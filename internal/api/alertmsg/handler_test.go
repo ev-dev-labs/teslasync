@@ -349,25 +349,25 @@ func TestMessagePreview(t *testing.T) {
 			name:      "signal template substitutes vehicle + hydrated value + threshold",
 			body:      `{"name":"Battery Low","kind":"signal","signal_name":"Soc","op":"<","value_num":20,"vehicle_name":"Falcon","msg_template":"On {{VehicleName}}: {{SignalName}}={{Value}} < {{Threshold}}"}`,
 			wantTitle: "Falcon — Battery Low",
-			wantBody:  "On Falcon: Soc=18.5% < 20.0%",
+			wantBody:  "On Falcon: Soc=18.5 < 20",
 		},
 		{
 			name:      "signal default body hydrates below-threshold sample",
 			body:      `{"name":"Low SoC","kind":"signal","signal_name":"Soc","op":"<","value_num":20}`,
 			wantTitle: "Low SoC",
-			wantBody:  "Soc 18.5% · threshold < 20.0%",
+			wantBody:  "Soc 18.5 · threshold < 20",
 		},
 		{
 			name:      "caller supplied signal value wins over hydration",
 			body:      `{"name":"X","kind":"signal","signal_name":"Soc","op":"<","value_num":20,"signals":{"Soc":42}}`,
 			wantTitle: "X",
-			wantBody:  "Soc 42.0% · threshold < 20.0%",
+			wantBody:  "Soc 42 · threshold < 20",
 		},
 		{
 			name:      "computed metric injects sample metric builtins",
 			body:      `{"name":"Fast","kind":"computed_metric","metric_id":"avg_speed","metric_window":"1h","metric_op":">","metric_threshold":80}`,
 			wantTitle: "Fast",
-			wantBody:  "Avg_speed 92.4 over 1h · threshold > 80.0",
+			wantBody:  "Avg_speed 92.4 over 1h · threshold > 80",
 		},
 		{
 			name:      "include_title false falls back to rule name for empty body",
@@ -751,7 +751,7 @@ func TestHydrateSampleValue(t *testing.T) {
 			name:    "between without bounds falls back to sample",
 			rule:    &alertmodel.AlertRule{SignalName: "Soc", Op: "between"},
 			signals: map[string]any{},
-			key:     "Soc", wantLen: 1, wantSet: true, want: 18.2345,
+			key:     "Soc", wantLen: 1, wantSet: true, want: "sample",
 		},
 		{
 			name:    "changed text uses the configured text",
@@ -775,13 +775,13 @@ func TestHydrateSampleValue(t *testing.T) {
 			name:    "unknown op falls back to sample",
 			rule:    &alertmodel.AlertRule{SignalName: "Soc", Op: "weird-op"},
 			signals: map[string]any{},
-			key:     "Soc", wantLen: 1, wantSet: true, want: 18.2345,
+			key:     "Soc", wantLen: 1, wantSet: true, want: "sample",
 		},
 		{
 			name:    "numeric op with no operands falls back to sample",
 			rule:    &alertmodel.AlertRule{SignalName: "Soc", Op: "<"},
 			signals: map[string]any{},
-			key:     "Soc", wantLen: 1, wantSet: true, want: 18.2345,
+			key:     "Soc", wantLen: 1, wantSet: true, want: "sample",
 		},
 	}
 

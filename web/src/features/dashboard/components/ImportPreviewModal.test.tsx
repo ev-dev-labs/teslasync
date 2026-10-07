@@ -105,15 +105,15 @@ describe('ImportPreviewModal', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
 
     // All three source tabs are present as ARIA tabs.
-    expect(screen.getByRole('tab', { name: 'From file' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'From File' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Paste JSON' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'From URL' })).toBeInTheDocument();
 
     // File is the default tab: its panel + browse affordance render, and the
     // tab reports itself selected.
-    expect(screen.getByRole('tabpanel', { name: 'From file' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Browse files/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'From file' })).toHaveAttribute(
+    expect(screen.getByRole('tabpanel', { name: 'From File' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Browse Files/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'From File' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
@@ -126,7 +126,7 @@ describe('ImportPreviewModal', () => {
     // Correct tabpanel swapped in.
     expect(screen.getByRole('tabpanel', { name: 'Paste JSON' })).toBeInTheDocument();
 
-    const validateBtn = screen.getByRole('button', { name: /Validate & preview/i });
+    const validateBtn = screen.getByRole('button', { name: /Validate & Preview/i });
     expect(validateBtn).toBeDisabled();
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: VALID_JSON } });
@@ -138,21 +138,21 @@ describe('ImportPreviewModal', () => {
     switchTab(/Paste JSON/);
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: VALID_JSON } });
-    fireEvent.click(screen.getByRole('button', { name: /Validate & preview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Validate & Preview/i }));
 
     // Preview modal title + dashboard name + the interpolated "2 widgets" badge.
     expect(screen.getByRole('heading', { name: 'My Fleet Dashboard' })).toBeInTheDocument();
     expect(screen.getByText('2 widgets')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Import dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Import Dashboard/i })).toBeInTheDocument();
   });
 
   it('confirms with the validated dashboard and then closes', () => {
     const { onConfirm, onClose } = renderModal();
     switchTab(/Paste JSON/);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: VALID_JSON } });
-    fireEvent.click(screen.getByRole('button', { name: /Validate & preview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Validate & Preview/i }));
 
-    fireEvent.click(screen.getByRole('button', { name: /Import dashboard/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Import Dashboard/i }));
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(onConfirm).toHaveBeenCalledWith(
@@ -171,14 +171,14 @@ describe('ImportPreviewModal', () => {
     renderModal();
     switchTab(/Paste JSON/);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'definitely not json' } });
-    fireEvent.click(screen.getByRole('button', { name: /Validate & preview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Validate & Preview/i }));
 
     // The validator's "Invalid JSON format" error is listed…
     expect(screen.getByText('Invalid JSON format')).toBeInTheDocument();
     // …and because there is no dashboard, the un-previewable empty state shows
     // and the confirm CTA is withheld.
     expect(screen.getByText('Cannot preview this layout')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Import dashboard/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Import Dashboard/i })).toBeNull();
     // But Back is always available to retry.
     expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
   });
@@ -187,15 +187,15 @@ describe('ImportPreviewModal', () => {
     renderModal();
     switchTab(/Paste JSON/);
     fireEvent.change(screen.getByRole('textbox'), { target: { value: VALID_JSON } });
-    fireEvent.click(screen.getByRole('button', { name: /Validate & preview/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Validate & Preview/i }));
 
-    expect(screen.getByRole('button', { name: /Import dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Import Dashboard/i })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Back/i }));
 
     // Back to the tabbed input surface; the preview is gone.
-    expect(screen.getByRole('tab', { name: 'From file' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Import dashboard/i })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'From File' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Import Dashboard/i })).toBeNull();
   });
 
   it('auto-validates a pre-filled initialJson prop and renders the preview immediately', () => {
@@ -203,7 +203,7 @@ describe('ImportPreviewModal', () => {
 
     // No interaction needed — the preview is shown on open.
     expect(screen.getByRole('heading', { name: 'My Fleet Dashboard' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Import dashboard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Import Dashboard/i })).toBeInTheDocument();
     // The input tabs are not rendered in the preview view.
     expect(screen.queryByRole('tab', { name: 'Paste JSON' })).toBeNull();
   });
@@ -241,12 +241,12 @@ describe('ImportPreviewModal', () => {
 
     expect(await screen.findByText('No data to validate')).toBeInTheDocument();
     // No preview was produced.
-    expect(screen.queryByRole('button', { name: /Import dashboard/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Import Dashboard/i })).toBeNull();
   });
 
   it('highlights the dropzone on drag-over and rejects a non-JSON drop', () => {
     renderModal();
-    const dropzone = screen.getByRole('tabpanel', { name: 'From file' });
+    const dropzone = screen.getByRole('tabpanel', { name: 'From File' });
 
     fireEvent.dragOver(dropzone);
     expect(dropzone.className).toContain('theme-primary');

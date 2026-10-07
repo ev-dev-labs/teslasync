@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Copy } from 'lucide-react'
 import { Button, type ButtonProps } from './Button'
@@ -17,7 +17,6 @@ import { useOptionalToast } from '@/components/feedback/Toast'
  *   - `iconOnly`: drop the label for dense lists (rows, table cells).
  *   - `withToast`: also fire a toast on success/failure for prominent actions.
  *   - `label`: override the default Copy/Copied text (e.g. "Copy link").
- *   - `onCopyError`: expose clipboard failures for caller-owned manual-copy UI.
  *
  * Accessibility: when `iconOnly` is set, an `aria-label` is provided that
  * mirrors the visible state. `aria-live="polite"` lets screen readers announce
@@ -44,8 +43,6 @@ export interface CopyButtonProps {
   title?: string
   /** Called after a successful copy. */
   onCopy?: () => void
-  /** Receives the original clipboard failure for caller-owned manual-copy UI. */
-  onCopyError?: (error: unknown) => void
   className?: string
 }
 
@@ -60,7 +57,6 @@ export function CopyButton({
   disabled,
   title,
   onCopy,
-  onCopyError,
   className,
 }: CopyButtonProps) {
   const { t } = useTranslation()
@@ -68,54 +64,26 @@ export function CopyButton({
   // rendered outside a `<ToastProvider>` (e.g. isolated component tests).
   const toast = useOptionalToast()
   const [copied, setCopied] = useState(false)
-  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const copyAttempt = useRef(0)
-
-  const clearCopyTimer = useCallback(() => {
-    if (copyTimer.current !== null) {
-      clearTimeout(copyTimer.current)
-      copyTimer.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    setCopied(false)
-    return () => {
-      // Invalidate pending writes as well as feedback for the previous text.
-      copyAttempt.current += 1
-      clearCopyTimer()
-    }
-  }, [text, clearCopyTimer])
 
   const copyLabel = t('common.copyButton.copy', 'Copy')
   const copiedLabel = t('common.copyButton.copied', 'Copied')
 
   const handleCopy = useCallback(async () => {
-    const attempt = ++copyAttempt.current
-    clearCopyTimer()
     try {
       await navigator.clipboard.writeText(text)
+      setCopied(true)
+      onCopy?.()
+      if (withToast) {
+        toast?.success(t('common.copyButton.successToast', 'Copied to clipboard'))
+      }
+      setTimeout(() => setCopied(false), 2000)
     } catch (err) {
-      console.error('CopyButton: clipboard write failed', err)
-      if (attempt !== copyAttempt.current) return
-      setCopied(false)
       if (withToast) {
         toast?.error(t('common.copyButton.errorToast', 'Failed to copy'))
       }
-      onCopyError?.(err)
-      return
+      console.error('CopyButton: clipboard write failed', err)
     }
-    if (attempt !== copyAttempt.current) return
-    setCopied(true)
-    copyTimer.current = setTimeout(() => {
-      copyTimer.current = null
-      setCopied(false)
-    }, 2000)
-    onCopy?.()
-    if (withToast) {
-      toast?.success(t('common.copyButton.successToast', 'Copied to clipboard'))
-    }
-  }, [text, withToast, onCopy, onCopyError, toast, t, clearCopyTimer])
+  }, [text, withToast, onCopy, toast, t])
 
   const visibleLabel = iconOnly ? null : (label ?? (copied ? copiedLabel : copyLabel))
   const icon = copied
@@ -132,7 +100,6 @@ export function CopyButton({
       type="button"
       variant={variant}
       size={size}
-      wrapLabel={!iconOnly}
       onClick={handleCopy}
       icon={icon}
       disabled={disabled}

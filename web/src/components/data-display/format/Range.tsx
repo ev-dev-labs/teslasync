@@ -21,7 +21,7 @@ interface RangeProps {
  * RangeEstimateWidget, BatteryRangePanel) which render BOTH ranges
  * side-by-side regardless of preference.
  */
-export function Range({ state, precision, className }: RangeProps) {
+export function Range({ state, precision = 0, className }: RangeProps) {
   const { formatDistance } = useUnits()
   const { meters } = usePreferredRange(state)
 
@@ -41,3 +41,4 @@ export function useRangeLabel(state: PreferredRangeFields | null | undefined): s
   const { labelKey, defaultLabel } = usePreferredRange(state)
   return t(`common.${labelKey}`, defaultLabel)
 }
+

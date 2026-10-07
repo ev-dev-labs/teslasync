@@ -7,7 +7,7 @@ import { EmptyState, ErrorDisplay, Spinner, StaleRefreshWarning } from '@/compon
 import { useDataState } from '@/hooks/useDataState'
 import InstallPackDialog from './InstallPackDialog'
 import InstalledPackCard from './InstalledPackCard'
-import { AIAlertPackBuilder } from '@/components/ai'
+import { AIAlertPackBuilder } from '@/components/ai/AIAlertPackBuilder'
 
 interface Props {
   onEditRule: (id: number) => void
@@ -29,6 +29,8 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
     .toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
   return (
     <GlassPanel className="space-y-5 p-4 sm:p-5">
+      <SectionTitle>{t('alertPacks.title', 'Alert Packs')}</SectionTitle>
+      <Text>{t('alertPacks.intro', 'Start with a goal, not a blank rule. Preview a curated group, choose your vehicles and install ordinary, independently editable rules.')}</Text>
       <SearchInput value={search} onChange={setSearch} placeholder={t('alertPacks.search', 'Search packs...')} />
       {catalog.isLoading ? <Spinner /> : catalogState.fatalError ? <ErrorDisplay error={catalogState.fatalError} onRetry={() => void catalog.refetch()} /> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

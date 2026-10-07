@@ -3,11 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useTimezone } from '@/lib/timezone';
@@ -16,6 +14,7 @@ import type { Drive } from '@/types/driving';
 import {
   ArrivalReliabilityDepartureWindowProfile,
   ArrivalReliabilityEvidenceQuality,
+  ArrivalReliabilityKpiBand,
   ArrivalReliabilityMethodology,
   ArrivalReliabilityMonthTrend,
   ArrivalReliabilityRouteDirectory,
@@ -26,7 +25,6 @@ import {
   type ArrivalReliabilityQueryState,
 } from '../components/arrival-reliability';
 import { analyzeArrivalReliability } from '../lib/arrivalReliability';
-import { ArrivalEvidenceBrief } from '../components/operationalbrief-a-m/ArrivalEvidenceBrief';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
 const TWO_COLUMNS = { default: 1, xl: 2 } as const;
@@ -40,10 +38,9 @@ export default function ArrivalReliabilityPage() {
   const selectedTimeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [nowMs] = useState(() => Date.now());
   const hasCachedData =
-    vehicleId != null && drivesState.hasData;
+    vehicleId != null && drivesQuery.data !== undefined;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -60,31 +57,31 @@ export default function ArrivalReliabilityPage() {
   const state: ArrivalReliabilityQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && drivesState.status === 'initial',
+      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
     isResolved,
     error:
-      drivesState.fatalError,
+      drivesQuery.isError && !hasCachedData
+        ? drivesQuery.error
+        : null,
     refreshError:
-      drivesState.refreshError,
+      drivesQuery.isError && hasCachedData
+        ? drivesQuery.error
+        : null,
     onRetry: () => void drivesQuery.refetch(),
   };
   const locale = i18n.language;
   const timeZone = analysis.timeZone;
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('arrivalReliability.title', 'Arrival Reliability')}
-      query={drivesQuery}
       subtitle={t(
         'arrivalReliability.subtitle',
         'Observed timing consistency and evidence coverage for directional routes in the vehicle timezone',
       )}
     >
-      {drivesState.isRefreshBlocked && (
-        <StaleRefreshWarning state={drivesState} label={t('arrivalReliability.title', 'Arrival Reliability')} />
-      )}
       <FadeIn>
-        <ArrivalEvidenceBrief
+        <ArrivalReliabilityKpiBand
           analysis={analysis}
           state={state}
           locale={locale}
@@ -166,6 +163,6 @@ export default function ArrivalReliabilityPage() {
           timeZone={timeZone}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

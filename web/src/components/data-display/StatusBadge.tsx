@@ -41,7 +41,7 @@ export function StatusBadge({ status, size = 'md', className }: StatusBadgeProps
     >
       {/* Decorative colour cue — the adjacent text already names the status. */}
       <span className={cn('inline-block rounded-full', s.dot, dotColor)} aria-hidden="true" />
-      <span className="text-[var(--text-secondary)]">{label || EMPTY_LABEL}</span>
+      <span className="capitalize text-[var(--text-secondary)]">{label || EMPTY_LABEL}</span>
     </span>
   );
 }

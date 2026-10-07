@@ -129,12 +129,10 @@ export function humanizeManagementLabel(value: string): string {
     .filter(Boolean)
 
   return words
-    .map((word, index) => {
+    .map((word) => {
       const upper = word.toUpperCase()
-      if (['API', 'FSD', 'ID', 'VIN', 'USD', 'SI', 'SOC', 'HVAC', 'TPMS', 'BMS', 'GPS'].includes(upper)) return upper
-      return index === 0
-        ? `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`
-        : word.toLowerCase()
+      if (['API', 'FSD', 'ID', 'VIN', 'USD'].includes(upper)) return upper
+      return `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`
     })
     .join(' ')
 }

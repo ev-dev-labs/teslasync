@@ -7,7 +7,7 @@ import {
   Badge, GlassPanel, MetricLabel, MetricValue, PanelTitle, Text,
 } from '@/components/ui';
 import { formatDayKey } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import {
   DEFAULT_BUCKET_KPH,
   DEFAULT_MIN_DRIVES_PER_BUCKET,
@@ -18,7 +18,6 @@ import {
 import { SpeedSweetSpotSectionBody } from './SpeedSweetSpotSectionBody';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SpeedSweetSpotMethodologyProps {
   summary: SweetSpotResult;
@@ -31,7 +30,6 @@ interface SpeedSweetSpotMethodologyProps {
 export function SpeedSweetSpotMethodology(
   { summary, start, end, windowLimit, state }: SpeedSweetSpotMethodologyProps,
 ) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useSpeedSweetSpotDisplay();
   const dateOptions = { locale: unitPrefs.locale, style: 'long' as const };

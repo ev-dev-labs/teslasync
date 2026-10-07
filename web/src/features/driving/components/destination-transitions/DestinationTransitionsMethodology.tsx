@@ -12,9 +12,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface DestinationTransitionsMethodologyProps {
   model: DestinationTransitionResult;
   locale: string;
@@ -25,7 +24,6 @@ export function DestinationTransitionsMethodology({
   locale,
   timeZone,
 }: DestinationTransitionsMethodologyProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const maxGap = model.config.maxContinuityGapMs == null
     ? t(
@@ -38,7 +36,7 @@ export function DestinationTransitionsMethodology({
         {
           hours: fmtNumber(
             model.config.maxContinuityGapMs / 3_600_000,
-            undefined,
+            1,
             locale,
           ),
         },
@@ -67,7 +65,7 @@ export function DestinationTransitionsMethodology({
         'destinationTransitions.method.continuityBody',
         'Adjacent rows connect only when normalized addresses match or valid coordinates are within {{meters}} m, and the current start does not overlap the previous end. {{maxGap}}',
         {
-          meters: fmtNumber(model.config.gpsToleranceM, undefined, locale),
+          meters: fmtNumber(model.config.gpsToleranceM, 0, locale),
           maxGap,
         },
       ),

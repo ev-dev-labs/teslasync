@@ -6,11 +6,8 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSettings } from '@/hooks/useSettings';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
 
 export function AiSpendWatch() {
-  const { precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { settings } = useSettings();
   const enabled = settings?.ai_mode === 'local' || settings?.ai_mode === 'cloud';
@@ -25,11 +22,11 @@ export function AiSpendWatch() {
     && capMicroCents > 0
     && data.projected_today_micro_cents >= capMicroCents;
   const biggest = (data?.drivers ?? [])[0];
-  const money = (value: number) => new Intl.NumberFormat(locale, {
+  const money = (value: number) => new Intl.NumberFormat(undefined, {
     style: 'currency',
     currency: 'USD',
-    minimumFractionDigits: precision,
-    maximumFractionDigits: precision,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 4,
   }).format(value / 1_000_000);
 
   return (
@@ -38,25 +35,6 @@ export function AiSpendWatch() {
         <TrendingUp className="h-5 w-5 text-amber-300" aria-hidden="true" />
         <PanelTitle>{t('systemStatus.aiSpend.title', 'Helix spend watch')}</PanelTitle>
       </div>
-      <SystemSummaryBrief
-        title={t('systemStatus.aiSpend.title', 'Helix spend watch')}
-        description={t('systemStatus.aiSpend.caveat', 'Based on recorded AI calls only. Delayed or missing audit records can undercount; projections assume today’s pace continues.')}
-        scope={t('systemStatus.aiSpend.briefScope', 'Audited today (UTC), prior seven-day daily average, and projected UTC midnight spend are different windows.')}
-        available={state.hasData} loading={state.status === 'initial'} retained={state.hasData && query.isError}
-        freshness={data?.as_of}
-        metrics={[
-          { metricId: 'currency', occurrenceId: 'today', rawValue: data?.today_micro_cents != null ? data.today_micro_cents / 1_000_000 : null,
-            label: t('systemStatus.aiSpend.todayMetric', 'Audited today (UTC)'),
-            context: data ? t('systemStatus.aiSpend.today', 'Audited today (UTC): {{amount}}', { amount: money(data.today_micro_cents) }) : undefined,
-            display: { formatter: (raw) => ({ value: money(raw * 1_000_000) }) } },
-          { metricId: 'currency', occurrenceId: 'baseline', rawValue: data?.prior_daily_avg_micro_cents != null ? data.prior_daily_avg_micro_cents / 1_000_000 : null,
-            label: t('systemStatus.aiSpend.baselineMetric', 'Prior 7-day daily average'),
-            context: data ? t('systemStatus.aiSpend.baseline', 'Prior 7-day daily average: {{amount}}', { amount: money(data.prior_daily_avg_micro_cents) }) : undefined,
-            display: { formatter: (raw) => ({ value: money(raw * 1_000_000) }) } },
-          { metricId: 'currency', occurrenceId: 'projection', rawValue: data?.projected_today_micro_cents != null ? data.projected_today_micro_cents / 1_000_000 : null,
-            label: t('systemStatus.aiSpend.projectionMetric', 'Projected UTC midnight spend'), display: { formatter: (raw) => ({ value: money(raw * 1_000_000) }) } },
-        ]}
-      />
       {state.status === 'initial' ? (
         <Skeleton height={88} className="rounded-xl" />
       ) : state.fatalError ? (
@@ -64,6 +42,15 @@ export function AiSpendWatch() {
       ) : data ? (
         <>
           <StaleRefreshWarning state={state} label={t('systemStatus.aiSpend.title', 'Helix spend watch')} />
+          <Text as="p" variant="bodySm">
+            {t('systemStatus.aiSpend.today', 'Audited today (UTC): {{amount}}', {
+              amount: money(data.today_micro_cents),
+            })}
+            {' · '}
+            {t('systemStatus.aiSpend.baseline', 'Prior 7-day daily average: {{amount}}', {
+              amount: money(data.prior_daily_avg_micro_cents),
+            })}
+          </Text>
           {data.status === 'insufficient_history' ? (
             <Text as="p" variant="bodySm">
               {t(
@@ -114,6 +101,12 @@ export function AiSpendWatch() {
               })}
             </Text>
           )}
+          <Text as="p" variant="caption">
+            {t(
+              'systemStatus.aiSpend.caveat',
+              'Based on recorded AI calls only. Delayed or missing audit records can undercount; projections assume today’s pace continues.',
+            )}
+          </Text>
         </>
       ) : null}
     </GlassPanel>

@@ -3,7 +3,6 @@ import { FileSearch2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton } from '@/components/feedback';
-import { SourceContent } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { BatteryPassportQueryState } from './types';
@@ -61,20 +60,8 @@ export function BatteryPassportSectionBody({
       />
     );
   }
-  // The certificate header owns fatal recovery; do not duplicate its retry
-  // or describe an unavailable certificate as a successfully empty source.
-  if (!state.isLoading && state.initialError) {
+  if (state.isLoading) {
     return (
-      <PassiveState
-        className={className}
-        message={t(
-          'batteryPassport.states.errorPassive',
-          'Certificate evidence is unavailable; retry from the certificate header.',
-        )}
-      />
-    );
-  }
-  const loadingContent = (
       <div
         className={cn('min-h-36', className)}
         role="status"
@@ -85,8 +72,21 @@ export function BatteryPassportSectionBody({
       >
         <Skeleton height={skeletonHeight} />
       </div>
-  );
-  const passiveContent = !state.isResolved ? (
+    );
+  }
+  if (state.initialError) {
+    return (
+      <PassiveState
+        className={className}
+        message={t(
+          'batteryPassport.states.errorPassive',
+          'Certificate evidence is unavailable; retry from the certificate header.',
+        )}
+      />
+    );
+  }
+  if (!state.isResolved) {
+    return (
       <PassiveState
         className={className}
         message={t(
@@ -94,7 +94,10 @@ export function BatteryPassportSectionBody({
           'Certificate availability has not resolved.',
         )}
       />
-  ) : requirePassport && !state.passport ? (
+    );
+  }
+  if (requirePassport && !state.passport) {
+    return (
       <PassiveState
         className={className}
         message={t(
@@ -102,17 +105,7 @@ export function BatteryPassportSectionBody({
           'The endpoint returned no certificate for this vehicle.',
         )}
       />
-  ) : null;
-  return (
-    <SourceContent
-      label={t('batteryPassport.title', 'Battery Passport')}
-      state={state.isLoading ? 'loading' : passiveContent ? 'empty' : 'ready'}
-      loadingContent={loadingContent}
-      emptyContent={passiveContent}
-      emptyMessage={t('batteryPassport.states.emptyPassive', 'The endpoint returned no certificate for this vehicle.')}
-      errorMessage={t('batteryPassport.states.errorPassive', 'Certificate evidence is unavailable; retry from the certificate header.')}
-    >
-      <div className={className}>{children}</div>
-    </SourceContent>
-  );
+    );
+  }
+  return <div className={className}>{children}</div>;
 }

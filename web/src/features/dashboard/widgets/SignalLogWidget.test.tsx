@@ -79,7 +79,7 @@ function isoAgo(ms: number): string {
 }
 
  
-function makeQuery(over: Record<string, unknown> = {}) {
+function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
     error: null,
@@ -112,11 +112,11 @@ const STANDARD = { cols: 2, rows: 2 };
 function setup(
   opts: {
      
-    obs?: Record<string, unknown>;
+    obs?: any;
      
-    mqtt?: Record<string, unknown>;
+    mqtt?: any;
      
-    vehicles?: Record<string, unknown>;
+    vehicles?: any;
   } = {},
 ) {
   mockObs.mockReturnValue(opts.obs ?? makeQuery({ data: [] }));
@@ -192,7 +192,7 @@ describe('formatSignalValue', () => {
 });
 
 describe('deriveSignalRate', () => {
-  it('does not present a partial fleet rate as a complete total', () => {
+  it('sums camelCase + snake_case rates and coerces junk / missing to 0', () => {
     const rate = deriveSignalRate([
       { signalsPerSecond: 5 },
       { signals_per_second: 7 },
@@ -200,30 +200,8 @@ describe('deriveSignalRate', () => {
       {},
     ] as unknown as VehicleTelemetry[]);
     // 5 + 7 + safeNumber('oops')=0 + safeNumber(undefined)=0 → 12, never NaN.
-    expect(rate).toBeNull();
+    expect(rate).toBe(12);
     expect(Number.isNaN(rate)).toBe(false);
-  });
-
-  describe('SignalLogWidget — source trust', () => {
-    it('renders fatal errors only when no observations have been retained', () => {
-      setup({ obs: makeQuery({ isError: true, error: new Error('failed') }) });
-      renderWidget(STANDARD);
-      expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    });
-
-    it('renders a genuine zero rate rather than an unknown placeholder', () => {
-      setup({ mqtt: makeQuery({ data: { vehicles: [{ signalsPerSecond: 0 }] } }) });
-      renderWidget(COMPACT);
-      expect(screen.getByText('0')).toBeInTheDocument();
-      expect(screen.queryByText('—')).not.toBeInTheDocument();
-    });
-
-    it('keeps a cached compact rate visible when its own MQTT refresh fails', () => {
-      setup({ mqtt: makeQuery({ data: { vehicles: [{ signalsPerSecond: 8 }] }, isError: true, error: new Error('refresh') }) });
-      const { container } = renderWidget(COMPACT);
-      expect(screen.getByText('8')).toBeInTheDocument();
-      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
-    });
   });
 
   it('prefers the camelCase field over the snake_case alias', () => {
@@ -235,8 +213,8 @@ describe('deriveSignalRate', () => {
   });
 
   it('is null-safe for undefined, null, and empty fleets', () => {
-    expect(deriveSignalRate(undefined)).toBeNull();
-    expect(deriveSignalRate(null)).toBeNull();
+    expect(deriveSignalRate(undefined)).toBe(0);
+    expect(deriveSignalRate(null)).toBe(0);
     expect(deriveSignalRate([])).toBe(0);
   });
 });
@@ -254,7 +232,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     });
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Signal log')).toBeInTheDocument();
+    expect(screen.getByText('Signal Log')).toBeInTheDocument();
 
     const list = screen.getByRole('list', { name: /event feed/i });
     expect(within(list).getAllByRole('listitem')).toHaveLength(3);
@@ -291,7 +269,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     expect(rows[2]).toHaveTextContent('older');
   });
 
-  it('labels a missing source as unknown and passes an unrecognized source through', () => {
+  it('defaults a null source to the "Cache" badge and passes an unknown source through', () => {
     setup({
       obs: makeQuery({
         data: [
@@ -302,8 +280,8 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     });
     renderWidget(STANDARD);
 
-    // Missing provenance is unknown, never falsely classified as backfill.
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    // Null source falls back to backfill → "Cache".
+    expect(screen.getByText('Cache')).toBeInTheDocument();
     // Unknown source label passes through verbatim (no crash, no blank badge).
     expect(screen.getByText('satellite')).toBeInTheDocument();
   });
@@ -315,7 +293,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     expect(screen.getByText('No signal updates yet')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // The header survives; the feed list is replaced, not rendered blank.
-    expect(screen.getByText('Signal log')).toBeInTheDocument();
+    expect(screen.getByText('Signal Log')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
@@ -324,7 +302,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Signal log')).toBeInTheDocument();
+    expect(screen.queryByText('Signal Log')).not.toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
@@ -397,20 +375,19 @@ describe('SignalLogWidget — compact layout (1×N)', () => {
     });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('Signals/sec')).toBeInTheDocument();
+    expect(screen.getByText('signals/sec')).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
     // Compact omits the event feed and the pause control.
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument();
   });
 
-  it('renders an unknown hero when the MQTT status is unavailable', () => {
+  it('renders a zero hero when the MQTT status is unavailable (null-safe)', () => {
     setup({ obs: makeQuery({ data: [] }), mqtt: makeQuery({ data: undefined }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.getByText('Signals/sec')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('signals/sec')).toBeInTheDocument();
   });
 });
 

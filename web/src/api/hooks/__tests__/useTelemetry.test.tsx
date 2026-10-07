@@ -16,10 +16,9 @@
 // ---------------------------------------------------------------------------
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import type { SignalHistoryResponse } from '@/types/telemetry'
 
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
@@ -356,85 +355,6 @@ describe('useSignalAnalysisHistory', () => {
 })
 
 describe('useSignalEvidenceBundle', () => {
-  it('preserves pending identities and distinguishes measured zero from a resolved empty history', async () => {
-    const speed: SignalHistoryResponse = {
-      vehicleId: 1, signal: 'Speed', from: '', to: '', count: 1,
-      data: [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }],
-    }
-    const power: SignalHistoryResponse = {
-      vehicleId: 1, signal: 'Power', from: '', to: '', count: 0, data: [],
-    }
-    let resolvePower: (response: SignalHistoryResponse) => void = () => {
-      throw new Error('Power request has not started')
-    }
-    mockedRequest.mockImplementation((url: string) => url.includes('/Speed/')
-      ? Promise.resolve(speed)
-      : new Promise<SignalHistoryResponse>((resolve) => { resolvePower = resolve }))
-    const { result } = renderHook(
-      () => useSignalEvidenceBundle(1, [' Speed ', 'Power', 'Speed'], 24),
-      { wrapper: makeWrapper() },
-    )
-
-    expect(result.current.sources.map((source) => source.signal)).toEqual(['Speed', 'Power'])
-    expect(result.current.sources[1]?.state).toMatchObject({
-      status: 'initial', provenance: 'unknown', hasData: false, updatedAt: null,
-    })
-    await waitFor(() => expect(result.current.sources[0]?.state.status).toBe('ok'))
-    expect(result.current.data).toEqual([{ signal: 'Speed', response: speed }])
-    expect(result.current.sources[0]?.state.data?.data[0]?.valueNum).toBe(0)
-    expect(result.current.sources[1]?.state.status).toBe('initial')
-
-    await act(async () => { resolvePower(power) })
-    await waitFor(() => expect(result.current.sources[1]?.state.status).toBe('unavailable'))
-    expect(result.current.sources[1]?.state.provenance).toBe('historical')
-    expect(result.current.sources[1]?.state.updatedAt).toBeGreaterThan(0)
-    expect(result.current.data.map((series) => series.signal)).toEqual(['Speed', 'Power'])
-    expect(mockedRequest).toHaveBeenCalledTimes(2)
-  })
-
-  it('retains independently stale histories and retries only the failed source', async () => {
-    const speed: SignalHistoryResponse = {
-      vehicleId: 1, signal: 'Speed', from: '', to: '', count: 1,
-      data: [{ timestamp: '2026-10-06T00:00:00Z', valueNum: 0 }],
-    }
-    const power: SignalHistoryResponse = {
-      vehicleId: 1, signal: 'Power', from: '', to: '', count: 1,
-      data: [{ timestamp: '2026-10-06T00:00:00Z', valueNum: -50 }],
-    }
-    const refreshError = new Error('Power refresh unavailable')
-    let failPower = false
-    mockedRequest.mockImplementation((url: string) => url.includes('/Speed/')
-      ? Promise.resolve(speed)
-      : failPower ? Promise.reject(refreshError) : Promise.resolve(power))
-    const { result } = renderHook(
-      () => useSignalEvidenceBundle(1, ['Speed', 'Power'], 24),
-      { wrapper: makeWrapper() },
-    )
-    await waitFor(() => expect(result.current.sources.every((source) => source.state.status === 'ok')).toBe(true))
-    const updatedAt = result.current.sources[1]?.state.updatedAt
-    failPower = true
-
-    await act(async () => { await result.current.refetch() })
-    await waitFor(() => expect(result.current.sources[1]?.state.status).toBe('stale'))
-    expect(result.current.sources[0]?.state.status).toBe('ok')
-    expect(result.current.sources[1]?.state).toMatchObject({
-      data: power, hasData: true, provenance: 'historical',
-      fatalError: null, refreshError, updatedAt,
-    })
-    expect(result.current.data).toEqual([
-      { signal: 'Speed', response: speed }, { signal: 'Power', response: power },
-    ])
-    expect(result.current.error).toBe(refreshError)
-    expect(mockedRequest).toHaveBeenCalledTimes(4)
-
-    failPower = false
-    act(() => { result.current.sources[1]?.state.retry?.() })
-    await waitFor(() => expect(result.current.sources[1]?.state.status).toBe('ok'))
-    expect(result.current.error).toBeNull()
-    expect(mockedRequest).toHaveBeenCalledTimes(5)
-    expect(mockedRequest.mock.calls[4]?.[0]).toContain('/Power/history')
-  })
-
   it('loads unique encoded signals with independent cancellation contexts', async () => {
     mockedRequest.mockImplementation(async (url: string) => ({
       vehicleId: 1,
@@ -491,13 +411,6 @@ describe('useSignalEvidenceBundle', () => {
     expect(result.current.isError).toBe(true)
     expect(result.current.error?.message).toBe('history unavailable')
     expect(result.current.data).toHaveLength(1)
-    expect(result.current.sources.map((source) => source.signal)).toEqual(['Speed', 'Power'])
-    expect(result.current.sources[0]?.state.status).toBe('unavailable')
-    expect(result.current.sources[1]?.state).toMatchObject({
-      status: 'initialFailure', hasData: false, provenance: 'unknown', data: undefined,
-      refreshError: null, updatedAt: null,
-    })
-    expect(result.current.sources[1]?.state.fatalError?.message).toBe('history unavailable')
   })
 
   it('does not fetch when the vehicle or signal set is unavailable', async () => {
@@ -513,9 +426,7 @@ describe('useSignalEvidenceBundle', () => {
     await tick()
     expect(mockedRequest).not.toHaveBeenCalled()
     expect(first.result.current.isLoading).toBe(false)
-    expect(first.result.current.sources[0]?.state.status).toBe('initial')
     expect(second.result.current.data).toEqual([])
-    expect(second.result.current.sources).toEqual([])
   })
 })
 

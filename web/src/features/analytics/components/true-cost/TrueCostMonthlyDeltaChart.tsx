@@ -83,7 +83,7 @@ export function TrueCostMonthlyDeltaChart({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value: number) => display.formatCurrency(value)}
+                  tickFormatter={(value: number) => display.formatCurrency(value, 0)}
                 />
                 <Tooltip
                   content={<ChartTooltip valueFormatter={(value) =>

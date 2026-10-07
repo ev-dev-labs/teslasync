@@ -1,6 +1,5 @@
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { TypographyAgentProvider, __resetTypographyAgentForTests } from './TypographyAgentProvider';
-import { TypographyActuator } from '@/lib/typography-agent/actuator';
 
 function renderHUD() {
   return render(
@@ -28,7 +27,7 @@ describe('AmbientTypographyHUD', () => {
   beforeEach(() => {
     __resetTypographyAgentForTests();
     localStorage.clear();
-    TypographyActuator.clearTokens();
+    document.getElementById('connected-typography-layer')?.remove();
   });
 
   it('stays hidden until the hotkey toggles it', async () => {
@@ -63,7 +62,9 @@ describe('AmbientTypographyHUD', () => {
 
     // The actuator wrote the token layer (proves harmonize → actuate ran).
     await waitFor(() => {
-      expect(document.documentElement.style.getPropertyValue('--type-size-base')).not.toBe('');
+      expect(document.getElementById('connected-typography-layer')?.textContent).toContain(
+        '--type-size-base',
+      );
     });
     // Verification ran against the live DOM (clean test tree scores 100).
     expect(await screen.findByText(/Score: 100\/100/)).toBeInTheDocument();

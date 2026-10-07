@@ -4,17 +4,15 @@ import {
 } from 'lucide-react'
 import { StaggerContainer, StaggerItem } from '@/components/motion'
 import { useUnits } from '@/hooks/useUnits'
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat'
 import { InfoTile } from './InfoTile'
 import type { VehicleState } from '@/api/types'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TelemetryGridProps {
   state: VehicleState
 }
 
 export function TelemetryGrid({ state }: TelemetryGridProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatTemperature } = useUnits()
 
@@ -24,7 +22,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Battery}
           label={t('common.battery', 'Battery')}
-          value={`${fmtNumber(state.battery_level)}%`}
+          value={`${fmtInt(state.battery_level)}%`}
           color={
             state.battery_level > 50
               ? 'text-emerald-300'
@@ -55,7 +53,7 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
         <InfoTile
           icon={Navigation}
           label={t('common.odometer', 'Odometer')}
-          value={formatDistance(state.odometer)}
+          value={formatDistance(state.odometer, { precision: 0 })}
         />
       </StaggerItem>
       <StaggerItem>
@@ -64,14 +62,14 @@ export function TelemetryGrid({ state }: TelemetryGridProps) {
           label={t('common.charger', 'Charger')}
           value={
             state.is_charging
-              ? `${fmtNumber(state.charger_power)} kW`
-              : t('common.notCharging', 'Not charging')
+              ? `${fmtInt(state.charger_power)} kW`
+              : t('common.notCharging', 'Not Charging')
           }
           color={state.is_charging ? 'text-emerald-300' : 'text-[var(--text-muted)]'}
           sub={
             state.is_charging && state.time_to_full_charge != null && state.time_to_full_charge > 0
               ? t('telemetry.fullInHours', 'Full in {{hours}}h', {
-                  hours: fmtNumber(state.time_to_full_charge),
+                  hours: fmtNumber(state.time_to_full_charge, 1),
                 })
               : undefined
           }

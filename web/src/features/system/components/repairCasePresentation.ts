@@ -129,8 +129,8 @@ export function humanizeRepairCode(value: string): string {
   return value
     .split('_')
     .filter(Boolean)
-    .join(' ')
-    .replace(/^./, (character) => character.toUpperCase());
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(' ');
 }
 
 export function repairCodeLabel(t: TFunction, value: string): string {

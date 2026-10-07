@@ -18,8 +18,8 @@
  *      backup-code count surfaces, and Regenerate + Disable render (Enable is
  *      gone). Each button raises its own callback; while `regenerating` only
  *      Regenerate is disabled/busy — Disable stays operable.
- *   4. Null-safety / hardening — missing counts remain unknown, real zero
- *      remains zero and negative counts retain their clamp. Blank `lastUsedAt`
+ *   4. Null-safety / hardening — a missing or negative backup count collapses
+ *      to "0" (never a blank or "-1" cell), and a blank/whitespace `lastUsedAt`
  *      falls back to "Never" instead of formatting an "Invalid Date".
  *   5. Variant mapping — the pill flips success↔neutral with the activated flag.
  *
@@ -228,17 +228,13 @@ describe('TotpStatusHero — null-safety & hardening', () => {
     expect(screen.getByTestId('totp-backup-remaining')).not.toHaveTextContent('-5')
   })
 
-  it.each([undefined, null, Number.NaN, Number.POSITIVE_INFINITY])('keeps an unknown backup count %s distinct from zero', backupRemaining => {
+  it('renders "0" rather than a blank cell when the count is missing', () => {
+    // Simulate an upstream data bug that lets `undefined` slip past the typed
+    // contract — the cell must still read a concrete "0", never empty.
     renderHero({
       activated: true,
-      backupRemaining,
+      backupRemaining: undefined as unknown as number,
     })
-    expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('—')
-    expect(screen.getByTestId('totp-backup-remaining')).not.toHaveTextContent('0')
-  })
-
-  it('preserves a measured exhausted balance as zero', () => {
-    renderHero({ activated: true, backupRemaining: 0 })
     expect(screen.getByTestId('totp-backup-remaining')).toHaveTextContent('0')
   })
 

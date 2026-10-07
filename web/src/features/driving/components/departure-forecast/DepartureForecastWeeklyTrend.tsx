@@ -18,11 +18,10 @@ import {
 } from '@/components/charts';
 import { Text } from '@/components/ui';
 import { formatDayKey } from '@/lib/dateFormat';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { DepartureForecastSectionBody } from './DepartureForecastSectionBody';
 import type { DepartureForecastQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastWeeklyTrendProps {
   forecast: DepartureForecast;
@@ -37,7 +36,6 @@ export function DepartureForecastWeeklyTrend({
   locale,
   timeZone,
 }: DepartureForecastWeeklyTrendProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const departureName = t(
     'departure.weeklyTrend.departureSeries',
@@ -185,7 +183,7 @@ export function DepartureForecastWeeklyTrend({
                   activeWeeks: fmtInt(forecast.activeWeeks),
                   observedWeeks: fmtNumber(
                     forecast.observedWeeks,
-                    undefined,
+                    1,
                     locale,
                   ),
                   timeZone,

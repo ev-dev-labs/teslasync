@@ -1,18 +1,18 @@
-import { LayoutCard } from '@/components/layout';
+import { ListX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { cabinRejectionLabel } from './labels';
@@ -36,7 +36,11 @@ export function CabinThermalRejectionReasons({
 
   return (
     <section data-testid="cabin-thermal-rejections">
-      <LayoutCard title={t('cabinThermal.rejections.title', 'Final rejection reasons')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <ListX className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('cabinThermal.rejections.title', 'Final rejection reasons')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'cabinThermal.rejections.subtitle',
@@ -45,7 +49,7 @@ export function CabinThermalRejectionReasons({
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="candidates">
           {/* chart-legend-audit:skip one candidate-count series across gate reasons */}
-          <EmbeddedChart toolbar exportable size="standard"
+          <ChartContainer
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('cabinThermal.rejections.plotTitle', 'Candidates rejected at each gate')}
             ariaLabel={t(
@@ -68,9 +72,9 @@ export function CabinThermalRejectionReasons({
                 <Bar dataKey="candidates" name={t('cabinThermal.rejections.candidates', 'Candidates')} fill={chartTokens.series[3]} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          </EmbeddedChart>
+          </ChartContainer>
         </CabinThermalSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

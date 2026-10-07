@@ -53,7 +53,7 @@ describe('PERMISSION_META', () => {
     expect(m.color).toBe('amber');
     expect(m.barColor).toBe('#f59e0b');
     expect(m.labelKey).toBe('apiKeys.perm.readWrite');
-    expect(m.labelFallback).toBe('Read-write');
+    expect(m.labelFallback).toBe('Read-Write');
     expect(m.descKey).toBe('apiKeys.perm.readWriteDesc');
     expect(m.descFallback).toContain('command');
   });

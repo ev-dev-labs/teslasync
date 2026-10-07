@@ -7,10 +7,10 @@ import { cn } from '@/lib/cn';
 // every one of the 140 presets, so a Dracula or Solarized user got buttons
 // that did not belong to their palette. They now track the active theme.
 export const BUTTON_VARIANTS = {
-  primary: 'border border-transparent bg-[var(--theme-primary)] text-[var(--theme-on-primary)] shadow-sm hover:brightness-105 forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
+  primary: 'border border-transparent bg-[var(--theme-primary)] text-[var(--theme-on-primary)] shadow-sm hover:brightness-105 forced-colors:border forced-colors:border-[ButtonBorder]',
   secondary: 'bg-[var(--control-bg)] text-[var(--text-primary)] border border-[var(--control-border)] hover:bg-[var(--control-bg-hover)] hover:border-[var(--control-border-hover)] forced-colors:border forced-colors:border-[ButtonBorder]',
   outline: 'border border-[var(--control-border)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] hover:border-[var(--control-border-hover)] forced-colors:border-[ButtonBorder]',
-  danger: 'bg-red-600 text-[var(--text-on-accent)] hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[ButtonFace] forced-colors:text-[ButtonText]',
+  danger: 'bg-red-600 text-[var(--text-on-accent)] hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder]',
   ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder]',
 } as const;
 
@@ -43,32 +43,21 @@ const sizes = {
   auto: 'min-h-d-row px-d-pad-x text-d-base',
 } as const;
 
-const wrappingSizes = {
-  sm: 'h-auto min-h-9 py-1.5',
-  md: 'h-auto min-h-10 py-2',
-  lg: 'h-auto min-h-12 py-2.5',
-  auto: 'h-auto py-d-pad-y',
-} as const;
-
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof variants;
   size?: keyof typeof sizes;
   loading?: boolean;
   icon?: React.ReactNode;
-  /** Grow multiline labels within the allocated width; fixed/icon sizing is unchanged by default. */
-  wrapLabel?: boolean;
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', loading, icon, wrapLabel = false, className, children, disabled, ...props }, ref) => (
+  ({ variant = 'primary', size = 'md', loading, icon, className, children, disabled, ...props }, ref) => (
     <button
       ref={ref}
       className={cn(
         BUTTON_BASE,
         variants[variant],
         sizes[size],
-        wrapLabel && 'min-w-0 max-w-full whitespace-normal',
-        wrapLabel && wrappingSizes[size],
         className,
       )}
       disabled={disabled || loading}
@@ -79,12 +68,12 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         // Decorative spinner: the loading state is already announced to
         // assistive tech via the button's aria-busy, so the SVG itself must
         // stay out of the accessibility tree.
-        <svg className="h-4 w-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
-      ) : wrapLabel && icon ? <span className="inline-flex shrink-0">{icon}</span> : icon}
-      {wrapLabel ? <span className="min-w-0 break-words">{children}</span> : children}
+      ) : icon}
+      {children}
     </button>
   ),
 );

@@ -262,7 +262,7 @@ function InnerSection({
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.subsumes && (
-                      <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-2xs font-medium tracking-wide text-amber-300">
+                      <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-amber-300">
                         {t(
                           'notifications.alertStudio.aiConflicts.flag.subsumes',
                           'subsumes',
@@ -270,7 +270,7 @@ function InnerSection({
                       </span>
                     )}
                     {c.severity_mismatch && (
-                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium tracking-wide text-rose-300">
+                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
                         {t(
                           'notifications.alertStudio.aiConflicts.flag.severityMismatch',
                           'severity mismatch',
@@ -278,7 +278,7 @@ function InnerSection({
                       </span>
                     )}
                     {c.cooldown_mismatch && (
-                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium tracking-wide text-rose-300">
+                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
                         {t(
                           'notifications.alertStudio.aiConflicts.flag.cooldownMismatch',
                           'cooldown mismatch',
@@ -286,7 +286,7 @@ function InnerSection({
                       </span>
                     )}
                     {c.trigger_mode_mismatch && (
-                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium tracking-wide text-rose-300">
+                      <span className="rounded-full border border-rose-300/30 bg-rose-300/10 px-2 py-0.5 text-2xs font-medium uppercase tracking-wide text-rose-300">
                         {t(
                           'notifications.alertStudio.aiConflicts.flag.triggerModeMismatch',
                           'trigger mode mismatch',

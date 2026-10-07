@@ -141,7 +141,7 @@ describe('CreateApiKeyModal', () => {
   it('renders nothing when closed', () => {
     renderModal({ open: false });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.queryByText('New API key')).not.toBeInTheDocument();
+    expect(screen.queryByText('New API Key')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
@@ -149,11 +149,8 @@ describe('CreateApiKeyModal', () => {
     renderModal();
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('New API key')).toBeInTheDocument();
+    expect(within(dialog).getByText('New API Key')).toBeInTheDocument();
     expect(within(dialog).getByLabelText('Name')).toBeInTheDocument();
-    const details = within(dialog).getByRole('group', { name: 'Key details' });
-    expect(within(details).getByLabelText('Name')).toBeInTheDocument();
-    expect(within(details).getByLabelText('Permissions')).toBeInTheDocument();
 
     const select = within(dialog).getByLabelText('Permissions') as HTMLSelectElement;
     // Default permission is the least-privileged "read".
@@ -161,13 +158,13 @@ describe('CreateApiKeyModal', () => {
     const optionLabels = within(select)
       .getAllByRole('option')
       .map((o) => o.textContent);
-    expect(optionLabels).toEqual(['Read', 'Read-write', 'Admin']);
+    expect(optionLabels).toEqual(['Read', 'Read-Write', 'Admin']);
   });
 
   it('keeps Generate disabled until a non-whitespace name is entered', () => {
     renderModal();
     const dialog = screen.getByRole('dialog');
-    const generate = within(dialog).getByRole('button', { name: 'Generate key' });
+    const generate = within(dialog).getByRole('button', { name: 'Generate Key' });
     const nameInput = within(dialog).getByLabelText('Name');
 
     expect(generate).toBeDisabled();
@@ -193,7 +190,7 @@ describe('CreateApiKeyModal', () => {
     fireEvent.change(within(dialog).getByLabelText('Permissions'), {
       target: { value: 'admin' },
     });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate key' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -206,9 +203,8 @@ describe('CreateApiKeyModal', () => {
     );
 
     // Phase 2: the one-time reveal replaces the form.
-    expect(await screen.findByRole('heading', { name: 'API key created' })).toBeInTheDocument();
-    expect(screen.queryByRole('group', { name: 'Key details' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Generate key' })).not.toBeInTheDocument();
+    expect(await screen.findByText('API Key Created')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Generate Key' })).not.toBeInTheDocument();
     expect(
       screen.getByText("Copy this key now — it won't be shown again."),
     ).toBeInTheDocument();
@@ -225,9 +221,9 @@ describe('CreateApiKeyModal', () => {
     const select = within(dialog).getByLabelText('Permissions') as HTMLSelectElement;
     expect(select.value).toBe('admin');
     expect(select).toBeDisabled();
-    expect(within(dialog).getByText(/full Admin access/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/full admin access/i)).toBeInTheDocument();
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Phone' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate key' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
         '/api-keys',
@@ -243,20 +239,20 @@ describe('CreateApiKeyModal', () => {
 
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'CI Bot' } });
-    const generate = within(dialog).getByRole('button', { name: 'Generate key' });
+    const generate = within(dialog).getByRole('button', { name: 'Generate Key' });
     fireEvent.click(generate);
 
     // While pending the button is busy + disabled (guards against double-submit).
     await waitFor(() => expect(generate).toHaveAttribute('aria-busy', 'true'));
     expect(generate).toBeDisabled();
-    expect(screen.queryByRole('heading', { name: 'API key created' })).not.toBeInTheDocument();
+    expect(screen.queryByText('API Key Created')).not.toBeInTheDocument();
 
     // Flush the request so the reveal phase renders and teardown is clean.
     await act(async () => {
       d.resolve(createdResponse());
       await d.promise;
     });
-    expect(await screen.findByRole('heading', { name: 'API key created' })).toBeInTheDocument();
+    expect(await screen.findByText('API Key Created')).toBeInTheDocument();
   });
 
   it('masks the generated secret by default and reveals it on toggle', async () => {
@@ -265,9 +261,9 @@ describe('CreateApiKeyModal', () => {
 
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'CI Bot' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate key' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
 
-    await screen.findByRole('heading', { name: 'API key created' });
+    await screen.findByText('API Key Created');
 
     // Masked form hides the raw secret behind bullets.
     const code = maskedCode();
@@ -284,9 +280,9 @@ describe('CreateApiKeyModal', () => {
 
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'CI Bot' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate key' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
 
-    await screen.findByRole('heading', { name: 'API key created' });
+    await screen.findByText('API Key Created');
     fireEvent.click(screen.getByRole('button', { name: 'Copy API key' }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(SECRET));
@@ -299,14 +295,14 @@ describe('CreateApiKeyModal', () => {
 
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'CI Bot' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate key' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Generate Key' }));
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith('/api-keys', expect.objectContaining({ method: 'POST' })),
     );
     // No reveal transition — the form survives.
-    expect(screen.queryByRole('heading', { name: 'API key created' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Generate key' })).toBeInTheDocument();
+    expect(screen.queryByText('API Key Created')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Generate Key' })).toBeInTheDocument();
   });
 
   it('keeps the form and re-enables Generate when creation fails', async () => {
@@ -315,7 +311,7 @@ describe('CreateApiKeyModal', () => {
 
     const dialog = screen.getByRole('dialog');
     fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'CI Bot' } });
-    const generate = within(dialog).getByRole('button', { name: 'Generate key' });
+    const generate = within(dialog).getByRole('button', { name: 'Generate Key' });
     fireEvent.click(generate);
 
     await waitFor(() =>
@@ -324,7 +320,7 @@ describe('CreateApiKeyModal', () => {
     // Failure keeps us on the form and lets the user retry (not stuck busy).
     await waitFor(() => expect(generate).not.toHaveAttribute('aria-busy', 'true'));
     expect(generate).toBeEnabled();
-    expect(screen.queryByRole('heading', { name: 'API key created' })).not.toBeInTheDocument();
+    expect(screen.queryByText('API Key Created')).not.toBeInTheDocument();
   });
 
   it('calls onClose when Cancel is clicked', () => {
@@ -359,8 +355,8 @@ describe('CreateApiKeyModal', () => {
 
     // Create a key and land on the reveal panel.
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'CI Bot' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Generate key' }));
-    await screen.findByRole('heading', { name: 'API key created' });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Key' }));
+    await screen.findByText('API Key Created');
 
     // Done closes the dialog (and resets internal state).
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
@@ -369,8 +365,8 @@ describe('CreateApiKeyModal', () => {
     // Reopening shows a FRESH form — no stale secret, empty name.
     fireEvent.click(screen.getByRole('button', { name: 'reopen' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText('New API key')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'API key created' })).not.toBeInTheDocument();
+    expect(within(dialog).getByText('New API Key')).toBeInTheDocument();
+    expect(screen.queryByText('API Key Created')).not.toBeInTheDocument();
     expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('');
   });
 
@@ -384,8 +380,8 @@ describe('CreateApiKeyModal', () => {
     const toggle = await screen.findByLabelText('App sign-in');
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Phone' } });
     fireEvent.click(toggle);
-    fireEvent.click(screen.getByRole('button', { name: 'Generate key' }));
-    await screen.findByRole('heading', { name: 'API key created' });
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Key' }));
+    await screen.findByText('API Key Created');
 
     const post = mockedRequest.mock.calls.find(([path]) => path === '/api-keys');
     expect(post).toBeDefined();

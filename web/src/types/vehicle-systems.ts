@@ -77,7 +77,7 @@ export interface TirePressureReading {
   rearRight: number;
   tpmsHardWarning: boolean;
   tpmsSoftWarning: boolean;
-  created_at?: string;
+  timestamp: string;
 }
 
 export type TirePosition = 'frontLeft' | 'frontRight' | 'rearLeft' | 'rearRight';

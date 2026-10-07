@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import type { DayLogSource } from '@/api/types';
@@ -49,39 +49,33 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
           />
         ) : (
           <>
-            <Text variant="caption" className="mb-2">
-              {t(
-                'dayLog.sources.feedNote',
-                'Signal feeds record transitions only — states between samples were never captured and cannot be reconstructed.',
-              )}
-            </Text>
-            <Table aria-label={t('dayLog.sources.title', 'Sources')}>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.source}>
-                    <th scope="row" className="min-w-0 font-normal">
-                      <Text size="sm" weight="medium" color="primary">{t(`dayLog.sources.names.${row.source}`, row.source)}</Text>
-                    </th>
-                    <td>
-                      {row.status === 'unavailable' ? (
-                        <Text variant="caption">
-                          {t(`dayLog.sources.reasons.${row.source}`, row.reason ?? t('dayLog.sources.noReason', 'Not available'))}
-                        </Text>
-                      ) : (
-                        <Text variant="caption">
-                          {t('dayLog.sources.rows', '{{count}} rows', { count: row.count })}
-                        </Text>
-                      )}
-                    </td>
-                    <td className="text-right">
-                      <Badge variant={STATUS_VARIANT[row.status] ?? 'neutral'}>
-                        {t(`dayLog.sources.status.${row.status}`, DAY_LOG_SOURCE_STATUS[row.status] ?? row.status)}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+          <Text variant="caption" className="mb-2">
+            {t(
+              'dayLog.sources.feedNote',
+              'Signal feeds record transitions only — states between samples were never captured and cannot be reconstructed.',
+            )}
+          </Text>
+          <ul className="divide-y divide-white/[0.06]">
+            {rows.map((row) => (
+              <li key={row.source} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                <div className="min-w-0">
+                  <Text size="sm" weight="medium" color="primary">{t(`dayLog.sources.names.${row.source}`, row.source)}</Text>
+                  {row.status === 'unavailable' ? (
+                    <Text variant="caption">
+                      {t(`dayLog.sources.reasons.${row.source}`, row.reason ?? t('dayLog.sources.noReason', 'Not available'))}
+                    </Text>
+                  ) : (
+                    <Text variant="caption">
+                      {t('dayLog.sources.rows', '{{count}} rows', { count: row.count })}
+                    </Text>
+                  )}
+                </div>
+                <Badge variant={STATUS_VARIANT[row.status] ?? 'neutral'}>
+                  {t(`dayLog.sources.status.${row.status}`, DAY_LOG_SOURCE_STATUS[row.status] ?? row.status)}
+                </Badge>
+              </li>
+            ))}
+          </ul>
           </>
         )}
       </div>

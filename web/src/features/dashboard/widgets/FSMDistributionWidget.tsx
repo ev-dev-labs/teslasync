@@ -2,20 +2,14 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, EmbeddedChart, type ChartDataRow } from '@/components/charts';
-import { Caption, Subhead, Text } from '@/components/ui';
-import { SourceContent } from '@/components/layout';
+import { Badge } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
 import { useVehicles } from '@/api/hooks/useVehicles';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates } from '@/api/dataState';
-import { WidgetBigNumber } from './shared';
-import { fmtNumber as formatDurationNumber } from '@/lib/numberFormat';
-import { FSMTransitionRow } from '../components/continuation-dashboard-2/FSMTransitionRow';
 
 /* ── State colors for donut chart ──────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -32,12 +26,11 @@ function stateColor(state: string): string {
 
 /* ── Duration formatter (ms → human readable) ──────────────────── */
 function fmtDuration(ms: number, t: (k: string, d: string) => string): string {
-  if (!Number.isFinite(ms) || ms < 0) return '—';
-  const totalMin = Math.round(ms / 60_000);
+  const totalMin = ms / 60_000;
   const hrs = Math.floor(totalMin / 60);
-  const mins = totalMin % 60;
-  if (hrs === 0) return `${formatDurationNumber(mins, 0)}${t('widget.fsmDistribution.min', 'm')}`;
-  return `${formatDurationNumber(hrs, 0)}${t('widget.fsmDistribution.hr', 'h')} ${formatDurationNumber(mins, 0)}${t('widget.fsmDistribution.min', 'm')}`;
+  const mins = Math.round(totalMin % 60);
+  if (hrs === 0) return `${mins}${t('widget.fsmDistribution.min', 'm')}`;
+  return `${hrs}${t('widget.fsmDistribution.hr', 'h')} ${mins}${t('widget.fsmDistribution.min', 'm')}`;
 }
 
 /* ── Donut segment data ────────────────────────────────────────── */
@@ -48,10 +41,9 @@ interface DonutSegment extends ChartDataRow {
 }
 
 function buildDonutData(stats: Record<string, number> | undefined): DonutSegment[] {
-  if (stats != null && (typeof stats !== 'object' || Array.isArray(stats))) return [];
-  const entries = Object.entries(stats ?? {}).filter(([, v]) => typeof v === 'number' && Number.isFinite(v) && v > 0);
+  const entries = Object.entries(stats ?? {}).filter(([, v]) => (v ?? 0) > 0);
   const total = entries.reduce((sum, [, v]) => sum + (v ?? 0), 0);
-  if (total === 0 || !Number.isFinite(total)) return [];
+  if (total === 0) return [];
   return entries
     .map(([state, value]) => ({
       state,
@@ -71,48 +63,74 @@ function DonutTooltip({
   payload?: Array<{ payload: DonutSegment }>;
   t: (k: string, d: string) => string;
 }) {
-  const { fmtNumber } = useNumberFormatting();
   if (!active || !payload?.[0]) return null;
   const seg = payload[0].payload;
   return (
-    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-3 py-2 shadow-lg">
+    <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] backdrop-blur-xl px-3 py-2 text-xs shadow-lg">
       <div className="flex items-center gap-2">
         <span
           className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
           style={{ backgroundColor: stateColor(seg.state) }}
         />
-        <Text variant="bodySm" className="break-words">
+        <span className="text-[var(--text-primary)] capitalize">
           {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
-        </Text>
+        </span>
       </div>
-      <Caption className="mt-1 block break-words">
-        {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct)}%
-      </Caption>
+      <div className="mt-1 text-[var(--text-secondary)]">
+        {fmtDuration(seg.value, t)} · {fmtNumber(seg.pct, 1)}%
+      </div>
+    </div>
+  );
+}
+
+/* ── Transition feed row ───────────────────────────────────────── */
+function TransitionRow({
+  from,
+  to,
+  timestamp,
+  t,
+}: {
+  from: string;
+  to: string;
+  timestamp: string;
+  t: (k: string, d: string) => string;
+}) {
+  return (
+    <div className="flex items-center justify-between min-h-[44px] gap-2">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Badge variant="neutral" className="text-2xs capitalize truncate max-w-[72px]">
+          {t(`widget.fsmDistribution.state.${from}`, from)}
+        </Badge>
+        <span className="text-2xs text-[var(--text-muted)]">→</span>
+        <Badge variant="neutral" className="text-2xs capitalize truncate max-w-[72px]">
+          {t(`widget.fsmDistribution.state.${to}`, to)}
+        </Badge>
+      </div>
+      <span className="flex-shrink-0">
+        <TimeStamp value={timestamp} className="text-2xs text-[var(--text-muted)] tabular-nums" />
+      </span>
     </div>
   );
 }
 
 /* ── Main widget ───────────────────────────────────────────────── */
 export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const vehiclesQuery = useVehicles();
-  const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
-  const id = vehicleId ?? vehicles?.[0]?.id;
-  const idStr = typeof id === 'number' && Number.isSafeInteger(id) && id > 0 ? String(id) : '';
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const id = vehicleId ?? vehicles?.[0]?.id ?? null;
+  const idStr = id != null ? String(id) : '';
 
-  const statsQuery = useFSMStats(idStr);
   const {
     data: statsData,
+    error: statsError,
     isLoading: statsLoading,
     isFetching: statsFetching,
     isStale: statsStale,
     isError: statsIsError,
     dataUpdatedAt: statsUpdatedAt,
     refetch: refetchStats,
-  } = statsQuery;
+  } = useFSMStats(idStr);
 
-  const transitionsQuery = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
   const {
     data: transitionsData,
     isLoading: transitionsLoading,
@@ -121,17 +139,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
     isError: transitionsIsError,
     dataUpdatedAt: transitionsUpdatedAt,
     refetch: refetchTransitions,
-  } = transitionsQuery;
-  const rawStats = statsData?.stats;
-  const invalidStats = rawStats != null && (
-    typeof rawStats !== 'object' || Array.isArray(rawStats) ||
-    Object.values(rawStats).some(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0)
-  );
-  const statsState = useDataState(statsQuery, { partial: invalidStats });
-  const transitionsState = useDataState(transitionsQuery, {
-    partial: transitionsData?.data != null && !Array.isArray(transitionsData.data),
-  });
-  const vehiclesState = useDataState(vehiclesQuery);
+  } = useFSMTransitions(idStr, 'vehicle', 24, 1, 5);
 
   const isCompact = size.cols <= 1;
 
@@ -148,55 +156,36 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
 
   const hasData = segments.length > 0;
 
+  /* Freshness: merge from both queries */
+  const updatedAt = Math.max(statsUpdatedAt ?? 0, transitionsUpdatedAt ?? 0);
+  const isFetching = statsFetching || transitionsFetching;
+  const isStale = statsStale || transitionsStale;
+  const isError = statsIsError || transitionsIsError;
   // Keep the skeleton up while the default vehicle is still resolving from
   // useVehicles: the FSM queries are disabled for an empty id and would report
   // "not loading", so without this gate the widget flashes its empty state
   // before the first fetch can even start.
   const isLoading =
     statsLoading || transitionsLoading || (vehicleId == null && vehiclesLoading);
-  const handleRefresh = useCallback(() => {
-    if (!idStr) {
-      void vehiclesQuery.refetch();
-      return;
-    }
-    void refetchStats();
-    void refetchTransitions();
-  }, [idStr, vehiclesQuery.refetch, refetchStats, refetchTransitions]);
-  const hasPayload = statsState.hasData || transitionsState.hasData;
-  const sourceError = statsState.fatalError ?? transitionsState.fatalError;
-  const combined = combineDataStates([statsState, transitionsState]);
-  const mergedState = {
-    ...combined,
-    data: statsData ?? transitionsData,
-    hasData: hasPayload,
-    fatalError: hasPayload ? null : sourceError,
-    refreshError: hasPayload ? combined.refreshError ?? sourceError : null,
-    status: !hasPayload && sourceError ? 'initialFailure' as const : combined.status,
-    retry: handleRefresh,
-  };
-  const resolvingVehicle = !idStr && !hasPayload;
-  const state = resolvingVehicle ? vehiclesState : isCompact ? { ...statsState, retry: handleRefresh } : mergedState;
-  const sourceTimes = [
-    statsState.hasData ? statsUpdatedAt : 0,
-    transitionsState.hasData ? transitionsUpdatedAt : 0,
-  ].filter((value): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0);
-  const updatedAt = resolvingVehicle
-    ? vehiclesQuery.dataUpdatedAt
-    : sourceTimes.length > 0 ? Math.min(...sourceTimes) : 0;
-  const isFetching = resolvingVehicle ? vehiclesQuery.isFetching : statsFetching || transitionsFetching;
-  const isStale = resolvingVehicle ? vehiclesQuery.isStale : statsStale || transitionsStale;
-  const isError = resolvingVehicle ? vehiclesQuery.isError : statsIsError || transitionsIsError;
+  // Surface the primary (stats) fetch failure through the shell so a genuine
+  // error is distinguishable from a legitimately-empty distribution instead of
+  // both collapsing into the same "no data" placeholder.
+  const shellError = statsError ? String(statsError) : null;
 
-  /* Compact view: state with the largest share of recorded time */
+  const handleRefresh = useCallback(() => {
+    refetchStats();
+    refetchTransitions();
+  }, [refetchStats, refetchTransitions]);
+
+  /* Compact view: current state badge + time in current state */
   if (isCompact) {
     const currentState = segments[0]?.state ?? '—';
     const currentMs = segments[0]?.value ?? 0;
 
     return (
       <WidgetShell
-        title={t('widget.fsmDistribution.title', 'State distribution')}
         loading={isLoading}
-        dataState={state}
+        error={shellError}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -209,12 +198,12 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               className="inline-block h-3 w-3 rounded-full"
               style={{ backgroundColor: stateColor(currentState) }}
             />
-            <WidgetBigNumber
-              value={t(`widget.fsmDistribution.state.${currentState}`, currentState)}
-              subtitle={fmtDuration(currentMs, t)}
-              align="center"
-              size="secondary"
-            />
+            <span className="text-sm font-semibold text-[var(--text-primary)] capitalize">
+              {t(`widget.fsmDistribution.state.${currentState}`, currentState)}
+            </span>
+            <span className="text-xs text-[var(--text-secondary)]">
+              {fmtDuration(currentMs, t)}
+            </span>
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -230,31 +219,21 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
   /* Standard (2×4) view: donut chart + transitions feed */
   return (
     <WidgetShell
-      title={t('widget.fsmDistribution.title', 'State distribution')}
+      title={t('widget.fsmDistribution.title', 'State Distribution')}
       icon={<GitBranch className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
-      dataState={state}
+      error={shellError}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="flex flex-col gap-3 h-full">
-        <SourceContent
-          state={statsState.fatalError ? 'error' : !statsState.hasData && statsLoading ? 'loading' : !hasData ? 'empty' : statsState.refreshError ? 'retained' : 'ready'}
-          label={t('widget.fsmDistribution.title', 'State distribution')}
-          emptyMessage={t('widget.fsmDistribution.noData', 'No state data available')}
-          errorMessage={t('widget.fsmDistribution.statsError', 'State distribution could not be loaded.')}
-          error={statsState.fatalError}
-          errorRecovery={{ onRetry: () => { void refetchStats(); } }}
-          retainedMessage={t('widget.fsmDistribution.statsRetained', 'Previously loaded state distribution remains visible while it refreshes.')}
-          emptyContent={<EmptyState /* no-action: the widget header already exposes refresh for this source */
-            icon={<GitBranch className="h-5 w-5" />} message={t('widget.fsmDistribution.noData', 'No state data available')} className="py-4" />}
-        >
+      {hasData ? (
+        <div className="flex flex-col gap-3 h-full">
           {/* Donut chart */}
           <EmbeddedChart
-            title={t('widget.fsmDistribution.title', 'State distribution')}
+            title={t('widget.fsmDistribution.title', 'State Distribution')}
             ariaLabel={t(
               'widget.fsmDistribution.chartAria',
               'Time spent in each vehicle state',
@@ -270,7 +249,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
               {
                 key: 'pct',
                 label: t('widget.fsmDistribution.share', 'Share'),
-                format: (value) => `${fmtNumber(Number(value ?? 0))}%`,
+                format: (value) => `${fmtNumber(Number(value ?? 0), 1)}%`,
               },
             ]}
             className="flex-1 min-h-0"
@@ -308,43 +287,41 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                   className="inline-block h-2 w-2 rounded-full flex-shrink-0"
                   style={{ backgroundColor: stateColor(seg.state) }}
                 />
-                <Caption className="break-words">
+                <span className="text-2xs text-[var(--text-secondary)] capitalize">
                   {t(`widget.fsmDistribution.state.${seg.state}`, seg.state)}
-                </Caption>
-                <Caption className="tabular-nums">
-                  {fmtNumber(seg.pct)}%
-                </Caption>
+                </span>
+                <span className="text-2xs text-[var(--text-muted)] tabular-nums">
+                  {fmtInt(seg.pct)}%
+                </span>
               </div>
             ))}
           </div>
 
-        </SourceContent>
-
           {/* Transitions feed */}
-            <div className="flex min-w-0 flex-col gap-0.5 overflow-y-auto">
-              <Subhead className="break-words">
-                {t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}
-              </Subhead>
-              <SourceContent
-                state={transitionsState.fatalError ? 'error' : !transitionsState.hasData && transitionsLoading ? 'loading' : transitions.length === 0 ? 'empty' : transitionsState.refreshError ? 'retained' : 'ready'}
-                label={t('widget.fsmDistribution.recentTransitions', 'Recent transitions')}
-                emptyMessage={t('widget.fsmDistribution.noTransitions', 'No recent transitions')}
-                errorMessage={t('widget.fsmDistribution.transitionsError', 'Recent transitions could not be loaded.')}
-                error={transitionsState.fatalError}
-                errorRecovery={{ onRetry: () => { void refetchTransitions(); } }}
-                retainedMessage={t('widget.fsmDistribution.transitionsRetained', 'Previously loaded transitions remain visible while they refresh.')}
-              >
+          {transitions.length > 0 && (
+            <div className="flex flex-col gap-0.5 overflow-y-auto">
+              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+                {t('widget.fsmDistribution.recentTransitions', 'Recent Transitions')}
+              </span>
               {transitions.map((tr) => (
-                <FSMTransitionRow
+                <TransitionRow
                   key={tr.id}
                   from={tr.from_state ?? '—'}
                   to={tr.to_state ?? '—'}
                   timestamp={tr.ts ?? ''}
+                  t={t}
                 />
               ))}
-              </SourceContent>
             </div>
-      </div>
+          )}
+        </div>
+      ) : (
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          icon={<GitBranch className="h-5 w-5" />}
+          message={t('widget.fsmDistribution.noData', 'No state data available')}
+          className="py-4"
+        />
+      )}
     </WidgetShell>
   );
 }

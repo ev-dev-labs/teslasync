@@ -4,15 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { useBehavioralSentinel } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { EvidencePanel, InsightPanel } from '../components';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 20;
 
@@ -29,21 +28,22 @@ function severityVariant(severity: string) {
 }
 
 export default function BehavioralSentinelPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useState(1);
   const query = useBehavioralSentinel(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const findings = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.sentinel.title', 'Behavioral sentinel'));
+  usePageTitle(t('advancedIntelligence.sentinel.title', 'Behavioral Sentinel'));
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.sentinel.title', 'Behavioral sentinel')}
+    <PageContainer
+      title={t('advancedIntelligence.sentinel.title', 'Behavioral Sentinel')}
       subtitle={t(
         'advancedIntelligence.sentinel.subtitle',
         'Explainable command, identity, and telemetry-integrity signals without personal attribution.',
       )}
+      loading={vehicleId != null && query.isLoading}
+      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="warning"
@@ -57,7 +57,6 @@ export default function BehavioralSentinelPage() {
 
       <FadeIn>
         <InsightPanel
-          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.sentinel.findings.title', 'Explainable findings')}
           empty={findings.length === 0}
           emptyMessage={vehicleId == null
@@ -81,7 +80,7 @@ export default function BehavioralSentinelPage() {
                       <Badge variant={severityVariant(finding.severity)}>{finding.severity}</Badge>
                       <Badge variant="neutral">
                         {t('advancedIntelligence.sentinel.confidence', '{{value}}% confidence', {
-                          value: fmtNumber(finding.confidence_pct),
+                          value: fmtNumber(finding.confidence_pct, 1),
                         })}
                       </Badge>
                     </div>
@@ -137,6 +136,6 @@ export default function BehavioralSentinelPage() {
           ]}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

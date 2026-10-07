@@ -156,8 +156,8 @@ export default function ReleaseNotes({ limit = 3 }: Props) {
                 aria-labelledby={triggerId}
                 className="border-t border-white/[0.06] px-4 pb-4 pt-3"
               >
-                <p className="text-xs font-medium tracking-wider text-[var(--text-muted)] mb-2">
-                  {t('changelog.releaseNotes.heading', "What's new")}
+                <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">
+                  {t('changelog.releaseNotes.heading', "What's New")}
                 </p>
                 <ul className="space-y-1.5">
                   {(release.changes ?? []).map((item, i) => (

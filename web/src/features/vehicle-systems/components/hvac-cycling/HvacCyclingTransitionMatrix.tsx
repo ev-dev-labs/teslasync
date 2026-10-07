@@ -1,12 +1,18 @@
+import { ArrowLeftRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, MetricValue, Text } from '@/components/ui';
-
+import { Grid } from '@/components/layout';
+import {
+  GlassPanel,
+  MetricLabel,
+  MetricValue,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
+import { fmtInt } from '@/lib/numberFormat';
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingTransitionMatrixProps {
   summary: HvacCyclingSummary;
@@ -14,7 +20,6 @@ interface HvacCyclingTransitionMatrixProps {
 }
 
 function MatrixCell({ label, value }: { label: string; value: number }) {
-  const { fmtInt } = useNumberFormatting();
   return (
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <MetricLabel>{label}</MetricLabel>
@@ -32,7 +37,11 @@ export function HvacCyclingTransitionMatrix({
 
   return (
     <section data-testid="hvac-cycling-transition-matrix">
-      <LayoutCard title={t('hvacCycling.transitions.title', 'Observed transition matrix')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <ArrowLeftRight className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('hvacCycling.transitions.title', 'Observed transition matrix')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.transitions.subtitle',
@@ -74,7 +83,7 @@ export function HvacCyclingTransitionMatrix({
             )}
           </Text>
         </HvacCyclingSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

@@ -16,14 +16,13 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { DataStateNotice, ErrorDisplay, StaleRefreshWarning } from '@/components/feedback';
+import { DataStateNotice, ErrorDisplay } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { ApiError } from '@/lib/resilience';
 import { useMyRecentActivity } from '@/api/hooks/useUser';
@@ -40,7 +39,7 @@ const ACTIVITY_LIMIT = 200;
 
 export default function MyActivityPage() {
   const { t } = useTranslation();
-  usePageTitle(t('activity.myActivity.title', 'My activity'));
+  usePageTitle(t('activity.myActivity.title', 'My Activity'));
 
   const { start, end } = useRangeState({
     persistKey: 'my-activity.range',
@@ -49,16 +48,13 @@ export default function MyActivityPage() {
   });
 
   const query = useMyRecentActivity({ start, end, limit: ACTIVITY_LIMIT });
-  const { data, isLoading, refetch } = query;
-  const state = useDataState(query, { provenance: 'historical' });
-  const error = state.fatalError;
-  const isError = !!error;
+  const { data, isLoading, isError, error, refetch } = query;
 
   // Stabilise the array identity so the derived-analytics memo below and the
   // feed panel don't churn on every render while the query is pending (when
   // `data` is undefined, `data ?? []` would otherwise be a fresh array each time).
   const entries = useMemo(() => data ?? [], [data]);
-  const apiError = query.error instanceof ApiError ? query.error : null;
+  const apiError = error instanceof ApiError ? error : null;
   const featureDisabled = apiError?.status === 503;
   const unauthenticated = apiError?.status === 401;
   const hardGate = featureDisabled || unauthenticated;
@@ -78,15 +74,14 @@ export default function MyActivityPage() {
 
 
   return (
-    <PageLayout
-      title={t('activity.myActivity.title', 'My activity')}
+    <PageContainer
+      title={t('activity.myActivity.title', 'My Activity')}
       subtitle={t(
         'activity.myActivity.subtitle',
         'Recent actions you have taken in TeslaSync.',
       )}
       query={query}
     >
-      <StaleRefreshWarning state={state} />
       {hardGate ? (
         <FadeIn>
           <GlassPanel className="p-4 sm:p-6">
@@ -103,16 +98,14 @@ export default function MyActivityPage() {
                 )}
               />
             ) : (
-              <ErrorDisplay error={query.error} />
+              <ErrorDisplay error={error} />
             )}
           </GlassPanel>
         </FadeIn>
       ) : (
         <>
           <FadeIn>
-            <MyActivityKpiBand kpis={analytics.kpis} isLoading={isLoading && !state.hasData}
-              available={state.hasData} retained={state.hasData && query.isError}
-              scope={t('activity.myActivity.brief.range', 'Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.', { start, end, limit: ACTIVITY_LIMIT })} />
+            <MyActivityKpiBand kpis={analytics.kpis} isLoading={isLoading} />
           </FadeIn>
 
           <FadeIn delay={0.1}>
@@ -183,6 +176,6 @@ export default function MyActivityPage() {
           </FadeIn>
         </>
       )}
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -428,24 +428,6 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
 });
 
 describe('ChatbotPage — history sidebar toggle + persistence', () => {
-  it('uses the shared mobile drawer with Escape dismissal and focus restoration', async () => {
-    setMatchMedia(true);
-    installRequest({ sessions: [session('s1')] });
-    renderPage();
-    const trigger = screen.getByRole('button', { name: 'History' });
-    trigger.focus();
-    fireEvent.click(trigger);
-    const dialog = await screen.findByRole('dialog', { name: 'History' });
-    expect(dialog).toHaveAttribute('aria-modal', 'true');
-    expect(document.body.style.overflow).toBe('hidden');
-    expect(await screen.findByRole('button', { name: 'select s1' })).toBeInTheDocument();
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'History' })).toBeNull());
-    await waitFor(() => expect(trigger).toHaveFocus());
-    expect(trigger).toHaveAttribute('aria-pressed', 'false');
-    expect(window.localStorage.getItem('teslasync-chatbot-history-visible')).toBe('false');
-  });
-
   it('opens/closes the sidebar, lists sessions, and persists visibility to localStorage', async () => {
     installRequest({ sessions: [session('s1'), session('s2')] });
     renderPage();

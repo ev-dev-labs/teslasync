@@ -15,20 +15,18 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
 import { formatDurationMinutes } from '@/lib/dateFormat';
-
+import { fmtNumber, fmtWithUnit, fmtInt } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
 import { distanceAddedM } from './charging-curve/helpers';
 import {
   durationMinutes,
   avgPowerW,
-  batteryFriendlyScore,
   costPerKwh,
   getChargerCategory,
   type ChargerCategory,
   type ChargingAnomaly,
 } from '@/lib/chargingAggregation';
 import { Icons } from '@/lib/icons';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export { getChargerCategory };
 export { formatDurationMinutes as formatDuration };
@@ -64,13 +62,12 @@ export function ChargingSessionCard({
   anomaly,
   density = 'comfortable',
 }: ChargingSessionCardProps) {
-  const { fmtWithUnit, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('charging');
   const { formatCurrency } = useFormatting();
   const cat = getChargerCategory(session.charger_type);
   const chargerLabels: Record<ChargerCategory, string> = {
     supercharger: t('chargerTypes.supercharger', 'Supercharger'),
-    dc: t('chargerTypes.dc', 'DC fast'),
+    dc: t('chargerTypes.dc', 'DC Fast'),
     home: t('chargerTypes.home', 'Home / AC'),
     unknown: t('chargerTypes.unknown', 'Charger'),
   };
@@ -88,14 +85,28 @@ export function ChargingSessionCard({
   const addedM = distanceAddedM(session);
   const rangeAddedDisplay = addedM != null ? toDistanceDisplay(addedM) : null;
   const energyKwh = (session.total_energy_added_wh ?? 0) / 1000;
-  const isFree = session.cost_decimal === 0;
+  const isFree = session.cost_decimal == null || session.cost_decimal === 0;
 
   const showCheckbox = typeof onToggleSelect === 'function';
 
   // Battery-friendly score for the leading badge — derived per session
   // so each row's badge reflects whether the charge stayed in the
   // healthy 30→80 % sweet spot.
-  const sessionScore = useMemo(() => batteryFriendlyScore([session]), [session]);
+  const sessionScore = useMemo(() => {
+    const start = session.start_soc_pct;
+    const end = session.end_soc_pct;
+    if (start == null || end == null) return null;
+    let s = 50;
+    if (start <= 30) s += 30;
+    else if (start <= 50) s += 15;
+    else if (start <= 70) s += 0;
+    else s -= 10;
+    if (end <= 80) s += 20;
+    else if (end <= 90) s += 0;
+    else if (end < 100) s -= 10;
+    else s -= 25;
+    return Math.max(0, Math.min(100, s));
+  }, [session.start_soc_pct, session.end_soc_pct]);
 
   const checkbox = showCheckbox ? (
     <Checkbox
@@ -175,7 +186,7 @@ export function ChargingSessionCard({
         />
       )}
       {cpk != null && (
-        <span className="text-[var(--text-muted)]">({formatCurrency(cpk)}/kWh)</span>
+        <span className="text-[var(--text-muted)]">({formatCurrency(cpk, 2)}/kWh)</span>
       )}
       {typeof rangeAddedDisplay === 'number' && rangeAddedDisplay > 0 && (
         <span className="flex items-center gap-1 text-purple-300">
@@ -207,7 +218,7 @@ export function ChargingSessionCard({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-11 w-11 p-0"
+                className="h-9 w-9 p-0"
                 aria-label={t('quickView', 'Quick view charging session')}
                 title={t('quickView', 'Quick view charging session')}
                 onClick={() => onPreview(session)}

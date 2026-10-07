@@ -126,7 +126,7 @@ describe('NormalizationCoverageKpis', () => {
       screen.getByText('No samples were observed in this window'),
     ).toBeInTheDocument();
     // The exact regression this page exists to prevent.
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
   });
 
@@ -142,7 +142,7 @@ describe('NormalizationCoverageKpis', () => {
     });
 
     // Rows WERE observed and none were attested — that is a real 0 %.
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.0%')).toBeInTheDocument();
     expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
     expect(screen.getByText('0 of 500 rows')).toBeInTheDocument();
   });
@@ -158,7 +158,7 @@ describe('NormalizationCoverageKpis', () => {
       }),
     });
 
-    expect(screen.getByText('75.00%')).toBeInTheDocument();
+    expect(screen.getByText('75.0%')).toBeInTheDocument();
     expect(screen.getByText('750 of 1,000 rows')).toBeInTheDocument();
     expect(screen.getByText('250')).toBeInTheDocument();
     expect(screen.getByText('v1')).toBeInTheDocument();
@@ -185,7 +185,7 @@ describe('NormalizationCoverageKpis', () => {
 
   it('keeps showing cached values during a background refetch', () => {
     renderBand({ loading: true });
-    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('80.0%')).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
@@ -210,6 +210,6 @@ describe('NormalizationCoverageKpis', () => {
     expect(screen.getByText('Samples in window')).toBeInTheDocument();
     // Coverage has no measurement, so it must read Unknown, not 0.0%.
     expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
   });
 });

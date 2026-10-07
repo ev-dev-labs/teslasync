@@ -192,7 +192,7 @@ describe('HealthOverview — query states', () => {
     );
 
     const qe = screen.getByTestId('query-error');
-    expect(qe).toHaveAttribute('data-resource', 'Drivetrain health');
+    expect(qe).toHaveAttribute('data-resource', 'Drivetrain Health');
     expect(screen.getByTestId('query-error-msg')).toHaveTextContent('boom');
     // Error wins over stale data + suppresses the alert / glow.
     expect(screen.queryByTestId('section-title')).toBeNull();
@@ -228,13 +228,13 @@ describe('HealthOverview — populated (good)', () => {
     expect(screen.queryByTestId('alert-banner')).toBeNull();
     expect(panel()).toHaveAttribute('data-glow', 'green');
 
-    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain healthy');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain Healthy');
 
     const badge = screen.getByTestId('badge');
     expect(badge).toHaveAttribute('data-variant', 'success');
     expect(badge).toHaveAttribute('data-size', 'lg');
     expect(badge).toHaveAttribute('data-dot', 'true');
-    expect(badge).toHaveTextContent('Good');
+    expect(badge).toHaveTextContent('GOOD');
 
     const score = screen.getByTestId('animated-number');
     expect(score).toHaveAttribute('data-value', '95');
@@ -254,7 +254,7 @@ describe('HealthOverview — populated (warning)', () => {
     expect(within(panel()).queryByTestId('icon-check')).toBeNull();
     expect(panel()).toHaveAttribute('data-glow', 'cyan');
 
-    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain running warm');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain Running Warm');
     expect(screen.getByTestId('badge')).toHaveAttribute('data-variant', 'warning');
     expect(screen.getByTestId('metric-value')).toHaveClass('text-amber-300');
     expect(screen.getByTestId('animated-number')).toHaveAttribute('data-value', '60');
@@ -266,7 +266,7 @@ describe('HealthOverview — populated (warning)', () => {
     const alert = screen.getByTestId('alert-banner');
     expect(alert).toHaveAttribute('data-variant', 'warning');
     expect(within(alert).getByTestId('alert-title')).toHaveTextContent(
-      'Elevated temperatures detected',
+      'Elevated Temperatures Detected',
     );
     expect(within(alert).getByTestId('alert-body')).toHaveTextContent(
       'above normal operating range',
@@ -279,7 +279,7 @@ describe('HealthOverview — populated (critical)', () => {
     render(<HealthOverview {...makeProps({ overallHealth: 'critical', healthScore: 25 })} />);
 
     expect(panel()).toHaveAttribute('data-glow', 'purple');
-    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain overheating');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain Overheating');
     expect(screen.getByTestId('badge')).toHaveAttribute('data-variant', 'danger');
     expect(screen.getByTestId('metric-value')).toHaveClass('text-rose-300');
   });
@@ -290,7 +290,7 @@ describe('HealthOverview — populated (critical)', () => {
     const alert = screen.getByTestId('alert-banner');
     expect(alert).toHaveAttribute('data-variant', 'danger');
     expect(within(alert).getByTestId('alert-title')).toHaveTextContent(
-      'Critical temperature warning',
+      'Critical Temperature Warning',
     );
     expect(within(alert).getByTestId('alert-body')).toHaveTextContent(
       'critically high temperatures',
@@ -329,21 +329,21 @@ describe('HealthOverview — alert suppression', () => {
 describe('HealthOverview — hardening', () => {
   it('shows the motor status when present', () => {
     render(<HealthOverview {...makeProps({ motorStatus: 'Driving' })} />);
-    expect(screen.getByTestId('motor-state')).toHaveTextContent('Motor state: Driving');
+    expect(screen.getByTestId('motor-state')).toHaveTextContent('Motor State: Driving');
   });
 
   it('falls back to "—" for an empty motor status (no dangling label)', () => {
     render(<HealthOverview {...makeProps({ motorStatus: '' })} />);
 
     const line = screen.getByTestId('motor-state');
-    expect(line).toHaveTextContent('Motor state: —');
+    expect(line).toHaveTextContent('Motor State: —');
     // The label must never dangle with a bare trailing colon.
     expect(line.textContent?.endsWith(': ')).toBe(false);
   });
 
   it('falls back to "—" for a whitespace-only motor status', () => {
     render(<HealthOverview {...makeProps({ motorStatus: '   ' })} />);
-    expect(screen.getByTestId('motor-state')).toHaveTextContent('Motor state: —');
+    expect(screen.getByTestId('motor-state')).toHaveTextContent('Motor State: —');
   });
 
   it('renders a non-finite health score as 0, not "NaN%"', () => {
@@ -368,8 +368,8 @@ describe('HealthOverview — a11y', () => {
     render(<HealthOverview {...makeProps({ overallHealth: 'critical' })} />);
 
     // Status is carried by title + badge text, not colour alone.
-    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain overheating');
-    expect(screen.getByTestId('badge')).toHaveTextContent('Critical');
+    expect(screen.getByTestId('section-title')).toHaveTextContent('Drivetrain Overheating');
+    expect(screen.getByTestId('badge')).toHaveTextContent('CRITICAL');
 
     // The alert's own icon is decorative...
     const alert = screen.getByTestId('alert-banner');

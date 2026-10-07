@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({
   t: (_key: string, fallback: string) => fallback,
 }) }))
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) =>
+  PageContainer: ({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) =>
     <main><h1>{title}</h1><p>{subtitle}</p>{children}</main>,
 }))
 vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> }))

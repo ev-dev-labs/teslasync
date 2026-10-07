@@ -7,8 +7,8 @@
  * export" surface.
  */
 import { useTranslation } from 'react-i18next';
-import { Badge, HelperText } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, Badge } from '@/components/ui';
+import { PanelTitle, HelperText } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { Accordion } from '@/components/ui';
 import { ShieldCheck, ShieldAlert, EyeOff, Clock } from 'lucide-react';
@@ -23,19 +23,23 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
 
   if (!report) {
     return (
-      <LayoutCard title={t('resaleVault.preview.title', 'Privacy preview')}>
+      <GlassPanel padding="lg">
+        <PanelTitle>{t('resaleVault.preview.title', 'Privacy Preview')}</PanelTitle>
         <HelperText className="mt-2">
           {t('resaleVault.preview.empty', 'Build a report to see exactly what would be included, excluded, and warned about.')}
         </HelperText>
-      </LayoutCard>
+      </GlassPanel>
     );
   }
 
   const manifest = report.redaction_manifest;
 
   return (
-    <LayoutCard title={t('resaleVault.preview.title', 'Privacy preview')}
-      actions={<Badge variant="neutral">{report.report_id}</Badge>}>
+    <GlassPanel padding="lg" className="space-y-4">
+      <div className="flex items-center justify-between">
+        <PanelTitle>{t('resaleVault.preview.title', 'Privacy Preview')}</PanelTitle>
+        <Badge variant="neutral">{report.report_id}</Badge>
+      </div>
 
       <HelperText>
         {t('resaleVault.preview.timeBounds', 'Evidence window: {{earliest}} → {{latest}} ({{precision}} precision).', {
@@ -104,7 +108,7 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
 
       <div>
         <HelperText className="mb-1">{t('resaleVault.preview.limitations', 'Limitations')}</HelperText>
-        <ul className="list-disc ps-5 text-[var(--text-secondary)] space-y-1">
+        <ul className="list-disc pl-5 text-xs text-[var(--text-secondary)] space-y-1">
           {report.limitations.map((limitation, i) => (
             <li key={i}>{limitation}</li>
           ))}
@@ -114,6 +118,6 @@ export function PrivacyPreviewPanel({ report }: PrivacyPreviewPanelProps) {
       <InlineCallout variant="info" icon={<ShieldCheck />}>
         {report.attestation_statement}
       </InlineCallout>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

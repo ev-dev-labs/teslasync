@@ -2,13 +2,11 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceToSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Unit-aware render-boundary helpers for SI-canonical cold-start evidence. */
 export function useColdStartDisplay() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
   const distanceUnit = units.unitPrefs.distance;
@@ -26,9 +24,9 @@ export function useColdStartDisplay() {
   const formatEfficiency = useCallback(
     (whPerKm: number | null | undefined) =>
       whPerKm != null && Number.isFinite(whPerKm)
-        ? `${fmtNumber(convertEfficiency(whPerKm))} ${efficiencyUnit}`
+        ? `${fmtNumber(convertEfficiency(whPerKm), 0)} ${efficiencyUnit}`
         : '—',
-    [convertEfficiency, efficiencyUnit, fmtNumber],
+    [convertEfficiency, efficiencyUnit],
   );
 
   const formatMonth = useCallback(

@@ -8,7 +8,7 @@ import 'react-resizable/css/styles.css';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Button as UiButton, GlassPanel, Modal, SectionTitle } from '@/components/ui';
+import { Button as UiButton, GlassPanel } from '@/components/ui';
 import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import { kioskPanelStyle } from '../lib/kioskAppearance';
@@ -89,14 +89,14 @@ function FullscreenOverlay({
   const { t } = useTranslation();
 
   return (
-    <Modal open onClose={onClose} ariaLabel={def.name} size="fullscreen">
-      <div className="flex shrink-0 flex-wrap items-start justify-between gap-3 pb-4">
-        <SectionTitle className="min-w-0 break-words">{def.name}</SectionTitle>
-        <UiButton variant="ghost" size="sm" className="min-h-11" data-autofocus onClick={onClose}>
-          <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit fullscreen')}
+    <div className="fixed inset-0 z-50 bg-[var(--surface-overlay)] backdrop-blur-xl p-6 flex flex-col">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{def.name}</h2>
+        <UiButton variant="ghost" size="sm" onClick={onClose}>
+          <Minimize2 className="h-4 w-4 mr-1" /> {t('dashboard.grid.exitFullscreen', 'Exit Fullscreen')}
         </UiButton>
       </div>
-      <GlassPanel className="min-h-0 flex-1 overflow-hidden">
+      <GlassPanel className="flex-1 overflow-hidden">
         <Suspense fallback={<Skeleton className="h-full" />}>
           <Component
             vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
@@ -105,7 +105,7 @@ function FullscreenOverlay({
           />
         </Suspense>
       </GlassPanel>
-    </Modal>
+    </div>
   );
 }
 
@@ -371,35 +371,20 @@ export function DashboardGrid({
       const baselineRows = Math.max(item.minH ?? def.minSize.rows, def.defaultSize.rows);
       const baselineHeight = baselineRows * ROW_HEIGHT + (baselineRows - 1) * marginY;
       const priorHeight = panel.style.height;
-      const priorTransition = panel.style.getPropertyValue('transition-property');
-      const priorTransitionPriority = panel.style.getPropertyPriority('transition-property');
-      let contentHeight: number;
-      try {
-        // Even the reduced-motion 0.01ms transition delays this synchronous read.
-        panel.style.setProperty('transition-property', 'none', 'important');
-        panel.style.height = `${baselineHeight}px`;
-        const nestedOverflow = Array.from(panel.querySelectorAll<HTMLElement>('*')).reduce((largest, element) => {
-          const overflow = element.scrollHeight - element.clientHeight;
-          if (overflow <= 4) return largest;
-          const overflowY = getComputedStyle(element).overflowY;
-          return overflowY === 'auto' || overflowY === 'scroll'
-            ? Math.max(largest, overflow)
-            : largest;
-        }, 0);
-        contentHeight = panel.clientHeight + Math.max(
-          panel.scrollHeight - panel.clientHeight,
-          nestedOverflow,
-        );
-      } finally {
-        panel.style.height = priorHeight;
-        // Commit the restored box before transitions can animate from the reference size.
-        void panel.offsetHeight;
-        if (priorTransition) {
-          panel.style.setProperty('transition-property', priorTransition, priorTransitionPriority);
-        } else {
-          panel.style.removeProperty('transition-property');
-        }
-      }
+      panel.style.height = `${baselineHeight}px`;
+      const nestedOverflow = Array.from(panel.querySelectorAll<HTMLElement>('*')).reduce((largest, element) => {
+        const overflow = element.scrollHeight - element.clientHeight;
+        if (overflow <= 4) return largest;
+        const overflowY = getComputedStyle(element).overflowY;
+        return overflowY === 'auto' || overflowY === 'scroll'
+          ? Math.max(largest, overflow)
+          : largest;
+      }, 0);
+      const contentHeight = panel.clientHeight + Math.max(
+        panel.scrollHeight - panel.clientHeight,
+        nestedOverflow,
+      );
+      panel.style.height = priorHeight;
       if (contentHeight <= 0) continue;
       const maxH = item.maxH ?? def.maxSize.rows;
       const hNew = Math.max(baselineRows, Math.min(rowsForHeight(contentHeight, ROW_HEIGHT, marginY), maxH));
@@ -614,7 +599,6 @@ export function DashboardGrid({
         data-widget-id={widget.id}
         className={cn(
           'widget-container relative group',
-          !editMode && '[--dashboard-widget-chrome-inset:4rem]',
           // Mobile: become a flex column so the GlassPanel + nested
           // `h-full` widget content resolve to the wrapper's min-height.
           mobile && 'flex flex-col min-h-[12rem]',
@@ -639,9 +623,9 @@ export function DashboardGrid({
             variant="ghost"
             size="sm"
             onClick={() => setFullscreenWidget(widget.id)}
-            className="absolute top-2 right-2 z-10 h-11 w-11 p-0 rounded-lg bg-[var(--surface-overlay)]
+            className="absolute top-2 right-2 z-10 h-auto p-1.5 rounded-lg bg-[var(--surface-overlay)]
               text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-overlay)]
-              opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all"
+              opacity-0 group-hover:opacity-100 transition-all"
             aria-label={t('dashboard.grid.expandLabel', 'Expand {{name}}', { name: def.name })}
           >
             <Maximize2 className="h-3.5 w-3.5" />
@@ -662,7 +646,7 @@ export function DashboardGrid({
             // (RGL v2 merges `react-grid-item` onto the container root, so
             // transform animations must live here, not on the item.)
             'widget-panel w-full overflow-y-auto rounded-xl',
-            mobile ? 'flex flex-1 min-h-0 flex-col' : 'h-full',
+            mobile ? 'flex-1 min-h-0' : 'h-full',
             showWidgetBorders && 'border border-[var(--border-subtle)]',
             panelStyle && 'kiosk-panel',
           )}

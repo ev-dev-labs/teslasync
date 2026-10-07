@@ -5,7 +5,7 @@
     "view": "View",
     "viewNamed": "View achievement: {{name}}",
     "dismiss": "Dismiss achievement notification",
-    "toastEyebrow": "Achievement unlocked",
+    "toastEyebrow": "Achievement Unlocked",
     "celebrationSettings": "Celebration",
     "showToasts": "Show celebration toasts",
     "showToastsHelp": "Pop a celebratory toast with confetti when you unlock an achievement.",

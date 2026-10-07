@@ -17,11 +17,10 @@ import {
   type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationDatum extends ChartDataRow {
   state: string;
@@ -33,7 +32,6 @@ export function TransitionDestinationChart({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const data = useMemo<DestinationDatum[]>(
     () =>
@@ -69,7 +67,7 @@ export function TransitionDestinationChart({
               }),
       },
     ],
-    [t, fmtInt, fmtNumber],
+    [t],
   );
 
   return (

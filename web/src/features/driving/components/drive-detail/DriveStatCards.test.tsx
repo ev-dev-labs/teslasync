@@ -192,19 +192,19 @@ describe('DriveStatCards — km preference', () => {
     render(<DriveStatCards drive={makeDrive()} stats={makeStats()} />);
 
     // Distance: 32 000 m → 32.0 km via the REAL converter.
-    expect(screen.getByText('32.00 km')).toBeInTheDocument();
+    expect(screen.getByText('32.0 km')).toBeInTheDocument();
     // Duration: 2700 s → 45 min via the REAL formatDuration.
     expect(screen.getByText('45m')).toBeInTheDocument();
     // Speeds carry the metric suffix.
-    expect(screen.getByText('95.00 km/h')).toBeInTheDocument();
-    expect(screen.getByText('60.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('95 km/h')).toBeInTheDocument();
+    expect(screen.getByText('60 km/h')).toBeInTheDocument();
     // SOC start → end.
-    expect(screen.getByText(`82.00% ${ARROW} 68.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`82% ${ARROW} 68%`)).toBeInTheDocument();
     // Max power through the REAL fmtWithUnit.
     expect(screen.getByText(fmtWithUnit(250, 'kW'))).toBeInTheDocument();
     // Elevation gain / loss rounded with directional arrows.
-    expect(screen.getByText(`120.00 m ${UP}`)).toBeInTheDocument();
-    expect(screen.getByText(`85.00 m ${DOWN}`)).toBeInTheDocument();
+    expect(screen.getByText(`120 m ${UP}`)).toBeInTheDocument();
+    expect(screen.getByText(`85 m ${DOWN}`)).toBeInTheDocument();
 
     // Every stat label is present as accessible text.
     for (const label of ['Distance', 'Duration', 'Max Speed', 'Avg Speed', 'SOC', 'Max Power', 'Elev. Gain', 'Elev. Loss']) {
@@ -212,10 +212,10 @@ describe('DriveStatCards — km preference', () => {
     }
   });
 
-  it('preserves fractional elevation until display formatting', () => {
+  it('rounds elevation to whole metres before display', () => {
     render(<DriveStatCards drive={makeDrive()} stats={makeStats({ elevGain: 119.7, elevLoss: 84.2 })} />);
-    expect(screen.getByText(`119.70 m ${UP}`)).toBeInTheDocument();
-    expect(screen.getByText(`84.20 m ${DOWN}`)).toBeInTheDocument();
+    expect(screen.getByText(`120 m ${UP}`)).toBeInTheDocument();
+    expect(screen.getByText(`84 m ${DOWN}`)).toBeInTheDocument();
   });
 
   it('formats a multi-hour duration as "1h 30m"', () => {
@@ -234,9 +234,9 @@ describe('DriveStatCards — mi preference', () => {
     render(<DriveStatCards drive={makeDrive()} stats={makeStats()} />);
 
     // 32 000 m / 1609.344 = 19.884 → 19.9 mi.
-    expect(screen.getByText('19.88 mi')).toBeInTheDocument();
-    expect(screen.getByText('95.00 mph')).toBeInTheDocument();
-    expect(screen.getByText('60.00 mph')).toBeInTheDocument();
+    expect(screen.getByText('19.9 mi')).toBeInTheDocument();
+    expect(screen.getByText('95 mph')).toBeInTheDocument();
+    expect(screen.getByText('60 mph')).toBeInTheDocument();
     // The interpolated cost label follows the display unit.
     expect(screen.getByText('Cost / mi')).toBeInTheDocument();
     expect(screen.queryByText('Cost / km')).not.toBeInTheDocument();
@@ -265,7 +265,7 @@ describe('DriveStatCards — SOC null safety', () => {
         stats={makeStats()}
       />,
     );
-    expect(screen.getByText(`82.00% ${ARROW} ${DASH}`)).toBeInTheDocument();
+    expect(screen.getByText(`82% ${ARROW} ${DASH}`)).toBeInTheDocument();
   });
 
   it('still renders a genuine 0% reading as "0%", not a placeholder', () => {
@@ -275,7 +275,7 @@ describe('DriveStatCards — SOC null safety', () => {
         stats={makeStats()}
       />,
     );
-    expect(screen.getByText(`5.00% ${ARROW} 0.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`5% ${ARROW} 0%`)).toBeInTheDocument();
   });
 });
 
@@ -292,8 +292,8 @@ describe('DriveStatCards — cost tiles', () => {
     // Cost-per-distance reads SI metres, not display units.
     expect(fmt.costPerDistanceUnit).toHaveBeenCalledWith(7.2, 32000);
     // The per-unit tile renders at 3-dp currency precision.
-    expect(fmt.formatCurrency).toHaveBeenCalledWith(0.25);
-    expect(screen.getByText('$0.25')).toBeInTheDocument();
+    expect(fmt.formatCurrency).toHaveBeenCalledWith(0.25, 3);
+    expect(screen.getByText('$0.250')).toBeInTheDocument();
     expect(screen.getByText('$0.72')).toBeInTheDocument();
   });
 
@@ -319,8 +319,8 @@ describe('DriveStatCards — cost tiles', () => {
     fmt.costPerDistanceUnit.mockReturnValueOnce(null);
     render(<DriveStatCards drive={makeDrive()} stats={makeStats({ energyWh: 7200 })} />);
 
-    expect(fmt.formatCurrency).toHaveBeenCalledWith(0);
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(fmt.formatCurrency).toHaveBeenCalledWith(0, 3);
+    expect(screen.getByText('$0.000')).toBeInTheDocument();
   });
 });
 

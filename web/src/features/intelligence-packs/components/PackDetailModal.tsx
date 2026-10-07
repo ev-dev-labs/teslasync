@@ -22,7 +22,6 @@ import { TrustDistinctionNote } from './TrustDistinctionNote';
 import { PublisherFingerprintDisplay } from './PublisherFingerprintDisplay';
 import { CapabilityRequestList } from './CapabilityRequestList';
 import { CompatibilityBadge } from './CompatibilityBadge';
-import { PackRecommendations } from './PackRecommendations';
 import type { CatalogEntryWithStatus } from '../hooks/useCatalog';
 import type { PackCapabilityId } from '../lib/manifestTypes';
 import type { TrustDecisionKind } from '../lib/trust';
@@ -149,8 +148,6 @@ export function PackDetailModal({ entry, open, onClose }: PackDetailModalProps) 
               </li>
             </ul>
           </section>
-
-          <PackRecommendations recommendations={manifest.automationRecommendations} />
 
           {installability === 'blocked' && (
             <AlertBanner variant="danger" title={t('intelPacks.detail.blockedTitle', 'This pack cannot be installed')} icon={<ShieldAlert className="h-4 w-4" />}>

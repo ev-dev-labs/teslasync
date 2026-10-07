@@ -101,11 +101,6 @@ import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import MonthlyMileageWidget, { shortMonth, currentMonthKey } from './MonthlyMileageWidget';
 
-it.each([1, 2, 3])('identifies monthly mileage at %i columns', (cols) => {
-  renderWidget({ size: { cols, rows: 4 } });
-  expect(screen.getByRole('heading', { name: 'Monthly mileage' })).toBeInTheDocument();
-});
-
 const mockMileage = useMonthlyMileage as unknown as ReturnType<typeof vi.fn>;
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 
@@ -137,15 +132,13 @@ function makeBucket(over: Partial<MonthlyMileageBucket> = {}): MonthlyMileageBuc
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
+  return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <MonthlyMileageWidget size={{ cols: 2, rows: 2 }} {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Monthly mileage');
-  return view;
 }
 
 beforeEach(() => {
@@ -205,9 +198,9 @@ describe('MonthlyMileageWidget — standard layout + conversion', () => {
     );
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByRole('heading', { name: 'Monthly mileage' })).toBeInTheDocument();
-    expect(screen.getByText('This month')).toBeInTheDocument();
-    expect(screen.getByText('12-month total')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Monthly Mileage' })).toBeInTheDocument();
+    expect(screen.getByText('This Month')).toBeInTheDocument();
+    expect(screen.getByText('12-Mo Total')).toBeInTheDocument();
     // 100 km (this month) and 300 km (12-mo total) render as plain integers.
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('300')).toBeInTheDocument();
@@ -255,7 +248,7 @@ describe('MonthlyMileageWidget — standard layout + conversion', () => {
     expect(screen.queryByText('100,119')).not.toBeInTheDocument();
   });
 
-  it('keeps an unknown month and incomplete total unknown without leaking NaN', () => {
+  it('coalesces a null total_km to 0 without leaking NaN', () => {
     mockMileage.mockReturnValue(
       makeQuery({
         data: [
@@ -266,15 +259,15 @@ describe('MonthlyMileageWidget — standard layout + conversion', () => {
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.queryByText('50')).not.toBeInTheDocument();
+    // Current month has a null distance → 0; total is the other bucket's 50.
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('50')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 });
 
 describe('MonthlyMileageWidget — compact layout', () => {
-  it('identifies the stats without adding a chart in the compact slot', () => {
+  it('renders the stats but no title and no chart in the compact (1-col) slot', () => {
     mockMileage.mockReturnValue(
       makeQuery({
         data: [
@@ -286,11 +279,11 @@ describe('MonthlyMileageWidget — compact layout', () => {
     const { container } = renderWidget({ size: { cols: 1, rows: 1 } });
 
     // Stats still render (100 this month, 150 total)...
-    expect(screen.getByText('This month')).toBeInTheDocument();
+    expect(screen.getByText('This Month')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('150')).toBeInTheDocument();
     // ...but the compact slot has no shell title and no chart.
-    expect(screen.getByRole('heading', { name: 'Monthly mileage' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Monthly Mileage' })).not.toBeInTheDocument();
     expect(container.querySelector('.recharts-responsive-container')).toBeNull();
   });
 });
@@ -302,7 +295,7 @@ describe('MonthlyMileageWidget — loading / empty', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
-    expect(screen.queryByText('This month')).not.toBeInTheDocument();
+    expect(screen.queryByText('This Month')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (not a blank panel) when no buckets have arrived', () => {
@@ -310,17 +303,16 @@ describe('MonthlyMileageWidget — loading / empty', () => {
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('No mileage data')).toBeInTheDocument();
-    expect(screen.queryByText('This month')).not.toBeInTheDocument();
+    expect(screen.queryByText('This Month')).not.toBeInTheDocument();
   });
 
-  it('renders genuine zero-distance buckets instead of calling them empty', () => {
+  it('treats all-zero-distance buckets as empty', () => {
     mockMileage.mockReturnValue(
-      makeQuery({ data: [makeBucket({ total_km: 0 }), makeBucket({ year_month: currentMonthKey(), total_km: 0 })] }),
+      makeQuery({ data: [makeBucket({ total_km: 0 }), makeBucket({ total_km: 0 })] }),
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
-    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.getByText('No mileage data')).toBeInTheDocument();
   });
 
   it('shows the compact empty state when no buckets have arrived', () => {
@@ -341,7 +333,7 @@ describe('MonthlyMileageWidget — error honesty', () => {
     // Honest error panel from WidgetShell (QueryError), not "No mileage data".
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
-    expect(screen.queryByText('This month')).not.toBeInTheDocument();
+    expect(screen.queryByText('This Month')).not.toBeInTheDocument();
   });
 
   it('keeps cached stats on screen when a background refetch errors', () => {
@@ -359,10 +351,9 @@ describe('MonthlyMileageWidget — error honesty', () => {
 
     // Data present → the error is a subtle freshness signal, not a full panel.
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    expect(screen.getByText('This month')).toBeInTheDocument();
+    expect(screen.getByText('This Month')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('150')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 
   it('keeps the compact stats on screen when a background refetch errors', () => {

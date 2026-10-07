@@ -46,7 +46,7 @@ vi.mock('@/hooks/useSettings', () => ({
 }));
 
 import { useSettings } from '@/hooks/useSettings';
-import { AIMqttSseInspectorExplanations } from '@/components/ai';
+import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 

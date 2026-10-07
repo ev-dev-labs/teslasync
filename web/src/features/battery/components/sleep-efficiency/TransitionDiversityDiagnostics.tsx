@@ -4,17 +4,15 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function TransitionDiversityDiagnostics({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtNumber, fmtScientificNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const transitions = analysis.transitions;
 
@@ -74,7 +72,7 @@ export function TransitionDiversityDiagnostics({
                 )}
                 value={
                   transitions.normalizedEntropy != null
-                    ? fmtScientificNumber(transitions.normalizedEntropy, 3)
+                    ? fmtNumber(transitions.normalizedEntropy, 3)
                     : '—'
                 }
                 color="purple"

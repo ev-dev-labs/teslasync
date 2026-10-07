@@ -104,34 +104,6 @@ afterEach(() => {
 // ── 1. Derivation branches ────────────────────────────────────────────────────
 
 describe('useSettings — derived flags', () => {
-  it('exposes the existing query refetch for read-only source recovery', async () => {
-    const { Wrapper } = makeWrapper()
-    const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
-    await waitFor(() => expect(result.current.settingsUnavailable).toBe(false))
-    const originalRefetch = result.current.refetch
-    vi.mocked(request).mockClear()
-    nextSettings = { locale: 'fr-FR', decimal_precision: 4 }
-
-    await act(async () => {
-      await result.current.refetch()
-    })
-
-    await waitFor(() => expect(result.current.locale).toBe('fr-FR'))
-    expect(result.current.decimals).toBe(4)
-    expect(result.current.refetch).toBe(originalRefetch)
-    expect(request).toHaveBeenCalledTimes(1)
-    expect(request).toHaveBeenCalledWith('/settings')
-  })
-
-  it('revalidates unit preferences when a page mounts with a still-fresh settings cache', async () => {
-    const { Wrapper, qc } = makeWrapper()
-    qc.setQueryData(['settings'], { unit_of_length: 'km', locale: 'en-US', decimal_precision: 2 })
-    nextSettings = { unit_of_length: 'mi', locale: 'en-US', decimal_precision: 2 }
-    const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
-    await waitFor(() => expect(result.current.isMiles).toBe(true))
-    expect(request).toHaveBeenCalledWith('/settings')
-  })
-
   it('derives the metric branch (km / C / bar / rated) from resolved settings', async () => {
     nextSettings = {
       unit_of_length: 'km',
@@ -145,7 +117,7 @@ describe('useSettings — derived flags', () => {
     const { Wrapper } = makeWrapper()
     const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
 
-    await waitFor(() => expect(result.current.settingsState.hasData).toBe(true))
+    await waitFor(() => expect(result.current.settings.unit_of_length).toBe('km'))
     expect(result.current.isMiles).toBe(false)
     expect(result.current.isFahrenheit).toBe(false)
     expect(result.current.isPSI).toBe(false)
@@ -153,7 +125,6 @@ describe('useSettings — derived flags', () => {
     expect(result.current.locale).toBe('en-US')
     expect(result.current.density).toBe('comfortable')
     expect(result.current.rangeType).toBe('rated')
-    expect(result.current.settingsUnavailable).toBe(false)
   })
 
   it('derives the imperial branch (mi / F / psi / ideal) from resolved settings', async () => {
@@ -186,21 +157,6 @@ describe('useSettings — derived flags', () => {
     await waitFor(() => expect(result.current.locale).toBe('de-DE'))
     expect(result.current.isPSI).toBe(false)
   })
-
-  it('retains configured pricing and downgrades trust when a refresh fails', async () => {
-    const { Wrapper, qc } = makeWrapper()
-    qc.setQueryData(['settings'], { locale: 'en-US', decimal_precision: 1, base_cost_per_kwh: 0.15 })
-    const failure = new Error('Settings unavailable')
-    vi.mocked(request).mockRejectedValueOnce(failure).mockRejectedValueOnce(failure)
-    const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
-
-    await waitFor(() => expect(result.current.settingsState.status).toBe('stale'), { timeout: 3000 })
-    expect(result.current.settingsUnavailable).toBe(false)
-    expect(result.current.settings.base_cost_per_kwh).toBe(0.15)
-    expect(result.current.settingsState.hasData).toBe(true)
-    expect(result.current.settingsState.fatalError).toBeNull()
-    expect(result.current.settingsState.refreshError).toBe(failure)
-  })
 })
 
 // ── 2. Default fallback while the query is pending ────────────────────────────
@@ -219,25 +175,10 @@ describe('useSettings — pending-query fallback', () => {
     expect(result.current.decimals).toBe(2)
     expect(result.current.density).toBe('comfortable')
     expect(result.current.rangeType).toBe('rated')
-    expect(result.current.settingsUnavailable).toBe(true)
-    expect(result.current.settingsState.hasData).toBe(false)
     // The post-commit effect must have synced the formatter globals even on
     // the defaults path (they were seeded to xx-XX / 0 in beforeEach).
     expect(getGlobalLocale()).toBe('en-US')
     expect(getGlobalPrecision()).toBe(2)
-  })
-
-  it('marks failed initial settings as unavailable rather than authorizing default prices', async () => {
-    const failure = new Error('Settings unavailable')
-    vi.mocked(request).mockRejectedValueOnce(failure).mockRejectedValueOnce(failure)
-    const { Wrapper } = makeWrapper()
-    const { result } = renderHook(() => useSettings(), { wrapper: Wrapper })
-
-    await waitFor(() => expect(result.current.settingsState.status).toBe('initialFailure'), { timeout: 3000 })
-    expect(result.current.settingsUnavailable).toBe(true)
-    expect(result.current.settingsState.hasData).toBe(false)
-    expect(result.current.settingsState.fatalError).toBe(failure)
-    expect(result.current.settingsState.retry).toEqual(expect.any(Function))
   })
 })
 

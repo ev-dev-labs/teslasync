@@ -4,12 +4,9 @@ import { fmtNumber } from '@/lib/numberFormat'
 import { convertDistanceFromSI } from '@/lib/unitConversion'
 import { useSettings } from './useSettings'
 import { useUnits } from './useUnits'
-import type { DataState } from '@/api/dataState'
-import type { AppSettings } from '@/api/types'
 
 export interface UseFormattingResult {
-  costPerKwh: number | null
-  pricingState: DataState<AppSettings>
+  costPerKwh: number
   currencySymbol: string
   formatEnergyCost: (kwh: number) => string
   formatCurrency: (amount: number, decimals?: number) => string
@@ -37,31 +34,29 @@ function normalizePrecision(value: unknown, fallback: number): number {
 }
 
 export function useFormatting(): UseFormattingResult {
-  const { settings, settingsUnavailable, settingsState: pricingState } = useSettings()
+  const { settings } = useSettings()
   const { unitPrefs } = useUnits()
 
-  const configuredRate = settings.base_cost_per_kwh ?? 0.12
-  const costPerKwh = settingsUnavailable || !Number.isFinite(configuredRate) ? null : configuredRate
+  const costPerKwh = settings.base_cost_per_kwh ?? 0.12
   const currencySymbol = settings.currency_symbol && settings.currency_symbol.trim() ? settings.currency_symbol : '$'
   const userPrecision = normalizePrecision(settings.decimal_precision, 2)
 
   const formatEnergyCost = useCallback((kwh: number): string => {
-    if (costPerKwh == null || !Number.isFinite(kwh)) return '—'
     const cost = kwh * costPerKwh
-    return `${currencySymbol}${fmtNumber(cost, userPrecision, unitPrefs.locale)}`
-  }, [costPerKwh, currencySymbol, userPrecision, unitPrefs.locale])
+    return `${currencySymbol}${fmtNumber(cost, userPrecision)}`
+  }, [costPerKwh, currencySymbol, userPrecision])
 
   const formatCurrency = useCallback((amount: number, decimals?: number): string => {
     const d = decimals === undefined ? userPrecision : normalizePrecision(decimals, userPrecision)
-    return `${currencySymbol}${fmtNumber(amount, d, unitPrefs.locale)}`
-  }, [currencySymbol, userPrecision, unitPrefs.locale])
+    return `${currencySymbol}${fmtNumber(amount, d)}`
+  }, [currencySymbol, userPrecision])
 
   /**
    * Calculate cost per user-preferred distance unit from SI meters.
    * @since SI cutover: distanceM input changed from legacy miles to SI meters.
    */
   const costPerDistanceUnit = useCallback((kwh: number, distanceM: number): number | null => {
-    if (costPerKwh == null || !Number.isFinite(kwh) || !Number.isFinite(distanceM) || distanceM <= 0) return null
+    if (!Number.isFinite(kwh) || !Number.isFinite(distanceM) || distanceM <= 0) return null
     const cost = kwh * costPerKwh
     const distance = convertDistanceFromSI(distanceM, unitPrefs.distance)
     return distance > 0 ? cost / distance : null
@@ -73,7 +68,6 @@ export function useFormatting(): UseFormattingResult {
    * @since SI cutover: distanceM input changed from legacy miles to SI meters.
    */
   const estimateGasCost = useCallback((distanceM: number): number | null => {
-    if (settingsUnavailable) return null
     const mpg = settings.gas_efficiency_mpg ?? 0
     const gasPrice = settings.gas_price_per_unit ?? 0
     if (!Number.isFinite(distanceM) || distanceM <= 0) return null
@@ -84,11 +78,10 @@ export function useFormatting(): UseFormattingResult {
       return gallonsUsed * FUEL.GALLONS_TO_LITERS * gasPrice
     }
     return gallonsUsed * gasPrice
-  }, [settingsUnavailable, settings.gas_efficiency_mpg, settings.gas_price_per_unit, settings.gas_unit])
+  }, [settings.gas_efficiency_mpg, settings.gas_price_per_unit, settings.gas_unit])
 
   return useMemo(() => ({
     costPerKwh,
-    pricingState,
     currencySymbol,
     formatEnergyCost,
     formatCurrency,
@@ -96,7 +89,6 @@ export function useFormatting(): UseFormattingResult {
     estimateGasCost,
   }), [
     costPerKwh,
-    pricingState,
     currencySymbol,
     formatEnergyCost,
     formatCurrency,

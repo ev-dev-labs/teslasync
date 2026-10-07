@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { Clock, Trash2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Card, Badge, Button, IconBox, Text, Caption, Code } from '@/components/ui';
+import { glassCardClasses } from '@/lib/tokens';
+import { Badge, Button, IconBox, Text, Caption, Code } from '@/components/ui';
 import { formatDate } from '@/lib/dateFormat';
 import type { APIKey } from '@/types/admin';
 import { KEY_ICON } from './constants';
@@ -38,9 +39,10 @@ export function ApiKeyCard({
   const displayName = apiKey.name || t('apiKeys.unnamed', 'Unnamed key');
 
   return (
-    <Card
+    <div
       className={cn(
-        'flex min-w-0 flex-col gap-3 transition-colors hover:border-[var(--panel-border-hover)]',
+        glassCardClasses.md,
+        'flex flex-col gap-3 transition-colors hover:border-white/[0.10]',
         expired && 'opacity-60',
       )}
     >
@@ -51,7 +53,7 @@ export function ApiKeyCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Text size="sm" weight="semibold" color="primary" className="break-words [overflow-wrap:anywhere]">
+            <Text size="sm" weight="semibold" color="primary" className="truncate">
               {displayName}
             </Text>
             <ApiKeyPermissionBadge perm={apiKey.permissions} />
@@ -67,7 +69,7 @@ export function ApiKeyCard({
               </Badge>
             )}
           </div>
-          <Code className="mt-1 block break-all">{apiKey.keyPrefix || '—'}</Code>
+          <Code className="mt-1 block truncate">{apiKey.keyPrefix || '—'}</Code>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -106,11 +108,11 @@ export function ApiKeyCard({
             : t('apiKeys.neverUsed', 'Never used')}
         </Caption>
         {apiKey.subject != null && apiKey.subject !== '' && (
-          <Caption className="break-words [overflow-wrap:anywhere]">
+          <Caption className="truncate">
             {t('apiKeys.signedInAs', 'Signed in as {{subject}}', { subject: apiKey.subject })}
           </Caption>
         )}
       </div>
-    </Card>
+    </div>
   );
 }

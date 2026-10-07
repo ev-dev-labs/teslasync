@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -15,15 +16,13 @@ import {
   ZAxis,
   axisTick,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeCentroidMapProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -34,7 +33,6 @@ export function ArchetypeCentroidMap({
   state,
   display,
 }: ArchetypeCentroidMapProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -62,8 +60,7 @@ export function ArchetypeCentroidMap({
 
   return (
     <section data-testid="drive-archetypes-centroid-map">
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t('archetypes.map.title', 'Archetype centroid map')}
         subtitle={t(
           'archetypes.map.subtitle',
@@ -81,21 +78,21 @@ export function ArchetypeCentroidMap({
         dataColumns={[
           { key: 'cluster', label: t('archetypes.common.cluster', 'Cluster') },
           { key: 'drives', label: t('archetypes.common.drives', 'Drives'), format: (value) => fmtInt(value) },
-          { key: 'distance', label: distanceName, format: (value) => fmtNumber(value) },
-          { key: 'speed', label: speedName, format: (value) => fmtNumber(value) },
+          { key: 'distance', label: distanceName, format: (value) => fmtNumber(value, 1) },
+          { key: 'speed', label: speedName, format: (value) => fmtNumber(value, 1) },
           {
             key: 'efficiency',
             label: t('archetypes.units.efficiencyColumn', 'Efficiency ({{unit}})', {
               unit: display.efficiencyUnit,
             }),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'temperature',
             label: t('archetypes.units.temperatureColumn', 'Temperature ({{unit}})', {
               unit: display.temperatureUnit,
             }),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
         ]}
       >
@@ -108,17 +105,17 @@ export function ArchetypeCentroidMap({
                 dataKey="distance"
                 name={distanceName}
                 tick={axisTick}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => fmtNumber(value, 0)}
               />
               <YAxis
                 type="number"
                 dataKey="speed"
                 name={speedName}
                 tick={axisTick}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => fmtNumber(value, 0)}
               />
               <ZAxis type="number" dataKey="drives" range={[90, 900]} />
-              <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtNumber(value)} />} />
+              <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtNumber(value, 1)} />} />
               <ChartLegend verticalAlign="top" align="right" />
               {summary.clusters.map((cluster, index) => (
                 <Scatter
@@ -132,7 +129,7 @@ export function ArchetypeCentroidMap({
             </ScatterChart>
           </ResponsiveContainer>
         </ArchetypeSectionBody>
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

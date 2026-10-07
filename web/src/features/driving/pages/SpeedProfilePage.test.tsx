@@ -178,13 +178,11 @@ vi.mock('@/components/charts', async () => {
       label,
       unit,
     }: {
-      value: number | null;
+      value: number;
       label: string;
       unit?: string;
     }) {
-      return React.createElement('div', {
-        'data-testid': `gauge-${label}`, 'data-reading': value == null ? 'missing' : String(value),
-      }, value == null ? '—' : `${value}${unit ?? ''}`);
+      return React.createElement('div', { 'data-testid': `gauge-${label}` }, `${value}${unit ?? ''}`);
     },
   };
 });
@@ -345,9 +343,9 @@ describe('SpeedProfilePage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
-    expect(screen.getByText('90.00 km/h')).toBeInTheDocument(); // avg 25 m/s → 90 km/h
-    expect(screen.getByText('144.00 km/h')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
-    expect(screen.getByText('54.00 km/h')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
+    expect(screen.getByText('90')).toBeInTheDocument(); // avg 25 m/s → 90 km/h
+    expect(screen.getByText('144')).toBeInTheDocument(); // peak 40 m/s → 144 km/h
+    expect(screen.getByText('54')).toBeInTheDocument(); // optimal 15 m/s → 54 km/h
     expect(screen.getByText('500')).toBeInTheDocument(); // total readings
     expect(screen.getByText('5 drives analysed')).toBeInTheDocument();
 
@@ -382,23 +380,23 @@ describe('SpeedProfilePage', () => {
     for (const range of ['0-15', '30-45', '60-75', '90+']) {
       expect(screen.getByText(range)).toBeInTheDocument();
     }
-    expect(screen.getByText('20.00%')).toBeInTheDocument(); // 100 / 500
-    expect(screen.getByText('42.00%')).toBeInTheDocument(); // 210 / 500
-    expect(screen.getByText('10.80 km/h')).toBeInTheDocument(); // 0-15 avg drive speed
-    expect(screen.getByText('120.00')).toBeInTheDocument(); // 0-15 efficiency
-    expect(screen.getByText('200.00')).toBeInTheDocument(); // 60-75 efficiency
+    expect(screen.getByText('20.0%')).toBeInTheDocument(); // 100 / 500
+    expect(screen.getByText('42.0%')).toBeInTheDocument(); // 210 / 500
+    expect(screen.getByText('11 km/h')).toBeInTheDocument(); // 0-15 avg drive speed
+    expect(screen.getByText('120')).toBeInTheDocument(); // 0-15 efficiency
+    expect(screen.getByText('200')).toBeInTheDocument(); // 60-75 efficiency
   });
 
   it('renders the efficiency insight at the optimal speed', () => {
     renderPage();
-    expect(screen.getByText(/Drives around 54\.00 km\/h show the best energy efficiency/)).toBeInTheDocument();
+    expect(screen.getByText(/Drives around 54 km\/h show the best energy efficiency/)).toBeInTheDocument();
   });
 
   it('re-converts every figure when unit prefs switch to mph / mi', () => {
     unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
     renderPage();
 
-    expect(screen.getByText('55.92 mph')).toBeInTheDocument(); // 25 m/s → 56 mph
+    expect(screen.getByText('56')).toBeInTheDocument(); // 25 m/s → 56 mph
     expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('56mph');
     // Efficiency unit label flips to Wh/mi (drive→bucket matching is unit-aware,
     // so the exact matched-card count is display-unit dependent — assert ≥1).
@@ -441,38 +439,15 @@ describe('SpeedProfilePage', () => {
     expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
   });
 
-  it('keeps the complete report outline and independent drive evidence while the profile loads', () => {
+  it('shows only the page spinner while the initial profile load is in flight', () => {
     speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ isLoading: true }));
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [] }));
     renderPage();
 
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Speed Envelope')).toBeInTheDocument();
-    expect(screen.getByText('Speed Buckets')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Insight')).toBeInTheDocument();
-    expect(captured.scatterData).toHaveLength(3);
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
+    // Panels are gated behind the container spinner.
+    expect(screen.queryByText('Speed Distribution')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();
-  });
-
-  it('retains both source derivations during refresh failures', () => {
-    const bytes = JSON.stringify(PROFILE);
-    speedProfileMock.mockReturnValue(makeQuery<SpeedProfileData>({ data: PROFILE, error: new Error('profile refresh') }));
-    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES, error: new Error('drive refresh') }));
-    renderPage();
-    expect(captured.barChartData).toHaveLength(4);
-    expect(captured.scatterData).toHaveLength(3);
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    expect(JSON.stringify(PROFILE)).toBe(bytes);
-  });
-
-  it('keeps missing and nonfinite speeds distinct from a measured zero at the display boundary', () => {
-    speedProfileMock.mockReturnValue(makeQuery({
-      data: { ...PROFILE, avgSpeedMps: null, peakSpeedMps: Number.NaN, optimalSpeedMps: 0 },
-    }));
-    renderPage();
-    expect(screen.getByTestId('gauge-Avg Speed')).toHaveAttribute('data-reading', 'missing');
-    expect(screen.getByTestId('gauge-Peak Speed')).toHaveAttribute('data-reading', 'missing');
-    expect(screen.getByTestId('gauge-Optimal Speed')).toHaveAttribute('data-reading', '0');
   });
 
   it('sends the header-owned range to the profile query without a local picker', () => {

@@ -1,14 +1,11 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import WarrantyResaleVaultPage from './WarrantyResaleVaultPage';
 import { __resetKeyRepositoryForTests } from '../lib/signingKeyRepository';
 import { __resetAuditTrailForTests } from '../lib/auditTrail';
-import * as reportSigner from '../lib/reportSigner';
-import * as auditTrail from '../lib/auditTrail';
-import type { VaultReport } from '../lib/types';
 
 const requestMock = vi.fn();
 vi.mock('@/api/client', () => ({
@@ -60,11 +57,10 @@ function renderPage() {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     </MemoryRouter>
   );
-  return { ...render(<WarrantyResaleVaultPage />, { wrapper: Wrapper }), client };
+  return render(<WarrantyResaleVaultPage />, { wrapper: Wrapper });
 }
 
 describe('WarrantyResaleVaultPage', () => {
-  afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     selectedVehicleId = 1;
     requestMock.mockReset();
@@ -116,97 +112,5 @@ describe('WarrantyResaleVaultPage', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: /audit trail/i }));
     await waitFor(() => expect(screen.getByText(/no activity yet/i)).toBeInTheDocument());
-  });
-
-  it('preserves selected report evidence and provenance through one denied source refresh and its own recovery', async () => {
-    const sign = vi.spyOn(reportSigner, 'signReport').mockImplementation(async (report) => ({
-      report, digest_sha256_hex: 'abc',
-      signature: {
-        alg: 'ECDSA_P256_SHA256', key_id: 'key_mock', public_key_jwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
-        signature_b64: 'sig', signed_at: '2024-01-01T00:00:00Z',
-      },
-      local_key_status: { persisted: false, revoked: false },
-    }));
-    vi.spyOn(auditTrail, 'recordAuditEvent').mockImplementation(async (action, detail) => ({
-      id: 'audit_mock', ts: '2024-01-01T00:00:00Z', action, detail,
-    }));
-    const { client } = renderPage();
-    expect(await screen.findByText('95.00%')).toBeInTheDocument();
-    expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
-
-    requestMock.mockImplementation((path: string) => path.includes('/battery-passport')
-      ? Promise.reject(Object.assign(new Error('Forbidden'), { status: 403 }))
-      : Promise.resolve(routeResponse(path)));
-    await act(async () => { await client.invalidateQueries({ queryKey: ['battery-passport', '1'] }); });
-    expect(await screen.findByText(/Previously loaded data remains visible/)).toBeInTheDocument();
-    expect(screen.getByText('95.00%')).toBeInTheDocument();
-    expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
-    expect(screen.getByText('Basic')).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: /Battery health Data found Included/ })).toBeInTheDocument();
-    expect(screen.getByRole('row', { name: /Warranty Data found Included/ })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
-    await waitFor(() => expect(sign).toHaveBeenCalledOnce());
-    const report = sign.mock.calls[0]?.[0];
-    expect(report?.evidence.battery?.capacity_wh).toBe(74000);
-    expect(report?.evidence.battery?.source_provenance_hash).toBe('abc');
-    expect(report?.evidence.warranty?.data).toEqual({ plan: 'Basic' });
-    expect(report?.evidence.vehicle_identity?.vin_full).toBeNull();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Evidence' }));
-    requestMock.mockImplementation((path: string) => Promise.resolve(routeResponse(path)));
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(screen.queryByText(/Previously loaded data remains visible/)).not.toBeInTheDocument());
-    expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
-    expect(screen.getByText('Basic')).toBeInTheDocument();
-  });
-
-  it('wires custom section, VIN and timestamp controls to the actual signed report without mutating unselected inventory', async () => {
-    const sign = vi.spyOn(reportSigner, 'signReport').mockImplementation(async (report) => ({
-      report, digest_sha256_hex: 'abc',
-      signature: {
-        alg: 'ECDSA_P256_SHA256', key_id: 'key_mock', public_key_jwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
-        signature_b64: 'sig', signed_at: '2024-01-01T00:00:00Z',
-      },
-      local_key_status: { persisted: false, revoked: false },
-    }));
-    vi.spyOn(auditTrail, 'recordAuditEvent').mockImplementation(async (action, detail) => ({
-      id: 'audit_mock', ts: '2024-01-01T00:00:00Z', action, detail,
-    }));
-    renderPage();
-    expect(await screen.findByText('95.00%')).toBeInTheDocument();
-    expect(sign).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('tab', { name: 'Disclosure profile' }));
-    fireEvent.click(screen.getByDisplayValue('custom'));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Battery health' }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'VIN disclosure' }), { target: { value: 'full' } });
-    fireEvent.click(screen.getByRole('switch', { name: 'Use exact timestamps' }));
-    expect(screen.getByText(/identifying information/)).toBeInTheDocument();
-    expect(screen.getByText(/easier to correlate/)).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Preview & sign' }));
-    expect(screen.getByText(/vehicle_identity.vin_full/)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Sign report' }));
-    await waitFor(() => expect(sign).toHaveBeenCalledOnce());
-    const report: VaultReport | undefined = sign.mock.calls[0]?.[0];
-    expect(report?.disclosure.profileId).toBe('custom');
-    expect(report?.disclosure.sections).not.toContain('battery');
-    expect(report?.disclosure.sensitive).toEqual({ vinDisclosure: 'full', exactTimestamps: true });
-    expect(report?.evidence.battery).toBeNull();
-    expect(report?.evidence.vehicle_identity?.vin_full).toBe('5YJ3E1EA7KF123456');
-    expect(report?.time_bounds.precision).toBe('exact');
-    expect(report?.redaction_manifest.excluded_by_selection).toEqual(expect.arrayContaining([
-      expect.objectContaining({ field: 'evidence.battery' }),
-    ]));
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Evidence' }));
-    expect(screen.getByRole('row', { name: /Battery health Data found Excluded by profile/ })).toBeInTheDocument();
-    expect(screen.getByText('95.00%')).toBeInTheDocument();
-    expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('tab', { name: 'Disclosure profile' }));
-    expect(screen.getByRole('checkbox', { name: 'Battery health' })).not.toBeChecked();
-    expect(screen.getByRole('combobox', { name: 'VIN disclosure' })).toHaveValue('full');
-    expect(screen.getByRole('switch', { name: 'Use exact timestamps' })).toBeChecked();
   });
 });

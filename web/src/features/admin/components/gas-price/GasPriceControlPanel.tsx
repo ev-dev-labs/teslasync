@@ -60,7 +60,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
         <QueryError
           error={error}
           onRetry={() => void refetch()}
-          resourceName={t('gas.title', 'Gas price auto-poll')}
+          resourceName={t('gas.title', 'Gas Price Auto-Poll')}
         />
       ) : isLoading && !data ? (
         <div className="space-y-4" aria-hidden="true">
@@ -73,7 +73,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-1">
                 <Toggle
-                  label={t('gas.autoPoll', 'Auto-poll')}
+                  label={t('gas.autoPoll', 'Auto-Poll')}
                   checked={enabled}
                   onChange={(next) => toggleMut.mutate(next)}
                 />
@@ -103,7 +103,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
           </div>
 
           <Select
-            label={t('gas.pollInterval', 'Poll interval')}
+            label={t('gas.pollInterval', 'Poll Interval')}
             value={interval}
             onChange={(e) => configMut.mutate(e.target.value)}
             options={intervalOptions}
@@ -115,7 +115,7 @@ export function GasPriceControlPanel({ query }: GasPriceControlPanelProps) {
 
           <div className="mt-auto flex items-start gap-2 pt-1">
             <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-            <Caption>{t('gas.source', 'Source: u.S. Energy information administration')}</Caption>
+            <Caption>{t('gas.source', 'Source: U.S. Energy Information Administration')}</Caption>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -14,19 +15,16 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
-import { Badge, MetricLabel, Table, Text } from '@/components/ui';
+import { Badge, MetricLabel, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeCandidateModels({
   summary,
   state,
 }: ArchetypeSectionProps) {
-  const { fmtScientificNumber, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -60,8 +58,7 @@ export function ArchetypeCandidateModels({
 
   return (
     <section data-testid="drive-archetypes-candidates">
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t('archetypes.candidates.title', 'Candidate-k model selection')}
         subtitle={t(
           'archetypes.candidates.subtitle',
@@ -84,9 +81,9 @@ export function ArchetypeCandidateModels({
         dataColumns={[
           { key: 'model', label: t('archetypes.candidates.model', 'Candidate') },
           { key: 'realized', label: t('archetypes.candidates.realized', 'Realized clusters') },
-          { key: 'silhouette', label: silhouetteName, format: (value) => fmtScientificNumber(value, 3) },
-          { key: 'inertia', label: t('archetypes.candidates.inertia', 'Inertia'), format: (value) => fmtNumber(value) },
-          { key: 'agreement', label: agreementName, format: (value) => fmtScientificNumber(value, 3) },
+          { key: 'silhouette', label: silhouetteName, format: (value) => fmtNumber(value, 3) },
+          { key: 'inertia', label: t('archetypes.candidates.inertia', 'Inertia'), format: (value) => fmtNumber(value, 2) },
+          { key: 'agreement', label: agreementName, format: (value) => fmtNumber(value, 3) },
           { key: 'smallest', label: t('archetypes.candidates.smallest', 'Smallest cluster') },
           { key: 'largest', label: t('archetypes.candidates.largest', 'Largest cluster') },
           { key: 'selected', label: t('archetypes.candidates.decision', 'Decision') },
@@ -104,8 +101,8 @@ export function ArchetypeCandidateModels({
               <BarChart data={rows} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-white/10" />
                 <XAxis dataKey="model" tick={axisTick} tickLine={false} axisLine={false} />
-                <YAxis domain={[-1, 1]} tick={axisTick} tickFormatter={(value) => fmtNumber(value)} />
-                <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtScientificNumber(value, 3)} />} />
+                <YAxis domain={[-1, 1]} tick={axisTick} tickFormatter={(value) => fmtNumber(value, 1)} />
+                <Tooltip content={<ChartTooltip valueFormatter={(value) => fmtNumber(value, 3)} />} />
                 <ChartLegend verticalAlign="top" align="right" />
                 <Bar
                   dataKey="silhouette"
@@ -124,9 +121,8 @@ export function ArchetypeCandidateModels({
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <Table className="min-w-[760px]" aria-label={t('archetypes.candidates.title', 'Candidate-k model selection')}>
-
-            <thead><tr>
+          <div className="overflow-x-auto rounded-xl border border-[var(--border-subtle)]">
+            <div className="grid min-w-[760px] grid-cols-7 gap-2 bg-[var(--surface-2)] px-3 py-2">
               {[
                 t('archetypes.candidates.model', 'Candidate'),
                 silhouetteName,
@@ -135,38 +131,31 @@ export function ArchetypeCandidateModels({
                 t('archetypes.candidates.realized', 'Realized clusters'),
                 t('archetypes.candidates.clusterRange', 'Smallest / largest'),
                 t('archetypes.candidates.decision', 'Decision'),
-              ].map((label, index) => (
-                <th key={label} scope="col" className={index > 0 && index < 6 ? 'text-right' : undefined}>
-                  <MetricLabel>{label}</MetricLabel>
-                </th>
-              ))}
-            </tr></thead>
-            <tbody>
+              ].map((label) => <MetricLabel key={label}>{label}</MetricLabel>)}
+            </div>
             {rows.map((row) => (
-              <tr
+              <div
                 key={row.k}
                 className={cn(
+                  'grid min-w-[760px] grid-cols-7 gap-2 border-t border-[var(--border-subtle)] px-3 py-2',
                   row.selected === t('archetypes.common.selected', 'Selected') && 'bg-cyan-500/5',
                 )}
               >
-                <th scope="row"><Text variant="bodySm">{row.model}</Text></th>
-                <td className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.silhouette, 3)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtScientificNumber(row.agreement, 3)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtNumber(row.inertia)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtInt(row.realized)}</Text></td>
-                <td className="text-right"><Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text></td>
-                <td>
+                <Text variant="bodySm">{row.model}</Text>
+                <Text variant="bodySm">{fmtNumber(row.silhouette, 3)}</Text>
+                <Text variant="bodySm">{fmtNumber(row.agreement, 3)}</Text>
+                <Text variant="bodySm">{fmtNumber(row.inertia, 2)}</Text>
+                <Text variant="bodySm">{fmtInt(row.realized)}</Text>
+                <Text variant="bodySm">{fmtInt(row.smallest)} / {fmtInt(row.largest)}</Text>
                 <Badge variant={row.selected === t('archetypes.common.selected', 'Selected') ? 'success' : 'neutral'}>
                   {row.selected}
                 </Badge>
-                </td>
-              </tr>
+              </div>
             ))}
-            </tbody>
-          </Table>
+          </div>
           </ArchetypeSectionBody>
         )}
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

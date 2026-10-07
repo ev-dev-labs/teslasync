@@ -98,7 +98,7 @@ vi.mock('@/components/charts', () => {
     CartesianGrid: () => null,
     ChartLegend: () => null,
     ChartTooltip: () => null,
-    EmbeddedChart: ({
+    ChartContainer: ({
       children,
       title,
       ariaLabel,
@@ -312,7 +312,7 @@ describe('PreconditioningEffectivenessPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Preconditioning effectiveness',
+      name: 'Preconditioning Effectiveness',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.climateHook).toHaveBeenLastCalledWith('7');

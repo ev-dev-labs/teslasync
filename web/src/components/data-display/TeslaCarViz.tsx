@@ -4,17 +4,16 @@ import { useTheme } from '@/components/ui/ThemeProvider'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { batteryColor, boolColor } from '@/lib/colors'
 import { cn } from '@/lib/cn'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 export type TeslaModel = 'model3' | 'models' | 'modely' | 'modelx' | 'cybertruck'
 
 interface TeslaCarVizProps {
-  batteryLevel: number | null
-  isCharging: boolean | null
-  isLocked: boolean | null
-  isClimateOn: boolean | null
-  sentryMode: boolean | null
-  speed: number | null
+  batteryLevel: number
+  isCharging: boolean
+  isLocked: boolean
+  isClimateOn: boolean
+  sentryMode: boolean
+  speed: number
   className?: string
   size?: 'sm' | 'md' | 'lg'
   model?: TeslaModel
@@ -223,7 +222,6 @@ export function TeslaCarViz({
   model = 'model3',
 }: TeslaCarVizProps) {
   const { t } = useTranslation()
-  const { fmtPercent } = useNumberFormatting()
   const palette = useSvgPalette()
   // Continuous/infinite loop animations (spinning wheels, pulsing lights,
   // sentry rings, speed lines) are suppressed under `prefers-reduced-motion:
@@ -233,9 +231,9 @@ export function TeslaCarViz({
   const { reduce } = useMotionPreference()
   // Guard against an out-of-range model key (callers may cast a raw string).
   if (!(model in WHEEL_POS)) model = 'model3'
-  const level = batteryLevel != null && Number.isFinite(batteryLevel) ? clampPercent(batteryLevel) : null
-  const batClr = level == null ? palette.statusInactive : batteryColor(level)
-  const driving = speed != null && Number.isFinite(speed) && speed > 0
+  const level = clampPercent(batteryLevel)
+  const batClr = batteryColor(level)
+  const driving = speed > 0
   // Semantic "is the car driving" state (used for the a11y summary and
   // static headlight-on styling) stays true even under reduced motion —
   // only the *looping* animations gated on `driving` are suppressed.
@@ -247,9 +245,9 @@ export function TeslaCarViz({
   // Accessible summary of the car's live state for screen readers — the SVG is
   // otherwise an unlabelled graphic. Mirrors the status chips rendered below.
   const statusLabel = [
-    `${t('vehicle.viz.battery', 'Battery')} ${level == null ? '—' : fmtPercent(level)}`,
+    `${t('vehicle.viz.battery', 'Battery')} ${level}%`,
     isCharging ? t('vehicle.viz.charging', 'Charging') : null,
-    isLocked == null ? null : isLocked ? t('vehicle.viz.locked', 'Locked') : t('vehicle.viz.unlocked', 'Unlocked'),
+    isLocked ? t('vehicle.viz.locked', 'Locked') : t('vehicle.viz.unlocked', 'Unlocked'),
     driving ? t('vehicle.viz.driving', 'Driving') : null,
     isClimateOn ? t('vehicle.viz.climate', 'Climate') : null,
     sentryMode ? t('vehicle.viz.sentry', 'Sentry') : null,
@@ -468,12 +466,12 @@ export function TeslaCarViz({
           height="8"
           fill={batClr}
           initial={{ width: 0 }}
-          animate={{ width: ((level ?? 0) / 100) * 260 }}
+          animate={{ width: (level / 100) * 260 }}
           transition={{ duration: 1.5, ease: 'easeOut' }}
           style={{ filter: `drop-shadow(0 0 6px ${batClr})` }}
         />
         <text x={WHEEL_POS[model].batX + 135} y={WHEEL_POS[model].batY + 8} textAnchor="middle" fill={palette.battery.text} fontSize="6" fontWeight="bold" opacity="0.7">
-          {level == null ? '—' : fmtPercent(level)}
+          {level}%
         </text>
 
         {/* Charging cable + plug animation */}
@@ -512,9 +510,7 @@ export function TeslaCarViz({
         {/* Lock indicator */}
         <g transform={`translate(${WHEEL_POS[model].lockX}, ${WHEEL_POS[model].lockY})`}>
           <rect x="-10" y="-8" width="20" height="16" rx="4" fill={palette.lock.bg} />
-          {isLocked == null ? (
-            <text x="0" y="4" textAnchor="middle" fill={palette.battery.text}>—</text>
-          ) : isLocked ? (
+          {isLocked ? (
             <g>
               <rect x="-5" y="-2" width="10" height="8" rx="2" fill="none" stroke="#10b981" strokeWidth="1.2" />
               <path d="M-3 -2 L-3 -5 A3 3 0 0 1 3 -5 L3 -2" fill="none" stroke="#10b981" strokeWidth="1.2" />
@@ -597,15 +593,15 @@ export function TeslaCarViz({
       {/* Status indicators below car */}
       <div className="absolute bottom-0 flex items-center gap-3 text-2xs font-medium">
         <StatusDot
-          active={isCharging === true}
+          active={isCharging}
           color="#10b981"
-          label={isCharging == null ? '—' : isCharging ? t('vehicle.viz.charging', 'Charging') : t('vehicle.viz.notCharging', 'Not Charging')}
+          label={isCharging ? t('vehicle.viz.charging', 'Charging') : t('vehicle.viz.notCharging', 'Not Charging')}
           palette={palette}
         />
         <StatusDot
-          active={isLocked === true}
-          color={isLocked == null ? palette.statusInactive : boolColor(isLocked)}
-          label={isLocked == null ? '—' : isLocked ? t('vehicle.viz.locked', 'Locked') : t('vehicle.viz.unlocked', 'Unlocked')}
+          active={isLocked}
+          color={boolColor(isLocked)}
+          label={isLocked ? t('vehicle.viz.locked', 'Locked') : t('vehicle.viz.unlocked', 'Unlocked')}
           palette={palette}
         />
         {isClimateOn && <StatusDot active color="#00f0ff" label={t('vehicle.viz.climate', 'Climate')} palette={palette} />}
@@ -642,15 +638,13 @@ const MINI_PATHS: Record<TeslaModel, string> = {
 /** Mini version for cards/lists */
 export function TeslaCarMini({ batteryLevel, isCharging, model }: { batteryLevel: number; isCharging: boolean; model?: TeslaModel }) {
   const { t } = useTranslation()
-  const { fmtPercent } = useNumberFormatting()
   const palette = useSvgPalette()
   const level = clampPercent(batteryLevel)
   const color = batteryColor(level)
   const m: TeslaModel = model && model in MINI_PATHS ? model : 'model3'
-  const displayLevel = Number.isFinite(batteryLevel) ? fmtPercent(level) : '—'
   const miniLabel = isCharging
-    ? `${t('vehicle.viz.battery', 'Battery')} ${displayLevel}, ${t('vehicle.viz.charging', 'Charging')}`
-    : `${t('vehicle.viz.battery', 'Battery')} ${displayLevel}`
+    ? `${t('vehicle.viz.battery', 'Battery')} ${level}%, ${t('vehicle.viz.charging', 'Charging')}`
+    : `${t('vehicle.viz.battery', 'Battery')} ${level}%`
   return (
     <svg width="64" height={m === 'modelx' ? 34 : 32} viewBox={m === 'modelx' ? '0 0 64 34' : '0 0 64 32'} fill="none" role="img" aria-label={miniLabel}>
       <path

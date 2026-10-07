@@ -4,7 +4,6 @@ import { Download, AlertTriangle, Package } from 'lucide-react';
 import { Modal, Button, Badge, CopyButton } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { MiniGridPreview } from './MiniGridPreview';
 import { toUrlSafeBase64, buildMinimalExport } from '../hooks/validateImport';
 import type { SavedDashboard } from '../widgets/types';
@@ -17,7 +16,6 @@ interface ExportModalProps {
 }
 
 export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModalProps) {
-  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDate } = useDateFormat();
 
@@ -28,8 +26,9 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
 
   const jsonSize = useMemo(() => {
     const bytes = new Blob([dashboardJson]).size;
-    return formatBytes(bytes);
-  }, [dashboardJson, formatBytes]);
+    if (bytes < 1024) return `${bytes} B`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }, [dashboardJson]);
 
   // Compute the shareable URL eagerly so we can validate length and disable the
   // copy button up-front (instead of letting users click through to a silent
@@ -56,7 +55,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
     <Modal
       open={open}
       onClose={onClose}
-      title={t('export.title', 'Export dashboard')}
+      title={t('export.title', 'Export Dashboard')}
       size="md"
       className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)]"
     >
@@ -94,7 +93,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             onClick={handleDownload}
           >
             <Download className="h-4 w-4 mr-2" />
-            {t('export.downloadFile', 'Download JSON file')}
+            {t('export.downloadFile', 'Download JSON File')}
           </Button>
 
           <CopyButton
@@ -102,7 +101,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             variant="ghost"
             size="md"
             withToast
-            label={t('export.copyClipboard', 'Copy to clipboard')}
+            label={t('export.copyClipboard', 'Copy to Clipboard')}
             className="w-full justify-start"
           />
 
@@ -112,7 +111,7 @@ export function ExportModal({ open, onClose, dashboard, onDownload }: ExportModa
             size="md"
             withToast
             disabled={shareUrlTooLong}
-            label={t('export.copyShareUrl', 'Copy shareable URL')}
+            label={t('export.copyShareUrl', 'Copy Shareable URL')}
             className="w-full justify-start"
           />
         </div>

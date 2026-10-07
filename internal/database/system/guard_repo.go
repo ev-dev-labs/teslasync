@@ -28,7 +28,6 @@ import (
 	"fmt"
 	"time"
 
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -120,60 +119,6 @@ func (r *GuardRepo) VehicleExists(ctx context.Context, vehicleID int64) (bool, e
 		return false, fmt.Errorf("guard: probe vehicle existence: %w", err)
 	}
 	return exists, nil
-}
-
-const guardConfigSQL = `
-SELECT vehicle_id, enabled, home_geofence_id, sensitivity, auto_panic, created_at, updated_at
-FROM vehicle_guard_config WHERE vehicle_id = $1
-`
-
-const guardUpsertConfigSQL = `
-INSERT INTO vehicle_guard_config (vehicle_id, enabled, home_geofence_id, sensitivity, auto_panic)
-VALUES ($1, $2, $3, $4, $5)
-ON CONFLICT (vehicle_id) DO UPDATE
-SET enabled = EXCLUDED.enabled, home_geofence_id = EXCLUDED.home_geofence_id,
-    sensitivity = EXCLUDED.sensitivity, auto_panic = EXCLUDED.auto_panic, updated_at = now()
-RETURNING vehicle_id, enabled, home_geofence_id, sensitivity, auto_panic, created_at, updated_at
-`
-
-// GetConfig returns nil when no configuration has been saved, not invented defaults.
-func (r *GuardRepo) GetConfig(ctx context.Context, vehicleID int64) (*vehiclemodel.GuardConfig, error) {
-	cfg, err := scanGuardConfig(r.pool.QueryRow(ctx, guardConfigSQL, vehicleID))
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("guard.config: load vehicle %d: %w", vehicleID, err)
-	}
-	return cfg, nil
-}
-
-// UpsertConfig returns the persisted timestamps, preserving created_at on updates.
-func (r *GuardRepo) UpsertConfig(ctx context.Context, cfg *vehiclemodel.GuardConfig) (*vehiclemodel.GuardConfig, error) {
-	saved, err := scanGuardConfig(r.pool.QueryRow(ctx, guardUpsertConfigSQL,
-		cfg.VehicleID, cfg.Enabled, cfg.HomeGeofenceID, cfg.Sensitivity, cfg.AutoPanic))
-	if err != nil {
-		return nil, fmt.Errorf("guard.config: save vehicle %d: %w", cfg.VehicleID, err)
-	}
-	return saved, nil
-}
-
-// GeofenceExists validates the optional reference before saving or commanding.
-func (r *GuardRepo) GeofenceExists(ctx context.Context, id int64) (bool, error) {
-	var exists bool
-	if err := r.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM geofences WHERE id = $1)`, id).Scan(&exists); err != nil {
-		return false, fmt.Errorf("guard.config: probe geofence %d: %w", id, err)
-	}
-	return exists, nil
-}
-
-func scanGuardConfig(row pgxScanner) (*vehiclemodel.GuardConfig, error) {
-	cfg := &vehiclemodel.GuardConfig{}
-	if err := row.Scan(&cfg.VehicleID, &cfg.Enabled, &cfg.HomeGeofenceID, &cfg.Sensitivity,
-		&cfg.AutoPanic, &cfg.CreatedAt, &cfg.UpdatedAt); err != nil {
-		return nil, err
-	}
-	return cfg, nil
 }
 
 // guardLatestSentrySQL returns the latest sentry_mode transition for a

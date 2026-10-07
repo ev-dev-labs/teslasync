@@ -13,9 +13,9 @@
  *     empty state when no snapshot has landed;
  *   - the populated gauge — the level / label / unit content, that the arc
  *     colour is wired through from `batteryColor`, and the regression fix that a
- *     raw state MISSING `battery_level` remains unknown instead of rendering 0;
+ *     raw state MISSING `battery_level` floors to 0 instead of rendering NaN;
  *   - the charging indicator — shown only while charging, hidden otherwise and
- *     with the decorative bolt hidden from a11y, including compact variants;
+ *     in the compact variant, with the decorative bolt hidden from a11y;
  *   - the freshness "Refresh" control wiring back to `refetch`.
  *
  * Strategy: the two data hooks (`useVehicles`, `useVehicleState`) live in the
@@ -26,7 +26,7 @@
  * reach for router context.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { VehicleState } from '@/api/types';
@@ -102,8 +102,6 @@ interface VehicleStateResult {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
-  error?: unknown;
-  fetchStatus?: 'idle' | 'fetching' | 'paused';
   dataUpdatedAt: number;
   refetch: () => void;
 }
@@ -136,18 +134,12 @@ beforeEach(() => {
   useVehicleStateMock.mockReturnValue(makeResult());
 });
 
-it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
-  renderWidget({ cols, rows: 2 });
-  expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
-});
-
 // ── Pure helper: batteryColor ────────────────────────────────────────────────
 
 describe('batteryColor', () => {
   it('renders neutral grey when the level is unknown (null/undefined)', () => {
-    expect(batteryColor(null)).toBe('var(--text-muted)');
-    expect(batteryColor(undefined)).toBe('var(--text-muted)');
-    expect(batteryColor(Number.NaN)).toBe('var(--text-muted)');
+    expect(batteryColor(null)).toBe('#374151');
+    expect(batteryColor(undefined)).toBe('#374151');
   });
 
   it('maps the charge tiers to green / amber / red', () => {
@@ -190,51 +182,19 @@ describe('BatteryGaugeWidget — vehicle resolution', () => {
 // ── Render states ────────────────────────────────────────────────────────────
 
 describe('BatteryGaugeWidget — states', () => {
-  it('retains the meter on refresh failure and exposes the existing retry warning', () => {
-    const refetch = vi.fn();
-    useVehicleStateMock.mockReturnValue(makeResult({ isError: true, error: new Error('offline'), refetch }));
-    renderWidget();
-    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
-    const warning = screen.getByTestId('stale-refresh-warning');
-    expect(warning).toHaveTextContent('Previously loaded data remains visible');
-    fireEvent.click(warning.querySelector('button')!);
-    expect(refetch).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('distinguishes a paused offline refresh from a failed request', () => {
-    useVehicleStateMock.mockReturnValue(makeResult({ fetchStatus: 'paused' }));
-    renderWidget();
-    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('device is offline');
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('keeps a genuine zero battery reading on the percentage meter', () => {
-    useVehicleStateMock.mockReturnValue(makeResult({ data: { state: makeState({ battery_level: 0 }), live: true } }));
-    renderWidget();
-    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.getByText('0.00')).toBeInTheDocument();
-  });
-
   it('renders a loading skeleton while the state query is pending', () => {
     useVehicleStateMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No battery data')).toBeNull();
-    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
-    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.queryByText('Battery')).toBeNull();
   });
 
   it('shows the empty state when no vehicle snapshot has landed', () => {
-    const refetch = vi.fn();
-    useVehicleStateMock.mockReturnValue(makeResult({ data: { state: undefined, live: false }, refetch }));
+    useVehicleStateMock.mockReturnValue(makeResult({ data: { state: undefined, live: false } }));
     renderWidget();
     expect(screen.getByText('No battery data')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
-    expect(screen.queryByRole('meter')).toBeNull();
-    fireEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Battery')).toBeNull();
   });
 
   it('surfaces an error affordance (red freshness dot + Refresh) on failure', () => {
@@ -245,8 +205,8 @@ describe('BatteryGaugeWidget — states', () => {
     // The freshness chip flips to its error tier (red dot) and stays actionable.
     expect(container.querySelector('.bg-red-400')).not.toBeNull();
     expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No battery data')).toBeNull();
+    // No data yet → an empty panel, never a blank one.
+    expect(screen.getByText('No battery data')).toBeInTheDocument();
   });
 });
 
@@ -258,9 +218,8 @@ describe('BatteryGaugeWidget — populated', () => {
       makeResult({ data: { state: makeState({ battery_level: 72 }), live: true } }),
     );
     renderWidget();
-    expect(screen.getByText('72.00')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Battery', level: 3 })).toBeVisible();
-    expect(screen.getAllByText('Battery')).toHaveLength(2);
+    expect(screen.getByText('72')).toBeInTheDocument();
+    expect(screen.getByText('Battery')).toBeInTheDocument();
     expect(screen.getByText('%')).toBeInTheDocument();
   });
 
@@ -272,16 +231,14 @@ describe('BatteryGaugeWidget — populated', () => {
     expect(hasGaugeColor(container, '#10b981')).toBe(true);
   });
 
-  it('shows an unknown reading rather than a fabricated zero or critical arc', () => {
+  it('floors a missing battery_level to 0 (no NaN) and shows the red arc', () => {
     useVehicleStateMock.mockReturnValue(
       makeResult({ data: { state: makeStateMissingLevel(), live: true } }),
     );
     const { container } = renderWidget();
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.00')).toBeNull();
+    expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.queryByText('NaN')).toBeNull();
-    expect(hasGaugeColor(container, '#ef4444')).toBe(false);
-    expect(screen.queryByRole('meter')).toBeNull();
+    expect(hasGaugeColor(container, '#ef4444')).toBe(true);
   });
 
   it('shows the charging indicator with an a11y-hidden bolt while charging', () => {
@@ -317,12 +274,13 @@ describe('BatteryGaugeWidget — populated', () => {
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('BatteryGaugeWidget — compact', () => {
-  it('keeps the charging state visible in the compact variant', () => {
+  it('renders the gauge but suppresses the charging chip in the 1×1 variant', () => {
     useVehicleStateMock.mockReturnValue(
       makeResult({ data: { state: makeState({ battery_level: 88, is_charging: true }), live: true } }),
     );
     renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('88.00')).toBeInTheDocument();
-    expect(screen.getByText('Charging')).toBeInTheDocument();
+    expect(screen.getByText('88')).toBeInTheDocument();
+    // WidgetGaugeHero drops its children (the ⚡ chip) in compact mode.
+    expect(screen.queryByText('Charging')).toBeNull();
   });
 });

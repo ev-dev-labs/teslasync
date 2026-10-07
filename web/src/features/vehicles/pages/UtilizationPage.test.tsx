@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen } from '@testing-library/react';
 import {
   afterEach,
   beforeEach,
@@ -82,7 +81,7 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     title,
     subtitle,
     actions,
@@ -253,7 +252,7 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date('2026-08-07T18:26:55.198-07:00'));
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
-  formattingMock.mockReturnValue({ costPerKwh: 0.15, currencySymbol: '$', formatCurrency: (amount: number) => `$${amount.toFixed(2)}` });
+  formattingMock.mockReturnValue({ costPerKwh: 0.15 });
   rangeMock.mockReturnValue({
     start: '2026-07-01',
     end: '2026-07-31',
@@ -268,14 +267,13 @@ afterEach(() => {
 
 describe('UtilizationPage', () => {
   it('mounts all sections and sends the selected date scope with the maximum limit', () => {
-    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    render(<UtilizationPage />);
 
     expect(
       screen.getByRole('heading', { name: 'Utilization' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Source returned');
-      else expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(drivesMock).toHaveBeenCalledWith('42', {
       start: '2026-07-01',
@@ -293,35 +291,31 @@ describe('UtilizationPage', () => {
 
   it('threads loading, error, and empty states to every mounted section', () => {
     drivesMock.mockReturnValue(query({ isLoading: true }));
-    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const view = render(<UtilizationPage />);
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId('utilization-summary')).toHaveAttribute('aria-busy', 'true');
-      else expect(screen.getByTestId(id)).toHaveTextContent('loading');
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
     }
 
     drivesMock.mockReturnValue(
       query({
-        data: undefined,
         isError: true,
         error: new Error('drive history unavailable'),
       }),
     );
     view.rerender(<UtilizationPage />);
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Source unavailable');
-      else expect(screen.getByTestId(id)).toHaveTextContent('error');
+      expect(screen.getByTestId(id)).toHaveTextContent('error');
     }
 
     drivesMock.mockReturnValue(query({ data: [] }));
     view.rerender(<UtilizationPage />);
     for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('No drives in this period yet.');
-      else expect(screen.getByTestId(id)).toHaveTextContent('empty');
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
     }
   });
 
   it('updates the server scope when the selected range changes', () => {
-    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const view = render(<UtilizationPage />);
     rangeMock.mockReturnValue({
       start: '2026-06-01',
       end: '2026-06-30',
@@ -346,7 +340,7 @@ describe('UtilizationPage', () => {
   });
 
   it('freezes the as-of clock for the lifetime of the page mount', () => {
-    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const view = render(<UtilizationPage />);
     const firstAsOf = screen
       .getByTestId('utilization-kpis')
       .getAttribute('data-as-of');
@@ -363,7 +357,7 @@ describe('UtilizationPage', () => {
 
   it('keeps the no-vehicle recovery state and disables the ranged query', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
-    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    render(<UtilizationPage />);
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
       'Utilization',
@@ -373,33 +367,8 @@ describe('UtilizationPage', () => {
       end: '2026-07-31',
       limit: 1000,
     });
-
     expect(
       screen.queryByTestId('utilization-method'),
     ).not.toBeInTheDocument();
-  });
-
-  it('keeps retained eligible drives in all eight sections when refresh fails', () => {
-    drivesMock.mockReturnValue(query({ data: [eligibleDrive()], isError: true, error: new Error('refresh failed') }));
-    render(<UtilizationPage />, { wrapper: MemoryRouter });
-    for (const id of SECTION_IDS) {
-      if (id === 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Retained after refresh failure');
-      else expect(screen.getByTestId(id)).toHaveTextContent('ready');
-    }
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(drivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01', end: '2026-07-31', limit: 1000 });
-  });
-
-  it('opens the real review drawer with UTC-day denominators and energy-only cost context', () => {
-    render(<UtilizationPage />, { wrapper: MemoryRouter });
-    const brief = screen.getByTestId('utilization-summary');
-    const distance = brief.querySelector('[data-operational-metric="distance-per-day"]');
-    if (!(distance instanceof HTMLElement)) throw new Error('Distance evidence missing');
-    expect(distance).toHaveAttribute('data-value-state', 'value');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText(/observed UTC days/)).toBeInTheDocument();
-    expect(within(drawer).getByText('energy only')).toBeInTheDocument();
-    expect(within(drawer).getByText('1 drives')).toBeInTheDocument();
   });
 });

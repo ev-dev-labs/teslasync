@@ -114,27 +114,4 @@ describe('NudgePanel', () => {
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
   });
-
-  it('keeps the verdict, all blocker details and evidence when the source is retained offline', () => {
-    const extraBlocker = { key: 'charge_limit', status: 'attention', detail: 'Raise the charge limit before leaving' };
-    mockNudge.mockReturnValue(idle({
-      data: { ...nudge, blockers: [...nudge.blockers, extraBlocker] }, fetchStatus: 'paused',
-    }));
-    renderPanel();
-    expect(screen.getByRole('heading', { name: 'Leave now?' })).toBeInTheDocument();
-    expect(screen.getByText('Wait')).toBeInTheDocument();
-    expect(screen.getByText('FR at 2.6 bar')).toBeInTheDocument();
-    expect(screen.getByText(extraBlocker.detail)).toBeInTheDocument();
-    expect(screen.getAllByText('Blocker')).toHaveLength(2);
-    expect(screen.getByText(/window opens/)).toBeInTheDocument();
-    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
-  });
-
-  it('keeps a named panel and an honest empty message with no nudge', () => {
-    mockNudge.mockReturnValue(idle({ data: null }));
-    renderPanel();
-    expect(screen.getByRole('heading', { name: 'Leave now?' })).toBeInTheDocument();
-    expect(screen.getByText('No nudge yet.')).toBeInTheDocument();
-    expect(screen.queryByText('Leave now')).not.toBeInTheDocument();
-  });
 });

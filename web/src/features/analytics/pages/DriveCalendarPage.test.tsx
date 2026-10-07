@@ -30,7 +30,7 @@ vi.mock('@/hooks/usePageTitle', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     title,
     subtitle,
     actions,
@@ -144,7 +144,7 @@ describe('DriveCalendarPage', () => {
   it('keeps every bento section mounted for a resolved empty calendar', () => {
     renderCalendar();
 
-    expect(screen.getByRole('heading', { name: 'Drive calendar' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive Calendar' })).toBeInTheDocument();
     expect(screen.getByText('Driving activity and streaks in the selected period')).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
@@ -170,8 +170,8 @@ describe('DriveCalendarPage', () => {
   });
 
   it.each([
-    ['loading', query({ data: undefined, isLoading: true })],
-    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
+    ['loading', query({ isLoading: true })],
+    ['error', query({ isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every independent section', (expected, result) => {
     useHistoryMock.mockReturnValue(result);
     renderCalendar();
@@ -181,24 +181,11 @@ describe('DriveCalendarPage', () => {
     }
   });
 
-  it('retains all six independently mounted sections during a failed history refresh', () => {
-    const retry = vi.fn();
-    useHistoryMock.mockReturnValue(query({
-      data: [], isError: true, error: new Error('refresh unavailable'), refetch: retry,
-    }));
-    renderCalendar('/drive-calendar?from=2024-07-01&to=2024-09-30');
-    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
-    expect(retry).toHaveBeenCalledOnce();
-    expect(useHistoryMock).toHaveBeenCalledWith('42', expect.any(String), expect.any(String));
-  });
-
   it('preserves the no-vehicle selection state', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
     renderCalendar();
 
-    expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Drive calendar');
+    expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Drive Calendar');
     expect(screen.queryByTestId('calendar-heatmap')).not.toBeInTheDocument();
   });
 

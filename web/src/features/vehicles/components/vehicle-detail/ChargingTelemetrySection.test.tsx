@@ -95,7 +95,7 @@ describe('ChargingTelemetrySection — metric rendering', () => {
     expect(screen.getByText('240.00 V')).toBeInTheDocument()
     expect(screen.getByText('Current')).toBeInTheDocument()
     expect(screen.getByText('32.00 A')).toBeInTheDocument()
-    expect(screen.getByText('Battery level')).toBeInTheDocument()
+    expect(screen.getByText('Battery Level')).toBeInTheDocument()
     expect(screen.getByText('82.00%')).toBeInTheDocument()
   })
 
@@ -119,7 +119,7 @@ describe('ChargingTelemetrySection — metric rendering', () => {
     )
     expect(screen.getByText('Complete')).toBeInTheDocument()
 
-    const heading = screen.getByRole('heading', { name: /Charging telemetry/i })
+    const heading = screen.getByRole('heading', { name: /Charging Telemetry/i })
     expect(heading).toBeInTheDocument()
   })
 })
@@ -148,7 +148,7 @@ describe('ChargingTelemetrySection — null safety', () => {
     expect(screen.queryByText(/kWh\b/)).toBeNull()
     expect(screen.queryByText(/km\/h/)).toBeNull()
     // The labels still render so the panel never shows a blank grid.
-    expect(screen.getByText('Charger power')).toBeInTheDocument()
+    expect(screen.getByText('Charger Power')).toBeInTheDocument()
   })
 })
 
@@ -158,8 +158,8 @@ describe('ChargingTelemetrySection — empty states', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.getByText('No charging telemetry available')).toBeInTheDocument()
-    expect(screen.queryByText('Charger power')).toBeNull()
-    expect(screen.queryByText('Battery level')).toBeNull()
+    expect(screen.queryByText('Charger Power')).toBeNull()
+    expect(screen.queryByText('Battery Level')).toBeNull()
   })
 
   it('renders the empty state when telemetry is undefined', () => {

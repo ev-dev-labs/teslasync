@@ -11,7 +11,7 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import {
   DEFAULT_MIN_DRIVES_PER_BUCKET,
@@ -20,7 +20,6 @@ import {
 import { SpeedSweetSpotSectionBody } from './SpeedSweetSpotSectionBody';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SweetSpotEvidenceProps {
   summary: SweetSpotResult;
@@ -33,7 +32,6 @@ export function SweetSpotEvidence({
   state,
   className,
 }: SweetSpotEvidenceProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatBand, formatDistance, formatEfficiency } =
     useSpeedSweetSpotDisplay();
@@ -54,7 +52,7 @@ export function SweetSpotEvidence({
     {
       value:
         coverage != null
-          ? `${fmtNumber(coverage.distanceShare * 100)}%`
+          ? `${fmtNumber(coverage.distanceShare * 100, 1)}%`
           : '—',
       label: t('sweetSpot.evidence.distanceShare', 'Eligible distance share'),
     },
@@ -135,9 +133,10 @@ export function SweetSpotEvidence({
                           summary.runnerUp.band.fromKph,
                           summary.runnerUp.band.toKph,
                         ),
-                        gap: formatEfficiency(summary.runnerUp.gapWhPerKm),
+                        gap: formatEfficiency(summary.runnerUp.gapWhPerKm, 1),
                         percent: `${fmtNumber(
                           summary.runnerUp.gapShare * 100,
+                          1,
                         )}%`,
                       },
                     )}

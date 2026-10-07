@@ -23,12 +23,12 @@ export function ElapsedComposition({ result, loading = false }: JourneyFragmenta
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <Clock3 className="mb-2 h-5 w-5 text-cyan-300" aria-hidden="true" />
             <Text as="p" variant="label">{t('journeyFragmentation.elapsed.driving', 'Driving time')}</Text>
-            <MetricValue>{loading ? '—' : formatDuration(result.drivingSeconds)}</MetricValue>
+            <MetricValue>{loading ? '—' : formatDuration(result.drivingSeconds, { precision: 1 })}</MetricValue>
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <ParkingCircle className="mb-2 h-5 w-5 text-amber-300" aria-hidden="true" />
             <Text as="p" variant="label">{t('journeyFragmentation.elapsed.parking', 'Observed parking time')}</Text>
-            <MetricValue>{loading ? '—' : formatDuration(result.observedParkingSeconds)}</MetricValue>
+            <MetricValue>{loading ? '—' : formatDuration(result.observedParkingSeconds, { precision: 1 })}</MetricValue>
           </div>
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
             <Text as="p" variant="label">{t('journeyFragmentation.elapsed.pairs', 'Linked stopovers')}</Text>

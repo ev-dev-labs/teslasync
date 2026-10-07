@@ -31,8 +31,7 @@ import { useEffect, useId, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Power, Server, Cloud } from 'lucide-react'
 import { GlassPanel, Button, SectionTitle, RadioCard } from '@/components/ui'
-import { DataStateNotice, InlineCallout, QueryError } from '@/components/feedback'
-import { deriveDataState } from '@/api/dataState'
+import { InlineCallout } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useSettings } from '@/api/hooks/useSettings'
 import { useSaveAiSettings } from '@/api/hooks/useAiSettings'
@@ -167,9 +166,7 @@ function archiveHasRestorableEntries(
 
 export function AISettings() {
   const { t } = useTranslation('settings')
-  const settingsQuery = useSettings()
-  const settingsState = deriveDataState(settingsQuery)
-  const { data: settings, isLoading } = settingsQuery
+  const { data: settings, isLoading } = useSettings()
   const saveAi = useSaveAiSettings()
 
   // ── Local form state ─────────────────────────────────────────────
@@ -418,17 +415,12 @@ export function AISettings() {
       data-ai-mode={mode}
       aria-label={t('ai.settings.title', 'Helix')}
     >
-      {settingsState.fatalError && <QueryError error={settingsState.fatalError} onRetry={() => void settingsQuery.refetch()} />}
-      {settingsState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       {/* Status band — at-a-glance summary, full-width metric grid. */}
       <FadeIn>
         <HelixStatusStrip
           mode={serverMode === 'off' ? 'off' : mode}
           enabledCount={enabledCount}
           providerName={provider.provider}
-          settingsLoading={settingsState.status === 'initial'}
-          settingsUnavailable={!settingsState.hasData}
-          settingsRetained={settingsState.status === 'stale'}
         />
       </FadeIn>
 
@@ -565,11 +557,10 @@ export function AISettings() {
         </FadeIn>
       )}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
+      <div className="flex items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-4">
         <Button
           type="button"
           variant="primary"
-          wrapLabel
           onClick={handleSave}
           disabled={isLoading || saveAi.isPending}
           data-testid="ai-settings-save"

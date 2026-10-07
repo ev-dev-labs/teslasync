@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, GitCompareArrows, Timer, Waypoints } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, Toggle, HelpTooltip } from '@/components/ui';
 
-import { CorrelationStatStrip } from '../components/statstrip-correlation/CorrelationStatStrip';
+import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -18,7 +18,6 @@ import {
 import { useSignals, useSignalHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
 
@@ -28,7 +27,7 @@ const HOURS = 24;
 
 export default function SignalCorrelationPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalCorrelation.title', 'Signal correlation'));
+  usePageTitle(t('signalCorrelation.title', 'Signal Correlation'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -41,9 +40,6 @@ export default function SignalCorrelationPage() {
   const signalsQuery = useSignals(id);
   const historyA = useSignalHistory(id, signalA, HOURS);
   const historyB = useSignalHistory(id, signalB, HOURS);
-  const catalogState = useDataState(signalsQuery);
-  const historyAState = useDataState(historyA, { provenance: 'historical' });
-  const historyBState = useDataState(historyB, { provenance: 'historical' });
   const signalAChosen = signalA !== '';
   const signalBChosen = signalB !== '';
   const bothChosen = signalAChosen && signalBChosen;
@@ -122,7 +118,7 @@ export default function SignalCorrelationPage() {
   }, [result]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalCorrelation.title', 'Signal correlation')} />;
+    return <NoVehicleSelected pageTitle={t('signalCorrelation.title', 'Signal Correlation')} />;
   }
 
   const historyAHasData = historyA.data !== undefined;
@@ -132,11 +128,13 @@ export default function SignalCorrelationPage() {
     || (!historyBHasData && historyB.isLoading)
   );
   const isError = bothChosen && (
-    historyAState.fatalError != null
-    || historyBState.fatalError != null
+    (historyA.isError && !historyAHasData)
+    || (historyB.isError && !historyBHasData)
   );
   const error =
-    historyAState.fatalError ?? historyBState.fatalError;
+    historyA.isError && !historyAHasData
+      ? historyA.error
+      : historyB.error;
 
   const leadLabel =
     result == null
@@ -150,8 +148,8 @@ export default function SignalCorrelationPage() {
             : t('signalCorrelation.noLead', 'No relationship');
 
   return (
-    <PageLayout
-      title={t('signalCorrelation.title', 'Signal correlation')}
+    <PageContainer
+      title={t('signalCorrelation.title', 'Signal Correlation')}
       subtitle={t(
         'signalCorrelation.subtitle',
         'Sweep one telemetry signal against another across time shifts to find not just whether they move together, but which one moves first',
@@ -164,7 +162,7 @@ export default function SignalCorrelationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitCompareArrows className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalCorrelation.pick', 'Choose two signals')}
+            {t('signalCorrelation.pick', 'Choose Two Signals')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalCorrelation.pick"
@@ -172,8 +170,8 @@ export default function SignalCorrelationPage() {
               ariaLabel={t('help.signalCorrelation.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {catalogState.fatalError ? (
-            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
+          {signalsQuery.isError ? (
+            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -220,12 +218,74 @@ export default function SignalCorrelationPage() {
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
-        <CorrelationStatStrip result={result} leadLabel={leadLabel} loading={isLoading}
-          retained={result != null && (historyAState.isRefreshing || historyBState.isRefreshing
-            || historyAState.status === 'stale' || historyBState.status === 'stale')}
-          errorA={bothChosen ? historyAState.fatalError ?? historyAState.refreshError : null}
-          errorB={bothChosen ? historyBState.fatalError ?? historyBState.refreshError : null}
-          onRetryA={() => { void historyA.refetch(); }} onRetryB={() => { void historyB.refetch(); }} />
+        <section
+          aria-label={t('signalCorrelation.kpis', 'Correlation metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+        >
+          {isError ? (
+            <GlassPanel className="col-span-full p-4 sm:p-5">
+              <QueryError
+                error={error}
+                onRetry={() => {
+                  void historyA.refetch();
+                  void historyB.refetch();
+                }}
+              />
+            </GlassPanel>
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height={96} className="rounded-xl" />
+            ))
+          ) : (
+            <>
+              <MetricCard
+                label={t('signalCorrelation.bestR', 'Peak Correlation')}
+                value={result != null ? result.bestR.toFixed(3) : '—'}
+                subtitle={t('signalCorrelation.zeroLag', 'at zero lag: {{r}}', {
+                  r: result != null ? result.zeroLagR.toFixed(3) : '—',
+                })}
+                icon={<GitCompareArrows className="h-5 w-5" />}
+                color={Math.abs(result?.bestR ?? 0) >= 0.7 ? 'green' : 'cyan'}
+                help={{
+                  i18nKey: 'help.signalCorrelation.bestR',
+                  defaultValue:
+                    'An ordinary overlay chart only ever shows the zero-lag correlation, which misses every relationship with a delay in it. Sweeping the lag finds the shift at which the two signals line up best, and the difference between the peak and the zero-lag value is exactly the information a static chart throws away.',
+                }}
+              />
+              <MetricCard
+                label={t('signalCorrelation.bestLag', 'Best Lag')}
+                value={result != null ? `${result.bestLagS} s` : '—'}
+                subtitle={leadLabel}
+                icon={<Timer className="h-5 w-5" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('signalCorrelation.significance', 'Significance')}
+                value={
+                  result == null
+                    ? '—'
+                    : result.significant
+                      ? t('signalCorrelation.real', 'Real')
+                      : t('signalCorrelation.noise', 'Noise')
+                }
+                subtitle={t('signalCorrelation.threshold', 'needs |r| > {{v}}', {
+                  v: result != null ? result.significanceThreshold.toFixed(3) : '—',
+                })}
+                icon={<ArrowLeftRight className="h-5 w-5" />}
+                color={result?.significant ? 'green' : 'amber'}
+              />
+              <MetricCard
+                label={t('signalCorrelation.effectiveN', 'Effective Samples')}
+                value={result != null ? Math.round(result.effectiveN) : '—'}
+                subtitle={t('signalCorrelation.rawN', 'from {{n}} raw points', {
+                  n: result?.bestN ?? 0,
+                })}
+                icon={<Waypoints className="h-5 w-5" />}
+                color="blue"
+              />
+            </>
+          )}
+        </section>
       </FadeIn>
 
       {/* 3 — Correlogram */}
@@ -249,7 +309,7 @@ export default function SignalCorrelationPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('signalCorrelation.correlogram', 'Lagged correlogram')}
+            title={t('signalCorrelation.correlogram', 'Lagged Correlogram')}
             subtitle={t(
               'signalCorrelation.correlogramHint',
               'Correlation at every time shift; the dashed lines are the significance threshold',
@@ -259,11 +319,6 @@ export default function SignalCorrelationPage() {
               'Line chart of correlation coefficient against time lag between the two selected signals',
             )}
             loading={isLoading}
-            error={isError ? error : null}
-            onRetry={() => {
-              if (historyAState.fatalError) historyAState.retry?.();
-              if (historyBState.fatalError) historyBState.retry?.();
-            }}
             empty={correlogram.length === 0}
             height={340}
             data={correlogram}
@@ -318,7 +373,7 @@ export default function SignalCorrelationPage() {
       {/* 4 — Normalised overlay */}
       <FadeIn delay={0.3}>
         <ChartContainer
-          title={t('signalCorrelation.overlay', 'Normalised overlay')}
+          title={t('signalCorrelation.overlay', 'Normalised Overlay')}
           subtitle={t(
             'signalCorrelation.overlayHint',
             'Both signals rescaled to 0–1 so their shapes can be compared directly',
@@ -329,11 +384,6 @@ export default function SignalCorrelationPage() {
           )}
           chartKey="signal-correlation-overlay"
           loading={isLoading}
-          error={isError ? error : null}
-          onRetry={() => {
-            if (historyAState.fatalError) historyAState.retry?.();
-            if (historyBState.fatalError) historyBState.retry?.();
-          }}
           empty={overlay.length === 0}
           height={300}
           data={overlay}
@@ -384,16 +434,9 @@ export default function SignalCorrelationPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <Timer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalCorrelation.reading', 'Reading the result')}
+            {t('signalCorrelation.reading', 'Reading the Result')}
           </PanelTitle>
-          {isLoading ? (
-            <Skeleton height={80} />
-          ) : isError ? (
-            <QueryError error={error} onRetry={() => {
-              if (historyAState.fatalError) historyAState.retry?.();
-              if (historyBState.fatalError) historyBState.retry?.();
-            }} />
-          ) : result == null ? (
+          {result == null ? (
             <EmptyState /* no-action: the interpretation follows from the correlogram above. */
               icon={<ArrowLeftRight className="h-8 w-8" />}
               message={t(
@@ -450,6 +493,6 @@ export default function SignalCorrelationPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { act, cleanup, render, screen } from '@testing-library/react'
-import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
+import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import {
@@ -10,46 +9,11 @@ import {
   type UsageCardTopList,
 } from '../UsageCard'
 
-let previousPreferences: ReturnType<typeof getFormatterPreferences>
-
-beforeEach(() => {
-  previousPreferences = getFormatterPreferences()
-  setGlobalPrecision(2)
-  setGlobalLocale('en-US')
-})
-
-afterEach(() => {
-  cleanup()
-  setGlobalPrecision(previousPreferences.precision)
-  setGlobalLocale(previousPreferences.locale)
-})
-
 function wrap(ui: ReactNode) {
   return render(<MemoryRouter>{ui}</MemoryRouter>)
 }
 
 describe('UsageCard', () => {
-  it('updates accessible budget percentages while preserving raw overflow and caller strings', () => {
-    setGlobalPrecision(2)
-    wrap(<UsageCard budget={{ headline: '$12.345 raw caller text', pct: 123.456, ariaLabel: 'Budget' }} />)
-    const bar = screen.getByRole('progressbar')
-    expect(bar).toHaveAttribute('aria-valuetext', '123.46%')
-    act(() => setGlobalPrecision(3))
-    expect(bar).toHaveAttribute('aria-valuetext', '123.456%')
-    expect(bar).toHaveAttribute('aria-valuenow', '123')
-    expect(screen.getByText('$12.345 raw caller text')).toBeInTheDocument()
-  })
-  it('preserves supplied band and top-list label casing', () => {
-    wrap(
-      <UsageCard
-        bands={[{ label: 'Tesla API', value: '12' }]}
-        topLists={[{ key: 'units', title: 'Energy (kWh)', items: [{ key: 'home', label: 'Home', value: '5' }] }]}
-      />,
-    )
-    expect(screen.getByText('Tesla API')).not.toHaveClass('uppercase', 'capitalize')
-    expect(screen.getByText('Energy (kWh)')).not.toHaveClass('uppercase', 'capitalize')
-  })
-
   it('renders the empty state when no sections are provided', () => {
     wrap(<UsageCard emptyMessage="Nothing here yet." />)
     expect(screen.getByText('Nothing here yet.')).toBeInTheDocument()

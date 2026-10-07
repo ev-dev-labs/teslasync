@@ -17,19 +17,6 @@ describe('CatalogPanel + PackDetailModal', () => {
     expect(screen.getByText(TAMPERED_DEMO_ENVELOPE.manifest.name)).toBeInTheDocument();
   });
 
-  it('keeps catalog descriptions keyboard-reachable and entry/action ordering unchanged', () => {
-    const { container } = renderWithProviders(<CatalogPanel />);
-    const envelopes = [EFFICIENCY_INSIGHTS_ENVELOPE, COMMUNITY_DRAFT_ENVELOPE, TAMPERED_DEMO_ENVELOPE];
-    const cards = Array.from(container.querySelectorAll('[data-card]'));
-    expect(cards).toHaveLength(envelopes.length);
-    envelopes.forEach((envelope, index) => {
-      expect(cards[index].querySelector('[data-card-title]')).toHaveTextContent(envelope.manifest.name);
-      expect(cards[index].querySelector('[data-card-desc]')).toHaveTextContent(envelope.manifest.description);
-      expect(screen.getByRole('button', { name: `Read full description for ${envelope.manifest.name}` })).not.toBeDisabled();
-    });
-    expect(screen.getAllByRole('button', { name: /View & install/i })).toHaveLength(envelopes.length);
-  });
-
   it('installs a validly signed pack after the (non-typed) confirm dialog', async () => {
     const { repository } = renderWithProviders(<CatalogPanel />);
 

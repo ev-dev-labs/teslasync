@@ -108,9 +108,9 @@ describe('WaitOraclePanel', () => {
   it('renders the forecast with verdict, best hour, and evidence', () => {
     renderPanel();
     expect(screen.getByText('Supercharger Wait Oracle')).toBeInTheDocument();
-    expect(screen.getByText('44.10 min expected wait')).toBeInTheDocument();
+    expect(screen.getByText('44 min expected wait')).toBeInTheDocument();
     expect(screen.getByText('packed')).toBeInTheDocument();
-    expect(screen.getByText('Arrive 15:00 UTC instead to save ~44.10 min.')).toBeInTheDocument();
+    expect(screen.getByText('Arrive 15:00 UTC instead to save ~44 min.')).toBeInTheDocument();
     expect(screen.getByText(/1740 sessions over 10.0 weeks/)).toBeInTheDocument();
   });
 

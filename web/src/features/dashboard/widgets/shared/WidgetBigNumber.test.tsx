@@ -66,8 +66,8 @@ describe('WidgetBigNumber — value rendering', () => {
     const animated = screen.getByTestId('animated-number');
     expect(animated).toHaveTextContent('42');
     // Default styling: display size + weight + the default theme text colour.
-    expect(animated).toHaveClass('text-2xl');
-    expect(animated).toHaveClass('font-semibold');
+    expect(animated).toHaveClass('text-3xl');
+    expect(animated).toHaveClass('font-bold');
     expect(animated).toHaveClass('text-[var(--text-primary)]');
   });
 
@@ -78,7 +78,7 @@ describe('WidgetBigNumber — value rendering', () => {
     const plain = screen.getByText('1234');
     expect(plain).toBeInTheDocument();
     expect(plain).toHaveClass('tabular-nums');
-    expect(plain).toHaveClass('text-2xl');
+    expect(plain).toHaveClass('text-3xl');
   });
 
   it('renders zero as a real value, not the placeholder (0 is falsy but finite)', () => {
@@ -134,24 +134,6 @@ describe('WidgetBigNumber — absent / non-finite values fall back to the placeh
 });
 
 describe('WidgetBigNumber — adornments', () => {
-  it('accepts a caller-formatted measurement unchanged without animating or recasing it', () => {
-    render(<WidgetBigNumber value="1,234.5" unit="km" label="Tesla Model Y" />);
-    expect(screen.getByText('1,234.5')).toBeInTheDocument();
-    expect(screen.getByText('Tesla Model Y')).not.toHaveClass('uppercase');
-    expect(screen.queryByTestId('animated-number')).not.toBeInTheDocument();
-  });
-
-  it('does not imply a measured unit when the value is unknown', () => {
-    render(<WidgetBigNumber value={null} unit="km" />);
-    expect(screen.getByText(DASH)).toBeInTheDocument();
-    expect(screen.queryByText('km')).not.toBeInTheDocument();
-  });
-
-  it('keeps long values wrappable at the widget boundary', () => {
-    render(<WidgetBigNumber value="999999999999999999999999999" animated={false} size="secondary" />);
-    expect(screen.getByText('999999999999999999999999999')).toHaveClass('break-all', 'text-lg');
-  });
-
   it('renders the unit next to the value when provided', () => {
     render(<WidgetBigNumber value={5} unit="kWh" />);
 

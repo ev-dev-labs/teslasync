@@ -15,8 +15,7 @@ import {
   axisTick,
   chartGrid,
 } from '@/components/charts';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtInt } from '@/lib/numberFormat';
 
 export interface DriveDnaDistributionRow {
   id: string;
@@ -41,7 +40,6 @@ export function DriveDnaDistributionBarPlot({
   maxBarSize,
   ariaLabel,
 }: DriveDnaDistributionBarPlotProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const effectiveAriaLabel =
     ariaLabel ??

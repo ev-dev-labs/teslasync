@@ -2,14 +2,14 @@ import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Timer, Clock, TrendingUp, TrendingDown } from 'lucide-react';
 import type { ChargingSession } from '@/api/types';
-
-import { type StatMetric } from '@/components/data-display';
-import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
+import { fmtNumber } from '@/lib/numberFormat';
+import { SectionTitle, HelperText } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import { isDcSession, avg, durationMinutes } from './helpers';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
+import type { NeonColor } from '@/lib/tokens';
 import type { TimeToChargeMetrics } from './types';
 import YearlyTrendChart from './YearlyTrendChart';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TimeToChargeSectionProps {
   sessions: ChargingSession[];
@@ -18,14 +18,13 @@ interface TimeToChargeSectionProps {
 interface TtcCard {
   key: string;
   label: string;
-  metricId: 'duration' | 'power';
-  rawValue: number | null;
+  value: string;
   subtitle?: string;
   icon: ReactNode;
+  color: NeonColor;
 }
 
 export default function TimeToChargeSection({ sessions }: TimeToChargeSectionProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const timeToCharge = useMemo((): TimeToChargeMetrics => {
@@ -93,62 +92,71 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
   }, [sessions]);
 
   const cards = useMemo<TtcCard[]>(() => {
+    const dash = '—';
     return [
       {
         key: 'avg10to80',
         label: t('charging.curve.avg10to80', '10% → 80%'),
-        metricId: 'duration',
-        rawValue: timeToCharge.avg10to80 != null ? timeToCharge.avg10to80 * 60 : null,
+        value: timeToCharge.avg10to80 != null ? `${fmtNumber(timeToCharge.avg10to80)} min` : dash,
         subtitle: t('charging.curve.avgDuration', 'Avg duration'),
         icon: <Timer className="h-5 w-5" aria-hidden="true" />,
+        color: 'cyan',
       },
       {
         key: 'avg20to80',
         label: t('charging.curve.avg20to80', '20% → 80%'),
-        metricId: 'duration',
-        rawValue: timeToCharge.avg20to80 != null ? timeToCharge.avg20to80 * 60 : null,
+        value: timeToCharge.avg20to80 != null ? `${fmtNumber(timeToCharge.avg20to80)} min` : dash,
         subtitle: t('charging.curve.avgDuration', 'Avg duration'),
         icon: <Clock className="h-5 w-5" aria-hidden="true" />,
+        color: 'blue',
       },
       {
         key: 'fastest',
         label: t('charging.curve.fastest', 'Fastest Session'),
-        metricId: 'power',
-        rawValue: timeToCharge.fastest ? timeToCharge.fastest.rate * 1000 : null,
+        value: timeToCharge.fastest ? `${fmtNumber(timeToCharge.fastest.rate)} kWh/h` : dash,
         subtitle: timeToCharge.fastest
           ? t('charging.curve.sessionId', 'Session #{{id}}', { id: timeToCharge.fastest.id })
           : undefined,
         icon: <TrendingUp className="h-5 w-5" aria-hidden="true" />,
+        color: 'green',
       },
       {
         key: 'slowest',
         label: t('charging.curve.slowest', 'Slowest Session'),
-        metricId: 'power',
-        rawValue: timeToCharge.slowest ? timeToCharge.slowest.rate * 1000 : null,
+        value: timeToCharge.slowest ? `${fmtNumber(timeToCharge.slowest.rate)} kWh/h` : dash,
         subtitle: timeToCharge.slowest
           ? t('charging.curve.sessionId', 'Session #{{id}}', { id: timeToCharge.slowest.id })
           : undefined,
         icon: <TrendingDown className="h-5 w-5" aria-hidden="true" />,
+        color: 'amber',
       },
     ];
   }, [t, timeToCharge]);
-  const metrics: StatMetric[] = cards.map(card => ({
-    metricId: card.metricId, occurrenceId: card.key, rawValue: card.rawValue, label: card.label,
-    display: { formatter: raw => ({
-      value: fmtNumber(card.metricId === 'duration' ? raw / 60 : raw / 1000),
-      unit: card.metricId === 'duration' ? 'min' : 'kWh/h',
-    }) },
-    context: <span className="inline-flex items-center gap-1">{card.icon}{card.subtitle}</span>,
-  }));
 
   return (
     <div className="space-y-4">
-      <ChargingSummaryBrief metrics={metrics}
-        title={t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}
-        description={t('charging.curve.timeToChargeDesc', 'How long DC sessions take to reach key SOC thresholds')}
-        period={{ kind: 'unknown', label: t('charging.curve.modernization.returnedSessions', 'Returned sessions in the workspace range'),
-          reason: t('charging.curve.brief.dcThresholdScope',
-            'Completed DC sessions from the returned history only. Threshold means exclude unfinished sessions; fastest and slowest use recorded energy divided by positive elapsed time.') }} />
+      <div className="space-y-1">
+        <SectionTitle>{t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}</SectionTitle>
+        <HelperText>
+          {t(
+            'charging.curve.timeToChargeDesc',
+            'How long DC sessions take to reach key SOC thresholds',
+          )}
+        </HelperText>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {cards.map((c) => (
+          <MetricCard
+            key={c.key}
+            label={c.label}
+            value={c.value}
+            subtitle={c.subtitle}
+            icon={c.icon}
+            color={c.color}
+          />
+        ))}
+      </div>
 
       <YearlyTrendChart yearlyTrend={timeToCharge.yearlyTrend} />
     </div>

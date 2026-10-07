@@ -1,56 +1,39 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartTooltip,
+  ChartContainer, ChartTooltip,
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { Table, Text } from '@/components/ui';
-
-import { useUnits } from '@/hooks/useUnits';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { ChartDataPoint, DriveStats } from './types';
-import type { DriveDetail } from '@/types/driving';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PowerProfileChartProps {
   chartData: ChartDataPoint[];
   stats: DriveStats;
-  drive?: DriveDetail;
 }
 
-export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+export function PowerProfileChart({ chartData, stats }: PowerProfileChartProps) {
   const { t } = useTranslation();
-  const { unitPrefs } = useUnits();
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
 
   // A single sample can't form an area — treat 0/1 points (or a missing
   // array) as "no chart" so an undefined `chartData` degrades to the empty
   // state instead of throwing on `.length`.
-  const powers = (chartData ?? []).map((row) => row.power).filter((value): value is number => value != null && Number.isFinite(value));
-  const speeds = (chartData ?? []).map((row) => row.speed).filter((value): value is number => value != null && value > 0 && Number.isFinite(value));
-  const hasChart = powers.length > 1;
-  const max = powers.length ? powers.reduce((result, value) => Math.max(result, value), -Infinity) : null;
-  const min = powers.length ? powers.reduce((result, value) => Math.min(result, value), Infinity) : null;
-  const mean = powers.length ? powers.reduce((sum, value) => sum + value, 0) / powers.length : null;
-  const minMoving = speeds.length ? speeds.reduce((result, value) => Math.min(result, value), Infinity) : null;
+  const hasChart = (chartData ?? []).length > 1;
 
   return (
     <FadeIn>
       {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear below the chart */}
-      <ChartCard
-        title={t('driveDetail.powerProfile', 'Power profile')}
+      <ChartContainer
+        title={t('driveDetail.powerProfile', 'Power Profile')}
         ariaLabel={t('driveDetail.powerProfile.aria', 'Drive power profile area chart over time')}
         height={220}
-        size="standard"
-        toolbar
-        exportable
       >
         {hasChart ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -85,19 +68,14 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
             <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}
-      </ChartCard>
-      <div className="mt-3 space-y-2">
-        <Text as="p" variant="caption">{t('driveDetail.report.powerMethod', 'Power samples preserve sign: positive draw, negative regeneration. Peak values require observations.')}</Text>
-        <Table variant="embedded" aria-label={t('driveDetail.powerProfile', 'Power profile')}>
-          <tbody>
-            <tr><th scope="row">{t('driveDetail.maxPower', 'Maximum power')}</th><td>{max != null ? `${fmtInt(max)} kW` : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.maxRegen', 'Maximum regen')}</th><td>{min != null && min < 0 ? `${fmtInt(min)} kW` : min != null ? '0 kW' : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.report.sampleMeanPower', 'Mean sampled power')}</th><td>{mean != null ? `${fmtNumber(mean)} kW` : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.avgPower', 'Average power')}</th><td>{drive?.avgPowerW != null && Number.isFinite(drive.avgPowerW) ? `${fmtNumber(drive.avgPowerW / 1000)} kW` : '—'}</td></tr>
-            <tr><th scope="row">{t('driveDetail.minSpeed', 'Minimum moving speed')}</th><td>{minMoving != null ? `${fmtNumber(minMoving)} ${unitPrefs.speed}` : '—'}</td></tr>
-          </tbody>
-        </Table>
-      </div>
+      </ChartContainer>
+      {hasChart && (
+        <div className="mt-3 flex items-center justify-center gap-6 text-xs text-[var(--text-secondary)]">
+          <span>{t('driveDetail.maxPower', 'Max Power')}: <strong className="text-amber-400">{fmtInt(stats.powerMax)} kW</strong></span>
+          <span>{t('driveDetail.maxRegen', 'Max Regen')}: <strong className="text-cyan-400">{fmtInt(stats.powerMin)} kW</strong></span>
+          <span>{t('driveDetail.avgLabel', 'Avg')}: <strong className="text-[var(--text-primary)]">{fmtNumber(stats.avgPower)} kW</strong></span>
+        </div>
+      )}
     </FadeIn>
   );
 }

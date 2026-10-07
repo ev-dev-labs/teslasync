@@ -40,11 +40,6 @@ user forever, and "only what this page already loaded" is a free, honest proxy
 for "relevant to what the user is doing". Unknown state (`-1` sentinels) never
 produces a hint.
 
-The cache subscription changes its snapshot only when decoded onboarding
-evidence changes. Creating pending queries, changing unrelated cache entries,
-or refetching an unchanged count must not invalidate a concurrent route render.
-Observed updates and removals still refresh the hints without extra requests.
-
 Tours still exist and are still complete — they are reachable from the tour
 launcher (help button, command palette, settings card). No tour declares an
 `autoStart` predicate; `features/onboarding/__tests__/tours.test.ts` fails if one
@@ -174,16 +169,9 @@ never leaves the input so the query stays editable throughout.
 ## 7. Release notes (HELP-07)
 
 `CHANGELOG.md` is the single source of truth. `scripts/buildChangelog.mjs`
-generates `src/generated/changelog.ts` and the lightweight
-`src/generated/changelogVersions.ts` index; `web/src/lib/releaseNotes.ts` derives the
+generates `src/generated/changelog.ts`; `web/src/lib/releaseNotes.ts` derives the
 product view from that. There is no second hand-maintained document, because
 there is no way to keep two of them in sync.
-
-Shell badges use `useChangelogStatus()` and the version index, while lazy
-release-note surfaces use `useChangelog()` for the complete content. Both share
-the same acknowledgment store, cross-tab updates and auto-show throttle.
-`npm run generate:changelog` regenerates both files; `--check` verifies both
-without modifying the worktree.
 
 Each release answers: **what changed**, **who is affected**, **is action
 needed**, **version and date**.

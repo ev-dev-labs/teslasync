@@ -1,7 +1,7 @@
 import { forwardRef, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 
 export interface MetricTileProps {
   /** The reading. Non-finite / nullish values degrade to an em-dash. */
@@ -12,10 +12,8 @@ export interface MetricTileProps {
   label: string;
   /** Optional second line for context (e.g. "across 42 sessions"). */
   sublabel?: ReactNode;
-  /** Explicit decimals; omitted follows kind (unitless untyped integers remain counts). */
+  /** Decimal places when `value` is numeric. Defaults to global precision. */
   decimals?: number;
-  /** Unit-bearing values default to measurements; use count for counted units. */
-  kind?: 'measurement' | 'count';
   /** Tailwind text colour for the reading. Defaults to primary text. */
   accentClass?: string;
   /** Left-align instead of centring — for stacked lists rather than strips. */
@@ -40,11 +38,9 @@ export interface MetricTileProps {
  * when the value has genuine qualitative thresholds.
  */
 export const MetricTile = forwardRef<HTMLDivElement, MetricTileProps>(function MetricTile(
-  { value, unit, label, sublabel, decimals, kind, accentClass, align = 'center', className },
+  { value, unit, label, sublabel, decimals, accentClass, align = 'center', className },
   ref,
 ) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
-  const isCount = kind === 'count' || (kind == null && !unit && Number.isInteger(value));
   const isNumeric = typeof value === 'number';
   const hasValue = isNumeric
     ? Number.isFinite(value)
@@ -52,7 +48,7 @@ export const MetricTile = forwardRef<HTMLDivElement, MetricTileProps>(function M
 
   const display = hasValue
     ? isNumeric
-      ? decimals == null && isCount ? fmtInt(value) : fmtNumber(value, decimals)
+      ? fmtNumber(value, decimals ?? (Number.isInteger(value) ? 0 : getGlobalPrecision()))
       : String(value)
     : '—';
 

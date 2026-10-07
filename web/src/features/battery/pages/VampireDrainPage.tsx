@@ -2,27 +2,25 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  BatteryWarning, Clock, Zap, Activity, ShieldAlert,
+  BatteryWarning, Clock, Zap, Activity, Lightbulb, ShieldAlert,
   Gauge, RefreshCw, TrendingDown,
 } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
-import { Badge, Button, DataTable, Caption, Text, type Column, useSortToggle } from '@/components/ui';
-import { StatGroup, type StatMetric } from '@/components/data-display';
-import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
-import { useMetricPreferences } from '@/components/data-display/stat-reference';
-import { formatMetric, type StatPeriod } from '@/lib/metric-reference';
-import { AIVampireDrainExplanation } from '@/components/ai';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, DataTable, PanelTitle, Caption, Text, type Column, useSortToggle } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
 import {
   LinearGauge, ChartLegend, ChartTooltip, EmbeddedChart, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
-import { VampireSplitPanel, VampireCulpritPanel, SourceRecovery, sessionPresentation } from '../components/vampire-drain-modernization';
+import { VampireSplitPanel } from '../components/VampireSplitPanel';
+import { VampireCulpritPanel } from '../components/VampireCulpritPanel';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -30,10 +28,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDate, formatDateTime, formatDayKey } from '@/lib/dateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useTimezone } from '@/lib/timezone';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { request } from '@/api/client';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useDataState } from '@/hooks/useDataState';
 
 /* ── Types (match internal/api/vampiredrain/handler.go — SI canonical) ── */
 
@@ -100,9 +96,8 @@ const GAUGE_MAX = 5;
 /* ── Component ── */
 
 export default function VampireDrainPage() {
-  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('vampireDrain.title', 'Vampire drain'));
+  usePageTitle(t('vampireDrain.title', 'Vampire Drain'));
 
   const { formatTemperature } = useUnits();
   const { vehicleId } = useSelectedVehicle();
@@ -122,9 +117,6 @@ export default function VampireDrainPage() {
   });
 
   const stats = statsQuery.data ?? null;
-  const statsState = useDataState(statsQuery, { provenance: 'historical' });
-  const eventsState = useDataState(eventsQuery, { provenance: 'historical' });
-  const metricPreferences = useMetricPreferences();
   const events = useMemo(() => eventsQuery.data?.events ?? [], [eventsQuery.data]);
   const dataSources = useMemo(
     () => [
@@ -158,7 +150,7 @@ export default function VampireDrainPage() {
   const trend = useMemo(
     () => [...events]
       .sort((a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime())
-      .map((e) => ({ date: e.started_at, rate: e.drain_pct_per_day ?? null })),
+      .map((e) => ({ date: e.started_at, rate: e.drain_pct_per_day ?? 0 })),
     [events],
   );
 
@@ -168,40 +160,7 @@ export default function VampireDrainPage() {
     [events, timeZone],
   );
 
-  const period: StatPeriod = {
-    kind: 'unknown',
-    label: stats?.sample_window_days != null
-      ? t('vampireDrain.modernization.sampleWindow', '{{count}}-day sample window', { count: stats.sample_window_days })
-      : t('vampireDrain.modernization.sampleUnknown', 'Sample window unavailable'),
-    reason: t('vampireDrain.modernization.sampleScope', 'Statistics use the server sample window. Charts and sessions use up to 200 loaded parked windows; exact interval bounds are not supplied.'),
-  };
-  const metrics: StatMetric[] = [
-    {
-      metricId: 'percent', occurrenceId: 'vampire-average', rawValue: stats?.avg_drain_pct_per_day,
-      label: t('vampireDrain.kpi.avg', 'Avg drain / day'),
-      description: t('vampireDrain.help.avg', 'Mean battery loss per day while parked and not charging across the sample window.'),
-    },
-    {
-      metricId: 'percent', occurrenceId: 'vampire-median', rawValue: stats?.median_drain_pct_per_day,
-      label: t('vampireDrain.kpi.median', 'Median drain / day'),
-      description: t('vampireDrain.help.median', 'Typical (50th percentile) daily battery loss — robust to one-off outliers.'),
-    },
-    {
-      metricId: 'percent', occurrenceId: 'vampire-p95', rawValue: stats?.p95_drain_pct_per_day,
-      label: t('vampireDrain.kpi.p95', 'P95 drain / day'),
-      description: t('vampireDrain.help.p95', 'Worst-case (95th percentile) daily battery loss observed in the window.'),
-    },
-    {
-      metricId: 'duration', occurrenceId: 'vampire-observed',
-      rawValue: stats?.total_observed_hours != null ? stats.total_observed_hours * 3600 : null,
-      display: { units: { duration: 'h' } },
-      label: t('vampireDrain.kpi.observed', 'Observed hours'),
-      description: t('vampireDrain.help.observed', 'Total parked, non-charging hours sampled for the drain statistics.'),
-      context: stats?.event_count != null
-        ? t('vampireDrain.kpi.sessions', '{{count}} sessions', { count: stats.event_count })
-        : t('vampireDrain.modernization.sessionsUnknown', 'Session count unavailable'),
-    },
-  ];
+  const pct = (v: number | null | undefined) => (v == null ? '—' : `${fmtNumber(v, 2)}%`);
   const avg = stats?.avg_drain_pct_per_day ?? null;
   const gaugeColor = avg == null
     ? CHART_COLORS[0]
@@ -209,19 +168,19 @@ export default function VampireDrainPage() {
 
   const columns: Column<VampireDrainEvent>[] = useMemo(() => [
     { key: 'started_at', header: t('vampireDrain.columns.started', 'Started'), sortable: true, render: (r) => formatDateTime(r.started_at) },
-    { key: 'duration_hours', align: 'right', header: t('vampireDrain.columns.duration', 'Duration'), sortable: true, render: (r) => r.duration_hours != null ? `${fmtNumber(r.duration_hours)}h` : '—' },
-    { key: 'start_battery_pct', align: 'right', header: t('vampireDrain.columns.startPct', 'Start %'), sortable: true, render: (r) => formatMetric('percent', r.start_battery_pct, metricPreferences).text },
-    { key: 'end_battery_pct', align: 'right', header: t('vampireDrain.columns.endPct', 'End %'), sortable: true, render: (r) => formatMetric('percent', r.end_battery_pct, metricPreferences).text },
+    { key: 'duration_hours', header: t('vampireDrain.columns.duration', 'Duration'), sortable: true, render: (r) => `${fmtNumber(r.duration_hours, 1)}h` },
+    { key: 'start_battery_pct', header: t('vampireDrain.columns.startPct', 'Start %'), sortable: true, render: (r) => `${fmtNumber(r.start_battery_pct, 0)}%` },
+    { key: 'end_battery_pct', header: t('vampireDrain.columns.endPct', 'End %'), sortable: true, render: (r) => `${fmtNumber(r.end_battery_pct, 0)}%` },
     {
       key: 'drain_pct', header: t('vampireDrain.columns.loss', 'Loss %'), sortable: true, render: (r) => (
-        <Badge variant={r.drain_pct == null ? 'neutral' : r.drain_pct > 5 ? 'danger' : r.drain_pct > 2 ? 'warning' : 'success'}>
-          {r.drain_pct != null ? `${fmtNumber(r.drain_pct)}%` : '—'}
+        <Badge variant={r.drain_pct > 5 ? 'danger' : r.drain_pct > 2 ? 'warning' : 'success'}>
+          {fmtNumber(r.drain_pct, 1)}%
         </Badge>
-      ), align: 'right',
+      ),
     },
-    { key: 'drain_pct_per_day', align: 'right', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day) },
-    { key: 'ambient_temp_c_avg', align: 'right', header: t('vampireDrain.columns.temp', 'Ambient'), sortable: true, render: (r) => formatTemperature(r.ambient_temp_c_avg) },
-  ], [t, formatTemperature, fmtNumber, metricPreferences]);
+    { key: 'drain_pct_per_day', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day, 2) },
+    { key: 'ambient_temp_c_avg', header: t('vampireDrain.columns.temp', 'Ambient'), sortable: true, render: (r) => formatTemperature(r.ambient_temp_c_avg) },
+  ], [t, formatTemperature]);
 
   const tips = useMemo(() => [
     { icon: <ShieldAlert className="h-4 w-4" aria-hidden="true" />, text: t('vampireDrain.tips.sentry', 'Disable Sentry Mode when parked at home to save 1–2 % per day.') },
@@ -237,7 +196,6 @@ export default function VampireDrainPage() {
     <>
       <Button
         variant="ghost"
-        className="min-h-11 min-w-11"
         onClick={() => { void statsQuery.refetch(); void eventsQuery.refetch(); }}
         aria-label={t('vampireDrain.refresh', 'Refresh vampire drain')}
         icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
@@ -246,10 +204,10 @@ export default function VampireDrainPage() {
   );
 
   return (
-    <PageLayout
-      title={t('vampireDrain.title', 'Vampire drain')}
+    <PageContainer
+      title={t('vampireDrain.title', 'Vampire Drain')}
       subtitle={t('vampireDrain.subtitle', 'Analyze phantom energy loss while your vehicle is parked')}
-      secondaryActions={actions}
+      actions={actions}
       query={[statsQuery, eventsQuery]}
       dataSources={dataSources}
     >
@@ -263,21 +221,63 @@ export default function VampireDrainPage() {
 
       {/* 1 — KPI band */}
       <FadeIn>
-        <Section id="vampire-summary" title={t('vampireDrain.kpis', 'Drain summary')}>
-          <SourceRecovery state={statsState} label={t('dataSources.labels.vampireDrainStats', 'Vampire-drain statistics')} />
+        <section
+          aria-label={t('vampireDrain.kpis', 'Drain summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
           {!enabled ? (
-            <LayoutCard title={t('vampireDrain.kpis', 'Drain summary')}>
+            <GlassPanel className="col-span-2 p-4 sm:p-5 lg:col-span-4">
               <EmptyState
                 icon={<Zap className="h-8 w-8" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
-            </LayoutCard>
+            </GlassPanel>
+          ) : statsQuery.isLoading ? (
+            <>
+              <Skeleton height={92} rounded />
+              <Skeleton height={92} rounded />
+              <Skeleton height={92} rounded />
+              <Skeleton height={92} rounded />
+            </>
+          ) : statsQuery.isError ? (
+            <GlassPanel className="col-span-2 p-4 sm:p-5 lg:col-span-4">
+              <QueryError error={statsQuery.error} onRetry={() => { void statsQuery.refetch(); }} />
+            </GlassPanel>
           ) : (
-            <BatteryEvidenceBrief id="vampire-drain-summary" title={t('vampireDrain.brief.title', 'Observed parked-drain statistics')} metrics={metrics} period={period}
-              loading={statsState.status === 'initial'} retained={statsState.hasData && statsState.status !== 'ok'} />
+            <>
+              <MetricCard
+                label={t('vampireDrain.kpi.avg', 'Avg Drain / day')}
+                value={pct(stats?.avg_drain_pct_per_day)}
+                icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+                color="purple"
+                help={{ i18nKey: 'vampireDrain.help.avg', defaultValue: 'Mean battery loss per day while parked and not charging across the sample window.' }}
+              />
+              <MetricCard
+                label={t('vampireDrain.kpi.median', 'Median Drain / day')}
+                value={pct(stats?.median_drain_pct_per_day)}
+                icon={<Activity className="h-4 w-4" aria-hidden="true" />}
+                color="cyan"
+                help={{ i18nKey: 'vampireDrain.help.median', defaultValue: 'Typical (50th percentile) daily battery loss — robust to one-off outliers.' }}
+              />
+              <MetricCard
+                label={t('vampireDrain.kpi.p95', 'P95 Drain / day')}
+                value={pct(stats?.p95_drain_pct_per_day)}
+                icon={<TrendingDown className="h-4 w-4" aria-hidden="true" />}
+                color="red"
+                help={{ i18nKey: 'vampireDrain.help.p95', defaultValue: 'Worst-case (95th percentile) daily battery loss observed in the window.' }}
+              />
+              <MetricCard
+                label={t('vampireDrain.kpi.observed', 'Observed Hours')}
+                value={fmtNumber(stats?.total_observed_hours, 1)}
+                subtitle={t('vampireDrain.kpi.sessions', '{{count}} sessions', { count: stats?.event_count ?? 0 })}
+                icon={<Clock className="h-4 w-4" aria-hidden="true" />}
+                color="amber"
+                help={{ i18nKey: 'vampireDrain.help.observed', defaultValue: 'Total parked, non-charging hours sampled for the drain statistics.' }}
+              />
+            </>
           )}
-        </Section>
+        </section>
       </FadeIn>
 
       <FadeIn delay={0.04}>
@@ -290,21 +290,25 @@ export default function VampireDrainPage() {
 
       {/* 2 — Primary bento: trend (hero) + rate gauge */}
       <FadeIn delay={0.1}>
-        <Section id="vampire-trend" title={t('vampireDrain.sections.trend', 'Drain rate trend and gauge')}>
-          <SourceRecovery state={eventsState} label={t('dataSources.labels.vampireDrainEvents', 'Parked-drain events')} />
-          <CardGrid label={t('vampireDrain.sections.trend', 'Drain rate trend and gauge')} items={[
-            { id: 'drain-trend', size: 'half', content: (
-          <LayoutCard title={t('vampireDrain.trend.title', 'Drain rate trend')}>
+        <section
+          aria-label={t('vampireDrain.sections.trend', 'Drain rate trend and gauge')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('vampireDrain.trend.title', 'Drain Rate Trend')}
+            </PanelTitle>
             {!enabled ? (
               <EmptyState
                 icon={<TrendingDown className="h-8 w-8" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
-            ) : eventsState.status === 'initial' ? (
+            ) : eventsQuery.isLoading ? (
               <Skeleton height={240} />
-            ) : eventsState.fatalError ? (
-              <EmptyState message={t('vampireDrain.modernization.eventsUnavailable', 'Parked-drain events are unavailable. Retry the source above.')} />
+            ) : eventsQuery.isError ? (
+              <QueryError error={eventsQuery.error} onRetry={() => { void eventsQuery.refetch(); }} />
             ) : trend.length === 0 ? (
               <EmptyState
                 /* no-action: transient — the trend needs more parked-drain sessions to plot;
@@ -313,52 +317,50 @@ export default function VampireDrainPage() {
                 message={noEventsMsg}
               />
             ) : (
-              <EmbeddedChart toolbar exportable size="standard"
-                title={t('vampireDrain.trend.title', 'Drain rate trend')}
+              <EmbeddedChart
+                title={t('vampireDrain.trend.title', 'Drain Rate Trend')}
                 ariaLabel={t('vampireDrain.trend.aria', 'Daily vampire drain rate over parked sessions')}
                 data={trend}
-                exportData={trend}
-                fullscreen
                 dataColumns={[
                   { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDate(String(value ?? '')) },
                   {
                     key: 'rate',
-                    label: t('vampireDrain.trend.series', 'Drain rate (%/day)'),
-                    format: (value) => value != null ? fmtNumber(Number(value)) : '—',
+                    label: t('vampireDrain.trend.series', 'Drain Rate (%/day)'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
                   },
                 ]}
                 height={288}
                 mobileHeight={224}
                 chartKey="vampire-drain-rate-trend"
               >
-                {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trend} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
                     <YAxis tick={axisTick} unit="%" width={48} />
                     <Tooltip content={<ChartTooltip />} />
-                    <ChartLegend />
-                    <Line {...AREA_DEFAULTS} dataKey="rate" name={t('vampireDrain.trend.series', 'Drain rate (%/day)')} stroke={CHART_COLORS[0]} hide={hiddenSeries?.isHidden('rate')} />
+                    <Line {...AREA_DEFAULTS} dataKey="rate" name={t('vampireDrain.trend.series', 'Drain Rate (%/day)')} stroke={CHART_COLORS[0]} />
                   </LineChart>
                 </ResponsiveContainer>
-                )}
               </EmbeddedChart>
             )}
-          </LayoutCard>
-            ) },
-            { id: 'drain-gauge', size: 'quarter', content: (
-          <LayoutCard title={t('vampireDrain.gauge.title', 'Drain rate')}>
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('vampireDrain.gauge.title', 'Drain Rate')}
+            </PanelTitle>
             {!enabled ? (
               <EmptyState
                 icon={<Gauge className="h-8 w-8" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
-            ) : statsState.status === 'initial' ? (
+            ) : statsQuery.isLoading ? (
               <div className="flex justify-center py-4"><Skeleton width="180px" height={180} rounded /></div>
-            ) : statsState.fatalError ? (
-              <EmptyState message={t('vampireDrain.modernization.statsUnavailable', 'Drain statistics are unavailable. Retry the source in Drain summary.')} />
+            ) : statsQuery.isError ? (
+              <QueryError error={statsQuery.error} onRetry={() => { void statsQuery.refetch(); }} />
             ) : avg == null ? (
               <EmptyState
                 /* no-action: transient — no parked-drain stats yet to average; the header
@@ -375,34 +377,46 @@ export default function VampireDrainPage() {
                   unit="%"
                   color={gaugeColor}
                   size={168}
-                  decimals={displayPrecision}
+                  decimals={2}
                 />
-                <StatGroup metrics={metrics.slice(1, 3)} period={period} className="w-full" />
+                <div className="w-full space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Text variant="bodySm">{t('vampireDrain.kpi.median', 'Median Drain / day')}</Text>
+                    <Text variant="bodySm" className="tabular-nums text-[var(--text-primary)]">{pct(stats?.median_drain_pct_per_day)}</Text>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Text variant="bodySm">{t('vampireDrain.kpi.p95', 'P95 Drain / day')}</Text>
+                    <Text variant="bodySm" className="tabular-nums text-[var(--text-primary)]">{pct(stats?.p95_drain_pct_per_day)}</Text>
+                  </div>
+                </div>
                 <Caption>{t('vampireDrain.gauge.caption', 'Reference: ~5 %/day is a high phantom-drain rate. Lower is better.')}</Caption>
               </div>
             )}
-          </LayoutCard>
-            ) },
-          ]} />
-        </Section>
+          </GlassPanel>
+        </section>
       </FadeIn>
 
       {/* 3 — Secondary bento: daily drain + tips */}
       <FadeIn delay={0.2}>
-        <Section id="vampire-daily" title={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')}>
-          <CardGrid label={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')} items={[
-            { id: 'daily-drain', size: 'half', content: (
-          <LayoutCard title={t('vampireDrain.daily.title', 'Daily drain while parked')}>
+        <section
+          aria-label={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <BatteryWarning className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('vampireDrain.daily.title', 'Daily Drain While Parked')}
+            </PanelTitle>
             {!enabled ? (
               <EmptyState
                 icon={<BatteryWarning className="h-8 w-8" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
-            ) : eventsState.status === 'initial' ? (
+            ) : eventsQuery.isLoading ? (
               <Skeleton height={260} />
-            ) : eventsState.fatalError ? (
-              <EmptyState message={t('vampireDrain.modernization.eventsUnavailable', 'Parked-drain events are unavailable. Retry the source above.')} />
+            ) : eventsQuery.isError ? (
+              <QueryError error={eventsQuery.error} onRetry={() => { void eventsQuery.refetch(); }} />
             ) : daily.length === 0 ? (
               <EmptyState
                 /* no-action: transient — daily aggregates build up as parked-drain sessions are
@@ -411,23 +425,21 @@ export default function VampireDrainPage() {
                 message={noEventsMsg}
               />
             ) : (
-              <EmbeddedChart toolbar exportable size="standard"
-                title={t('vampireDrain.daily.title', 'Daily drain while parked')}
+              <EmbeddedChart
+                title={t('vampireDrain.daily.title', 'Daily Drain While Parked')}
                 ariaLabel={t('vampireDrain.daily.aria', 'Daily battery loss and parked hours')}
                 data={daily}
-                exportData={daily}
-                fullscreen
                 dataColumns={[
                   { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDayKey(String(value ?? '')) },
                   {
                     key: 'drain_pct',
-                    label: t('vampireDrain.daily.loss', 'Battery loss %'),
-                    format: (value) => value != null ? fmtNumber(Number(value)) : '—',
+                    label: t('vampireDrain.daily.loss', 'Battery Loss %'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
                   },
                   {
                     key: 'hours',
-                    label: t('vampireDrain.daily.parked', 'Parked hours'),
-                    format: (value) => value != null ? fmtNumber(Number(value)) : '—',
+                    label: t('vampireDrain.daily.parked', 'Parked Hours'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
                   },
                 ]}
                 height={288}
@@ -443,64 +455,59 @@ export default function VampireDrainPage() {
                       <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="h" width={44} />
                       <Tooltip content={<ChartTooltip />} />
                       <ChartLegend />
-                      <Bar yAxisId="left" dataKey="drain_pct" name={t('vampireDrain.daily.loss', 'Battery loss %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drain_pct')} />
-                      <Bar yAxisId="right" dataKey="hours" name={t('vampireDrain.daily.parked', 'Parked hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('hours')} />
+                      <Bar yAxisId="left" dataKey="drain_pct" name={t('vampireDrain.daily.loss', 'Battery Loss %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drain_pct')} />
+                      <Bar yAxisId="right" dataKey="hours" name={t('vampireDrain.daily.parked', 'Parked Hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('hours')} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
               </EmbeddedChart>
             )}
-          </LayoutCard>
-            ) },
-            { id: 'drain-tips', size: 'quarter', content: (
-          <LayoutCard title={t('vampireDrain.tips.title', 'Tips to reduce vampire drain')}>
+          </GlassPanel>
+
+          <GlassPanel glow="green" className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <Lightbulb className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('vampireDrain.tips.title', 'Tips to Reduce Vampire Drain')}
+            </PanelTitle>
             <ul className="space-y-3">
               {tips.map((tip, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="mt-0.5 shrink-0 text-[var(--text-secondary)]">{tip.icon}</span>
+                  <span className="mt-0.5 shrink-0 text-emerald-300">{tip.icon}</span>
                   <Text variant="body">{tip.text}</Text>
                 </li>
               ))}
             </ul>
-          </LayoutCard>
-            ) },
-          ]} />
-        </Section>
+          </GlassPanel>
+        </section>
       </FadeIn>
 
       {/* 4 — Detail band: drain sessions */}
       <FadeIn delay={0.3}>
-        <LayoutCard title={t('vampireDrain.sessions.title', 'Drain sessions')} actions={
+        <GlassPanel className="p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <PanelTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('vampireDrain.sessions.title', 'Drain Sessions')}
+            </PanelTitle>
             <Badge variant="neutral">
-              {eventsState.hasData
-                ? t('vampireDrain.sessions.count', '{{count}} sessions', { count: events.length })
-                : t('vampireDrain.modernization.sessionsUnknown', 'Session count unavailable')}
+              {t('vampireDrain.sessions.count', '{{count}} sessions', { count: events.length })}
             </Badge>
-        }>
+          </div>
           {!enabled ? (
             <EmptyState
               icon={<Activity className="h-8 w-8" />}
               message={noVehicleMsg}
               actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
             />
-          ) : eventsState.status === 'initial' ? (
+          ) : eventsQuery.isLoading ? (
             <Skeleton height={220} />
-          ) : eventsState.fatalError ? (
-            <EmptyState
-              message={t('vampireDrain.modernization.eventsUnavailable', 'Parked-drain events are unavailable. Retry the source above.')}
-              action={{
-                label: t('vampireDrain.modernization.retrySource', 'Retry {{source}}', {
-                  source: t('dataSources.labels.vampireDrainEvents', 'Parked-drain events'),
-                }),
-                onClick: () => { void eventsQuery.refetch(); },
-              }}
-            />
+          ) : eventsQuery.isError ? (
+            <QueryError error={eventsQuery.error} onRetry={() => { void eventsQuery.refetch(); }} />
           ) : (
             <DataTable<VampireDrainEvent>
               tableId="battery:vampire-drain-sessions"
-              caption={t('vampireDrain.sessions.title', 'Drain sessions')}
               columns={columns}
-              mobilePresentation={sessionPresentation(fmtNumber, formatTemperature, t)}
+              mobileColumns={['started_at', 'drain_pct', 'drain_pct_per_day']}
               data={sortedEvents}
               keyExtractor={(r) => r.started_at}
               sortKey={sortKey}
@@ -511,8 +518,8 @@ export default function VampireDrainPage() {
               pagination
             />
           )}
-        </LayoutCard>
+        </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

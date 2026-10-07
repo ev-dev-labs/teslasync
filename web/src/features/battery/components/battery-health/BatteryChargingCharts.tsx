@@ -20,13 +20,10 @@ import {
 } from '@/components/charts';
 import { EmptyState, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { Stack } from '@/components/layout';
-
+import { GlassPanel, SectionTitle, Text } from '@/components/ui';
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import type { BatteryChargingAnalysis } from '@/types/energy';
 import { computeEnergyBreakdown } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { BATTERY_PANEL_CLASS, BATTERY_PANEL_HEADER_CLASS } from './layout';
 
 interface BatteryChargingChartsProps {
   analysis: BatteryChargingAnalysis;
@@ -43,7 +40,7 @@ function HabitStat({
   accent?: string;
 }) {
   return (
-    <div className="min-w-0 text-center">
+    <div className="text-center">
       <Text
         as="p"
         size="lg"
@@ -62,9 +59,9 @@ function HabitStat({
 
 function StatRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-4 border-b border-[var(--border-subtle)] py-2 last:border-b-0">
+    <div className="flex items-center justify-between border-b border-[var(--border-subtle)] py-2">
       <Text size="xs" color="secondary">{label}</Text>
-      <Text size="sm" weight="semibold" color="primary" className="shrink-0 tabular-nums">{value}</Text>
+      <Text size="sm" weight="semibold" color="primary">{value}</Text>
     </div>
   );
 }
@@ -73,7 +70,6 @@ export default function BatteryChargingCharts({
   analysis,
   totalCycles,
 }: BatteryChargingChartsProps) {
-  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const chargeLevelDistribution = useMemo(
     () =>
@@ -90,21 +86,20 @@ export default function BatteryChargingCharts({
     analysis.total_sessions > 0 && chargeLevelDistribution.length > 0;
 
   return (
-    <Stack gap={6} className="min-w-0 w-full" data-testid="battery-charging-sections">
+    <>
       <SectionErrorBoundary
         name="battery:charge-level-dist"
         fallbackTitle={t('battery.section.chargeDistFailed', 'Charge level distribution failed to load')}
       >
-        <FadeIn delay={0.25} className="min-w-0 w-full">
+        <FadeIn delay={0.25}>
           <ChartContainer
-            className={BATTERY_PANEL_CLASS}
             title={t('battery.chart.chargeDist', 'Charge Level Distribution')}
             subtitle={t('battery.chart.chargeDistSub', 'Recent 100 sessions')}
             ariaLabel={t(
               'battery.chart.chargeDistAria',
               'Distribution of charging-session start and end battery levels',
             )}
-            size={hasChargeLevelData ? 'detail' : 'compact'}
+            size="detail"
             empty={!hasChargeLevelData}
             emptyMessage={t('battery.chart.noSessions', 'No charging session data yet')}
             data={chargeLevelDistribution}
@@ -152,7 +147,7 @@ export default function BatteryChargingCharts({
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="mt-4 grid min-w-0 shrink-0 grid-cols-2 gap-4 sm:grid-cols-4">
+                <div className="mt-3 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
                   <HabitStat
                     value={
                       analysis.avg_start_soc_pct == null
@@ -191,13 +186,13 @@ export default function BatteryChargingCharts({
         name="battery:acdc-breakdown"
         fallbackTitle={t('battery.section.acdcFailed', 'AC/DC energy breakdown failed to load')}
       >
-        <FadeIn delay={0.3} className="min-w-0 w-full">
+        <FadeIn delay={0.3}>
           <section
             aria-label={t('battery.section.chargingAnalysis', 'Charging energy analysis')}
-            className="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2"
+            className="grid grid-cols-1 gap-4 lg:grid-cols-2"
           >
             <ChartContainer
-              className={BATTERY_PANEL_CLASS}
+              className="h-full"
               title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}
               ariaLabel={t('battery.chart.acdcAria', 'AC versus DC energy share pie chart')}
               size="compact"
@@ -234,11 +229,11 @@ export default function BatteryChargingCharts({
               </ResponsiveContainer>
             </ChartContainer>
 
-            <GlassPanel className={BATTERY_PANEL_CLASS}>
-              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
+            <GlassPanel className="h-full p-4 sm:p-5">
+              <SectionTitle className="mb-4 flex items-center gap-2">
                 <Gauge className="h-4 w-4 text-purple-300" aria-hidden="true" />
                 {t('battery.stats.title', 'Charging Statistics')}
-              </PanelTitle>
+              </SectionTitle>
               {energyBreakdown ? (
                 <div className="space-y-1">
                   <StatRow
@@ -255,7 +250,7 @@ export default function BatteryChargingCharts({
                   />
                   <StatRow
                     label={t('battery.stats.totalEnergy', 'Total Energy Added')}
-                    value={`${fmtNumber(energyBreakdown.totalEnergy)} kWh`}
+                    value={`${fmtNumber(energyBreakdown.totalEnergy, 1)} kWh`}
                   />
                   <StatRow
                     label={t('battery.stats.cycles', 'Charge Cycles')}
@@ -273,6 +268,6 @@ export default function BatteryChargingCharts({
           </section>
         </FadeIn>
       </SectionErrorBoundary>
-    </Stack>
+    </>
   );
 }

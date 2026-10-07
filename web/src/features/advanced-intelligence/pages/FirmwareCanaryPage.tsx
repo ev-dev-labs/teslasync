@@ -5,15 +5,14 @@ import { useFirmwareCanary } from '@/api/hooks/useAdvancedIntelligence';
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { EvidencePanel, InsightPanel } from '../components';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 10;
 
@@ -25,22 +24,23 @@ function decisionVariant(decision: string) {
 }
 
 export default function FirmwareCanaryPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useState(1);
   const query = useFirmwareCanary(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
   const latest = items[0] ?? null;
-  usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware canary'));
+  usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware Canary'));
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.firmware.title', 'Firmware canary')}
+    <PageContainer
+      title={t('advancedIntelligence.firmware.title', 'Firmware Canary')}
       subtitle={t(
         'advancedIntelligence.firmware.subtitle',
         'Compare a target vehicle with matched peer windows before deciding rollout readiness.',
       )}
+      loading={vehicleId != null && query.isLoading}
+      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="warning"
@@ -55,7 +55,6 @@ export default function FirmwareCanaryPage() {
 
       <FadeIn>
         <InsightPanel
-          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.firmware.decision.title', 'Matched cohort decisions')}
           description={t(
             'advancedIntelligence.firmware.decision.subtitle',
@@ -82,17 +81,17 @@ export default function FirmwareCanaryPage() {
                   <StatCard
                     label={t('advancedIntelligence.firmware.targetDelta', 'Target regression')}
                     value={item.vehicle_regression_pct != null
-                      ? `${fmtNumber(item.vehicle_regression_pct)}%` : null}
+                      ? `${fmtNumber(item.vehicle_regression_pct, 2)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.firmware.peerDelta', 'Peer regression')}
                     value={item.peer_regression_pct != null
-                      ? `${fmtNumber(item.peer_regression_pct)}%` : null}
+                      ? `${fmtNumber(item.peer_regression_pct, 2)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.firmware.excessDelta', 'Matched excess')}
                     value={item.matched_excess_pct != null
-                      ? `${fmtNumber(item.matched_excess_pct)}%` : null}
+                      ? `${fmtNumber(item.matched_excess_pct, 2)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.firmware.generated', 'Decision generated')}
@@ -140,6 +139,6 @@ export default function FirmwareCanaryPage() {
           ]}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

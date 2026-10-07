@@ -29,10 +29,10 @@ export function QuickLinksSection() {
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <ChevronRight className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.detail.quickLinks', 'Quick links')}
+        {t('vehicles.detail.quickLinks', 'Quick Links')}
       </PanelTitle>
       <nav
-        aria-label={t('vehicles.detail.quickLinks', 'Quick links')}
+        aria-label={t('vehicles.detail.quickLinks', 'Quick Links')}
         className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6"
       >
         {quickLinks.map((link) => {

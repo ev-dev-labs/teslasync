@@ -1,8 +1,7 @@
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, ImageDown } from 'lucide-react';
-import { Button } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Button, GlassPanel } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import type { ClipRecord } from '../../lib/types';
 import type { ReconstructionResult } from '../../lib/timelineAlignment';
@@ -22,20 +21,13 @@ export interface ExportManifestPanelProps {
 export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPanelProps) {
   const { t } = useTranslation();
   const objectUrlRef = useRef<string | null>(null);
-  const [exportError, setExportError] = useState<string | null>(null);
 
   const handleManifestDownload = () => {
-    setExportError(null);
-    try {
-      const manifest = buildIncidentManifest(clip, reconstruction);
-      downloadJson(`${clip.fileName}.incident-manifest.json`, manifest);
-    } catch (error) {
-      setExportError(error instanceof Error ? error.message : t('dashcam.export.manifestFailed', 'The local manifest export failed.'));
-    }
+    const manifest = buildIncidentManifest(clip, reconstruction);
+    downloadJson(`${clip.fileName}.incident-manifest.json`, manifest);
   };
 
   const handleStillExport = () => {
-    setExportError(null);
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
     const objectUrl = URL.createObjectURL(clip.blob);
     objectUrlRef.current = objectUrl;
@@ -64,35 +56,25 @@ export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPane
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d') as unknown as RedactionDrawContext | null;
-          if (!ctx) {
-            setExportError(t('dashcam.export.canvasUnavailable', 'This browser could not create a still-image canvas.'));
-            return;
-          }
+          if (!ctx) return;
           drawRedactedFrame(ctx, video, width, height, clip.redactions);
           canvas.toBlob((blob) => {
-            try {
-              if (blob) downloadBlobAs(blob, `${clip.fileName}.redacted-still.png`);
-              else setExportError(t('dashcam.export.imageUnavailable', 'This browser could not encode the still image.'));
-            } catch (error) {
-              setExportError(error instanceof Error ? error.message : t('dashcam.export.failed', 'The local still export failed.'));
-            }
+            if (blob) downloadBlobAs(blob, `${clip.fileName}.redacted-still.png`);
           }, 'image/png');
-        } catch (error) {
-          setExportError(error instanceof Error ? error.message : t('dashcam.export.failed', 'The local still export failed.'));
         } finally {
           cleanup();
         }
       },
       { once: true },
     );
-    video.addEventListener('error', () => {
-      setExportError(video.error?.message || t('dashcam.export.decodeFailed', 'This browser could not decode the clip for a still export.'));
-      cleanup();
-    }, { once: true });
+    video.addEventListener('error', cleanup, { once: true });
   };
 
   return (
-    <LayoutCard title={t('dashcam.export.title', 'Local export')}>
+    <GlassPanel padding="md" className="space-y-3">
+      <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+        {t('dashcam.export.title', 'Local export')}
+      </h3>
       <InlineCallout variant="info">
         {t(
           'dashcam.export.disclaimer',
@@ -100,17 +82,13 @@ export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPane
         )}
       </InlineCallout>
       <div className="flex flex-wrap gap-2">
-        <Button wrapLabel size="sm" variant="secondary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleManifestDownload}>
+        <Button size="sm" variant="secondary" icon={<Download className="h-3.5 w-3.5" />} onClick={handleManifestDownload}>
           {t('dashcam.export.manifest', 'Download incident manifest (JSON)')}
         </Button>
-        <Button wrapLabel size="sm" variant="secondary" icon={<ImageDown className="h-3.5 w-3.5" />} onClick={() => {
-          try { handleStillExport(); }
-          catch (error) { setExportError(error instanceof Error ? error.message : t('dashcam.export.failed', 'The local still export failed.')); }
-        }}>
+        <Button size="sm" variant="secondary" icon={<ImageDown className="h-3.5 w-3.5" />} onClick={handleStillExport}>
           {t('dashcam.export.still', 'Export redacted still (PNG)')}
         </Button>
       </div>
-      {exportError && <InlineCallout variant="danger">{exportError}</InlineCallout>}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

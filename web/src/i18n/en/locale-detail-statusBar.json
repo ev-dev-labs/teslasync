@@ -6,7 +6,7 @@
       "open": "Open Helix chat",
       "close": "Close Helix chat",
       "title": "Helix chat",
-      "disabled": "Enable Helix chat in integrations to ask about this page.",
+      "disabled": "Enable Helix Chat in Integrations to ask about this page.",
       "configure": "Configure Helix",
       "welcome": "Ask Helix about the page you are viewing.",
       "includePage": "Include visible page text",

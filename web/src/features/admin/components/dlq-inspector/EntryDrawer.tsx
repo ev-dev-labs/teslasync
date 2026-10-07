@@ -30,9 +30,8 @@ import {
 } from '@/components/ui';
 import { KVList, TimeStamp } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { DLQEntryFull, DLQEntrySummary } from '@/types/admin-diagnostics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EntryDrawerProps {
   open: boolean;
@@ -74,7 +73,6 @@ export function EntryDrawer({
   onClose,
   onReplay,
 }: EntryDrawerProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<string>('inner');
 
@@ -147,7 +145,7 @@ export function EntryDrawer({
             },
           ]
         : [],
-    [head, t, fmtInt],
+    [head, t],
   );
 
   // Active payload panel: its accessible label (mirrors the selected tab)

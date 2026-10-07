@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { PageContainer } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
@@ -71,7 +69,7 @@ export function resolveActivityWindow(
  */
 export default function ActivityTimelinePage() {
   const { t } = useTranslation();
-  usePageTitle(t('activity.timeline.title', 'Activity timeline'));
+  usePageTitle(t('activity.timeline.title', 'Activity Timeline'));
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const operationalMode = useOperationalMode();
@@ -101,17 +99,14 @@ export default function ActivityTimelinePage() {
     offset,
     enabled: vehicles.length > 0,
   });
-  const { data, isLoading, refetch } = query;
-  const state = useDataState(query, { provenance: 'historical' });
-  const error = state.fatalError;
-  const isError = !!error;
+  const { data, isLoading, isError, error, refetch } = query;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
   if (vehicles.length === 0) {
     return (
       <NoVehicleSelected
-        pageTitle={t('activity.timeline.title', 'Activity timeline')}
+        pageTitle={t('activity.timeline.title', 'Activity Timeline')}
       />
     );
   }
@@ -121,8 +116,8 @@ export default function ActivityTimelinePage() {
   const exportName = `activity-${start}-${end}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
 
   return (
-    <PageLayout
-      title={t('activity.timeline.title', 'Activity timeline')}
+    <PageContainer
+      title={t('activity.timeline.title', 'Activity Timeline')}
       subtitle={t(
         'activity.timeline.subtitle',
         'A unified timeline of drives, charging, alerts, software updates, and your annotations.',
@@ -151,17 +146,13 @@ export default function ActivityTimelinePage() {
         />
       }
     >
-      <StaleRefreshWarning state={state} />
       <FadeIn>
         <ActivityOverview
           items={items}
           total={total}
           offset={offset}
-          loading={isLoading && !state.hasData}
+          loading={isLoading}
           error={isError}
-          available={state.hasData}
-          retained={state.hasData && query.isError}
-          scope={`${activityWindow.start} – ${activityWindow.end}`}
           timezone={tz}
         />
       </FadeIn>
@@ -227,6 +218,6 @@ export default function ActivityTimelinePage() {
           'Dated service records will join this timeline when a verified service-history source is available.',
         )}
       </Text>
-    </PageLayout>
+    </PageContainer>
   );
 }

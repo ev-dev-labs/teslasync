@@ -20,10 +20,10 @@
  */
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Info, RefreshCw } from 'lucide-react';
+import { Activity, Info, RefreshCw } from 'lucide-react';
 
-import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button, GlassPanel } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { Button, GlassPanel, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import {
   AlertBanner,
@@ -33,7 +33,6 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useIngestXRay } from '@/api/hooks/useIngestXRay';
-import { deriveDataState } from '@/api/dataState';
 import type {
   IngestXRayBucket,
   IngestXRayWindow,
@@ -43,13 +42,13 @@ import {
   XRayBucketChart,
   XRayControls,
   XRayFieldsTable,
+  XRayHeader,
   XRayTopFields,
 } from '../components/ingest-xray';
-import { IngestOperationalBrief } from '../components/statstrip-ingest-dlq-redis/IngestOperationalBrief';
 
 export default function IngestXRayPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.xray.pageTitle', 'Ingest x-ray'));
+  usePageTitle(t('admin.xray.pageTitle', 'Ingest X-Ray'));
 
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [windowSel, setWindowSel] = useState<IngestXRayWindow>('1h');
@@ -78,8 +77,7 @@ export default function IngestXRayPage() {
   // last-good numbers on error; gating every section on "error AND no data"
   // keeps them consistent and lets the page-tier freshness chip own the
   // stale/failed signalling.
-  const source = deriveDataState(xray);
-  const showError = source.fatalError !== null;
+  const showError = xray.isError && xray.data === undefined;
 
   const actions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
@@ -96,7 +94,7 @@ export default function IngestXRayPage() {
         variant="ghost"
         onClick={refetch}
         disabled={noVehicle || xray.isFetching}
-        aria-label={t('admin.xray.actions.refresh', 'Refresh ingest x-ray')}
+        aria-label={t('admin.xray.actions.refresh', 'Refresh ingest X-Ray')}
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
@@ -104,20 +102,14 @@ export default function IngestXRayPage() {
   );
 
   return (
-    <PageLayout
-      title={t('admin.xray.pageTitle', 'Ingest x-ray')}
+    <PageContainer
+      title={t('admin.xray.pageTitle', 'Ingest X-Ray')}
       subtitle={t(
         'admin.xray.subtitle',
         'Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.',
       )}
-      contextActions={actions}
+      actions={actions}
       query={xray}
-      dataSources={[{
-        id: 'ingest-xray',
-        label: t('admin.xray.pageTitle', 'Ingest x-ray'),
-        query: xray,
-        enabled: !noVehicle,
-      }]}
     >
       {noVehicle && (
         <AlertBanner
@@ -135,12 +127,9 @@ export default function IngestXRayPage() {
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <SectionErrorBoundary name="xray-kpis">
-          <IngestOperationalBrief
+          <XRayHeader
             data={xray.data}
-            loading={!noVehicle && source.status === 'initial'}
-            retained={source.hasData && xray.isError}
-            enabled={!noVehicle}
-            error={source.fatalError}
+            loading={xray.isLoading}
             windowSel={windowSel}
             bucketSel={bucketSel}
           />
@@ -181,15 +170,19 @@ export default function IngestXRayPage() {
       {/* 3 — Detail band: full-width per-field statistics table */}
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="xray-fields">
-          <LayoutCard title={t('admin.xray.panels.fields', 'Field statistics')}>
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('admin.xray.panels.fields', 'Field statistics')}
+            </PanelTitle>
             {showError ? (
               <QueryError error={xray.error} onRetry={refetch} />
             ) : (
               <XRayFieldsTable rows={fields} loading={xray.isLoading} />
             )}
-          </LayoutCard>
+          </GlassPanel>
         </SectionErrorBoundary>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

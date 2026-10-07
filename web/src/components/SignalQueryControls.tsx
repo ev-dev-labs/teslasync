@@ -7,7 +7,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { request } from '@/api/client'
 import { GlassPanel, Badge, type BadgeProps, Button, Input, DataTable, type Column } from './ui'
-
+import { fmtInt } from '../lib/numberFormat'
 import { TIME_RANGE_PRESETS, matchTimeRangePreset } from '../lib/constants'
 import { cn } from '../lib/cn'
 import { Search, X, Play, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
@@ -33,7 +33,6 @@ export interface SignalLogEntry {
 // chart axis renders "Invalid Date" and every cell shows "—" with a
 // "string" type badge — the symptom that motivated this helper.
 import type { SignalHistoryPoint, SignalHistoryResp } from '@/api/types'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function adaptSignalHistoryPoint(point: SignalHistoryPoint, signal: string): SignalLogEntry {
   const entry: SignalLogEntry = {
@@ -380,7 +379,6 @@ interface SignalDataTableProps {
 }
 
 export function SignalDataTable({ rows, page, totalPages, total, perPage, onPageChange, loading }: SignalDataTableProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
 
   if (loading) {

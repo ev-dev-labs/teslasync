@@ -110,7 +110,7 @@ describe('RateTimeline — rendering & legend', () => {
 
   it('shows the formatted rate in the (decorative) hover tooltip', () => {
     renderTimeline({ rates: [makeRate({ hour: 0, rate_cents: 17.5, tier: 'ON_PEAK' })] });
-    expect(screen.getByText('17.50¢/kWh')).toBeInTheDocument();
+    expect(screen.getByText('17.5¢/kWh')).toBeInTheDocument();
   });
 });
 
@@ -246,7 +246,7 @@ describe('RateTimeline — accessibility', () => {
     renderTimeline({ rates: [makeRate({ hour: 0, rate_cents: 15, tier: 'OFF_PEAK' })] });
 
     expect(
-      screen.getByRole('img', { name: '12a: 15.00¢ per kWh, Off-Peak' }),
+      screen.getByRole('img', { name: '12a: 15.0¢ per kWh, Off-Peak' }),
     ).toBeInTheDocument();
   });
 
@@ -257,7 +257,7 @@ describe('RateTimeline — accessibility', () => {
     });
 
     expect(
-      screen.getByRole('img', { name: '2a: 8.00¢ per kWh, Off-Peak, in charge window' }),
+      screen.getByRole('img', { name: '2a: 8.0¢ per kWh, Off-Peak, in charge window' }),
     ).toBeInTheDocument();
   });
 
@@ -269,8 +269,8 @@ describe('RateTimeline — accessibility', () => {
       ],
     });
 
-    expect(screen.getByRole('img', { name: /5a: 5\.00¢ per kWh, WEIRD/ })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /6a: 5\.00¢ per kWh, Unknown/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /5a: 5\.0¢ per kWh, WEIRD/ })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /6a: 5\.0¢ per kWh, Unknown/ })).toBeInTheDocument();
   });
 
   it('marks the decorative legend swatch aria-hidden (state conveyed by adjacent text)', () => {

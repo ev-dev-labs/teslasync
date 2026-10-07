@@ -3,14 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import {
   AreaChartWrapper,
+  ChartContainer,
   type ChartDataColumn,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
 import { formatDayKey } from '@/lib/dateFormat';
-
+import { fmtPercent } from '@/lib/numberFormat';
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import type { BatteryPassportQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportTrendTimelineProps {
   analysis: BatteryPassportAnalysis;
@@ -23,7 +22,6 @@ export function BatteryPassportTrendTimeline({
   state,
   locale,
 }: BatteryPassportTrendTimelineProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const data = useMemo(
     () => analysis.trend.points.map((point) => ({
@@ -46,12 +44,12 @@ export function BatteryPassportTrendTimeline({
         ),
         format: (value) => (
           typeof value === 'number'
-            ? fmtPercent(value)
+            ? fmtPercent(value, 1)
             : '—'
         ),
       },
     ],
-    [t, fmtPercent],
+    [t],
   );
   const unavailable =
     !state.vehicleSelected
@@ -62,7 +60,7 @@ export function BatteryPassportTrendTimeline({
 
   return (
     <section data-testid="battery-passport-trend-timeline">
-      <ChartCard toolbar size="standard"
+      <ChartContainer
         title={t(
           'batteryPassport.trend.title',
           'Certificate-reported SoH timeline',
@@ -97,7 +95,7 @@ export function BatteryPassportTrendTimeline({
           xFormatter={(value) =>
             formatDayKey(value, { locale, style: 'short' })
           }
-          yFormatter={(value) => fmtPercent(value)}
+          yFormatter={(value) => fmtPercent(value, 0)}
           series={[
             {
               key: 'soh_pct',
@@ -109,7 +107,7 @@ export function BatteryPassportTrendTimeline({
             },
           ]}
         />
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

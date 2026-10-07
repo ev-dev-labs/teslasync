@@ -1,15 +1,13 @@
 import type {
   PhysicsLedger
 } from '@/api/types';
-import { Badge, Caption, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { unknownLabel, useT } from './helpers';
 import { TermRow } from './TermRow';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
-  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const { formatEnergy, formatDuration } = useUnits();
   const c = ledger.charge;
@@ -39,27 +37,21 @@ export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
           </Badge>
         ) : null}
       </div>
-      <Table aria-label={t('physicsLedger.charge.title', 'Charge physics')}>
-        <tbody>
-          <tr>
-            <th scope="row" className="font-normal">
-              <Text as="span" size="sm">
-                {t('physicsLedger.charge.added', 'Energy added')}
-              </Text>
-            </th>
-            <td className="text-right tabular-nums">
-              <Text as="span" size="sm">
-                {c.energy_added_wh != null ? formatEnergy(c.energy_added_wh) : unknownLabel(t)}
-              </Text>
-            </td>
-          </tr>
-          <TermRow label={t('physicsLedger.charge.wall', 'Wall energy')} term={c.wall_wh} format={(v) => formatEnergy(v)} />
-          <TermRow label={t('physicsLedger.charge.precondition', 'Preconditioning')} term={c.precondition_wh} format={(v) => formatEnergy(v)} />
-        </tbody>
-      </Table>
+      <div className="divide-y divide-[var(--border-default)]">
+        <div className="flex items-baseline justify-between gap-3 py-1.5">
+          <Text as="span" size="sm">
+            {t('physicsLedger.charge.added', 'Energy added')}
+          </Text>
+          <Text as="span" size="sm" className="tabular-nums">
+            {c.energy_added_wh != null ? formatEnergy(c.energy_added_wh) : unknownLabel(t)}
+          </Text>
+        </div>
+        <TermRow label={t('physicsLedger.charge.wall', 'Wall energy')} term={c.wall_wh} format={(v) => formatEnergy(v)} />
+        <TermRow label={t('physicsLedger.charge.precondition', 'Preconditioning')} term={c.precondition_wh} format={(v) => formatEnergy(v)} />
+      </div>
       <Caption>
         {t('physicsLedger.charge.efficiency', 'Efficiency')}:{' '}
-        {c.efficiency_known && c.efficiency_pct != null ? `${fmtNumber(c.efficiency_pct)} %` : unknownLabel(t)}
+        {c.efficiency_known && c.efficiency_pct != null ? `${fmtNumber(c.efficiency_pct, 1)} %` : unknownLabel(t)}
         {' · '}
         {t('physicsLedger.drive.session', 'Session')}: {c.session_wh != null ? formatEnergy(c.session_wh) : unknownLabel(t)}
       </Caption>

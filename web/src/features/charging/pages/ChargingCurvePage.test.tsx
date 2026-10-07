@@ -14,44 +14,43 @@
  * option labels and curve length are exercised end-to-end.
  *
  * What is covered:
- *   1. READY   — the real KPI band renders the correct derived SI metrics,
+ *   1. READY   — the KPI band receives the correct derived SummaryStats,
  *      every section renders with the full session list, the selector
  *      exposes one option per session (real `sessionLabel`), and the
  *      opt-in AI narrators receive the active vehicle id.
  *   2. INSPECT — selecting a session swaps the hint for the real power
  *      curve (61 points from the real `generateChargingCurve`) plus the
  *      detail panel, and surfaces the session's place caption.
- *   3. RANGE   — committing a new range through the workspace header resets
+ *   3. RANGE   — committing a new range through the RangePicker resets
  *      the inspected session back to the hint (regression guard).
  *   4. VEHICLE — switching the active vehicle also clears the inspected
  *      session so the <Select> never strands on an absent option
  *      (the bug the reset effect fixes).
  *   5. LOADING — every panel shows a skeleton and no ready values leak.
- *   6. ERROR   — the KPI band and six source sections surface QueryError;
- *      each Retry action is wired to the query's refetch.
+ *   6. ERROR   — EVERY section, INCLUDING the KPI band, surfaces
+ *      QueryError (the band previously leaked an all-zero KPI grid on
+ *      error) and the Retry action is wired to the query's refetch.
  *   7. EMPTY   — each section shows its own EmptyState (never a blank
  *      panel), the selector is disabled, and the KPI band renders its
- *      known zero session count and missing measurements rather than hiding.
+ *      empty (null-stats) form rather than being hidden.
  *   8. NO FLEET — a null active vehicle threads no id to the AI narrators.
  *
- * Charging data, vehicle scope, chart specialists and AI surfaces are stubbed.
- * Summary metrics, shared controls and layout stay real. i18n
+ * Network is never hit: the data hook, vehicle picker, chart
+ * sub-components, form controls, and AI surfaces are all stubbed. i18n
  * is stubbed so visible copy is the English fallback with
  * {{placeholder}} interpolation applied.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { cleanup, render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
+import { useRangeState } from '@/hooks/useRangeState';
 import type { ReactNode } from 'react';
 
 import { ToastProvider } from '@/components/feedback/Toast';
-import { Button } from '@/components/ui';
 import type { ChargingSession } from '@/api/types';
-import type { CurvePoint } from '../components/charging-curve/types';
-import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import type { SummaryStats, CurvePoint } from '../components/charging-curve/types';
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
 // `query` feeds the stubbed useChargingSessionsPaginated; `selected`
@@ -59,7 +58,6 @@ import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
   selected: { vehicleId: 7 as number | null },
-  queryCall: vi.fn(),
 }));
 
 const refetchMock = vi.fn();
@@ -94,10 +92,7 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/api/hooks/useCharging', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useCharging')>();
-  return { ...actual, useChargingSessionsPaginated: (...args: unknown[]) => {
-    h.queryCall(...args);
-    return h.query;
-  } };
+  return { ...actual, useChargingSessionsPaginated: () => h.query };
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -110,9 +105,22 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 }));
 
 // Heavy chart sub-components echo the props the page threads into them so
-// the page's derivations (sessions, curveData, selectedSession)
+// the page's derivations (stats, sessions, curveData, selectedSession)
 // stay assertable without rendering recharts.
 vi.mock('../components/charging-curve', () => ({
+  SummaryStatsGrid: ({ stats, loading }: { stats: SummaryStats | null; loading?: boolean }) => (
+    <div
+      data-testid="summary-stats"
+      data-loading={String(!!loading)}
+      data-empty={String(stats == null)}
+      data-total-sessions={stats?.totalSessions ?? ''}
+      data-total-energy={stats?.totalEnergy ?? ''}
+      data-avg-rate={stats?.avgRate ?? ''}
+      data-peak-rate={stats?.peakRate ?? ''}
+      data-avg-duration={stats?.avgDuration ?? ''}
+      data-total-cost={stats?.totalCost ?? ''}
+    />
+  ),
   SessionCurveChart: ({ curveData }: { curveData: CurvePoint[] }) => (
     <div data-testid="session-curve" data-points={curveData.length} />
   ),
@@ -173,7 +181,6 @@ interface QueryStub {
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
-  fetchStatus: 'idle' | 'fetching' | 'paused';
   dataUpdatedAt: number;
   refetch: () => void;
 }
@@ -186,7 +193,6 @@ function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
     error: null,
     isFetching: false,
     isStale: false,
-    fetchStatus: 'idle',
     dataUpdatedAt: Date.now(),
     refetch: refetchMock,
     ...overrides,
@@ -243,7 +249,7 @@ const acSession = makeSession({
 function buildTree(qc: QueryClient): ReactNode {
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/charging/curves?from=2024-05-01&to=2024-05-31']}>
+      <MemoryRouter initialEntries={['/charging/curve']}>
         <ToastProvider>
           <HeaderRangeChange />
           <ChargingCurvePage />
@@ -256,51 +262,27 @@ function buildTree(qc: QueryClient): ReactNode {
 function HeaderRangeChange() {
   const { setRange } = useRangeState();
   return (
-    <Button onClick={() => setRange({ start: '2099-01-01', end: '2099-01-31' })}>
+    <button onClick={() => setRange({ start: '2099-01-01', end: '2099-01-31' })}>
       Change header range
-    </Button>
+    </button>
   );
-}
-
-const clients: QueryClient[] = [];
-const preferences = getFormatterPreferences();
-let storedRange: string | null;
-const sourceTitles = [
-  'Power vs SOC', 'Session Details', 'Session Comparison',
-  'Charge Rate by Charger Type', 'Charging Speed Trend', 'Time-to-Charge Analysis',
-];
-
-function sourceCard(title: string) {
-  const card = screen.getByRole('heading', { name: title, exact: true }).closest<HTMLElement>('[data-card]');
-  if (!card) throw new Error(`Missing source card: ${title}`);
-  return card;
 }
 
 function renderPage() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  clients.push(qc);
   const result = render(buildTree(qc));
   return { ...result, qc };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  storedRange = localStorage.getItem(SHARED_RANGE_STORAGE_KEY);
-  setGlobalPrecision(2);
-  setGlobalLocale('en-US');
   h.selected.vehicleId = 7;
   h.query = makeQuery({ data: [dcSession, acSession] });
 });
 
 afterEach(() => {
-  cleanup();
-  clients.splice(0).forEach(client => client.clear());
-  if (storedRange == null) localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
-  else localStorage.setItem(SHARED_RANGE_STORAGE_KEY, storedRange);
-  setGlobalPrecision(preferences.precision);
-  setGlobalLocale(preferences.locale);
   vi.restoreAllMocks();
 });
 
@@ -311,23 +293,16 @@ describe('ChargingCurvePage', () => {
     // Page shell.
     expect(screen.getByRole('heading', { level: 1, name: /Charging Curve/i })).toBeInTheDocument();
 
-    // The accepted summary renders real SI-backed OperationalBrief readings.
-    const stats = screen.getByTestId('charging-curve-summary');
-    const tiles = stats.querySelectorAll('[data-operational-metric]');
-    expect(tiles).toHaveLength(6);
-    const expected = [
-      ['Total Sessions', '2'], ['Total Energy', '80.00 kWh'],
-      ['Avg Charge Rate', '80.50 kW'], ['Peak Rate', '150.00 kW'],
-      ['Avg Duration', '200 min'], ['Total Cost', '$16.75'],
-    ];
-    expected.forEach(([label, value], index) => {
-      expect(tiles[index]).toHaveAttribute('data-value-state', 'value');
-      expect(tiles[index].querySelector(':scope > div:first-child > div:first-child')).toHaveTextContent(label);
-      expect(tiles[index].querySelector('[data-operational-value]')).toHaveTextContent(value);
-    });
-    expect(h.queryCall).toHaveBeenLastCalledWith(7, {
-      limit: 200, start: '2024-05-01', end: '2024-05-31',
-    });
+    // KPI band receives the deterministic derived SummaryStats.
+    const stats = screen.getByTestId('summary-stats');
+    expect(stats).toHaveAttribute('data-loading', 'false');
+    expect(stats).toHaveAttribute('data-empty', 'false');
+    expect(stats).toHaveAttribute('data-total-sessions', '2');
+    expect(Number(stats.getAttribute('data-total-energy'))).toBeCloseTo(80); // (50k+30k)/1000
+    expect(Number(stats.getAttribute('data-avg-rate'))).toBeCloseTo(80.5); // (150+11)/2 kW
+    expect(Number(stats.getAttribute('data-peak-rate'))).toBeCloseTo(150);
+    expect(Number(stats.getAttribute('data-avg-duration'))).toBeCloseTo(200); // (40+360)/2 min
+    expect(Number(stats.getAttribute('data-total-cost'))).toBeCloseTo(16.75); // 12.5+4.25
 
     // Every downstream section renders with the full session list.
     for (const id of ['comparison-chart', 'charger-type-chart', 'speed-trend-chart', 'ttc-section']) {
@@ -343,8 +318,8 @@ describe('ChargingCurvePage', () => {
 
     // Nothing inspected yet → the hint shows, not a curve.
     expect(
-      screen.getAllByText('Select a session above to view its charging curve'),
-    ).toHaveLength(2);
+      screen.getByText('Select a session above to view its charging curve'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('session-curve')).not.toBeInTheDocument();
 
     // a11y section landmarks are all labelled regions.
@@ -390,14 +365,8 @@ describe('ChargingCurvePage', () => {
 
     expect(screen.queryByTestId('session-curve')).not.toBeInTheDocument();
     expect(
-      screen.getAllByText('Select a session above to view its charging curve'),
-    ).toHaveLength(2);
-    expect(h.queryCall).toHaveBeenLastCalledWith(7, {
-      limit: 200, start: '2099-01-01', end: '2099-01-31',
-    });
-    expect(JSON.parse(localStorage.getItem(SHARED_RANGE_STORAGE_KEY)!)).toMatchObject({
-      start: '2099-01-01', end: '2099-01-31',
-    });
+      screen.getByText('Select a session above to view its charging curve'),
+    ).toBeInTheDocument();
   });
 
   it('clears the inspected session when the active vehicle changes', () => {
@@ -417,11 +386,8 @@ describe('ChargingCurvePage', () => {
 
     expect(screen.queryByTestId('session-detail')).not.toBeInTheDocument();
     expect(
-      screen.getAllByText('Select a session above to view its charging curve'),
-    ).toHaveLength(2);
-    expect(h.queryCall).toHaveBeenLastCalledWith(8, {
-      limit: 200, start: '2024-05-01', end: '2024-05-31',
-    });
+      screen.getByText('Select a session above to view its charging curve'),
+    ).toBeInTheDocument();
   });
 
   it('shows a skeleton in every panel while loading and leaks no ready values', () => {
@@ -431,10 +397,10 @@ describe('ChargingCurvePage', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: /Charging Curve/i })).toBeInTheDocument();
 
-    const stats = screen.getByTestId('charging-curve-summary');
-    expect(stats).toHaveAttribute('aria-busy', 'true');
-    expect(stats.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(stats.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    // KPI band stub is told it is loading and has no stats.
+    const stats = screen.getByTestId('summary-stats');
+    expect(stats).toHaveAttribute('data-loading', 'true');
+    expect(stats).toHaveAttribute('data-empty', 'true');
 
     // No resolved chart sections leak while loading.
     expect(screen.queryByTestId('comparison-chart')).not.toBeInTheDocument();
@@ -443,8 +409,6 @@ describe('ChargingCurvePage', () => {
 
     // Per-section skeletons render across the page.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(5);
-    for (const title of sourceTitles)
-      expect(sourceCard(title).querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
   it('surfaces QueryError in every section including the KPI band and wires Retry to refetch', () => {
@@ -452,18 +416,17 @@ describe('ChargingCurvePage', () => {
 
     renderPage();
 
-    // Summary + power + details + comparison + charger + speed + duration.
-    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(7);
-    expect(screen.queryByTestId('charging-curve-summary')).not.toBeInTheDocument();
-    for (const title of ['Summary metrics', ...sourceTitles]) {
-      expect(within(sourceCard(title)).getByText(/Can't reach server/i)).toBeInTheDocument();
-    }
+    // One QueryError per data-bound section: KPI band + curve + comparison +
+    // charger + speed + time-to-charge = 6. The KPI band is the regression
+    // guard — it previously rendered an all-zero KPI grid on error instead.
+    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(6);
+    expect(screen.queryByTestId('summary-stats')).not.toBeInTheDocument();
 
     const retryButtons = screen.getAllByRole('button', { name: /^Retry$/i });
-    expect(retryButtons).toHaveLength(7);
+    expect(retryButtons).toHaveLength(6);
 
-    retryButtons.forEach(button => fireEvent.click(button));
-    expect(refetchMock).toHaveBeenCalledTimes(7);
+    fireEvent.click(retryButtons[0]);
+    expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('renders a per-section EmptyState and disables the selector when there are no sessions', () => {
@@ -471,19 +434,15 @@ describe('ChargingCurvePage', () => {
 
     renderPage();
 
-    // Six source shells plus the source notice, never a blank panel.
-    expect(screen.getAllByText('No charging sessions to plot a curve.')).toHaveLength(7);
-    expect(screen.getAllByRole('button', { name: 'Reset date range' })).toHaveLength(6);
-    for (const title of sourceTitles) {
-      expect(within(sourceCard(title)).getByText('No charging sessions to plot a curve.')).toBeInTheDocument();
-    }
+    // Every data section degrades to its own EmptyState (5 total), never a
+    // blank panel: curve + comparison + charger + speed + time-to-charge.
+    expect(screen.getAllByText('No charging sessions to plot a curve.')).toHaveLength(5);
 
-    // Zero returned sessions is known; absent measurements are not zero.
-    const stats = screen.getByTestId('charging-curve-summary');
-    expect(stats.querySelector('[data-operational-metric="charge.sessions:0"] [data-operational-value]'))
-      .toHaveTextContent('0');
-    expect(stats.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
-    expect(stats).not.toHaveAttribute('aria-busy', 'true');
+    // KPI band still renders (its null-stats form), and the selector is
+    // disabled because there is nothing to inspect.
+    const stats = screen.getByTestId('summary-stats');
+    expect(stats).toHaveAttribute('data-empty', 'true');
+    expect(stats).toHaveAttribute('data-loading', 'false');
     expect(screen.getByRole('combobox', { name: /Inspect session/i })).toBeDisabled();
 
     // No resolved chart sections and no error banner appear.

@@ -12,12 +12,13 @@ import {
   Input,
   Select,
   HelperText,
+  SectionTitle,
   Caption,
   Button,
+  GlassPanel,
   Text,
 } from '@/components/ui'
 import { Stack } from '@/components/layout'
-import { FormSection } from '@/components/forms'
 import {
   useValidateAiProvider,
   type ValidateAiProviderRequest,
@@ -135,15 +136,15 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
   }
 
   return (
-    <div
-      className="min-w-0"
+    <GlassPanel
+      className="space-y-4 p-4 sm:p-5"
       aria-label={t('ai.settings.provider.label', 'Provider configuration')}
       data-testid="ai-provider-section"
     >
-      <FormSection
-        title={t('ai.settings.provider.label', 'Provider configuration')}
-        className="p-4 sm:p-5"
-      >
+      <SectionTitle>
+        {t('ai.settings.provider.label', 'Provider configuration')}
+      </SectionTitle>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Select
           label={t('ai.settings.provider.providerLabel', 'Provider')}
@@ -155,12 +156,12 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
               ? [
                   { value: 'openai', label: 'OpenAI' },
                   { value: 'anthropic', label: 'Anthropic' },
-                  { value: 'azure', label: 'Microsoft foundry' },
+                  { value: 'azure', label: 'Microsoft Foundry' },
                   { value: 'google', label: 'Google' },
                 ]
               : [
                   { value: 'ollama', label: 'Ollama' },
-                  { value: 'lmstudio', label: 'LM studio' },
+                  { value: 'lmstudio', label: 'LM Studio' },
                   { value: 'llama-cpp', label: 'llama.cpp' },
                 ]
           }
@@ -206,11 +207,11 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             options={[
               {
                 value: 'auto',
-                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (chat completions first)'),
+                label: t('ai.settings.provider.azureProtocolAuto', 'Auto (Chat Completions first)'),
               },
               {
                 value: 'chat_completions',
-                label: t('ai.settings.provider.azureProtocolChat', 'Chat completions'),
+                label: t('ai.settings.provider.azureProtocolChat', 'Chat Completions'),
               },
               {
                 value: 'responses',
@@ -247,7 +248,6 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             <Button
               type="button"
               variant="ghost"
-              wrapLabel
               onClick={runValidate}
               disabled={
                 validate.isPending || value.base_url.trim().length === 0
@@ -343,7 +343,6 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
             <Button
               type="button"
               variant="ghost"
-              wrapLabel
               onClick={runValidate}
               disabled={validate.isPending}
               data-testid="ai-provider-validate-cloud"
@@ -375,8 +374,7 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
           'Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable.',
         )}
       </HelperText>
-      </FormSection>
-    </div>
+    </GlassPanel>
   )
 }
 

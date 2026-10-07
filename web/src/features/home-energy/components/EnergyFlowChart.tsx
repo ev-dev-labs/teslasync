@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import {
+  ChartContainer,
   ChartTooltip,
   ChartLegend,
   chartGrid,
@@ -16,20 +17,18 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { formatTime } from '@/lib/dateFormat';
 import type { SlotResult } from '../lib/types';
 
 interface EnergyFlowChartProps {
   slots: SlotResult[];
-  slotMinutes: number;
 }
 
 const CHART_HEIGHT = 320;
 
 /** Multi-series stacked/line view of the proposed 15-minute-slot energy flow schedule. */
-export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
+export function EnergyFlowChart({ slots }: EnergyFlowChartProps) {
   const { t } = useTranslation();
   const { formatPower } = useUnits();
 
@@ -44,26 +43,15 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
   }));
 
   return (
-    <ChartCard
-      title={t('homeEnergy.flow.title', 'Energy flow schedule')}
-      subtitle={t('homeEnergy.flow.interval', 'Solar, household load, vehicle charging, battery, and grid — per {{minutes}}-minute slot', { minutes: slotMinutes })}
+    // chart-a11y:no-table dense 15-minute-slot schedule (up to hundreds of rows) — the KPI summary
+    // and per-vehicle readiness panels already surface the aggregate figures in tabular form.
+    <ChartContainer
+      title={t('homeEnergy.flow.title', 'Energy Flow Schedule')}
+      subtitle={t('homeEnergy.flow.subtitle', 'Solar, household load, vehicle charging, battery, and grid — per 15-minute slot')}
       ariaLabel={t('homeEnergy.flow.aria', 'Multi-series chart of solar generation, household load, vehicle charging, battery, and grid power across the planning horizon')}
       chartKey="home-energy-flow-schedule"
       empty={rows.length === 0}
       height={CHART_HEIGHT}
-      data={rows}
-      exportData={rows}
-      exportable
-      fullscreen
-      dataColumns={[
-        { key: 'time', label: t('powershare.time', 'Time') },
-        { key: 'solarW', label: t('homeEnergy.flow.solar', 'Solar') },
-        { key: 'loadW', label: t('homeEnergy.flow.load', 'Household load') },
-        { key: 'vehicleChargeW', label: t('homeEnergy.flow.vehicles', 'Vehicle charging') },
-        { key: 'batteryPowerW', label: t('homeEnergy.flow.battery', 'Powerwall (+charge/-discharge)') },
-        { key: 'gridImportW', label: t('homeEnergy.flow.gridImport', 'Grid import') },
-        { key: 'gridExportW', label: t('homeEnergy.flow.gridExport', 'Grid export (shown negative)') },
-      ]}
     >
       {({ hiddenSeries }) => (
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -91,6 +79,6 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
           </ComposedChart>
         </ResponsiveContainer>
       )}
-    </ChartCard>
+    </ChartContainer>
   );
 }

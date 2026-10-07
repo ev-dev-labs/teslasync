@@ -9,9 +9,8 @@ import {
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { YearReview } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   data: YearReview;
@@ -31,7 +30,6 @@ function monthShortLabel(month: number | null | undefined, locale: string | unde
 
 /** Month-by-month drives (bars) and distance (line) across the year. */
 export function YearMonthlyChart({ data }: Props) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { distance: distanceUnit, locale } = unitPrefs;

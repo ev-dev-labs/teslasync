@@ -26,8 +26,8 @@
   "artifacts": [
     {
       "id": "web-changelog",
-      "paths": ["web/src/generated/changelog.ts", "web/src/generated/changelogVersions.ts"],
-      "sources": ["CHANGELOG.md", "web/scripts/buildChangelog.mjs"],
+      "paths": ["web/src/generated/changelog.ts"],
+      "sources": ["CHANGELOG.md"],
       "regenerate": "cd web && npm run generate:changelog",
       "check": { "cwd": "web", "command": ["node", "scripts/buildChangelog.mjs", "--check"] },
       "gate": ".github/workflows/ci.yml :: generated (+ web prebuild/predev)"

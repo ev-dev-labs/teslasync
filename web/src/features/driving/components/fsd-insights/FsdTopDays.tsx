@@ -6,13 +6,12 @@ import { EmptyState } from '@/components/feedback';
 import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { FsdInsights, FsdInsightsDay } from '@/types/fsd';
 
 import { FsdSectionBody } from './FsdSectionBody';
 import { topActiveDays } from './helpers';
 import type { FsdSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const TOP_DAY_LIMIT = 10;
 
@@ -29,7 +28,6 @@ interface FsdTopDaysProps {
  * trend chart instead.
  */
 export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance } = useUnits();
   const rows = useMemo(() => topActiveDays(insights?.daily ?? [], TOP_DAY_LIMIT), [insights]);
@@ -51,7 +49,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
         render: (row) => (
           <span className="tabular-nums">
             {row.fsd_distance_m != null
-              ? formatDistance(row.fsd_distance_m)
+              ? formatDistance(row.fsd_distance_m, { precision: 1 })
               : t('fsd.notReported', 'Not reported')}
           </span>
         ),
@@ -62,7 +60,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
         render: (row) => (
           <span className="tabular-nums">
             {row.driving_distance_m != null
-              ? formatDistance(row.driving_distance_m)
+              ? formatDistance(row.driving_distance_m, { precision: 1 })
               : t('fsd.notReported', 'Not reported')}
           </span>
         ),
@@ -72,7 +70,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
         header: t('fsd.topDays.colShare', 'Share'),
         render: (row) =>
           row.fsd_share_pct != null ? (
-            <span className="tabular-nums">{fmtNumber(row.fsd_share_pct)}%</span>
+            <span className="tabular-nums">{fmtNumber(row.fsd_share_pct, 1)}%</span>
           ) : (
             <Text as="span" variant="caption">
               {t('fsd.notReported', 'Not reported')}
@@ -94,7 +92,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
           ),
       },
     ],
-    [formatDistance, t, unitPrefs.locale, fmtNumber],
+    [formatDistance, t, unitPrefs.locale],
   );
 
   return (

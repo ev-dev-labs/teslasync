@@ -3,17 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { CHART_COLORS } from '@/components/charts';
 import { MetricBar } from '@/components/data-display';
 import { MetricLabel, MetricValue } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { ExplorerEligibility } from '../../lib/explorer';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CoverageMetricsProps {
   eligibility: ExplorerEligibility;
 }
 
 export function CoverageMetrics({ eligibility }: CoverageMetricsProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coordinatePercent =
     (eligibility.coordinateCoverageShare ?? 0) * 100;
@@ -21,7 +19,7 @@ export function CoverageMetrics({ eligibility }: CoverageMetricsProps) {
     (eligibility.timestampCoverageShare ?? 0) * 100;
   const percent = (value: number) =>
     t('explorer.coverage.percentValue', '{{value}}%', {
-      value: fmtNumber(value),
+      value: fmtNumber(value, 0),
     });
 
   return (

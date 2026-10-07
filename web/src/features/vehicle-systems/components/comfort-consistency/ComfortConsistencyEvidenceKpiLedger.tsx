@@ -8,17 +8,17 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { type StatMetric } from '@/components/data-display';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+import { MetricCard } from '@/components/data-display';
+import { Grid } from '@/components/layout';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencyQueryStatus } from './ComfortConsistencyQueryStatus';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyEvidenceKpiLedgerProps {
   summary: ComfortConsistencySummary;
@@ -33,7 +33,6 @@ export function ComfortConsistencyEvidenceKpiLedger({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyEvidenceKpiLedgerProps) {
-  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unavailable = !state.vehicleSelected
@@ -47,69 +46,6 @@ export function ComfortConsistencyEvidenceKpiLedger({
     summary.stabilizationWindows.length > 0
       ? summary.stabilizedWindows / summary.stabilizationWindows.length
       : null;
-  const metrics: StatMetric[] = [
-    {
-      metricId: 'number', occurrenceId: 'consistency-score',
-      label: t('comfortConsistency.kpis.score', 'Adjusted consistency score'),
-      rawValue: resolved ? summary.consistencyScore ?? null : null,
-      display: { formatter: raw => ({ value: String(raw), unit: '' }) },
-      context: <><ShieldCheck aria-hidden="true" className={`h-5 w-5 ${
-        summary.consistencyScore == null ? 'text-cyan-300'
-          : summary.consistencyScore >= 80 ? 'text-emerald-300'
-            : summary.consistencyScore >= 60 ? 'text-amber-300' : 'text-rose-300'
-      }`} />{resolved ? t('comfortConsistency.kpis.scoreHint', '{{confidence}} evidence confidence', {
-        confidence: fmtPercent(summary.confidence * 100),
-      }) : unavailable}</>,
-    },
-    {
-      metricId: 'count', occurrenceId: 'analyzed-samples',
-      label: t('comfortConsistency.kpis.samples', 'Analyzed active samples'),
-      rawValue: resolved ? summary.analyzedSamples : null,
-      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: <><Activity aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
-        ? t('comfortConsistency.kpis.samplesHint', '{{returned}} returned rows', {
-            returned: fmtInt(summary.rows.returnedRows),
-          }) : unavailable}</>,
-    },
-    {
-      metricId: 'duration', occurrenceId: 'observed-active-duration',
-      label: t('comfortConsistency.kpis.observed', 'Observed active duration'),
-      rawValue: resolved ? summary.intervalComposition.observedActiveS : null,
-      display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) },
-      context: <><Clock3 aria-hidden="true" className="h-5 w-5 text-purple-300" />{resolved
-        ? t('comfortConsistency.kpis.observedHint', '{{count}} qualified intervals', {
-            count: summary.intervals.observedActiveIntervals,
-          }) : unavailable}</>,
-    },
-    {
-      metricId: 'percent', occurrenceId: 'within-band-share',
-      label: t('comfortConsistency.kpis.inBand', 'Duration within comfort band'),
-      rawValue: resolved && summary.intervalComposition.withinBandShare != null
-        ? summary.intervalComposition.withinBandShare * 100 : null,
-      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><Gauge aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
-        ? t('comfortConsistency.kpis.inBandHint', 'duration-weighted support') : unavailable}</>,
-    },
-    {
-      metricId: 'number', occurrenceId: 'weighted-deviation',
-      label: t('comfortConsistency.kpis.deviation', 'Weighted mean deviation'),
-      rawValue: resolved && summary.durationWeightedMeanAbsDeviationC != null
-        ? summary.durationWeightedMeanAbsDeviationC : null,
-      display: { formatter: raw => ({ value: formatDelta(raw), unit: '' }) },
-      context: <><Thermometer aria-hidden="true" className="h-5 w-5 text-purple-300" />{resolved
-        ? t('comfortConsistency.kpis.deviationHint', 'absolute cabin-to-target gap') : unavailable}</>,
-    },
-    {
-      metricId: 'percent', occurrenceId: 'stabilization-share',
-      label: t('comfortConsistency.kpis.stabilized', 'Observed stabilization share'),
-      rawValue: resolved && stabilizationShare != null ? stabilizationShare * 100 : null,
-      display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
-      context: <><TimerReset aria-hidden="true" className="h-5 w-5 text-indigo-300" />{resolved
-        ? t('comfortConsistency.kpis.stabilizedHint', '{{count}} outside-band fragments', {
-            count: summary.stabilizationWindows.length,
-          }) : unavailable}</>,
-    },
-  ];
 
   return (
     <section
@@ -119,13 +55,102 @@ export function ComfortConsistencyEvidenceKpiLedger({
         'Comfort consistency evidence ledger',
       )}
     >
-        <VehicleOperationalBrief id="comfort-consistency-evidence" metrics={metrics}
-          title={t('comfortConsistency.kpis.title', 'Evidence KPI ledger')}
-          loading={state.isLoading} available={resolved}
-          period={{ kind: 'unknown', label: t('comfortConsistency.kpis.aria', 'Comfort consistency evidence ledger') }}
-          retained={Boolean(state.refreshError) || (resolved && Boolean(state.isPaused))}
-        />
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('comfortConsistency.kpis.title', 'Evidence KPI ledger')}
+        </PanelTitle>
+        <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
+          <MetricCard
+            label={t('comfortConsistency.kpis.score', 'Adjusted consistency score')}
+            value={resolved ? summary.consistencyScore ?? '—' : '—'}
+            subtitle={resolved
+              ? t('comfortConsistency.kpis.scoreHint', '{{confidence}} evidence confidence', {
+                  confidence: fmtPercent(summary.confidence * 100, 0),
+                })
+              : unavailable}
+            icon={<ShieldCheck className="h-5 w-5" />}
+            color={
+              summary.consistencyScore == null
+                ? 'cyan'
+                : summary.consistencyScore >= 80
+                  ? 'green'
+                  : summary.consistencyScore >= 60
+                    ? 'amber'
+                    : 'red'
+            }
+          />
+          <MetricCard
+            label={t('comfortConsistency.kpis.samples', 'Analyzed active samples')}
+            value={resolved ? fmtInt(summary.analyzedSamples) : '—'}
+            subtitle={resolved
+              ? t('comfortConsistency.kpis.samplesHint', '{{returned}} returned rows', {
+                  returned: fmtInt(summary.rows.returnedRows),
+                })
+              : unavailable}
+            icon={<Activity className="h-5 w-5" />}
+            color="blue"
+          />
+          <MetricCard
+            label={t('comfortConsistency.kpis.observed', 'Observed active duration')}
+            value={resolved
+              ? formatDuration(summary.intervalComposition.observedActiveS, {
+                  precision: 1,
+                })
+              : '—'}
+            subtitle={resolved
+              ? t('comfortConsistency.kpis.observedHint', '{{count}} qualified intervals', {
+                  count: summary.intervals.observedActiveIntervals,
+                })
+              : unavailable}
+            icon={<Clock3 className="h-5 w-5" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('comfortConsistency.kpis.inBand', 'Duration within comfort band')}
+            value={
+              resolved && summary.intervalComposition.withinBandShare != null
+                ? fmtPercent(
+                    summary.intervalComposition.withinBandShare * 100,
+                    1,
+                  )
+                : '—'
+            }
+            subtitle={resolved
+              ? t('comfortConsistency.kpis.inBandHint', 'duration-weighted support')
+              : unavailable}
+            icon={<Gauge className="h-5 w-5" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('comfortConsistency.kpis.deviation', 'Weighted mean deviation')}
+            value={resolved
+              ? formatDelta(summary.durationWeightedMeanAbsDeviationC)
+              : '—'}
+            subtitle={resolved
+              ? t('comfortConsistency.kpis.deviationHint', 'absolute cabin-to-target gap')
+              : unavailable}
+            icon={<Thermometer className="h-5 w-5" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('comfortConsistency.kpis.stabilized', 'Observed stabilization share')}
+            value={
+              resolved && stabilizationShare != null
+                ? fmtPercent(stabilizationShare * 100, 1)
+                : '—'
+            }
+            subtitle={resolved
+              ? t('comfortConsistency.kpis.stabilizedHint', '{{count}} outside-band fragments', {
+                  count: summary.stabilizationWindows.length,
+                })
+              : unavailable}
+            icon={<TimerReset className="h-5 w-5" />}
+            color="blue"
+          />
+        </Grid>
         <ComfortConsistencyQueryStatus summary={summary} state={state} />
+      </GlassPanel>
     </section>
   );
 }

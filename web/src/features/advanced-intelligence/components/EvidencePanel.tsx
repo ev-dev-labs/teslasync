@@ -2,12 +2,10 @@ import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
-import { KVList } from '@/components/data-display';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
 import { InsightPanel } from './InsightPanel';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EvidencePanelProps {
   quality?: DataQuality | null;
@@ -28,7 +26,6 @@ export function EvidencePanel({
   limitations,
   unsupported,
 }: EvidencePanelProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
@@ -53,12 +50,30 @@ export function EvidencePanel({
           {quality ? (
             <>
               <Badge variant={qualityVariant(quality.status)} dot>{quality.status}</Badge>
-              <KVList layout="responsive" wrap items={[
-                { id: 'samples', label: t('advancedIntelligence.quality.samples', 'Samples'), value: fmtInt(quality.sample_count) },
-                { id: 'coverage', label: t('advancedIntelligence.quality.coverage', 'Coverage'), value: quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct)}%` : '—' },
-                { id: 'window', label: t('advancedIntelligence.quality.window', 'Observation window'), value: quality.window_start || quality.window_end
-                  ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}` : '—' },
-              ]} />
+              <dl className="space-y-2 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--text-muted)]">
+                    {t('advancedIntelligence.quality.samples', 'Samples')}
+                  </dt>
+                  <dd>{fmtNumber(quality.sample_count, 0)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--text-muted)]">
+                    {t('advancedIntelligence.quality.coverage', 'Coverage')}
+                  </dt>
+                  <dd>{quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct, 1)}%` : '—'}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--text-muted)]">
+                    {t('advancedIntelligence.quality.window', 'Observation window')}
+                  </dt>
+                  <dd className="text-right">
+                    {quality.window_start || quality.window_end
+                      ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`
+                      : '—'}
+                  </dd>
+                </div>
+              </dl>
               {(quality.reasons ?? []).map((reason) => (
                 <Text as="p" variant="caption" key={reason}>• {reason}</Text>
               ))}

@@ -136,7 +136,7 @@ export function ActivityFeed({
               })();
               const measurements: string[] = [];
               if (item.duration_s != null) {
-                measurements.push(formatDuration(item.duration_s));
+                measurements.push(formatDuration(item.duration_s, { precision: 1 }));
               }
               if (item.start_soc_pct != null && item.end_soc_pct != null) {
                 measurements.push(
@@ -147,7 +147,7 @@ export function ActivityFeed({
                 );
               }
               if (item.energy_added_wh != null) {
-                measurements.push(formatEnergy(item.energy_added_wh));
+                measurements.push(formatEnergy(item.energy_added_wh, { precision: 1 }));
               }
               if (item.summary) measurements.push(item.summary);
               const summary = measurements.join(' · ');

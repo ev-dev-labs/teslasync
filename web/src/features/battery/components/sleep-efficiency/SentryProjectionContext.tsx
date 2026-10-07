@@ -4,13 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type {
   SleepEfficiencyFormatters,
   SleepEfficiencySectionProps,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type SentryProjectionContextProps =
   SleepEfficiencySectionProps
@@ -22,7 +21,6 @@ export function SentryProjectionContext({
   formatCurrency,
   formatEnergy,
 }: SentryProjectionContextProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { context, projection, on, off } = analysis.sentry;
   const sourceLabel = (() => {

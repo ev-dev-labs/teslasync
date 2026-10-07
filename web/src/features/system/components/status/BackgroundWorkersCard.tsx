@@ -20,16 +20,9 @@ import { Link } from 'react-router-dom'
 import { Activity, AlertTriangle, Boxes, Server } from 'lucide-react'
 
 import type { WorkersHealth, WorkerStatus } from '@/api/types'
-import { Trans, useTranslation } from 'react-i18next'
-import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief'
-import { Caption, Code, Text } from '@/components/ui'
-import { cn } from '@/lib/cn'
-import { typography } from '@/lib/tokens'
 
 interface BackgroundWorkersCardProps {
   health: WorkersHealth | undefined
-  retained?: boolean
-  loading?: boolean
 }
 
 type Severity = 'healthy' | 'degraded' | 'down' | 'unknown'
@@ -70,7 +63,7 @@ function severityClasses(s: Severity): { dot: string; chip: string; label: strin
   switch (s) {
     case 'healthy':
       return {
-        dot: 'bg-emerald-400',
+        dot: 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]',
         chip: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30',
         label: 'all healthy',
       }
@@ -99,7 +92,7 @@ function severityClasses(s: Severity): { dot: string; chip: string; label: strin
 function instanceClasses(status: WorkerStatus['status']): { dot: string; label: string; chip: string } {
   if (status === 'healthy') {
     return {
-      dot: 'bg-emerald-400',
+      dot: 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.55)]',
       label: 'healthy',
       chip: 'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/25',
     }
@@ -131,52 +124,27 @@ function fmtLatency(ms: number | null | undefined): string {
   return `${Math.round(ms)} ms`
 }
 
-export function BackgroundWorkersCard({ health, retained = false, loading = false }: BackgroundWorkersCardProps) {
-  const { t } = useTranslation()
+export function BackgroundWorkersCard({ health }: BackgroundWorkersCardProps) {
   const workers: WorkerStatus[] = health?.workers ?? []
   const groups = groupByName(workers)
+
+  if (!health || workers.length === 0) {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-lg bg-white/[0.03] p-4 text-sm text-[var(--text-muted)]">
+          No background workers reporting. Ensure the notification, export, and
+          automation worker processes are running and reachable on their
+          configured ports.
+        </div>
+      </div>
+    )
+  }
+
   const totalInstances = workers.length
   const healthyInstances = workers.filter((w) => w.status === 'healthy').length
   const groupCount = groups.length
   const healthyGroups = groups.filter((g) => g.severity === 'healthy').length
   const multiInstanceGroups = groups.filter((g) => g.total > 1).length
-  const summary = (
-    <SystemSummaryBrief
-      title={t('systemStatus.bgWorkers', 'Background workers')}
-      description={t('systemStatus.workersBrief.description', 'Reported worker types, healthy replicas, and replicated types from the worker health response.')}
-      scope={t('systemStatus.workersBrief.scope', 'Reported instances only; this response does not prove unreported replicas are healthy.')}
-      available={health != null} retained={retained} loading={loading}
-      metrics={[
-        { metricId: 'count', occurrenceId: 'types', rawValue: health ? healthyGroups : null,
-          label: t('systemStatus.workersCopy.types', 'Worker types'), display: { countTotal: groupCount },
-          context: t('systemStatus.workersCopy.typeCounts', '{{healthy}} of {{total}} types', { healthy: healthyGroups, total: groupCount }) },
-        { metricId: 'count', occurrenceId: 'instances', rawValue: health ? healthyInstances : null,
-          label: t('systemStatus.workersCopy.instances', 'Instances'), display: { countTotal: totalInstances },
-          context: t('systemStatus.workersCopy.instanceCounts', '{{healthy}} of {{total}} instances', { healthy: healthyInstances, total: totalInstances }) },
-        { metricId: 'count', occurrenceId: 'replicated', rawValue: health ? multiInstanceGroups : null,
-          label: t('systemStatus.workersCopy.replicated', 'Replicated'), display: { countTotal: groupCount },
-          context: multiInstanceGroups > 0
-            ? groupCount === 1
-              ? t('systemStatus.workersCopy.replicatedType', '{{replicated}} of {{total}} type', { replicated: multiInstanceGroups, total: groupCount })
-              : t('systemStatus.workersCopy.replicatedTypes', '{{replicated}} of {{total}} types', { replicated: multiInstanceGroups, total: groupCount })
-            : t('systemStatus.workersCopy.singleEach', 'single instance each') },
-      ]}
-    />
-  )
-
-  if (!health || workers.length === 0) {
-    return (
-      <div className="space-y-3">
-        {summary}
-        <Text as="p" variant="bodySm" className="rounded-lg bg-white/[0.03] p-4">
-          {!health
-            ? t('systemStatus.workersCopy.unavailable', 'Background worker health is unavailable.')
-            : t('systemStatus.workersCopy.empty', 'No background workers reporting. Ensure the notification, export, and automation worker processes are running and reachable on their configured ports.')}
-        </Text>
-      </div>
-    )
-  }
-
 
   return (
     <div className="space-y-4">
@@ -184,7 +152,28 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
           key differentiator for horizontally-scaled deployments: the
           operator needs to see *which replicas* are healthy, not just that
           some replica answered. */}
-      {summary}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm md:grid-cols-3">
+        <div>
+          <div className="text-xs text-[var(--text-muted)]">Worker types</div>
+          <div className="tabular-nums text-[var(--text-primary)]">
+            {healthyGroups} of {groupCount} types
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-[var(--text-muted)]">Instances</div>
+          <div className="tabular-nums text-[var(--text-primary)]">
+            {healthyInstances} of {totalInstances} instances
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-[var(--text-muted)]">Replicated</div>
+          <div className="tabular-nums text-[var(--text-primary)]">
+            {multiInstanceGroups > 0
+              ? `${multiInstanceGroups} of ${groupCount} type${groupCount === 1 ? '' : 's'}`
+              : 'single instance each'}
+          </div>
+        </div>
+      </div>
 
       {/* Per-worker-name groups, each containing 1..N instance rows. */}
       <ul className="space-y-3">
@@ -200,25 +189,18 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
               <div className="flex flex-wrap items-center gap-2 border-b border-white/[0.05] bg-white/[0.02] px-3 py-2">
                 <span
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${groupCls.dot}`}
-                  role="img"
-                  aria-label={t('systemStatus.workersCopy.groupStatus', '{{name}} status: {{status}}', {
-                    name: g.name,
-                    status: t(`systemStatus.workerStates.${g.severity}`, groupCls.label),
-                  })}
+                  aria-label={`${g.name} status: ${groupCls.label}`}
                 />
                 <Boxes className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
-                <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words">{g.name}</Text>
-                <Text
-                  size="xs"
-                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${groupCls.chip}`}
+                <span className="font-medium text-[var(--text-primary)]">{g.name}</span>
+                <span
+                  className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${groupCls.chip}`}
                 >
-                  {t('systemStatus.summary.healthy', '{{healthy}} / {{total}} healthy', { healthy: g.healthy, total: g.total })}
-                </Text>
-                <Caption className="ms-auto">
-                  {isMulti
-                    ? t('systemStatus.workersCopy.instanceCount', '{{count}} instances', { count: g.total })
-                    : t('systemStatus.workersCopy.oneInstance', '1 instance')}
-                </Caption>
+                  {g.healthy} / {g.total} healthy
+                </span>
+                <span className="ml-auto text-xs text-[var(--text-muted)]">
+                  {isMulti ? `${g.total} instances` : '1 instance'}
+                </span>
               </div>
 
               {/* Per-instance rows */}
@@ -229,44 +211,39 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
                   return (
                     <li
                       key={`${inst.name}::${inst.host}`}
-                      className="flex flex-col gap-1.5 px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
+                      className="flex flex-col gap-1.5 px-3 py-2 text-sm sm:flex-row sm:items-center sm:gap-3"
                     >
                       <div className="flex min-w-0 flex-1 items-center gap-2.5">
                         <span
                           className={`h-2 w-2 shrink-0 rounded-full ${cls.dot}`}
-                          role="img"
-                          aria-label={t('systemStatus.workersCopy.instanceStatus', 'instance status: {{status}}', {
-                            status: t(`systemStatus.workerInstanceStates.${cls.label}`, cls.label),
-                          })}
+                          aria-label={`instance status: ${cls.label}`}
                         />
                         <Server className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
-                        <Text
-                          mono size="xs" color="primary"
-                          className="min-w-0 break-all"
+                        <span
+                          className="truncate font-mono text-xs text-[var(--text-primary)]"
                           title={inst.host}
                         >
                           {host}
-                        </Text>
+                        </span>
                       </div>
 
                       <div className="flex shrink-0 items-center gap-2 sm:justify-end">
-                        <Text
-                          size="xs"
-                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${cls.chip}`}
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs ${cls.chip}`}
                         >
-                          {t(`systemStatus.workerInstanceStates.${cls.label}`, cls.label)}
-                        </Text>
-                        <Caption className="w-16 text-end tabular-nums">
+                          {cls.label}
+                        </span>
+                        <span className="w-16 text-right text-xs tabular-nums text-[var(--text-muted)]">
                           {fmtLatency(inst.latency_ms)}
-                        </Caption>
+                        </span>
                       </div>
 
                       {inst.error && (
                         <div className="basis-full sm:basis-full">
-                          <Text as="div" size="xs" className="mt-1 flex items-start gap-1.5 rounded-md bg-red-500/10 px-2 py-1 text-red-300 ring-1 ring-red-500/25">
+                          <div className="mt-1 flex items-start gap-1.5 rounded-md bg-red-500/10 px-2 py-1 text-xs text-red-300 ring-1 ring-red-500/25">
                             <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" aria-hidden />
                             <span className="break-all">{inst.error}</span>
-                          </Text>
+                          </div>
                         </div>
                       )}
                     </li>
@@ -281,32 +258,23 @@ export function BackgroundWorkersCard({ health, retained = false, loading = fals
       {/* Footer guidance: explain how to scale, since most operators won't
           know the *_HOSTS env contract until the panel tells them. */}
       {multiInstanceGroups === 0 && (
-        <Text as="p" variant="caption" className="break-words rounded-md bg-white/[0.02] p-2.5 ring-1 ring-white/[0.05]">
-          <Trans
-            i18nKey="systemStatus.workersCopy.replicationGuidance"
-            defaults="Running multiple instances of a worker? Set <notification>{{notification}}</notification>, <export>{{export}}</export>, or <automation>{{automation}}</automation> to a comma-separated list of hostnames. Each instance will then appear here with its own status and latency."
-            values={{
-              notification: 'NOTIFICATION_WORKER_HOSTS',
-              export: 'EXPORT_WORKER_HOSTS',
-              automation: 'AUTOMATION_WORKER_HOSTS',
-            }}
-            components={{ notification: <Code />, export: <Code />, automation: <Code /> }}
-          >
-            Running multiple instances of a worker? Set{' '}
-            <Code>NOTIFICATION_WORKER_HOSTS</Code>,{' '}
-            <Code>EXPORT_WORKER_HOSTS</Code>, or{' '}
-            <Code>AUTOMATION_WORKER_HOSTS</Code> to a comma-separated list of hostnames. Each instance will then appear here with its own status and latency.
-          </Trans>
-        </Text>
+        <div className="rounded-md bg-white/[0.02] p-2.5 text-xs text-[var(--text-muted)] ring-1 ring-white/[0.05]">
+          Running multiple instances of a worker? Set{' '}
+          <code className="font-mono text-[var(--text-primary)]">NOTIFICATION_WORKER_HOSTS</code>,{' '}
+          <code className="font-mono text-[var(--text-primary)]">EXPORT_WORKER_HOSTS</code>, or{' '}
+          <code className="font-mono text-[var(--text-primary)]">AUTOMATION_WORKER_HOSTS</code> to a
+          comma-separated list of hostnames. Each instance will then appear
+          here with its own status and latency.
+        </div>
       )}
 
       <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
         <Link
           to="/api-logs"
-          className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-md px-3 py-1.5 text-cyan-300 hover:bg-white/[0.04]', typography.size.xs)}
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"
         >
-          <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {t('systemStatus.workersCopy.apiLogs', 'API logs')}
+          <Activity className="h-3.5 w-3.5" />
+          API logs
         </Link>
       </div>
     </div>

@@ -47,23 +47,10 @@ afterEach(() => {
 describe('ConnectPage', () => {
   it('renders the server and token fields', () => {
     renderPage()
-    expect(screen.getByRole('heading', { name: /Connect to your server/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /connect to your server/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText('https://teslasync.example.com')).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/ts_/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^connect$/i })).toBeInTheDocument()
-    const heading = screen.getByRole('heading', { level: 1, name: /Connect to your server/i })
-    expect(heading).toHaveAttribute('data-route-focus-target', 'true')
-    expect(heading).toHaveAttribute('tabindex', '-1')
-    expect(heading.closest('[data-role="page-header"]')).toHaveClass('border-0', 'bg-transparent')
-    expect(screen.getByPlaceholderText('https://teslasync.example.com')).toHaveFocus()
-  })
-
-  it('keeps introductory guidance reachable from the compact header by keyboard focus', async () => {
-    renderPage()
-    const help = screen.getByRole('button', { name: /More info: Connect to your server/i })
-    help.focus()
-    fireEvent.focus(help)
-    expect(await screen.findByText('Enter your TeslaSync address to continue.')).toBeInTheDocument()
   })
 
   it('rejects an empty address without probing', async () => {
@@ -71,7 +58,7 @@ describe('ConnectPage', () => {
     vi.stubGlobal('fetch', fetchMock)
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/enter a Server address/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/enter a server address/i)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -95,7 +82,7 @@ describe('ConnectPage', () => {
       target: { value: 'https://srv.example.com' },
     })
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/needs an Access token/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/needs an access token/i)
     expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
 
     fireEvent.change(screen.getByPlaceholderText(/ts_/), { target: { value: 'ts_secret' } })
@@ -128,7 +115,7 @@ describe('ConnectPage', () => {
     })
     fireEvent.change(screen.getByPlaceholderText(/ts_/), { target: { value: 'ts_invalid' } })
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(/rejected the Access token/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent(/rejected the access token/i)
     expect(window.sessionStorage.getItem('teslasync-access-token')).toBeNull()
   })
 })

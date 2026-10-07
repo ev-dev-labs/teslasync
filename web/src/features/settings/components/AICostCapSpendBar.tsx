@@ -19,18 +19,13 @@
 import { useTranslation } from 'react-i18next'
 import { GlassPanel, Caption, HelperText, Text } from '@/components/ui'
 import { useAiUsageToday } from '@/api/hooks/useAiUsage'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { MetricBar } from '@/components/data-display'
-import { DataStateNotice } from '@/components/feedback'
-import { deriveDataState } from '@/api/dataState'
-import { gaugeTone } from '@/lib/tokens'
 
 type SpendLevel = 'ok' | 'warn' | 'critical'
 
-const FILL_COLOR: Record<SpendLevel, string> = {
-  ok: gaugeTone.info,
-  warn: gaugeTone.warning,
-  critical: gaugeTone.danger,
+const FILL_CLASS: Record<SpendLevel, string> = {
+  ok: 'bg-cyan-300',
+  warn: 'bg-amber-300',
+  critical: 'bg-rose-300',
 }
 
 const TEXT_CLASS: Record<SpendLevel, string> = {
@@ -49,31 +44,24 @@ function toFinite(n: number | null | undefined): number {
 }
 
 export function AICostCapSpendBar({ capCents }: { capCents: number }) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('settings')
-  const usageQuery = useAiUsageToday()
-  const usageState = deriveDataState(usageQuery)
-  const data = usageState.data
-  const isLoading = usageState.status === 'initial'
-  const isError = usageState.fatalError != null
+  const { data, isLoading, isError } = useAiUsageToday()
 
   // Backend stores spend in micro-cents (1e-4 cent). Cap is supplied in
-  // whole cents. Missing spend remains unknown; a measured negative value
-  // retains the existing non-negative clamp.
+  // whole cents. Convert both to dollars for display. Every input is
+  // coerced to a finite, non-negative number so a corrupt payload can
+  // never yield a `NaN%` width or an out-of-range progress value.
   const safeCapCents = Math.max(0, toFinite(capCents))
-  const cost = data?.cost_micro_cents
-  const todayMicroCents =
-    typeof cost === 'number' && Number.isFinite(cost) ? Math.max(0, cost) : null
+  const todayMicroCents = Math.max(0, toFinite(data?.cost_micro_cents))
   const capMicroCents = safeCapCents * 10_000 // 1 cent = 10_000 micro-cents
-  const pct = todayMicroCents == null
-    ? null
-    : capMicroCents > 0
+  const pct =
+    capMicroCents > 0
       ? Math.min(100, Math.max(0, (todayMicroCents / capMicroCents) * 100))
       : 0
-  const todayDollars = todayMicroCents == null ? null : todayMicroCents / 1_000_000
+  const todayDollars = todayMicroCents / 1_000_000
   const capDollars = safeCapCents / 100
 
-  const level: SpendLevel = pct != null && pct >= 100 ? 'critical' : pct != null && pct >= 80 ? 'warn' : 'ok'
+  const level: SpendLevel = pct >= 100 ? 'critical' : pct >= 80 ? 'warn' : 'ok'
 
   // Readout copy. On a failed fetch we must NOT surface a falsely
   // reassuring "$0.00" — the cap is still enforced server-side, we just
@@ -81,20 +69,20 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
   // state so the panel is never a blank/misleading placeholder.
   const readout = isLoading
     ? t('ai.settings.costCap.loading', 'Loading…')
-    : isError || todayDollars == null
+    : isError
       ? t('ai.settings.costCap.unavailable', 'Spend unavailable')
       : t('ai.settings.costCap.amount', '${{spent}} / ${{cap}}', {
-          spent: fmtNumber(todayDollars),
-          cap: fmtNumber(capDollars),
-          defaultValue: `$${fmtNumber(todayDollars)} / $${fmtNumber(capDollars)}`,
+          spent: todayDollars.toFixed(2),
+          cap: capDollars.toFixed(2),
+          defaultValue: `$${todayDollars.toFixed(2)} / $${capDollars.toFixed(2)}`,
         })
-  const readoutClass = isError || todayDollars == null ? 'text-[var(--text-muted)]' : TEXT_CLASS[level]
+  const readoutClass = isError ? 'text-[var(--text-muted)]' : TEXT_CLASS[level]
 
   return (
     <GlassPanel
       className="space-y-2 p-4"
       data-testid="ai-cost-cap-spend-bar"
-      data-spend-level={todayMicroCents == null ? 'unknown' : level}
+      data-spend-level={level}
     >
       <div className="flex items-baseline justify-between gap-2">
         <Caption>{t('ai.settings.costCap.todayTitle', 'Today’s Helix spend')}</Caption>
@@ -102,17 +90,20 @@ export function AICostCapSpendBar({ capCents }: { capCents: number }) {
           {readout}
         </Text>
       </div>
-      <MetricBar
-        value={pct}
-        max={100}
-        color={FILL_COLOR[level]}
-        ariaLabel={t('ai.settings.costCap.barLabel', 'Helix cost cap usage')}
-        showHeader={false}
-        size="slim"
-        fill="solid"
-      />
-      {usageState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
-      {!isLoading && (isError || todayMicroCents == null) && (
+      <div
+        className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+        aria-label={t('ai.settings.costCap.barLabel', 'Helix cost cap usage')}
+      >
+        <div
+          className={`h-full transition-all duration-slow ${FILL_CLASS[level]}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      {isError && (
         <HelperText>
           {t(
             'ai.settings.costCap.unavailableHint',

@@ -5,7 +5,7 @@
  * surface under test:
  *
  *   1. Responsive layout branches keyed off `size.cols`:
- *        - compact (cols ≤ 1) → a titled shell with This-Month + Sessions
+ *        - compact (cols ≤ 1) → a title-less shell with This-Month + Sessions
  *          stats and NO chart (the per-session average is dropped).
  *        - standard (2 cols)  → a titled shell + a 3-up stat row (This Month /
  *          Sessions / Avg-per-Session) + a bar chart, using the *small* ticks.
@@ -50,10 +50,6 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { chartTokens } from '@/lib/tokens';
-vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
-}));
 
 // jsdom lacks matchMedia; framer-motion (useReducedMotion, read by the
 // freshness chip) reads it at module load. Report reduced motion so the
@@ -122,10 +118,8 @@ vi.mock('@/api/hooks/useEnergy', async () => {
 // inspectable; the axis/tooltip doubles invoke the widget's real formatters so
 // the unit wiring is exercised.
 vi.mock('@/components/charts', async () => {
-  const { useMeasuredAxisWidth } = await import('@/components/charts/useMeasuredAxisWidth');
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
-  useMeasuredAxisWidth,
   ...chartTestDoubles,
   chartGrid: null,
   chartMargin: {},
@@ -173,18 +167,6 @@ vi.mock('@/components/charts', async () => {
 });
 
 import WallConnectorWidget from './WallConnectorWidget';
-
-it.each([1, 2, 3])('identifies the wall connector at %i columns', (cols) => {
-  renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Wall connector' })).toBeInTheDocument();
-});
-
-it.each([1, 2, 3])('identifies the wall connector without a linked site at %i columns', (cols) => {
-  sitesMock.mockReturnValue(makeQuery({ data: [] }));
-  renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Wall connector' })).toBeInTheDocument();
-  expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
-});
 import type { WidgetSize } from './types';
 import type { TeslaEnergySite, TeslaWCChargingEntry } from '@/types/energy';
 
@@ -268,13 +250,11 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }) {
-  const view = render(
+  return render(
     <MemoryRouter>
       <WallConnectorWidget size={size} />
     </MemoryRouter>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Wall connector');
-  return view;
 }
 
 interface Row {
@@ -300,22 +280,20 @@ describe('WallConnectorWidget', () => {
     renderWidget();
 
     // Titled shell — no gutted panel.
-    expect(screen.getByText('Wall connector')).toBeInTheDocument();
+    expect(screen.getByText('Wall Connector')).toBeInTheDocument();
 
-    for (const label of ['This month (loaded)', 'Sessions', 'Avg / session']) {
+    for (const label of ['This Month', 'Sessions', 'Avg / Session']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
     // Two of the three stats carry the kWh unit (Sessions is a bare count).
-    expect(screen.queryAllByText('kWh')).toHaveLength(0);
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.getByText('Totals cover loaded records from the last 14 days.')).toBeInTheDocument();
+    expect(screen.getAllByText('kWh')).toHaveLength(2);
 
     // The bar is wired to the energy series with the emerald fill.
     const bar = screen.getByTestId('bar');
     expect(bar).toHaveAttribute('data-key', 'energy_kwh');
     expect(bar).toHaveAttribute('data-name', 'Energy');
-    expect(bar).toHaveAttribute('data-fill', chartTokens.series[1]);
+    expect(bar).toHaveAttribute('data-fill', '#10b981');
 
     // Standard layout uses the small axis ticks.
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'sm');
@@ -360,21 +338,21 @@ describe('WallConnectorWidget', () => {
 
     // Total 2 + 4 = 6.0 kWh (the 9 kWh past entry is excluded), 2 sessions,
     // average 3.0 kWh/session.
-    expect(screen.getByText('This month (loaded)')).toBeInTheDocument();
-    expect(screen.getByText('6.00')).toBeInTheDocument();
+    expect(screen.getByText('This Month')).toBeInTheDocument();
+    expect(screen.getByText('6.0')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('3.00')).toBeInTheDocument();
+    expect(screen.getByText('3.0')).toBeInTheDocument();
   });
 
   it('labels the Y axis and tooltip through the shared fmt / fmtNumber helpers', () => {
     renderWidget();
 
     // Y-axis tickFormatter(1234) → fmt(1234, 0) → "1234".
-    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-tick', '1,234.00');
+    expect(screen.getByTestId('y-axis')).toHaveAttribute('data-tick', '1234');
 
     // Tooltip formatter(2.5) → ["2.5 kWh", "Energy"].
     const fmtAttr = screen.getByTestId('tooltip').getAttribute('data-fmt') ?? '';
-    expect(fmtAttr).toContain('2.50 kWh');
+    expect(fmtAttr).toContain('2.5 kWh');
     expect(fmtAttr).toContain('Energy');
   });
 
@@ -382,7 +360,7 @@ describe('WallConnectorWidget', () => {
     renderWidget();
 
     const chart = screen.getByRole('img', {
-      name: 'Daily wall connector charging energy over the last 14 days',
+      name: 'Daily Wall Connector charging energy over the last 14 days',
     });
     expect(chart).toBeInTheDocument();
     // The recharts subtree lives inside the labelled image.
@@ -394,25 +372,24 @@ describe('WallConnectorWidget', () => {
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-ticksize', 'lg');
   });
 
-  it('compact layout retains its title and icon with This-Month + Sessions, no chart or average', () => {
+  it('compact layout shows This-Month + Sessions, no title, no chart, no average', () => {
     const ym = currentMonthPrefix();
     historyMock.mockReturnValue(
       makeQuery({ data: [makeEntry(`${ym}-10T12:00:00Z`, 3000)] }), // 3 kWh, 1 session
     );
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByText('This month (loaded)')).toBeInTheDocument();
-    expect(screen.getByText('3.00')).toBeInTheDocument();
+    expect(screen.getByText('This Month')).toBeInTheDocument();
+    expect(screen.getByText('3.0')).toBeInTheDocument();
     expect(screen.getByText('Sessions')).toBeInTheDocument();
     expect(screen.getByText('1')).toBeInTheDocument();
     // Only the This-Month stat carries a unit in compact.
     expect(screen.getAllByText('kWh')).toHaveLength(1);
 
-    const heading = screen.getByRole('heading', { name: 'Wall connector', level: 3 });
-    expect(heading).toBeVisible();
-    expect(heading.parentElement?.querySelector('svg.lucide-plug')).toBeInTheDocument();
-    // Compact drops the per-session average and never mounts the chart.
-    expect(screen.queryByText('Avg / session')).not.toBeInTheDocument();
+    // Compact is title-less, drops the per-session average, and never mounts
+    // the chart.
+    expect(screen.queryByText('Wall Connector')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg / Session')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -420,10 +397,9 @@ describe('WallConnectorWidget', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByRole('heading', { name: 'Wall connector', level: 3 })).toBeVisible();
-    expect(screen.getByText('No wall connector data')).toBeInTheDocument();
+    expect(screen.getByText('No Wall Connector data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByText('This month (loaded)')).not.toBeInTheDocument();
+    expect(screen.queryByText('This Month')).not.toBeInTheDocument();
   });
 
   it('shows the "no site linked" empty state and disables the history query', () => {
@@ -431,9 +407,9 @@ describe('WallConnectorWidget', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget();
 
-    expect(screen.getByText('No Tesla energy site linked')).toBeInTheDocument();
+    expect(screen.getByText('No Tesla Energy site linked')).toBeInTheDocument();
     // Genuinely-empty, not a fetch failure.
-    expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
+    expect(screen.queryByText('No Wall Connector data')).not.toBeInTheDocument();
     // With no site the history hook is called with an undefined id (disabled).
     expect(historyMock).toHaveBeenCalledWith(undefined, expect.any(String));
   });
@@ -449,21 +425,21 @@ describe('WallConnectorWidget', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading empty state / title must NOT appear on error.
-    expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
-    expect(screen.queryByText('Wall connector')).toBeInTheDocument();
+    expect(screen.queryByText('No Tesla Energy site linked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Wall Connector')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('shows the no-data empty state (keeping the titled shell) with a linked site', () => {
     historyMock.mockReturnValue(makeQuery({ data: [] }));
     renderWidget();
 
-    expect(screen.getByText('Wall connector')).toBeInTheDocument();
-    expect(screen.getByText('No wall connector data')).toBeInTheDocument();
+    expect(screen.getByText('Wall Connector')).toBeInTheDocument();
+    expect(screen.getByText('No Wall Connector data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Stats + chart are not rendered while empty.
-    expect(screen.queryByText('Avg / session')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg / Session')).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -472,7 +448,7 @@ describe('WallConnectorWidget', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('Wall connector')).toBeInTheDocument();
+    expect(screen.queryByText('Wall Connector')).not.toBeInTheDocument();
   });
 
   it('renders a skeleton while the history query loads for a linked site', () => {
@@ -481,7 +457,7 @@ describe('WallConnectorWidget', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('Wall connector')).toBeInTheDocument();
+    expect(screen.queryByText('Wall Connector')).not.toBeInTheDocument();
   });
 
   it('surfaces the error panel (not the empty state) when the history query fails', () => {
@@ -493,8 +469,8 @@ describe('WallConnectorWidget', () => {
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Wall connector')).toBeInTheDocument();
+    expect(screen.queryByText('No Wall Connector data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Wall Connector')).not.toBeInTheDocument();
   });
 
   it('refreshes both the sites and history queries when a site is linked', () => {
@@ -540,7 +516,7 @@ describe('WallConnectorWidget', () => {
     historyMock.mockReturnValue(makeQuery({ data: 'not-an-array' }));
 
     expect(() => renderWidget()).not.toThrow();
-    expect(screen.getByText('No wall connector data')).toBeInTheDocument();
+    expect(screen.getByText('No Wall Connector data')).toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -549,43 +525,5 @@ describe('WallConnectorWidget', () => {
     renderWidget();
 
     expect(historyMock).toHaveBeenCalledWith(777, expect.any(String));
-  });
-
-  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }, { cols: 3, rows: 4 }])('retains loaded session stats and charts after cached refresh failure in %j', (size) => {
-    const month = currentMonthPrefix();
-    const refetch = vi.fn();
-    historyMock.mockReturnValue(makeQuery({
-      data: [makeEntry(`${month}-01T12:00:00Z`, 2000)],
-      isError: true, error: new Error('refresh failed'), refetch,
-    }));
-    renderWidget(size);
-    expect(screen.getAllByText('2.00').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('preserves zero energy sessions without treating them as empty history', () => {
-    const month = currentMonthPrefix();
-    historyMock.mockReturnValue(makeQuery({ data: [makeEntry(`${month}-01T12:00:00Z`, 0)] }));
-    renderWidget();
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getAllByText('0.00')).toHaveLength(2);
-    expect(chartRows()[0].energy_kwh).toBe(0);
-    expect(screen.queryByText('No wall connector data')).not.toBeInTheDocument();
-  });
-
-  it('does not turn missing session energy into a fabricated daily total or average', () => {
-    const month = currentMonthPrefix();
-    historyMock.mockReturnValue(makeQuery({ data: [
-      makeEntry(`${month}-01T08:00:00Z`, 2000),
-      makeEntry(`${month}-01T12:00:00Z`, null),
-    ] }));
-    renderWidget();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(chartRows()[0].energy_kwh).toBeNull();
-    expect(screen.queryByText('2.00')).not.toBeInTheDocument();
   });
 });

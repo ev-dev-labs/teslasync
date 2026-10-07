@@ -1,25 +1,29 @@
-import { LayoutCard } from '@/components/layout';
+import { Clock3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { MetricLabel, Text } from '@/components/ui';
+import {
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyHourlyProfileProps {
   summary: ComfortConsistencySummary;
@@ -32,7 +36,6 @@ export function ComfortConsistencyHourlyProfile({
   state,
   formatDuration,
 }: ComfortConsistencyHourlyProfileProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.hourlyProfile.map((bucket) => ({
     hour: t('comfortConsistency.hourly.hourLabel', '{{hour}}:00', {
@@ -42,12 +45,16 @@ export function ComfortConsistencyHourlyProfile({
       bucket.withinBandShare != null
         ? bucket.withinBandShare * 100
         : null,
-    observed: formatDuration(bucket.observedS),
+    observed: formatDuration(bucket.observedS, { precision: 2 }),
   }));
 
   return (
     <section data-testid="comfort-consistency-hourly-profile">
-      <LayoutCard title={t('comfortConsistency.hourly.title', 'Hourly comfort consistency')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Clock3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('comfortConsistency.hourly.title', 'Hourly comfort consistency')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.hourly.subtitle',
@@ -60,7 +67,7 @@ export function ComfortConsistencyHourlyProfile({
           requirement="intervals"
           skeletonHeight={320}
         >
-          <EmbeddedChart toolbar exportable size="standard"
+          <ChartContainer
             title={t('comfortConsistency.hourly.plotTitle', 'Within-band duration by local hour')}
             ariaLabel={t(
               'comfortConsistency.hourly.aria',
@@ -101,7 +108,7 @@ export function ComfortConsistencyHourlyProfile({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </EmbeddedChart>
+          </ChartContainer>
           <Text as="h4" variant="label" className="mb-3 mt-4">
             {t('comfortConsistency.hourly.supportGrid', 'Per-hour observed support')}
           </Text>
@@ -116,17 +123,17 @@ export function ComfortConsistencyHourlyProfile({
                 </MetricLabel>
                 <Text as="p" variant="bodySm" className="mt-1">
                   {bucket.withinBandShare != null
-                    ? fmtPercent(bucket.withinBandShare * 100)
+                    ? fmtPercent(bucket.withinBandShare * 100, 0)
                     : '—'}
                 </Text>
                 <Text as="p" variant="caption">
-                  {formatDuration(bucket.observedS)}
+                  {formatDuration(bucket.observedS, { precision: 2 })}
                 </Text>
               </div>
             ))}
           </div>
         </ComfortConsistencySectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import {
   destinationDateTime,
@@ -10,7 +10,6 @@ import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
 } from './DestinationTransitionsMetricGroup';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationCoverageMetricsProps {
   model: DestinationTransitionResult;
@@ -23,11 +22,10 @@ export function DestinationCoverageMetrics({
   locale,
   timeZone,
 }: DestinationCoverageMetricsProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const evidence = model.evidence;
   const days = (value: number | null) =>
-    value != null ? fmtNumber(value, undefined, locale) : '—';
+    value != null ? fmtNumber(value, 1, locale) : '—';
   const metrics: DestinationTransitionsEvidenceMetric[] = [
     {
       label: t(

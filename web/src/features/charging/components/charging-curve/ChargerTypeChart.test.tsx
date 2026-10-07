@@ -233,10 +233,10 @@ describe('ChargerTypeChart — grouping + averaging', () => {
     ]);
 
     // avgKw=(250+150)/2=200, avgKwh=(40+60)/2=50, avgDuration=(20+40)/2=30.
-    expect(dataRowCells('Supercharger')).toEqual(['Supercharger', '2', '200.00', '50.00', '30']);
+    expect(dataRowCells('Supercharger')).toEqual(['Supercharger', '2', '200.0', '50.0', '30']);
     // Single-session buckets — 120 kW / 80 kWh / 30 min and 7 kW / 10 kWh / 60 min.
-    expect(dataRowCells('DC Fast')).toEqual(['DC Fast', '1', '120.00', '80.00', '30']);
-    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '7.00', '10.00', '60']);
+    expect(dataRowCells('DC Fast')).toEqual(['DC Fast', '1', '120.0', '80.0', '30']);
+    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '7.0', '10.0', '60']);
   });
 
   it('mirrors each bucket in the visible legend (label + session count)', () => {
@@ -297,8 +297,8 @@ describe('ChargerTypeChart — null safety', () => {
 
     const cells = dataRowCells('Home / AC');
     expect(cells[1]).toBe('2'); // both sessions counted
-    expect(cells[3]).toBe('5.00'); // avgKwh survives the missing reading
-    expect(cells[3]).not.toBe('0.00'); // pin the pre-fix collapse
+    expect(cells[3]).toBe('5.0'); // avgKwh survives the missing reading
+    expect(cells[3]).not.toBe('0.0'); // pin the pre-fix collapse
   });
 
   it('coerces a null peak power to a zeroed kW average without crashing', () => {
@@ -308,7 +308,7 @@ describe('ChargerTypeChart — null safety', () => {
       ]),
     ).not.toThrow();
     // peak_power_w null → avgKw 0 → "0.0"; energy 5 kWh survives.
-    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '0.00', '5.00', '15']);
+    expect(dataRowCells('Home / AC')).toEqual(['Home / AC', '1', '0.0', '5.0', '15']);
   });
 });
 

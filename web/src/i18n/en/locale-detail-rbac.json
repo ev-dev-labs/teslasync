@@ -66,8 +66,8 @@
     "legend": {
       "allowed": "Allowed",
       "denied": "Denied",
-      "editHint": "Toggle cells then save to publish changes.",
-      "readHint": "Read-only view — choose edit to change bindings."
+      "editHint": "Toggle cells then Save to publish changes.",
+      "readHint": "Read-only view — choose Edit to change bindings."
     },
     "matrix": {
       "title": "Permission matrix",

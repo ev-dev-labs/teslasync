@@ -58,7 +58,7 @@ describe('TemplateGallery', () => {
   it('shows named starters and a preview together, without a drill-down', () => {
     setup();
     const dialog = screen.getByRole('dialog', { name: 'Create a layout' });
-    expect(within(dialog).getByRole('button', { name: /Blank dashboard/ })).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: /Blank Dashboard/ })).toBeVisible();
     expect(within(dialog).getByRole('button', { name: /Minimal/ })).toBeVisible();
     expect(within(dialog).getByRole('heading', { name: 'Layout preview' })).toBeVisible();
     expect(within(dialog).getByLabelText(/Layout name/)).toHaveValue('Default');
@@ -89,8 +89,8 @@ describe('TemplateGallery', () => {
 
   it('opens blank selection directly and only creates it after naming', () => {
     const { onApply } = setup('__blank__');
-    expect(screen.getByRole('button', { name: /Blank dashboard/ })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByLabelText(/Layout name/)).toHaveValue('New layout');
+    expect(screen.getByRole('button', { name: /Blank Dashboard/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText(/Layout name/)).toHaveValue('New Layout');
     fireEvent.change(screen.getByLabelText(/Layout name/), { target: { value: 'Fresh Board' } });
     fireEvent.keyDown(screen.getByLabelText(/Layout name/), { key: 'Enter' });
     expect(onApply).toHaveBeenCalledWith('__blank__', 'Fresh Board');
@@ -100,11 +100,11 @@ describe('TemplateGallery', () => {
     setup();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search layout starters' }), { target: { value: 'Level Gauge' } });
     expect(screen.getByRole('button', { name: /Minimal/ })).toBeVisible();
-    expect(screen.queryByRole('button', { name: /Blank dashboard/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Blank Dashboard/ })).toBeNull();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search layout starters' }), { target: { value: 'zzzzxyz' } });
     expect(screen.getByText('No starters match this search.')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
-    expect(screen.getByRole('button', { name: /Blank dashboard/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /Blank Dashboard/ })).toBeVisible();
   });
 
   it('rejects an empty name and tolerates a starter with missing widgets', () => {
@@ -124,8 +124,8 @@ describe('TemplateGallery', () => {
     fireEvent.change(screen.getByLabelText(/Layout name/), { target: { value: 'Old name' } });
     rerender(<TemplateGallery {...props} open={false} />);
     rerender(<TemplateGallery {...props} open initialTemplateId="__blank__" />);
-    expect(screen.getByLabelText(/Layout name/)).toHaveValue('New layout');
-    expect(screen.getByRole('button', { name: /Blank dashboard/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText(/Layout name/)).toHaveValue('New Layout');
+    expect(screen.getByRole('button', { name: /Blank Dashboard/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('closes via the dialog close control', () => {

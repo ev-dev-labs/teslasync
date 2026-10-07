@@ -1,18 +1,17 @@
 /**
  * LiveMonitorKpiBand — full-width responsive metric strip for the Live Signal
  * Monitor. Summarises the live SSE firehose (connection, throughput, buffer
- * fill, and the type mix of the buffered signals) using OperationalBrief.
+ * fill, and the type mix of the buffered signals) using shared MetricCards.
  *
  * All figures are derived from the live tail buffer owned by
  * `useLiveSignalStream` — nothing here fetches or fabricates data.
  */
 
 import { useTranslation } from 'react-i18next';
-import type { ReactNode } from 'react';
-import type { StatMetric } from '@/components/data-display';
-import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
+import { Activity, Boxes, Fingerprint, Hash, Layers, Wifi, WifiOff } from 'lucide-react';
 
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { MetricCard } from '@/components/data-display';
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 
 export interface LiveMonitorKpiBandProps {
   connected: boolean;
@@ -28,7 +27,6 @@ export interface LiveMonitorKpiBandProps {
   numericCount: number;
   /** Count of non-numeric (boolean + string) entries in the buffer. */
   categoricalCount: number;
-  scope?: ReactNode;
 }
 
 export function LiveMonitorKpiBand({
@@ -39,9 +37,7 @@ export function LiveMonitorKpiBand({
   uniqueSignals,
   numericCount,
   categoricalCount,
-  scope,
 }: LiveMonitorKpiBandProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const safeBufferCount = bufferCount ?? 0;
@@ -50,38 +46,59 @@ export function LiveMonitorKpiBand({
   // malformed count (negative, NaN, or > capacity) can never surface a
   // nonsensical "-25%" / "137%" subtitle.
   const fillPct = Math.max(0, Math.min((safeBufferCount / safeMax) * 100, 100));
-  const countDisplay = { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) };
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'status', occurrenceId: 'connection',
-      rawValue: connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected'),
-      label: t('liveMonitor.connection', 'Connection'),
-      description: t('telemetryBrief.sseConnection', 'SSE transport connection only; not a vehicle-health or signal-freshness verdict.') },
-    { metricId: 'rate', occurrenceId: 'rate', rawValue: rate,
-      label: t('liveMonitor.sigPerSec', 'Signals / sec'), display: countDisplay,
-      description: t('telemetryBrief.sseRate', 'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.') },
-    { metricId: 'count', occurrenceId: 'buffer', rawValue: bufferCount,
-      label: t('liveMonitor.bufferSize', 'Buffer size'), display: countDisplay,
-      description: `/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct)}` },
-    { metricId: 'count', occurrenceId: 'unique', rawValue: uniqueSignals,
-      label: t('liveMonitor.uniqueSignals', 'Unique signals'), display: countDisplay,
-      description: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
-    { metricId: 'count', occurrenceId: 'numeric', rawValue: numericCount,
-      label: t('liveMonitor.numeric', 'Numeric'), display: countDisplay,
-      description: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
-    { metricId: 'count', occurrenceId: 'categorical', rawValue: categoricalCount,
-      label: t('liveMonitor.categorical', 'Categorical'), display: countDisplay,
-      description: t('telemetryBrief.categorical', 'Boolean and string entries in the current buffer; not distinct catalog fields.') },
-  ];
 
   return (
-    <div className="min-w-0 max-w-full">
-      <TelemetrySummaryBrief title={t('liveMonitor.kpis', 'Live stream summary')}
-        metrics={metrics} testId="live-monitor-summary"
-        statusLabel={connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
-        retained={!connected && safeBufferCount > 0}
-        scope={scope ?? t('telemetryBrief.sseScope', 'Current SSE session · bounded tail buffer')}
-        provenance={t('telemetryBrief.sseProvenance', 'Client SSE tail and locally sampled throughput')}
-        description={t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.')} />
-    </div>
+    <section
+      aria-label={t('liveMonitor.kpis', 'Live stream summary')}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-6"
+    >
+      <MetricCard
+        label={t('liveMonitor.connection', 'Connection')}
+        value={
+          connected
+            ? t('liveMonitor.connected', 'Connected')
+            : t('liveMonitor.disconnected', 'Disconnected')
+        }
+        color={connected ? 'green' : 'red'}
+        icon={
+          connected ? (
+            <Wifi className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <WifiOff className="h-5 w-5" aria-hidden="true" />
+          )
+        }
+      />
+      <MetricCard
+        label={t('liveMonitor.sigPerSec', 'Signals / sec')}
+        value={fmtInt(rate ?? 0)}
+        color="cyan"
+        icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+      />
+      <MetricCard
+        label={t('liveMonitor.bufferSize', 'Buffer Size')}
+        value={fmtInt(safeBufferCount)}
+        subtitle={`/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct, 0)}`}
+        color="blue"
+        icon={<Boxes className="h-5 w-5" aria-hidden="true" />}
+      />
+      <MetricCard
+        label={t('liveMonitor.uniqueSignals', 'Unique Signals')}
+        value={fmtInt(uniqueSignals ?? 0)}
+        color="purple"
+        icon={<Fingerprint className="h-5 w-5" aria-hidden="true" />}
+      />
+      <MetricCard
+        label={t('liveMonitor.numeric', 'Numeric')}
+        value={fmtInt(numericCount ?? 0)}
+        color="cyan"
+        icon={<Hash className="h-5 w-5" aria-hidden="true" />}
+      />
+      <MetricCard
+        label={t('liveMonitor.categorical', 'Categorical')}
+        value={fmtInt(categoricalCount ?? 0)}
+        color="amber"
+        icon={<Layers className="h-5 w-5" aria-hidden="true" />}
+      />
+    </section>
   );
 }

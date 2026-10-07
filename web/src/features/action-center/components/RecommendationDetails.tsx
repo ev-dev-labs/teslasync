@@ -76,7 +76,7 @@ export function RecommendationDetails({
     ),
     tesla_battery_passport_ledger: t(
       'actionCenter.provenance.tesla_battery_passport_ledger',
-      'Issued battery Passports',
+      'Issued Battery Passports',
     ),
   };
   const sourceLabel = (source: string) =>

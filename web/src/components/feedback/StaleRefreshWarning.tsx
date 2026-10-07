@@ -2,8 +2,7 @@ import { type HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
-import { Button } from '@/components/ui/Button';
-import { Text } from '@/components/ui/Typography';
+import { Button, Text } from '@/components/ui';
 import type { DataState } from '@/api/dataState';
 import { DataStateNotice } from './DataStateNotice';
 

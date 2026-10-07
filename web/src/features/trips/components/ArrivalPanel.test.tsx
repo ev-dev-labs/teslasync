@@ -142,27 +142,4 @@ describe('ArrivalPanel', () => {
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
   });
-
-  it('retains ETA, route context and every evidence line across an arrival refresh failure', () => {
-    mockArrival.mockReturnValue(idle({
-      data: arrival, error: new Error('arrival refresh failed'), isError: true, isFetching: true,
-    }));
-    renderPanel();
-    expect(screen.getByRole('heading', { name: 'Arrival' })).toBeInTheDocument();
-    expect(screen.getByText('KC')).toBeInTheDocument();
-    expect(screen.getByText('Top up en route')).toBeInTheDocument();
-    expect(screen.getByText('adjusted 1.05× from 2 trips')).toBeInTheDocument();
-    for (const line of arrival.evidence) expect(screen.getByText(`· ${line}`)).toBeInTheDocument();
-    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
-  });
-
-  it('shows measured zero pace, remaining distance and shortfall instead of unavailable placeholders', () => {
-    mockArrival.mockReturnValue(idle({
-      data: { ...arrival, pace_ms: 0, left_m: 0, shortfall_wh: 0, eta_at: null },
-    }));
-    renderPanel();
-    expect(screen.getByText(/0 m\/s · 0 m/)).toBeInTheDocument();
-    expect(screen.getByText('top up ≈ 0 Wh en route')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
 });

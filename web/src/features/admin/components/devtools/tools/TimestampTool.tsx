@@ -121,7 +121,7 @@ export function TimestampTool() {
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <Input
-              label={t('devtools.utils.timestampUnixLabel', 'Unix timestamp')}
+              label={t('devtools.utils.timestampUnixLabel', 'Unix Timestamp')}
               placeholder="1700000000"
               value={unix}
               onChange={handleUnixChange}
@@ -143,7 +143,7 @@ export function TimestampTool() {
           </div>
           <div>
             <Input
-              label={t('devtools.utils.timestampIsoLabel', 'ISO timestamp')}
+              label={t('devtools.utils.timestampIsoLabel', 'ISO Timestamp')}
               placeholder="2024-01-01T00:00:00Z"
               value={iso}
               onChange={handleIsoChange}

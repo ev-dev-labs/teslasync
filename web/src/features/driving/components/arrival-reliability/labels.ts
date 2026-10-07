@@ -1,7 +1,6 @@
 import type { TFunction } from 'i18next';
 
 import type { ArrivalEvidenceBand } from '../../lib/arrivalReliability';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function arrivalEvidenceBandLabel(
   t: TFunction,
@@ -22,7 +21,7 @@ export function arrivalEvidenceBandLabel(
 export function arrivalPercent(
   value: number | null,
   locale: string,
-  digits = getGlobalPrecision(),
+  digits = 0,
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   try {
@@ -45,13 +44,11 @@ export function arrivalIndex(
   if (value == null || !Number.isFinite(value)) return '—';
   try {
     return new Intl.NumberFormat(locale, {
-      minimumFractionDigits: getGlobalPrecision(),
-      maximumFractionDigits: getGlobalPrecision(),
+      maximumFractionDigits: 0,
     }).format(value);
   } catch {
     return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: getGlobalPrecision(),
-      maximumFractionDigits: getGlobalPrecision(),
+      maximumFractionDigits: 0,
     }).format(value);
   }
 }

@@ -19,7 +19,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { UseQueryResult } from '@tanstack/react-query';
 import '../../../i18n';
@@ -74,32 +74,22 @@ function getRegion() {
   return screen.getByRole('region', { name: /inbox summary/i });
 }
 
-// Scope the canonical value to its metric rather than old card DOM siblings.
+// Read a MetricCard's rendered value by its (unique) label text. The label
+// lives in a <span> inside <p class="metric-label">; the value is that
+// paragraph's immediate sibling.
 function cardValue(label: string): string {
-  const tile = screen.getByText(label).closest('[data-operational-metric]');
-  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
+  const labelParagraph = screen.getByText(label).closest('p');
+  return labelParagraph?.nextElementSibling?.textContent ?? '';
 }
 
 describe('InboxSummary — loading & error states', () => {
-  it('retains compact metrics after a failed cached refresh', () => {
-    renderSummary(makeQuery({
-      data: [makeLog({ severity: 'critical' })],
-      isError: true,
-      error: new Error('Refresh failed'),
-    }));
-    expect(cardValue('Recent notifications')).toBe('1');
-    expect(cardValue('Critical')).toBe('1');
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
   it('renders a six-card skeleton grid inside the labelled region on first load', () => {
     renderSummary(makeQuery({ isLoading: true, isPending: true, isFetching: true }));
 
     expect(getRegion()).toBeInTheDocument();
-    const skeleton = screen.getByTestId('notification-backlog-brief');
+    const skeleton = screen.getByTestId('stat-grid-skeleton');
     expect(skeleton).toHaveAttribute('aria-busy', 'true');
-    expect(skeleton.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(skeleton.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(skeleton.querySelectorAll('.animate-pulse')).toHaveLength(6);
     // No KPI cards while first-loading.
     expect(screen.queryByText('Total')).not.toBeInTheDocument();
   });
@@ -217,22 +207,5 @@ describe('InboxSummary — null-safety & accessibility', () => {
     // metric label + value carry the meaning.
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
     expect(cardValue('Recent notifications')).toBe('1');
-  });
-
-  it('reviews the bounded sample, unread denominator, full timestamp, and severity uncertainty in the real drawer', () => {
-    renderSummary(makeQuery({ isSuccess: true, data: [
-      makeLog({ severity: 'critical', read_at: null, created_at: '2026-08-04T12:00:00Z' }),
-      makeLog({ severity: 'debug', read_at: '2026-08-04T13:00:00Z' }),
-    ] }));
-    const brief = screen.getByTestId('notification-backlog-brief');
-    expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelector('[data-operational-metric="inbox-unread"]')).toHaveAttribute('data-value-state', 'value');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(drawer).toHaveTextContent('Latest 50 active entries · all time');
-    expect(drawer).toHaveTextContent('not the workspace period or the server total');
-    expect(drawer).toHaveTextContent('1 of 2');
-    expect(drawer).toHaveTextContent('1 with unknown severity');
-    expect(drawer).toHaveTextContent('Last received');
   });
 });

@@ -161,28 +161,14 @@ describe('PresetGallery — loading state', () => {
     // four cards means comfortably more than four in the tree.
     const pulses = container.querySelectorAll('.animate-pulse');
     expect(pulses.length).toBeGreaterThanOrEqual(4);
-    // The canonical loading status owns the four specialist skeleton cards.
+    // Skeletons are non-interactive — no Install buttons, no error/empty status.
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading Automation presets' })).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 });
 
 // ── Error state ──────────────────────────────────────────────────────────────
 describe('PresetGallery — error state', () => {
-  it('offers nonblocking source recovery without removing cached templates or install navigation', () => {
-    const refetch = vi.fn();
-    mockUsePresets.mockReturnValue(hookResult({
-      data: { categories: [], presets: [makePreset({ id: 'retained', name: 'Retained template' })] },
-      isError: true, error: new Error('Refresh offline'), refetch,
-    }));
-    renderGallery();
-    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Install Retained template' }));
-    expect(navigateMock).toHaveBeenCalledWith('/automations/new?preset=retained');
-  });
-
   it('renders QueryError with a Retry that re-fetches when the query fails', () => {
     const refetch = vi.fn();
     mockUsePresets.mockReturnValue(
@@ -219,15 +205,12 @@ describe('PresetGallery — error state', () => {
 // ── Empty state ──────────────────────────────────────────────────────────────
 describe('PresetGallery — empty state', () => {
   it('renders the empty status region when the response has no presets', () => {
-    const refetch = vi.fn();
-    mockUsePresets.mockReturnValue(hookResult({ data: { categories: [], presets: [] }, refetch }));
+    mockUsePresets.mockReturnValue(hookResult({ data: { categories: [], presets: [] } }));
     renderGallery();
 
     const status = screen.getByRole('status');
     expect(status).toBeInTheDocument();
     expect(screen.getByText('No preset templates available')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('treats a fully absent data payload as empty (null-safety on data?.presets)', () => {
@@ -236,26 +219,12 @@ describe('PresetGallery — empty state', () => {
 
     expect(screen.getByText('No preset templates available')).toBeInTheDocument();
     // No cards rendered → no Install buttons.
-    expect(screen.queryByRole('button', { name: /Install/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
 
 // ── Loaded — card content ────────────────────────────────────────────────────
 describe('PresetGallery — card content', () => {
-  it('keeps complete long titles and descriptions visible without truncation', () => {
-    const name = 'A complete long preset name with every important condition preserved';
-    const description = 'First full description sentence. Second sentence with the remaining policy and conditions.';
-    mockUsePresets.mockReturnValue(hookResult({
-      data: { categories: [], presets: [makePreset({ name, description })] },
-    }));
-    renderGallery();
-    expect(screen.getByRole('heading', { name })).toHaveClass('break-words');
-    const descriptions = screen.getAllByText(description).filter(node => node.classList.contains('break-words'));
-    expect(descriptions).toHaveLength(1);
-    expect(descriptions[0]).not.toHaveClass('line-clamp-2', 'truncate');
-    expect(screen.getByRole('button', { name: `Install ${name}` })).toBeEnabled();
-  });
   it('renders name, description, trigger label and interpolated action count', () => {
     mockUsePresets.mockReturnValue(
       hookResult({
@@ -339,17 +308,16 @@ describe('PresetGallery — card content', () => {
     expect(screen.getByRole('heading', { name: 'Night Lock' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Morning HVAC' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Filter presets by category' })).toHaveClass('flex-wrap');
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Security(1)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Security (1)' }));
     expect(screen.getByRole('heading', { name: 'Night Lock' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Morning HVAC' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Security(1)' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Security (1)' })).toHaveAttribute('aria-pressed', 'true');
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search templates' }), {
       target: { value: 'morning' },
     });
     await waitFor(() => expect(screen.getByText('No templates match your filters')).toBeInTheDocument());
     expect(screen.getByText('0 of 2 templates')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'All(2)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'All (2)' }));
     expect(screen.getByRole('heading', { name: 'Morning HVAC' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Night Lock' })).not.toBeInTheDocument();
   });
@@ -390,9 +358,9 @@ describe('PresetGallery — trigger labels', () => {
     renderGallery();
 
     expect(screen.getByText('Schedule')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle event')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle Event')).toBeInTheDocument();
     expect(screen.getByText('Geofence')).toBeInTheDocument();
-    expect(screen.getByText('Signal threshold')).toBeInTheDocument();
+    expect(screen.getByText('Signal Threshold')).toBeInTheDocument();
   });
 
   it('shows the "no trigger" fallback for an empty triggers array', () => {

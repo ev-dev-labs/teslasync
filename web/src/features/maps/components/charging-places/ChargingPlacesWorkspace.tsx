@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Plus, RefreshCw, Trash2, Zap } from 'lucide-react';
 
 import {
   Button,
+  Caption,
   ConfirmDialog,
+  GlassPanel,
+  PanelTitle,
   Toggle,
 } from '@/components/ui';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { deriveDataState } from '@/api/dataState';
 import { SearchInput } from '@/components/forms';
 import { QueryError } from '@/components/feedback';
 import {
@@ -55,9 +56,6 @@ export function ChargingPlacesWorkspace({
   const placesQuery = useGeofencesFull(showArchived);
   const needsReviewQuery = useGeofenceNeedsReview();
   const currentRatesQuery = useGeofenceCurrentRates();
-  const placesState = deriveDataState(placesQuery);
-  const needsReviewState = deriveDataState(needsReviewQuery);
-  const ratesState = deriveDataState(currentRatesQuery);
   const { data: pins = [] } = usePinned('geofence');
 
   const visiblePlaces = useMemo(() => {
@@ -120,13 +118,22 @@ export function ChargingPlacesWorkspace({
   };
 
   return (
-    <LayoutCard
-      title={t('chargingPlaces.workspace.unifiedTitle', 'Places & charging zones')}
-      description={t('chargingPlaces.workspace.unifiedDescription', 'Review visited places, define their boundaries and charging purpose, and manage rates and session history.')}
-      actions={
+    <GlassPanel className="p-4 sm:p-6">
+      <div className="mb-4 flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <PanelTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-amber-300" aria-hidden="true" />
+            {t('chargingPlaces.workspace.unifiedTitle', 'Places & Charging Zones')}
+          </PanelTitle>
+          <Caption className="mt-1">
+            {t(
+              'chargingPlaces.workspace.unifiedDescription',
+              'Review visited places, define their boundaries and charging purpose, and manage rates and session history.',
+            )}
+          </Caption>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            wrapLabel
             size="sm"
             variant="ghost"
             icon={<RefreshCw className={placesQuery.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} aria-hidden="true" />}
@@ -137,34 +144,25 @@ export function ChargingPlacesWorkspace({
           </Button>
           {onAdd && (
             <Button
-              wrapLabel
               size="sm"
               variant="primary"
               icon={<Plus className="h-4 w-4" aria-hidden="true" />}
               onClick={onAdd}
             >
-              {t('chargingPlaces.workspace.addPlace', 'Add place')}
+              {t('chargingPlaces.workspace.addPlace', 'Add Place')}
             </Button>
           )}
         </div>
-      }
-    >
+      </div>
 
       <div className="flex flex-col gap-4">
-        <SourceContent
-          state={needsReviewState.refreshError ? 'retained' : 'ready'}
-          label={t('chargingPlaces.workspace.unifiedTitle', 'Places & charging zones')}
-          emptyMessage={t('chargingPlaces.workspace.noReview', 'No places are awaiting review.')}
-          errorMessage={t('chargingPlaces.workspace.reviewLoadFailed', 'The place review queue could not be loaded.')}
-        >
         <NeedsSetupQueue
           places={needsReviewQuery.data}
-          isLoading={needsReviewQuery.isLoading && !needsReviewState.hasData}
-          error={needsReviewState.fatalError}
+          isLoading={needsReviewQuery.isLoading}
+          error={needsReviewQuery.error}
           onRetry={() => void needsReviewQuery.refetch()}
           onReview={setSelectedPlace}
         />
-        </SourceContent>
         {onReviewCandidate && (
           <VisitedCandidates onReview={onReviewCandidate} onSelectForTemplate={onSelectForTemplate} />
         )}
@@ -189,34 +187,19 @@ export function ChargingPlacesWorkspace({
           />
         </div>
 
-        <SourceContent
-          state={ratesState.refreshError ? 'retained' : 'ready'}
-          label={t('chargingPlaces.table.rates', 'charging rates')}
-          emptyMessage={t('chargingPlaces.workspace.noRates', 'No current charging rates are available.')}
-          errorMessage={t('chargingPlaces.workspace.ratesLoadFailed', 'Current charging rates could not be loaded.')}
-        >
-        {ratesState.fatalError && (
+        {currentRatesQuery.error && (
           <QueryError
-            error={ratesState.fatalError}
+            error={currentRatesQuery.error}
             onRetry={() => void currentRatesQuery.refetch()}
             resourceName={t('chargingPlaces.table.rates', 'charging rates')}
           />
         )}
-        </SourceContent>
 
-        <SourceContent
-          state={placesState.refreshError ? 'retained' : 'ready'}
-          label={t('chargingPlaces.workspace.unifiedTitle', 'Places & charging zones')}
-          emptyMessage={t('chargingPlaces.workspace.noPlaces', 'No places are available.')}
-          errorMessage={t('chargingPlaces.workspace.placesLoadFailed', 'The place directory could not be loaded.')}
-        >
         <PlacesTable
-          places={placesState.hasData ? visiblePlaces : undefined}
-          filterData={placesQuery.data}
+          places={visiblePlaces}
           currentRates={currentRatesQuery.data}
-          ratesLoading={currentRatesQuery.isLoading}
-          isLoading={placesQuery.isLoading && !placesState.hasData}
-          error={placesState.fatalError}
+          isLoading={placesQuery.isLoading}
+          error={placesQuery.error}
           onRetry={refreshAll}
           onSelect={setSelectedPlace}
           onEdit={onEdit}
@@ -227,7 +210,6 @@ export function ChargingPlacesWorkspace({
             onBulkDelete
               ? (selected) => (
                   <Button
-                    wrapLabel
                     size="sm"
                     variant="danger"
                     icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
@@ -249,11 +231,10 @@ export function ChargingPlacesWorkspace({
               : undefined
           }
         />
-        </SourceContent>
       </div>
 
       <PlaceDetailPanel place={liveSelectedPlace} onClose={() => setSelectedPlace(null)} />
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

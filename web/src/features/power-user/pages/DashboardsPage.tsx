@@ -38,9 +38,9 @@ import {
 import {
   AINLDashboardComposer,
   type DashboardLayoutDraft,
-} from '@/components/ai';
-import { Grid, PageLayout } from '@/components/layout';
-import { Button, CopyButton, GlassPanel, Heading, HelperText, Text, Textarea } from '@/components/ui';
+} from '@/components/ai/AINLDashboardComposer';
+import { PageContainer } from '@/components/layout';
+import { Button, GlassPanel, Heading, HelperText, Text, Textarea } from '@/components/ui';
 import { InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -48,7 +48,6 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 // Persisted across navigation so a user editing a long JSON envelope
 // doesn't lose progress on accidental reload.
 const DASHBOARD_COMPOSER_DRAFT_KEY = 'ai.dashboardComposer.draft';
-const COMPOSER_COLUMNS = { default: 1, xl: 3, '3xl': 4 } as const;
 
 // CuratedDashboardPanel mirrors the Go-side AINLDashboardComposerPanelEntry
 // shape in internal/api/ai_nl_dashboard_composer_handler.go. The catalog is
@@ -125,7 +124,7 @@ interface ComposerStatus {
 
 export default function DashboardsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('powerDashboards.title', 'Dashboard composer'));
+  usePageTitle(t('powerDashboards.title', 'Dashboard Composer'));
 
   const [dashboardJson, setDashboardJson] = useState<string>(() => loadPersistedJson());
   const [status, setStatus] = useState<ComposerStatus | null>(null);
@@ -152,35 +151,47 @@ export default function DashboardsPage() {
     setStatus(null);
   }, []);
 
-  const handleCopyError = useCallback(() => {
+  const handleCopy = useCallback(async () => {
+    const trimmed = dashboardJson.trim();
+    if (!trimmed) {
+      setStatus({
+        variant: 'warning',
+        text: t(
+          'powerDashboards.editor.copyEmpty',
+          'Type or paste a dashboard JSON envelope above before copying.',
+        ),
+      });
+      return;
+    }
     if (typeof navigator === 'undefined' || !navigator.clipboard) {
       setStatus({
         variant: 'warning',
         text: t(
           'powerDashboards.editor.copyUnavailable',
-          'Clipboard access is not available in this browser. Select the text manually and copy with ctrl+C / cmd+C.',
+          'Clipboard access is not available in this browser. Select the text manually and copy with Ctrl+C / Cmd+C.',
         ),
       });
       return;
     }
-    setStatus({
-      variant: 'warning',
-      text: t(
-        'powerDashboards.editor.copyFailed',
-        'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
-      ),
-    });
-  }, [t]);
-
-  const handleCopied = useCallback(() => {
-    setStatus({
-      variant: 'success',
-      text: t(
-        'powerDashboards.editor.copySuccess',
-        'Copied. Paste the JSON into your Grafana dashboard editor (dashboard settings → JSON Model).',
-      ),
-    });
-  }, [t]);
+    try {
+      await navigator.clipboard.writeText(trimmed);
+      setStatus({
+        variant: 'success',
+        text: t(
+          'powerDashboards.editor.copySuccess',
+          'Copied. Paste the JSON into your Grafana dashboard editor (Dashboard settings → JSON Model).',
+        ),
+      });
+    } catch {
+      setStatus({
+        variant: 'warning',
+        text: t(
+          'powerDashboards.editor.copyFailed',
+          'Clipboard write failed. Select the text manually and copy with Ctrl+C / Cmd+C.',
+        ),
+      });
+    }
+  }, [dashboardJson, t]);
 
   const sortedPanels = useMemo(
     () => [...CURATED_DASHBOARD_PANELS].sort((a, b) => a.name.localeCompare(b.name)),
@@ -213,7 +224,7 @@ export default function DashboardsPage() {
         title: t('powerDashboards.howTo.step3.title', 'Copy to Grafana'),
         body: t(
           'powerDashboards.howTo.step3.body',
-          'Copy the envelope and paste it into Grafana under dashboard settings → JSON Model.',
+          'Copy the envelope and paste it into Grafana under Dashboard settings → JSON Model.',
         ),
       },
     ],
@@ -229,16 +240,16 @@ export default function DashboardsPage() {
 
   return (
     <div data-testid="power-dashboards-composer-root">
-      <PageLayout
-        title={t('powerDashboards.title', 'Dashboard composer')}
+      <PageContainer
+        title={t('powerDashboards.title', 'Dashboard Composer')}
         subtitle={t(
           'powerDashboards.subtitle',
           'Assemble a Grafana dashboard JSON envelope from curated panels, then copy it into Grafana.',
         )}
       >
         {/* 1 — How-it-works band: intro + workflow steps, full-width. */}
-        <FadeIn className="min-w-0 max-w-full">
-          <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
+        <FadeIn>
+          <GlassPanel className="p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-2">
               {t('powerDashboards.howTo.title', 'How it works')}
             </Heading>
@@ -278,11 +289,11 @@ export default function DashboardsPage() {
 
         {/* 3 — Compose bento: JSON editor (hero) beside the curated catalog.
             1 col on phone → 2+1 on xl → balanced 2+2 on 3xl. */}
-        <FadeIn delay={0.1} className="min-w-0 max-w-full">
-          <Grid cols={COMPOSER_COLUMNS} gap={4} className="min-w-0">
-            <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5 xl:col-span-2 3xl:col-span-2">
-              <Heading level="panel" as="h2" className="mb-1 flex min-w-0 items-center gap-2 break-words">
-                <Braces className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+        <FadeIn delay={0.1}>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 3xl:grid-cols-4">
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-2 3xl:col-span-2">
+              <Heading level="panel" as="h2" className="mb-1 flex items-center gap-2">
+                <Braces className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerDashboards.editor.title', 'Manual dashboard JSON editor')}
               </Heading>
               <HelperText className="mb-3">
@@ -293,7 +304,7 @@ export default function DashboardsPage() {
               </HelperText>
               <Textarea
                 value={dashboardJson}
-                onChange={(e) => { setDashboardJson(e.target.value); setStatus(null); }}
+                onChange={(e) => setDashboardJson(e.target.value)}
                 placeholder={t(
                   'powerDashboards.editor.placeholder',
                   '{\n  "title": "Fleet overview",\n  "slots": [\n    {\n      "panel_name": "drives_per_day_timeseries",\n      "grid_pos": { "x": 0, "y": 0, "w": 24, "h": 8 }\n    }\n  ]\n}',
@@ -304,16 +315,16 @@ export default function DashboardsPage() {
                 className="font-mono"
               />
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <CopyButton
-                  text={dashboardJson.trim()}
+                <Button
                   variant="primary"
-                  size="md"
-                  onCopy={handleCopied}
-                  onCopyError={handleCopyError}
+                  onClick={handleCopy}
                   disabled={!canCopy}
-                  label={t('powerDashboards.editor.copy', 'Copy to clipboard')}
-                />
-                <Button variant="secondary" wrapLabel onClick={handleClear} disabled={!canClear}>
+                  aria-disabled={!canCopy ? 'true' : 'false'}
+                >
+                  <ClipboardCopy className="h-4 w-4" aria-hidden="true" />
+                  {t('powerDashboards.editor.copy', 'Copy to clipboard')}
+                </Button>
+                <Button variant="secondary" onClick={handleClear} disabled={!canClear}>
                   <Eraser className="h-4 w-4" aria-hidden="true" />
                   {t('powerDashboards.editor.clear', 'Clear')}
                 </Button>
@@ -337,9 +348,9 @@ export default function DashboardsPage() {
             </GlassPanel>
 
             {/* Curated panel catalog — reference column beside the editor. */}
-            <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5 xl:col-span-1 3xl:col-span-2">
-              <Heading level="panel" as="h2" className="mb-1 flex min-w-0 items-center gap-2 break-words">
-                <LayoutDashboard className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+            <GlassPanel className="p-4 sm:p-5 xl:col-span-1 3xl:col-span-2">
+              <Heading level="panel" as="h2" className="mb-1 flex items-center gap-2">
+                <LayoutDashboard className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('powerDashboards.panels.title', 'Curated panel catalog')}
               </Heading>
               <HelperText className="mb-3">
@@ -369,9 +380,9 @@ export default function DashboardsPage() {
                 ))}
               </ul>
             </GlassPanel>
-          </Grid>
+          </section>
         </FadeIn>
-      </PageLayout>
+      </PageContainer>
     </div>
   );
 }

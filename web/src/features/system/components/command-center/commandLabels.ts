@@ -29,7 +29,7 @@ export function getCommandLabel(command: string, t: CommandTranslate): string {
 
   const humanized = command
     .replace(/_/g, ' ')
-    .replace(/^\w/, (character) => character.toUpperCase());
+    .replace(/\b\w/g, (character) => character.toUpperCase());
 
   if (definition?.commandOff === command) {
     return t(`commands.activity.commands.${command}`, humanized);

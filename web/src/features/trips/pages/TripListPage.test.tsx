@@ -48,19 +48,6 @@ import type { UnitPref } from '@/lib/unitConversion';
 import { convertDistanceFromSI, formatEnergy as libFormatEnergy } from '@/lib/unitConversion';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { formatDate } from '@/lib/dateFormat';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-
-const rawBridge = vi.hoisted(() => ({ inputs: [] as Array<readonly StatMetric[]> }));
-vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
-  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
-  return {
-    ...actual,
-    useOperationalMetrics: (metrics: readonly StatMetric[]) => {
-      rawBridge.inputs.push(metrics);
-      return actual.useOperationalMetrics(metrics);
-    },
-  };
-});
 
 // Same conversion factor the page uses for Wh/km → Wh/mi efficiency.
 const KM_PER_MILE = 1.609344;
@@ -126,11 +113,6 @@ vi.mock('framer-motion', () => {
 //    mirrors the props the page relies on — title, ariaLabel (role=img body),
 //    the action toolbar, and the loading / empty flags — and renders children
 //    only in the populated state, exactly like the real component. ────────────
-vi.mock('@/components/layout', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/components/layout')>()),
-  ChartCard: (await import('@/components/charts')).ChartContainer,
-}));
-
 vi.mock('@/components/charts', () => ({
   ChartContainer: ({
     title,
@@ -315,7 +297,6 @@ function unitsValue(distance: 'km' | 'mi') {
 
 function formattingValue() {
   return {
-    currencySymbol: '$',
     formatCurrency: (amount: number, decimals?: number) => `$${fmtNumber(amount, decimals ?? 2)}`,
   };
 }
@@ -352,10 +333,10 @@ const listRegion = () => screen.getByRole('region', { name: 'All trips' });
 const primaryRegion = () => screen.getByRole('region', { name: 'Trip distance and energy breakdown' });
 const locSearch = () => screen.getByTestId('loc-search').textContent ?? '';
 
-/** Real OperationalBrief measurement, independent of typography elements. */
+/** Value <p> that immediately follows a MetricCard's label span. */
 function cardValue(region: HTMLElement, label: string): string {
   const span = within(region).getByText(label);
-  return span.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
+  return span.closest('p')?.nextElementSibling?.textContent ?? '';
 }
 
 /** The nearest trip-card panel that contains the given (unique) trip name. */
@@ -366,7 +347,6 @@ function cardByName(name: string): HTMLElement {
 }
 
 beforeEach(() => {
-  rawBridge.inputs = [];
   mockUseTrips.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
@@ -396,47 +376,6 @@ describe('TripListPage — loading', () => {
 });
 
 describe('TripListPage — populated (km) KPIs + wiring', () => {
-  it('preserves the screenshot cohort: six measurements and 60 drives, 2 trips, 32 charging sessions', () => {
-    mockUseTrips.mockReturnValue(makeQuery({ data: [
-      makeTrip({ id: 41, total_distance_m: 300000, total_energy_wh: 50000, total_cost: 15, drive_count: 30, charge_count: 16 }),
-      makeTrip({ id: 42, total_distance_m: 100000, total_energy_wh: 20000, total_cost: 5, drive_count: 30, charge_count: 16 }),
-    ] }));
-    renderPage();
-    const kpi = statsRegion();
-    expect(kpi.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(cardValue(kpi, 'Total Distance')).toBe('400 km');
-    expect(cardValue(kpi, 'Energy Used')).toBe(libFormatEnergy(70000, makePref('km')));
-    expect(cardValue(kpi, 'Total Cost')).toBe('$20.00');
-    expect(cardValue(kpi, 'Total Trips')).toBe('2');
-    expect(cardValue(kpi, 'Avg / Trip')).toBe('200 km');
-    expect(cardValue(kpi, 'Total Charges')).toBe('32');
-    const rawMetrics = rawBridge.inputs[rawBridge.inputs.length - 1];
-    expect(rawMetrics?.map(metric => metric.rawValue)).toEqual([400000, 70000, 20, 2, 200000, 32]);
-    expect(rawMetrics?.map(metric => metric.metricId)).toEqual(['distance', 'energy', 'currency', 'count', 'distance', 'count']);
-    expect(within(kpi).getByText('2 trips')).toBeInTheDocument();
-    expect(within(kpi).getByText('60 drives')).toBeInTheDocument();
-    expect(within(kpi).getByText('60 total drives')).toBeInTheDocument();
-    expect(within(kpi).getByText('32 charge sessions')).toBeInTheDocument();
-    expect(within(kpi).getByText('$5.00/100km')).toBeInTheDocument();
-    expect(within(kpi).getAllByText(/Loaded page only/).length).toBeGreaterThan(0);
-    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('60 drives')).toBeInTheDocument();
-    expect(within(drawer).getByText('32 charge sessions')).toBeInTheDocument();
-    expect(within(drawer).getByText('400 km')).toBeInTheDocument();
-  });
-
-  it('keeps loaded summaries and export controls through a failed background refresh', () => {
-    mockUseTrips.mockReturnValue(makeQuery({ data: TRIPS, isError: true, error: new Error('refresh failed'), isFetching: true }));
-    renderPage();
-    const kpi = statsRegion();
-    expect(cardValue(kpi, 'Total Distance')).toBe(`${fmtInt(convertDistanceFromSI(TOTAL_DIST_M, 'km'))} km`);
-    expect(within(kpi).getByText('Retained source')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'CSV' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
-    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText(`${fmtInt(convertDistanceFromSI(TOTAL_DIST_M, 'km'))} km`)).toBeInTheDocument();
-  });
   it('derives honest KPI tiles from the raw SI trip list', () => {
     renderPage();
     const kpi = statsRegion();
@@ -458,23 +397,6 @@ describe('TripListPage — populated (km) KPIs + wiring', () => {
 });
 
 describe('TripListPage — populated (km) trip cards', () => {
-  it('keeps complete distance, energy, efficiency and cost text wrap-safe inside allocated cards', () => {
-    renderPage();
-    const card = cardByName('Weekend to Coast');
-    const values = [
-      within(card).getByText(`${fmtInt(convertDistanceFromSI(300000, 'km'))} km`),
-      within(card).getByText(libFormatEnergy(54000, makePref('km'))),
-      within(card).getByText(`${fmtInt(54000 / 300)} Wh/km`),
-      within(card).getByText('$12.50'),
-    ];
-    for (const value of values) {
-      expect(value).toHaveClass('break-words');
-      expect(value).not.toHaveClass('truncate');
-    }
-    expect(screen.getByRole('button', { name: 'CSV' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'JSON' })).toBeEnabled();
-  });
-
   it('renders each card with converted distance, energy, cost, badges and duration', () => {
     renderPage();
 
@@ -574,18 +496,6 @@ describe('TripListPage — error', () => {
 });
 
 describe('TripListPage — exports', () => {
-  it('keeps complete loaded-set exports and trip cards during a background refresh failure', () => {
-    mockUseTrips.mockReturnValue(makeQuery({ data: TRIPS, isError: true, error: new Error('refresh failed') }));
-    renderPage();
-    expect(cardByName('Weekend to Coast')).toBeInTheDocument();
-    expect(cardByName('Trip #2')).toBeInTheDocument();
-    expect(cardByName('Airport run')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
-    expect(mockExportJSON).toHaveBeenCalledWith(TRIPS, 'teslasync-trips.json');
-    fireEvent.click(screen.getByRole('button', { name: 'CSV' }));
-    expect(mockExportCSV.mock.calls[0]?.[0]).toHaveLength(TRIPS.length);
-  });
-
   it('exports a flat SI CSV row per trip under the v2 filename', () => {
     renderPage();
 

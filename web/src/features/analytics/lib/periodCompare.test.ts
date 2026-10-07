@@ -9,11 +9,11 @@ import {
 describe('pctChange', () => {
   it('formats signed percentages', () => {
     expect(pctChange(150, 100)).toEqual({
-      value: '+50.00%',
+      value: '+50.0%',
       positive: true,
       neutral: false,
     });
-    expect(pctChange(50, 100).value).toBe('-50.00%');
+    expect(pctChange(50, 100).value).toBe('-50.0%');
     expect(pctChange(50, 100).positive).toBe(false);
   });
 

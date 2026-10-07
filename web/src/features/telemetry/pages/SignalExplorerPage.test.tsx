@@ -22,9 +22,8 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent, act, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { SignalHistoryResp } from '@/api/types';
@@ -33,7 +32,7 @@ import type { SignalHistoryResp } from '@/api/types';
 const h = vi.hoisted(() => ({
   vehicleId: 1 as number | null,
   connected: false,
-  signalsData: ['battery_level', 'speed', 'inside_temp'] as string[] | undefined,
+  signalsData: ['battery_level', 'speed', 'inside_temp'] as string[],
   signalsError: null as unknown,
   onVehicleUpdate: null as ((data: unknown) => void) | null,
 }));
@@ -77,7 +76,7 @@ vi.mock('@/hooks/useRealtimeEvents', () => ({
 // `onApply` with a fixed draft — lets us exercise handleApplyAiDraft without
 // standing up the SSE stream. The real gating/streaming is covered by the
 // sibling AI contract tests.
-vi.mock('@/components/ai', () => ({
+vi.mock('@/components/ai/AISignalExplorerNlFilter', () => ({
   AISignalExplorerNlFilter: ({
     onApply,
   }: {
@@ -177,14 +176,13 @@ function makeHistoryResp(signal: string, values: number[]): SignalHistoryResp {
 
 function renderPage(entries: string[] = ['/signals/explorer']) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const rendered = render(
+  return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={entries}>
         <SignalExplorerPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  return { ...rendered, client };
 }
 
 beforeEach(() => {
@@ -205,13 +203,13 @@ describe('SignalExplorerPage', () => {
     renderPage();
 
     // The page shell (title) still renders...
-    expect(screen.getByRole('heading', { name: 'Signal explorer' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Signal Explorer' })).toBeInTheDocument();
     // ...but the body is the "pick a vehicle" prompt, not the KPI/results UI.
     expect(screen.getByText('Select a vehicle to begin')).toBeInTheDocument();
     expect(
       screen.queryByRole('region', { name: 'Exploration summary' }),
     ).not.toBeInTheDocument();
-    expect(screen.queryByText('Pick signals and click explore')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pick signals and click Explore')).not.toBeInTheDocument();
     // No signals catalog fetch is meaningful without a vehicle.
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -227,7 +225,7 @@ describe('SignalExplorerPage', () => {
     expect(screen.getByText('Records')).toBeInTheDocument();
     // Deterministic guidance before Explore, and Explore is disabled with no
     // signals selected.
-    expect(screen.getByText('Pick signals and click explore')).toBeInTheDocument();
+    expect(screen.getByText('Pick signals and click Explore')).toBeInTheDocument();
     expect(screen.getByText(/Historical queries use the selected range/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Explore' })).toBeDisabled();
     // No historical query fired.
@@ -236,7 +234,6 @@ describe('SignalExplorerPage', () => {
 
   it('surfaces a non-blocking error banner when the signals catalog fails to load', () => {
     h.signalsError = new Error('catalog boom');
-    h.signalsData = undefined;
 
     renderPage();
 
@@ -247,40 +244,6 @@ describe('SignalExplorerPage', () => {
     expect(
       screen.getByRole('region', { name: 'Exploration summary' }),
     ).toBeInTheDocument();
-  });
-
-  it('keeps cached signal choices reachable after catalog refresh failure', () => {
-    h.signalsError = new Error('refresh failed');
-    renderPage(['/signal-explorer?signals=battery_level']);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByText(/Failed to load data/)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Explore' })).toBeEnabled();
-  });
-
-  it('keeps historical values and stats readable through a failed background refresh', async () => {
-    mockedRequest.mockResolvedValue(makeHistoryResp('battery_level', [80.1, 80.2]));
-    const { client } = renderPage(['/signal-explorer?signals=battery_level']);
-    fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
-    expect(await screen.findByText('80.15')).toBeInTheDocument();
-    mockedRequest.mockRejectedValue(new Error('refresh failed'));
-    await act(async () => { await client.refetchQueries({ queryKey: ['signal-explorer'] }); });
-    // The refetch promise settles before the query observer's scheduled render.
-    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent(
-      'Signal data may be out of date',
-    );
-    expect(screen.getByText('80.15')).toBeInTheDocument();
-    expect(screen.getAllByText('80.1').length).toBeGreaterThan(0);
-    expect(screen.queryByText(/Failed to load data/)).toBeNull();
-    const brief = screen.getByTestId('signal-explorer-summary');
-    expect(brief).toHaveTextContent('Retained source data');
-    const requestsBeforeReview = mockedRequest.mock.calls.length;
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(drawer).toHaveTextContent('Returned rows only; not a server-wide total');
-    expect(drawer).toHaveTextContent('previously executed query until Explore is pressed');
-    expect(within(drawer).getByText('Records')).toBeInTheDocument();
-    expect(mockedRequest.mock.calls.length).toBe(requestsBeforeReview);
-    expect(screen.getByText('80.15')).toBeInTheDocument();
   });
 
   it('runs a historical query on Explore, requesting SI history per signal with the correct URL contract', async () => {
@@ -329,7 +292,7 @@ describe('SignalExplorerPage', () => {
 
     // Historical mode uses the "Records" KPI, not the live "Live Events" one.
     expect(screen.getByText('Records')).toBeInTheDocument();
-    expect(screen.queryByText('Live events')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live Events')).not.toBeInTheDocument();
   });
 
   it('applies a changed page size atomically so the query limit reflects it (regression)', async () => {
@@ -343,12 +306,12 @@ describe('SignalExplorerPage', () => {
 
     renderPage(['/signals/explorer?signals=battery_level']);
 
-    const perPage = screen.getByLabelText('Per page') as HTMLSelectElement;
+    const perPage = screen.getByLabelText('Per Page') as HTMLSelectElement;
     fireEvent.change(perPage, { target: { value: '100' } });
 
     // Before the fix the second (page) setter clobbered the size setter, so
     // the controlled select snapped back to 25. It must now stick at 100.
-    await waitFor(() => expect(screen.getByLabelText('Per page')).toHaveValue('100'));
+    await waitFor(() => expect(screen.getByLabelText('Per Page')).toHaveValue('100'));
 
     fireEvent.click(screen.getByRole('button', { name: 'Explore' }));
 
@@ -377,12 +340,12 @@ describe('SignalExplorerPage', () => {
     // KPI band flips to the streaming vocabulary — the Status value and the
     // events subtitle both read "Streaming" when connected.
     expect(screen.getAllByText('Streaming').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Live events')).toBeInTheDocument();
+    expect(screen.getByText('Live Events')).toBeInTheDocument();
     expect(screen.queryByText('Records')).not.toBeInTheDocument();
     // The live chart shows its waiting state and the history table (historical
     // only) is absent.
     expect(screen.getByText('Waiting for live signal data…')).toBeInTheDocument();
-    expect(screen.queryByText('Signal data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Signal Data')).not.toBeInTheDocument();
     // No historical fetch in live mode.
     expect(mockedRequest).not.toHaveBeenCalled();
   });
@@ -392,7 +355,7 @@ describe('SignalExplorerPage', () => {
 
     // Sanity: nothing selected yet, default size.
     expect(screen.getByText(/Signals \(0 \/ 5\)/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Per page')).toHaveValue('25');
+    expect(screen.getByLabelText('Per Page')).toHaveValue('25');
 
     fireEvent.click(screen.getByTestId('mock-ai-apply'));
 
@@ -400,6 +363,6 @@ describe('SignalExplorerPage', () => {
     // and size were dropped. Now both the two-signal selection and the size
     // land together.
     expect(screen.getByText(/Signals \(2 \/ 5\)/)).toBeInTheDocument();
-    expect(screen.getByLabelText('Per page')).toHaveValue('100');
+    expect(screen.getByLabelText('Per Page')).toHaveValue('100');
   });
 });

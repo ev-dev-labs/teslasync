@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle, Badge } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import type { Violation, ViolationCode } from '../lib/types';
 
@@ -46,7 +45,9 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
   }
 
   return (
-    <LayoutCard title={t('homeEnergy.violations.title', 'Constraint violations')} actions={
+    <GlassPanel className="p-4 sm:p-5">
+      <div className="mb-3 flex items-center justify-between">
+        <PanelTitle>{t('homeEnergy.violations.title', 'Constraint Violations')}</PanelTitle>
         <Badge variant={errors.length > 0 ? 'danger' : warnings.length > 0 ? 'warning' : 'success'} size="sm">
           {errors.length > 0
             ? t('homeEnergy.violations.errorsCount', '{{count}} error(s)', { count: errors.length })
@@ -54,30 +55,30 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
               ? t('homeEnergy.violations.warningsCount', '{{count}} warning(s)', { count: warnings.length })
               : t('homeEnergy.violations.none', 'No violations')}
         </Badge>
-      }>
+      </div>
 
       {violations.length === 0 ? (
-        <Text as="p" variant="bodySm" color="muted" className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
           <ShieldCheck className="h-4 w-4 text-emerald-500" />
           {t('homeEnergy.violations.clean', 'This plan satisfies every hard constraint modeled.')}
-        </Text>
+        </div>
       ) : (
         <ul className="space-y-2">
           {[...errors, ...warnings].map((v, i) => (
             <li
               key={`${v.code}-${v.vehicleId ?? ''}-${v.slotIndex ?? ''}-${i}`}
-              className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-2.5"
+              className="flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-2.5 text-sm"
             >
               {v.severity === 'error' ? (
                 <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
               ) : (
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
               )}
-              <Text variant="bodySm" color="secondary" className="min-w-0 break-words">{describe(v)}</Text>
+              <span className="text-[var(--text-secondary)]">{describe(v)}</span>
             </li>
           ))}
         </ul>
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

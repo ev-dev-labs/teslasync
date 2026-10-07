@@ -170,85 +170,16 @@ describe('SmallMultiplesChart', () => {
     expect(within(screen.getByTestId('small-multiples-cell-sigD')).getByText('No data')).toBeInTheDocument();
   });
 
-  it('bounds the default nonzero preferred minimum by the allocated width', () => {
-    render(<SmallMultiplesChart data={sampleData} series={['sigA', 'sigB']} />);
-    expect(screen.getByTestId('small-multiples-grid').style.gridTemplateColumns)
-      .toBe('repeat(auto-fill, minmax(min(100%, 280px), 1fr))');
-  });
-
-  it('preserves automatic packing with a custom preferred minimum', () => {
-    render(
-      <SmallMultiplesChart data={sampleData} series={['sigA', 'sigB']} cellMinWidth={360} />,
-    );
-    expect(screen.getByTestId('small-multiples-grid').style.gridTemplateColumns)
-      .toBe('repeat(auto-fill, minmax(min(100%, 360px), 1fr))');
-  });
-
-  it('represents a narrow allocated slot without dropping or reordering any series', () => {
-    const series = ['sigB', 'sigC', 'sigA'];
-    const { container } = render(
-      <div style={{ width: 160 }}>
-        <SmallMultiplesChart
-          data={sampleData}
-          series={series}
-          seriesLabel={(signal) => `Long localized series label: ${signal}`}
-          emptyCellLabel="No samples"
-        />
-      </div>,
-    );
-    // This checks the authored CSS contract, not measured jsdom layout.
-    expect(container.firstElementChild).toHaveStyle({ width: '160px' });
-    expect(screen.getByTestId('small-multiples-grid').style.gridTemplateColumns)
-      .toBe('repeat(auto-fill, minmax(min(100%, 280px), 1fr))');
-    const cells = screen.getAllByTestId(/^small-multiples-cell-/);
-    expect(cells.map((cell) => cell.getAttribute('data-testid')))
-      .toEqual(series.map((signal) => `small-multiples-cell-${signal}`));
-    for (const [index, cell] of cells.entries()) {
-      expect(cell).toHaveAccessibleName(`Long localized series label: ${series[index]}`);
-    }
-    expect(within(cells[1]).getByText('No samples')).toBeInTheDocument();
-    expect(within(cells[0]).queryByText('No samples')).not.toBeInTheDocument();
-    expect(within(cells[2]).queryByText('No samples')).not.toBeInTheDocument();
-    expect(sampleData).toEqual([
-      { timestamp: '2024-01-01T10:00:00Z', sigA: 1, sigB: 100, sigC: null },
-      { timestamp: '2024-01-01T10:01:00Z', sigA: 2, sigB: 110, sigC: null },
-      { timestamp: '2024-01-01T10:02:00Z', sigA: 3, sigB: 120, sigC: null },
-    ]);
-  });
-
-  it.each([1, 3])('respects %i forced columns over the preferred minimum', (columns) => {
+  it('respects forced columns prop', () => {
     render(
       <SmallMultiplesChart
         data={sampleData}
         series={['sigA', 'sigB']}
-        columns={columns}
-        cellMinWidth={360}
+        columns={1}
       />,
     );
     const grid = screen.getByTestId('small-multiples-grid');
-    expect(grid).toHaveStyle({ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` });
-  });
-
-  it.each([0, -1])('keeps automatic packing for inactive columns=%i', (columns) => {
-    render(
-      <SmallMultiplesChart data={sampleData} series={['sigA']} columns={columns} />,
-    );
-    expect(screen.getByTestId('small-multiples-grid').style.gridTemplateColumns)
-      .toBe('repeat(auto-fill, minmax(min(100%, 280px), 1fr))');
-  });
-
-  it('updates automatic and forced modes when sizing props change', () => {
-    const { rerender } = render(
-      <SmallMultiplesChart data={sampleData} series={['sigA']} cellMinWidth={320} />,
-    );
-    const grid = screen.getByTestId('small-multiples-grid');
-    expect(grid.style.gridTemplateColumns)
-      .toBe('repeat(auto-fill, minmax(min(100%, 320px), 1fr))');
-    rerender(<SmallMultiplesChart data={sampleData} series={['sigA']} columns={2} />);
-    expect(grid.style.gridTemplateColumns).toBe('repeat(2, minmax(0, 1fr))');
-    rerender(<SmallMultiplesChart data={sampleData} series={['sigA']} />);
-    expect(grid.style.gridTemplateColumns)
-      .toBe('repeat(auto-fill, minmax(min(100%, 280px), 1fr))');
+    expect(grid).toHaveStyle({ gridTemplateColumns: 'repeat(1, minmax(0, 1fr))' });
   });
 
   it('respects custom xKey for series presence detection', () => {

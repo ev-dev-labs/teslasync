@@ -18,11 +18,8 @@
  */
 import { createRef } from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ProgressRing } from './ProgressRing';
-import { setGlobalPrecision } from '@/lib/numberFormat';
-
-beforeEach(() => setGlobalPrecision(0));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -56,11 +53,6 @@ function attrNum(el: Element | null, name: string): number {
 }
 
 describe('ProgressRing — structure', () => {
-  it('preserves unit casing in the center sub-label', () => {
-    render(<ProgressRing value={50} centerLabel="50" centerSubLabel="kWh" />);
-    expect(screen.getByText('kWh')).not.toHaveClass('uppercase', 'capitalize');
-  });
-
   it('renders a track circle and a round-capped progress arc', () => {
     const { container } = render(<ProgressRing value={50} />);
 

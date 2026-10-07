@@ -27,21 +27,17 @@ const mocks = vi.hoisted(() => {
     forensicsData: noData,
     federatedData: noData,
     causalData: noData,
-    readError: null as Error | null,
-    readLoading: false,
-    readFetchStatus: 'idle' as 'idle' | 'paused' | 'fetching',
   };
 });
 
 function query(data: unknown) {
   return {
     data,
-    isLoading: mocks.readLoading,
+    isLoading: false,
     isFetching: false,
-    isError: mocks.readError != null,
+    isError: false,
     isStale: false,
-    error: mocks.readError,
-    fetchStatus: mocks.readFetchStatus,
+    error: null,
   };
 }
 
@@ -143,9 +139,6 @@ beforeEach(() => {
     forensicsData: undefined,
     federatedData: undefined,
     causalData: undefined,
-    readError: null,
-    readLoading: false,
-    readFetchStatus: 'idle',
   });
   [
     mocks.twinMutate, mocks.journeyMutate, mocks.siteMutate, mocks.federatedMutate,
@@ -155,18 +148,18 @@ beforeEach(() => {
 
 describe('advanced intelligence page routes', () => {
   const pages: Array<[string, ComponentType]> = [
-    ['Twin lab', TwinLabPage],
-    ['Firmware canary', FirmwareCanaryPage],
-    ['Component survival', ComponentSurvivalPage],
-    ['Road hazard mesh', RoadHazardMeshPage],
-    ['Behavioral sentinel', BehavioralSentinelPage],
-    ['Charging forensics', ChargingForensicsPage],
-    ['Journey assurance', JourneyAssurancePage],
-    ['Charging site twin', ChargingSiteTwinPage],
-    ['Federated learning studio', FederatedLearningStudioPage],
-    ['Emergency resilience', EmergencyResiliencePage],
-    ['Causal experimentation', CausalExperimentationPage],
-    ['TCO optimizer', TCOOptimizerPage],
+    ['Twin Lab', TwinLabPage],
+    ['Firmware Canary', FirmwareCanaryPage],
+    ['Component Survival', ComponentSurvivalPage],
+    ['Road Hazard Mesh', RoadHazardMeshPage],
+    ['Behavioral Sentinel', BehavioralSentinelPage],
+    ['Charging Forensics', ChargingForensicsPage],
+    ['Journey Assurance', JourneyAssurancePage],
+    ['Charging Site Twin', ChargingSiteTwinPage],
+    ['Federated Learning Studio', FederatedLearningStudioPage],
+    ['Emergency Resilience', EmergencyResiliencePage],
+    ['Causal Experimentation', CausalExperimentationPage],
+    ['TCO Optimizer', TCOOptimizerPage],
   ];
 
   it.each(pages)('smoke-renders the %s route shell', (title, Page) => {
@@ -177,60 +170,6 @@ describe('advanced intelligence page routes', () => {
 });
 
 describe('critical advanced intelligence interactions', () => {
-  it.each([
-    BehavioralSentinelPage, CausalExperimentationPage, ChargingForensicsPage,
-    ComponentSurvivalPage, FederatedLearningStudioPage, FirmwareCanaryPage, RoadHazardMeshPage,
-  ])('keeps source-independent notices and evidence shells on initial query failure', Page => {
-    mocks.readError = new Error('initial evidence failure');
-    renderPage(Page);
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();
-    expect(screen.getAllByText('Intelligence evidence could not be loaded.').length).toBeGreaterThan(0);
-    expect(screen.getByText('Explicitly unsupported')).toBeInTheDocument();
-  });
-
-  it('keeps independent creation and confirmation reachable when experiment history fails', () => {
-    mocks.readError = new Error('history unavailable');
-    renderPage(CausalExperimentationPage);
-    fireEvent.click(screen.getByRole('button', { name: 'Review experiment' }));
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(mocks.causalMutate).not.toHaveBeenCalled();
-  });
-
-  it('discloses a paused unresolved source without claiming that no hazards exist', () => {
-    mocks.readFetchStatus = 'paused';
-    renderPage(RoadHazardMeshPage);
-    expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
-    expect(screen.queryByText('No coarse-cell hazard clusters meet the privacy and evidence thresholds.')).not.toBeInTheDocument();
-    expect(screen.getByText(/No exact coordinates, routes, or driver identities/)).toBeInTheDocument();
-  });
-
-  it('retains ordered sentinel findings, confidence, explanations and caveats after a refresh failure', () => {
-    mocks.sentinelData = {
-      items: [
-        { finding_type: 'identity-observation', observed_at: '2026-08-01T00:00:00Z', severity: 'high', confidence_pct: 72.5,
-          explanation: 'First explanation', evidence: [{ source: 'first-source', summary: 'First supporting observation' }], limitations: ['No intent inferred'] },
-        { finding_type: 'telemetry-observation', observed_at: '2026-08-02T00:00:00Z', severity: 'medium', confidence_pct: 35,
-          explanation: 'Second explanation', evidence: [], limitations: ['No compromise inferred'] },
-      ],
-      total: 2,
-    };
-    mocks.readError = new Error('refresh failure');
-    renderPage(BehavioralSentinelPage);
-    const first = screen.getByText('First explanation');
-    const second = screen.getByText('Second explanation');
-    expect(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const firstFinding = first.closest('article');
-    const secondFinding = second.closest('article');
-    expect(firstFinding).not.toBeNull();
-    expect(secondFinding).not.toBeNull();
-    expect(within(firstFinding!).getByText('• No intent inferred')).toBeInTheDocument();
-    expect(within(secondFinding!).getByText('• No compromise inferred')).toBeInTheDocument();
-    expect(screen.getByText(/72.*confidence/)).toBeInTheDocument();
-    expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
-    expect(screen.getByText('Anomaly is not attribution')).toBeInTheDocument();
-  });
-
   it('submits all Twin Lab scenarios as confirmed canonical SI values', () => {
     renderPage(TwinLabPage);
     expect(screen.getAllByLabelText(/Scenario name/i)).toHaveLength(2);

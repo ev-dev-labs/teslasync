@@ -40,9 +40,10 @@ export interface HelpIconProps {
   /** Default fallback when key is missing or for one-offs. */
   content?: string;
   /**
-   * Field identifier used in the default "Help for {{for}}" trigger name
-   * and data-help-for audit attribute. Tooltip owns the generated body ID
-   * and the trigger's aria-describedby association.
+   * Used to attach the helper to a labelled control: id of the field.
+   * Surfaces in the trigger's aria-label as "Help for {{for}}", and (when
+   * provided) the tooltip body is exposed under the id `${for}-help` so
+   * the field can reference it via `aria-describedby` if needed.
    */
   for?: string;
   /** Tooltip placement relative to the icon. */
@@ -88,6 +89,7 @@ export function HelpIcon({
       <button
         type="button"
         aria-label={label}
+        aria-describedby={forId ? `${forId}-help` : undefined}
         data-help-for={forId}
         onKeyDown={handleKeyDown}
         className={cn(

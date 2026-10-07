@@ -70,26 +70,6 @@ beforeEach(() => {
 })
 
 describe('useUnits — unitPrefs derivation', () => {
-  it('updates mounted measurement formatters when precision changes without changing SI values', () => {
-    const { result, rerender } = renderHook(() => useUnits())
-    const watts = 12345.678
-    const meters = 12345.678
-    expect(result.current.formatPower(watts)).toBe('12.35 kW')
-    expect(result.current.formatDistance(meters)).toBe('12.35 km')
-
-    mockSettings = { ...mockSettings, decimal_precision: 3 }
-    rerender()
-    expect(result.current.formatPower(watts)).toBe('12.346 kW')
-    expect(result.current.formatDistance(meters)).toBe('12.346 km')
-    expect(watts).toBe(12345.678)
-    expect(meters).toBe(12345.678)
-
-    mockSettings = { ...mockSettings, decimal_precision: 0 }
-    rerender()
-    expect(result.current.formatPower(watts)).toBe('12 kW')
-    expect(result.current.formatDistance(meters)).toBe('12 km')
-  })
-
   it('derives metric prefs from km / C / bar settings', () => {
     const { result } = renderHook(() => useUnits())
     expect(result.current.unitPrefs).toEqual({

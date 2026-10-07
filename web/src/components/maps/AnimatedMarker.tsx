@@ -19,8 +19,12 @@ interface AnimatedMarkerProps {
 
 /**
  * Custom car icon rendered as a pulsing CSS circle with an optional heading arrow.
- * Keyframes live in index.css: Leaflet's repeated icon swaps must not inject
- * style elements blocked by the production Content Security Policy.
+ *
+ * The `@keyframes replay-pulse` used by the pulse ring is NOT declared in the
+ * global stylesheet, so it is embedded inline here (mirrors `vehicleIcon.ts`).
+ * Without it the ring renders static instead of pulsing. Leaflet swaps the
+ * marker's icon DOM on `setIcon`, so at most one `<style>` block exists per
+ * marker at a time — no unbounded accumulation.
  */
 function createCarIcon(color: string, heading: number | undefined, label: string): L.DivIcon {
   const rotation =
@@ -43,6 +47,12 @@ function createCarIcon(color: string, heading: number | undefined, label: string
           ${rotation}
         "></div>
       </div>
+      <style>
+        @keyframes replay-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.3; }
+          50% { transform: scale(1.6); opacity: 0; }
+        }
+      </style>
     `,
   });
 }

@@ -36,13 +36,13 @@ describe('Current — rendered value', () => {
     const { container } = render(<Current amps={0} precision={0} />);
     expect(container.textContent).toBe('0 A');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0 A');
+    expect(span(container)?.getAttribute('title')).toBe('0.000 A');
   });
 
   it('preserves the sign of negative currents (e.g. regen / discharge deltas)', () => {
     const { container } = render(<Current amps={-48} precision={0} />);
     expect(container.textContent).toBe('-48 A');
-    expect(span(container)?.getAttribute('title')).toBe('-48 A');
+    expect(span(container)?.getAttribute('title')).toBe('-48.000 A');
   });
 
   it('renders large finite DC-bus currents without truncation', () => {
@@ -115,23 +115,23 @@ describe('Current — formatting & precision', () => {
 });
 
 describe('Current — title (canonical hover value)', () => {
-  it('formats the amperage title with the requested precision', () => {
+  it('exposes the raw amperage at a fixed 3-decimal precision', () => {
     const { container } = render(<Current amps={32.5} precision={1} />);
-    expect(span(container)?.getAttribute('title')).toBe('32.5 A');
+    expect(span(container)?.getAttribute('title')).toBe('32.500 A');
   });
 
-  it('uses the display precision for the title too', () => {
+  it('keeps the title at 3 decimals independent of the display precision', () => {
     const { container } = render(<Current amps={40} precision={0} />);
-    // The explicit integer override applies to both display and title.
+    // Display collapses to "40 A" but the hover title stays canonical.
     expect(container.textContent).toBe('40 A');
-    expect(span(container)?.getAttribute('title')).toBe('40 A');
+    expect(span(container)?.getAttribute('title')).toBe('40.000 A');
   });
 
-  it('uses locale grouping separators in the title', () => {
+  it('keeps the canonical title free of locale grouping separators', () => {
     setGlobalLocale('de-DE');
     const { container } = render(<Current amps={12345} precision={0} />);
-    // Titles follow the same locale as the visible measurement.
-    expect(span(container)?.getAttribute('title')).toBe('12.345 A');
+    // toFixed(3) is locale-agnostic, so the title never picks up de-DE grouping.
+    expect(span(container)?.getAttribute('title')).toBe('12345.000 A');
   });
 });
 
@@ -141,7 +141,7 @@ describe('Current — DOM & re-render', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42 A');
+    expect(el?.getAttribute('title')).toBe('42.000 A');
   });
 
   it('applies the className to the rendered value span', () => {
@@ -152,11 +152,11 @@ describe('Current — DOM & re-render', () => {
   it('recomputes the display and title when props change on re-render', () => {
     const { container, rerender } = render(<Current amps={16} precision={1} />);
     expect(container.textContent).toBe('16.0 A');
-    expect(span(container)?.getAttribute('title')).toBe('16.0 A');
+    expect(span(container)?.getAttribute('title')).toBe('16.000 A');
 
     rerender(<Current amps={32} precision={1} />);
     expect(container.textContent).toBe('32.0 A');
-    expect(span(container)?.getAttribute('title')).toBe('32.0 A');
+    expect(span(container)?.getAttribute('title')).toBe('32.000 A');
   });
 
   it('transitions from a valid value to the empty state when amps becomes null', () => {

@@ -23,8 +23,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { Link, MemoryRouter } from 'react-router-dom';
-import { Button } from '@/components/ui';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -175,100 +173,5 @@ describe('Stepper', () => {
     expect(screen.queryByText('2')).toBeNull();
     expect(container.querySelector('#onboarding-step-tesla')?.tagName).toBe('LI');
     expect(container.querySelector('#onboarding-step-telemetry')).not.toBeNull();
-  });
-
-  it('preserves completed rows after a missing anchor and moves only the first unfinished action', () => {
-    const laterDone = mkStep({ key: 'later', title: 'Already configured', done: true });
-    const first = mkStep({ key: 'first', title: 'First anchor', cta: { label: 'First action' } });
-    const second = mkStep({ key: 'second', title: 'Second anchor', cta: { label: 'Second action' } });
-    const { container, rerender } = renderStepper({ steps: [first, laterDone, second] });
-
-    expect(container.querySelector('[aria-current="step"]')).toHaveAttribute('id', 'onboarding-step-first');
-    expect(container.querySelector('#onboarding-step-later')).toHaveTextContent('Completed');
-    expect(screen.getByRole('button', { name: 'First action' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Second action' })).toBeNull();
-
-    rerender(<Stepper steps={[{ ...first, done: true }, laterDone, second]} />);
-    expect(container.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
-    expect(container.querySelector('[aria-current="step"]')).toHaveAttribute('id', 'onboarding-step-second');
-    expect(screen.getAllByText('Completed')).toHaveLength(2);
-    expect(screen.queryByRole('button', { name: 'First action' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Second action' })).toBeInTheDocument();
-  });
-
-  it('keeps LI ids and distinct check, spinner and pending markers in a contained layout', () => {
-    const { container } = renderStepper({ steps: threeSteps() });
-    const list = screen.getByRole('list', { name: 'Onboarding steps' });
-    expect(list).toHaveClass('min-w-0', 'max-w-full');
-    const done = container.querySelector('#onboarding-step-tesla');
-    const current = container.querySelector('#onboarding-step-vehicle');
-    const pending = container.querySelector('#onboarding-step-telemetry');
-    for (const row of [done, current, pending]) {
-      expect(row?.tagName).toBe('LI');
-      expect(row).toHaveClass('min-w-0', 'max-w-full');
-    }
-    expect(done?.querySelector('.lucide-check')).not.toBeNull();
-    expect(done?.querySelector('.animate-spin')).toBeNull();
-    expect(current?.querySelector('.animate-spin')).toHaveClass('motion-reduce:animate-none');
-    expect(pending).toHaveTextContent('3');
-    expect(pending?.querySelector('.animate-spin')).toBeNull();
-    expect(pending?.querySelector('.lucide-check')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveClass('whitespace-normal', 'max-w-full');
-  });
-
-  it('preserves caller-owned internal, external and custom actions only for the current row', () => {
-    const customClick = vi.fn();
-    const steps = [
-      mkStep({ key: 'internal', title: 'Internal', cta: { label: 'Open settings', to: '/settings#workspace' } }),
-      mkStep({ key: 'external', title: 'External', cta: { label: 'Read guide', href: '/docs/fleet-telemetry-setup' } }),
-      mkStep({ key: 'custom', title: 'Custom', cta: { label: 'Recover', onClick: customClick } }),
-    ];
-    const renderCta = vi.fn((step: OnboardingStep) => {
-      const action = step.cta;
-      if (!action) return null;
-      if (action.to) return <Link to={action.to}>{action.label}</Link>;
-      if (action.href) return <a href={action.href} target="_blank" rel="noreferrer noopener">{action.label}</a>;
-      return <Button onClick={action.onClick}>{action.label}</Button>;
-    });
-    const { rerender } = render(
-      <MemoryRouter><Stepper steps={steps} renderCta={renderCta} /></MemoryRouter>,
-    );
-    expect(screen.getByRole('link', { name: 'Open settings' })).toHaveAttribute('href', '/settings#workspace');
-    expect(screen.queryByRole('link', { name: 'Read guide' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Recover' })).toBeNull();
-    expect(renderCta).toHaveBeenCalledTimes(1);
-    expect(renderCta).toHaveBeenLastCalledWith(steps[0]);
-
-    rerender(<MemoryRouter><Stepper steps={steps.map((step, index) => ({ ...step, done: index === 0 }))} renderCta={renderCta} /></MemoryRouter>);
-    const guide = screen.getByRole('link', { name: 'Read guide' });
-    expect(guide).toHaveAttribute('href', '/docs/fleet-telemetry-setup');
-    expect(guide).toHaveAttribute('target', '_blank');
-    expect(guide).toHaveAttribute('rel', 'noreferrer noopener');
-    expect(screen.queryByRole('link', { name: 'Open settings' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Recover' })).toBeNull();
-
-    rerender(<MemoryRouter><Stepper steps={steps.map((step, index) => ({ ...step, done: index < 2 }))} renderCta={renderCta} /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: 'Recover' }));
-    expect(customClick).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('link')).toBeNull();
-    renderCta.mockClear();
-
-    rerender(<MemoryRouter><Stepper steps={steps.map(step => ({ ...step, done: true }))} renderCta={renderCta} /></MemoryRouter>);
-    expect(renderCta).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.queryByRole('link')).toBeNull();
-  });
-
-  it('does not invoke the action renderer when the current row has no action', () => {
-    const renderCta = vi.fn(() => <Button>Unexpected action</Button>);
-    renderStepper({
-      steps: [
-        mkStep({ key: 'wait', title: 'Wait for evidence' }),
-        mkStep({ key: 'later', title: 'Later', cta: { label: 'Later action' } }),
-      ],
-      renderCta,
-    });
-    expect(renderCta).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button')).toBeNull();
   });
 });

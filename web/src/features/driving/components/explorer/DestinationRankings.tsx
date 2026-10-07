@@ -108,6 +108,7 @@ export function DestinationRankings({
                             {
                               distance: formatDistance(
                                 destination.distanceFromBaseM,
+                                { precision: 0 },
                               ),
                               count: destination.visits,
                             },

@@ -53,21 +53,21 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     title,
     subtitle,
-    contextActions,
+    actions,
     children,
   }: {
     title: string;
     subtitle: string;
-    contextActions: ReactNode;
+    actions: ReactNode;
     children: ReactNode;
   }) => (
     <main>
       <h1>{title}</h1>
       <p>{subtitle}</p>
-      {contextActions}
+      {actions}
       {children}
     </main>
   ),
@@ -159,11 +159,6 @@ vi.mock('../components/odometer-milestones', async () => {
   };
 });
 
-vi.mock('../components/operationalbrief-a-m/MilestoneBrief', async () => {
-  const { MilestoneKpis } = await import('../components/odometer-milestones');
-  return { MilestoneBrief: MilestoneKpis };
-});
-
 import MilestonesPage from './MilestonesPage';
 
 function query(overrides: Record<string, unknown> = {}) {
@@ -240,24 +235,24 @@ describe('MilestonesPage', () => {
     render(<MilestonesPage />);
 
     expect(
-      screen.getByRole('heading', { name: 'Odometer milestones' }),
+      screen.getByRole('heading', { name: 'Odometer Milestones' }),
     ).toBeInTheDocument();
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(historyMock).toHaveBeenCalledWith('42', 1_000);
-    expect(pageTitleMock).toHaveBeenCalledWith('Odometer milestones');
+    expect(pageTitleMock).toHaveBeenCalledWith('Odometer Milestones');
   });
 
   it('threads loading, error, and empty states to every mounted section', () => {
-    historyMock.mockReturnValue(query({ data: undefined, isLoading: true }));
+    historyMock.mockReturnValue(query({ isLoading: true }));
     const view = render(<MilestonesPage />);
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('loading');
     }
 
     historyMock.mockReturnValue(
-      query({ data: undefined, isError: true, error: new Error('unavailable') }),
+      query({ isError: true, error: new Error('unavailable') }),
     );
     view.rerender(<MilestonesPage />);
     for (const id of SECTION_IDS) {
@@ -271,27 +266,12 @@ describe('MilestonesPage', () => {
     }
   });
 
-  it('retains calibration, eight sections and frozen as-of evidence after a failed refresh', () => {
-    const retry = vi.fn();
-    const drives = [eligibleDrive()];
-    historyMock.mockReturnValue(query({
-      data: drives, isError: true, error: new Error('refresh unavailable'), refetch: retry,
-    }));
-    render(<MilestonesPage />);
-    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
-    expect(retry).toHaveBeenCalledOnce();
-    expect(historyMock).toHaveBeenCalledWith('42', 1_000);
-    expect(drives[0].distanceM).toBe(10_000);
-  });
-
   it('preserves the no-vehicle recovery state and disables history scope', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
     render(<MilestonesPage />);
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent(
-      'Odometer milestones',
+      'Odometer Milestones',
     );
     expect(historyMock).toHaveBeenCalledWith(undefined, 1_000);
     expect(screen.queryByTestId('milestone-progress')).not.toBeInTheDocument();

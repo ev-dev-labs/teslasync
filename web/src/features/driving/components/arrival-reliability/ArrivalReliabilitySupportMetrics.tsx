@@ -10,7 +10,6 @@ import {
   arrivalIndex,
   arrivalPercent,
 } from './labels';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilitySupportMetricsProps {
   analysis: ArrivalReliabilityResult;
@@ -21,7 +20,6 @@ export function ArrivalReliabilitySupportMetrics({
   analysis,
   locale,
 }: ArrivalReliabilitySupportMetricsProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const support = analysis.coverage.globalSupport;
   const metrics: ArrivalReliabilityEvidenceMetric[] = [

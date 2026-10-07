@@ -8,9 +8,8 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download } from 'lucide-react'
-import { Modal, Button, Code, Text } from '@/components/ui'
+import { Modal, Button, CopyButton, Code, Text } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
-import { TotpCopyAction } from './TotpCopyAction'
 
 interface TotpBackupCodesModalProps {
   open: boolean
@@ -61,15 +60,14 @@ export function TotpBackupCodesModal({ open, codes, onDownload, onClose }: TotpB
                 <Button
                   type="button"
                   variant="ghost"
-                  wrapLabel
                   onClick={onDownload}
                   data-testid="totp-backup-download"
                 >
                   <Download className="mr-2 h-4 w-4" aria-hidden="true" />
                   {t('totp.backupCodes.download', 'Download .txt')}
                 </Button>
-                <TotpCopyAction text={clipboardText} />
-                <Button type="button" variant="primary" wrapLabel onClick={onClose} data-testid="totp-backup-done">
+                <CopyButton text={clipboardText} />
+                <Button type="button" variant="primary" onClick={onClose} data-testid="totp-backup-done">
                   {t('totp.backupCodes.done', 'I saved them')}
                 </Button>
               </div>

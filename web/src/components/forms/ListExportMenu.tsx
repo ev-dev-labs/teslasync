@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileJson, FileSpreadsheet, ListChecks } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 
@@ -182,7 +182,7 @@ export function ListExportMenu({
               className="mb-2 border-b border-white/[0.06] pb-2"
               aria-label={t('listExport.scopeLegend', 'Export scope')}
             >
-              <div className="mb-1 px-1 text-2xs font-semibold tracking-wide text-[var(--text-muted)]">
+              <div className="mb-1 px-1 text-2xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 <ListChecks className="inline h-3 w-3 mr-1" aria-hidden />
                 {t('listExport.scopeLegend', 'Export scope')}
               </div>

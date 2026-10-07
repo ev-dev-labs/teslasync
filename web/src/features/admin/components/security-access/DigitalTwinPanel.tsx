@@ -32,7 +32,7 @@ export function DigitalTwinPanel({
     <GlassPanel className={className} padding="md">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.security.twin.title', 'Digital twin')}
+        {t('admin.security.twin.title', 'Digital Twin')}
       </PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />

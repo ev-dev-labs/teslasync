@@ -1,19 +1,12 @@
-import { type ComponentProps, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { LinearGauge } from '@/components/charts';
 
-export interface GaugeHeroConfig extends Pick<
-  ComponentProps<typeof LinearGauge>,
-  'value' | 'max' | 'min' | 'ariaLabel' | 'tone' | 'status' | 'kind' | 'decimals' | 'hideScale'
-> {
+export interface GaugeHeroConfig {
+  value: number;
+  max: number;
   label: string;
   unit: string;
   color: string;
-  /**
-   * Forward unknown readings and caller scales unchanged to LinearGauge.
-   * Opt in until existing callers migrate: omission temporarily retains the
-   * tested non-finite→0 reading and invalid-max→100 defaults.
-   */
-  preserveReadingAndScale?: boolean;
   /** Optional reference tick (e.g. a configured charge limit). */
   marker?: number;
   markerLabel?: string;
@@ -37,14 +30,12 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
   // widgets via container queries (handled below by the wrapper).
   const size = compact ? 70 : 100;
 
-  // LinearGauge already handles missing readings and invalid scales safely.
-  // Keep the original, test-pinned defaults only outside preservation mode.
-  const value = gauge?.preserveReadingAndScale
-    ? gauge.value
-    : Number.isFinite(gauge?.value) ? gauge.value : 0;
-  const max = gauge?.preserveReadingAndScale
-    ? gauge.max
-    : Number.isFinite(gauge?.max) && gauge.max > 0 ? gauge.max : 100;
+  // Guard the numbers the gauge feeds into its fill math. A missing /
+  // non-finite value collapses to 0, and a non-positive max would make the
+  // LinearGauge divide by zero — producing a NaN width and a blank track — so
+  // it falls back to a sane 100-unit scale.
+  const value = Number.isFinite(gauge?.value) ? gauge.value : 0;
+  const max = Number.isFinite(gauge?.max) && gauge.max > 0 ? gauge.max : 100;
 
   // Never call .length / .map on a possibly-undefined stats prop.
   const items = stats ?? [];
@@ -53,7 +44,6 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
     <div className="flex flex-col items-center justify-center gap-2">
       <LinearGauge
         value={value}
-        preserveReadingAndScale={gauge?.preserveReadingAndScale}
         max={max}
         label={gauge?.label ?? ''}
         unit={gauge?.unit ?? ''}
@@ -61,13 +51,6 @@ export function WidgetGaugeHero({ gauge, stats, compact, children }: WidgetGauge
         size={size}
         marker={gauge?.marker}
         markerLabel={gauge?.markerLabel}
-        min={gauge?.min}
-        ariaLabel={gauge?.ariaLabel}
-        tone={gauge?.tone}
-        status={gauge?.status}
-        kind={gauge?.kind}
-        decimals={gauge?.decimals}
-        hideScale={gauge?.hideScale}
       />
 
       {!compact && items.length > 0 && (

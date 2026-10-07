@@ -14,49 +14,6 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OperationalBrief', () => {
-  it('preserves complete captions, rich context and long values in the summary and details', () => {
-    render(<OperationalBrief compact eyebrow="Source posture" title="Source evidence"
-      description="Actual source context" statusLabel="Unknown"
-      metrics={[{ key: 'status', label: 'Endpoint', value: 'A complete source-provided endpoint status',
-        rawValue: 'A complete source-provided endpoint status', valueState: 'value',
-        detail: <><span>Complete explanatory caption</span><span>Retained source context</span></> }]} />);
-    const item = screen.getByRole('listitem');
-    expect(item).toHaveAttribute('data-operational-metric', 'status');
-    expect(item).toHaveAttribute('data-value-state', 'value');
-    expect(item.querySelector('[data-operational-value]')).toHaveTextContent('A complete source-provided endpoint status');
-    expect(screen.getByText('Complete explanatory caption').parentElement).not.toHaveClass('line-clamp-2');
-    expect(screen.getByText('Retained source context')).toBeVisible();
-  });
-  it('marks loading without inventing measurements or removing metric labels and captions', () => {
-    const { container } = render(<OperationalBrief loading eyebrow="Snapshot" title="Live source"
-      description="Latest source values" statusLabel="Loading"
-      metrics={[{ key: 'calls', label: 'Calls', value: '—', detail: 'No measurement supplied' }]} />);
-    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Calls')).toBeVisible();
-    expect(screen.getByText('No measurement supplied')).toBeVisible();
-    expect(container.querySelector('[data-operational-value]')).toBeNull();
-  });
-  it('consolidates compact metrics without hiding their explanations', () => {
-    render(
-      <OperationalBrief
-        compact
-        eyebrow="Driving posture"
-        title="Activity in context"
-        description="Measured drive evidence."
-        statusLabel="On track"
-        metrics={[
-          { key: 'distance', label: 'Distance', value: '64 mi', detail: 'Total distance in your display unit.', tone: 'success' },
-          { key: 'efficiency', label: 'Energy intensity', value: '297 Wh/mi', detail: 'Both drives include measured energy.', tone: 'info' },
-        ]}
-      />,
-    );
-    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-3', 'min-[1920px]:grid-cols-6');
-    expect(screen.getByText('Total distance in your display unit.')).toBeVisible();
-    expect(screen.getByText('Both drives include measured energy.')).toBeVisible();
-    expect(screen.getByText('64 mi')).toHaveClass('text-emerald-700', 'dark:text-emerald-300');
-    expect(screen.getByText('Driving posture')).not.toHaveClass('uppercase', 'capitalize');
-  });
-
   it('renders decision context, evidence, and workflow actions', () => {
     const onOpen = vi.fn();
 

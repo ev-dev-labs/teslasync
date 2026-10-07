@@ -188,7 +188,7 @@ describe('FsdDistanceTrend', () => {
     };
     const fsdColumn = props.dataColumns.find((column) => column.key === 'fsd');
     expect(fsdColumn?.format?.(null)).toBe('Not reported');
-    expect(fsdColumn?.format?.(4.02336)).toBe('4.02 km');
+    expect(fsdColumn?.format?.(4.02336)).toBe('4.0 km');
   });
 
   it('keeps the frame mounted with a recovery CTA when no vehicle is selected', () => {

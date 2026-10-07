@@ -41,7 +41,7 @@ export function VersionSegment({
   const {
     appVersion,
     hasUnseen,
-    unseenCount,
+    newEntries,
     sha,
     updateAvailable,
     uptime,
@@ -61,7 +61,7 @@ export function VersionSegment({
       {t('statusBar.version.tooltip', 'TeslaSync version')} · v{appVersion}
       {sha && sha !== 'dev' ? ` · ${sha}` : ''}
       {uptime ? ` · ${t('statusBar.version.uptime', 'up {{uptime}}', { uptime })}` : ''}
-      {hasUnseen ? ` · ${t('changelog.unseenHint', '{{count}} new release(s)', { count: unseenCount })}` : ''}
+      {hasUnseen ? ` · ${t('changelog.unseenHint', '{{count}} new release(s)', { count: newEntries.length })}` : ''}
     </span>
   );
 

@@ -93,6 +93,10 @@ function num(v: number | null | undefined): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
 }
 
+function titleCase(s: string): string {
+  return s.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /**
  * Resolve a session's site identity using the documented three-step
  * fallback. Exported for tests. Returns a bucket even for a session with
@@ -118,7 +122,7 @@ export function resolveResilienceSite(
   }
   const type = session.charger_type?.trim();
   if (type != null && type.length > 0) {
-    return { key: `type:${type.toLowerCase()}`, label: type, groupedBy: 'charger_type' };
+    return { key: `type:${type.toLowerCase()}`, label: titleCase(type), groupedBy: 'charger_type' };
   }
   return { key: 'type:unknown', label: 'Unknown location', groupedBy: 'charger_type' };
 }

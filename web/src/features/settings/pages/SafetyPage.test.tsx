@@ -34,8 +34,6 @@ import {
 } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
-import { MemoryRouter } from 'react-router-dom'
-import { deriveDataState } from '@/api/dataState'
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -52,7 +50,6 @@ import { BADGE_VARIANTS } from '@/components/ui';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 const mockUsePageTitle = usePageTitle as unknown as ReturnType<typeof vi.fn>
-const refetchSettings = vi.fn(() => Promise.resolve())
 
 // The source renders two Unicode dashes verbatim (verified against
 // SafetyPage.tsx): an em dash (U+2014) marks a missing value, an en dash
@@ -89,13 +86,7 @@ const baseSettings: AppSettings = {
 }
 
 function mountWith(overrides: Partial<AppSettings> = {}) {
-  const settings = { ...baseSettings, ...overrides }
-  mockUseSettings.mockReturnValue({
-    settings,
-    settingsState: deriveDataState({ data: settings }),
-    settingsUnavailable: false,
-    refetch: refetchSettings,
-  })
+  mockUseSettings.mockReturnValue({ settings: { ...baseSettings, ...overrides } })
   return render(<SafetyPage />)
 }
 
@@ -131,10 +122,7 @@ function sseFrame(event: string, data: unknown): string {
 beforeEach(() => {
   mockUseSettings.mockReset()
   mockUsePageTitle.mockReset()
-  refetchSettings.mockClear()
 })
-
-afterEach(() => vi.restoreAllMocks())
 
 describe('SafetyPage — page chrome & accessibility', () => {
   it('sets the page title and renders the page + listing section headings', () => {
@@ -169,47 +157,6 @@ describe('SafetyPage — page chrome & accessibility', () => {
 })
 
 describe('SafetyPage — safety-posture KPI band', () => {
-  it('opens the actual Review drawer with the safeguard denominator and retains all setting links', () => {
-    mountWith()
-    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }))
-    const drawer = screen.getByRole('dialog')
-    expect(within(drawer).getByText('3 / 3')).toBeInTheDocument()
-    expect(within(drawer).getByText('Protections enabled')).toBeInTheDocument()
-    expect(within(drawer).getByText('Digest batching')).toBeInTheDocument()
-    expect(within(screen.getByTestId('safety-settings-rows')).getAllByRole('listitem')).toHaveLength(7)
-  })
-
-  it('keeps every safety explanation but shows unknown values when the settings source failed initially', () => {
-    mockUseSettings.mockReturnValue({
-      settings: baseSettings,
-      settingsState: deriveDataState({ error: new Error('Read failed'), isError: true }),
-      settingsUnavailable: true,
-      refetch: refetchSettings,
-    })
-    render(<MemoryRouter><SafetyPage /></MemoryRouter>)
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
-    expect(screen.queryByText('3 / 3')).toBeNull()
-    expect(screen.getByTestId('safety-settings-listing')).toBeInTheDocument()
-    expect(within(screen.getByTestId('safety-settings-rows')).getAllByRole('listitem')).toHaveLength(7)
-    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent(EM_DASH)
-    expect(valueBadge('safetySettings.rows.quietHoursEnabled.title')).toHaveTextContent(EM_DASH)
-    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0)
-  })
-
-  it('retains the safety posture and all field values after a failed refresh', () => {
-    mockUseSettings.mockReturnValue({
-      settings: baseSettings,
-      settingsState: deriveDataState({ data: baseSettings, error: new Error('Refresh failed'), isError: true }),
-      settingsUnavailable: false,
-      refetch: refetchSettings,
-    })
-    render(<SafetyPage />)
-    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
-    expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
-    expect(valueBadge('safetySettings.rows.quietHoursStart.title')).toHaveTextContent('22:00')
-    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
-    expect(screen.queryByRole('alert')).toBeNull()
-  })
   it('counts all three safeguards as active when quiet hours, critical flash, and tab badge are on', () => {
     mountWith({
       quiet_hours_enabled: true,
@@ -426,102 +373,6 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
       screen.getByTestId('safety-settings-row-safetySettings.rows.apiSuspended.title'),
     ).getByRole('link')
     expect(apiRowLink).toHaveAttribute('href', '/docs/operations/api-suspended.md')
-  })
-})
-
-describe('SafetyPage — read-only recovery', () => {
-  it('retries the existing read without promoting fallback settings into current values', () => {
-    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected request'))
-    mockUseSettings.mockReturnValue({
-      settings: baseSettings,
-      settingsState: deriveDataState({ error: new Error('Read failed'), isError: true }),
-      settingsUnavailable: true,
-      refetch: refetchSettings,
-    })
-    render(<MemoryRouter><SafetyPage /></MemoryRouter>)
-
-    const list = screen.getByTestId('safety-settings-rows')
-    expect(within(list).getAllByRole('listitem')).toHaveLength(7)
-    for (const badge of within(list).getAllByText(EM_DASH)) {
-      expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
-    }
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
-    expect(screen.queryByText('3 / 3')).toBeNull()
-    expect(screen.queryByRole('button', { name: /Explain my settings/i })).toBeNull()
-    expect(refetchSettings).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(refetchSettings).toHaveBeenCalledTimes(1)
-    expect(fetch).not.toHaveBeenCalled()
-    expect(within(list).getAllByText(EM_DASH)).toHaveLength(7)
-    expect(within(list).getAllByRole('link')).toHaveLength(7)
-  })
-
-  it('keeps cached safety values visible while the safe refresh Retry is requested', () => {
-    const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected request'))
-    mockUseSettings.mockReturnValue({
-      settings: baseSettings,
-      settingsState: deriveDataState({ data: baseSettings, error: new Error('Refresh failed'), isError: true }),
-      settingsUnavailable: false,
-      refetch: refetchSettings,
-    })
-    render(<MemoryRouter><SafetyPage /></MemoryRouter>)
-    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
-    expect(screen.queryByRole('alert')).toBeNull()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
-    expect(refetchSettings).toHaveBeenCalledTimes(1)
-    expect(fetch).not.toHaveBeenCalled()
-    expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
-    expect(valueBadge('safetySettings.rows.quietHoursStart.title')).toHaveTextContent('22:00')
-    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
-    expect(within(screen.getByTestId('safety-settings-rows')).getAllByRole('listitem')).toHaveLength(7)
-  })
-
-  it('keeps first-load values unknown until real settings arrive, including real zero safeguards', () => {
-    mockUseSettings.mockReturnValue({
-      settings: baseSettings,
-      settingsState: deriveDataState({ isLoading: true }),
-      settingsUnavailable: true,
-      refetch: refetchSettings,
-    })
-    const { rerender } = render(<SafetyPage />)
-    expect(screen.getByText('Loading…')).toBeInTheDocument()
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
-    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
-    expect(screen.queryByText('3 / 3')).toBeNull()
-
-    const settings = {
-      ...baseSettings,
-      quiet_hours_enabled: false,
-      critical_flash_enabled: false,
-      tab_badge_enabled: false,
-    }
-    mockUseSettings.mockReturnValue({
-      settings,
-      settingsState: deriveDataState({ data: settings }),
-      settingsUnavailable: false,
-      refetch: refetchSettings,
-    })
-    rerender(<SafetyPage />)
-    expect(screen.queryByText('Loading…')).toBeNull()
-    expect(within(kpiRegion()).getByText('0 / 3')).toBeInTheDocument()
-    expect(valueBadge('safetySettings.rows.quietHoursEnabled.title')).toHaveTextContent('Off')
-    expect(refetchSettings).not.toHaveBeenCalled()
-  })
-
-  it('does not render defaults as evidence when the hook reports a missing settings payload', () => {
-    mockUseSettings.mockReturnValue({
-      settings: baseSettings,
-      settingsState: deriveDataState({ data: null }),
-      settingsUnavailable: true,
-      refetch: refetchSettings,
-    })
-    render(<SafetyPage />)
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
-    expect(within(screen.getByTestId('safety-settings-rows')).getAllByText(EM_DASH)).toHaveLength(7)
-    expect(screen.queryByText('3 / 3')).toBeNull()
-    expect(refetchSettings).not.toHaveBeenCalled()
   })
 })
 

@@ -4,15 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { useRoadHazards } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Table, Badge, Pagination, Text } from '@/components/ui';
+import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatRelative } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { EvidencePanel, InsightPanel } from '../components';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 18;
 
@@ -23,21 +22,22 @@ function severityVariant(severity: string) {
 }
 
 export default function RoadHazardMeshPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useState(1);
   const query = useRoadHazards(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
-  usePageTitle(t('advancedIntelligence.hazards.title', 'Road hazard mesh'));
+  usePageTitle(t('advancedIntelligence.hazards.title', 'Road Hazard Mesh'));
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
+    <PageContainer
+      title={t('advancedIntelligence.hazards.title', 'Road Hazard Mesh')}
       subtitle={t(
         'advancedIntelligence.hazards.subtitle',
         'Privacy-preserving hazard clusters shown only at coarse-cell resolution.',
       )}
+      loading={vehicleId != null && query.isLoading}
+      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="info"
@@ -52,7 +52,6 @@ export default function RoadHazardMeshPage() {
 
       <FadeIn>
         <InsightPanel
-          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.hazards.clusters.title', 'Hazard clusters')}
           description={t(
             'advancedIntelligence.hazards.clusters.subtitle',
@@ -76,33 +75,33 @@ export default function RoadHazardMeshPage() {
                   </div>
                   <Badge variant={severityVariant(cluster.severity)}>{cluster.severity}</Badge>
                 </div>
-                <Table aria-label={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}><tbody>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.cell', 'Coarse cell')}
-                    </th>
-                    <td className="font-mono">{cluster.coarse_cell}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                    </dt>
+                    <dd className="font-mono">{cluster.coarse_cell}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.confidence', 'Confidence')}
-                    </th>
-                    <td className="text-right">{fmtNumber(cluster.confidence_pct)}%</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                    </dt>
+                    <dd>{fmtNumber(cluster.confidence_pct, 1)}%</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.hazards.coverage', 'Observations')}
-                    </th>
-                    <td className="text-right">{fmtInt(cluster.observation_count)}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="flex items-center gap-1 text-[var(--text-muted)]">
+                    </dt>
+                    <dd>{fmtNumber(cluster.observation_count, 0)}</dd>
+                  </div>
+                  <div className="flex justify-between gap-3">
+                    <dt className="flex items-center gap-1 text-[var(--text-muted)]">
                       <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
                       {t('advancedIntelligence.hazards.recency', 'Last seen')}
-                    </th>
-                    <td>{formatRelative(cluster.last_seen)}</td>
-                  </tr>
-                </tbody></Table>
+                    </dt>
+                    <dd>{formatRelative(cluster.last_seen)}</dd>
+                  </div>
+                </dl>
               </article>
             ))}
           </div>
@@ -128,6 +127,6 @@ export default function RoadHazardMeshPage() {
           ]}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

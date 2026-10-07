@@ -1,6 +1,5 @@
 {
   "error": {
-    "unexpected": "An unexpected error occurred",
     "loadFailed": "Failed to load data",
     "retry": "Retry",
     "notFound": {
@@ -27,11 +26,10 @@
     },
     "waiting": {
       "title": "Waiting for upstream",
-      "message": "We're pausing requests briefly. Data will refresh automatically.",
-      "retryMessage": "Requests are paused briefly. Wait before retrying."
+      "message": "We're pausing requests briefly. Data will refresh automatically."
     },
     "chunkLoad": {
-      "body": "A new version was deployed. Click reload to load the latest assets."
+      "body": "A new version was deployed. Click Reload to load the latest assets."
     }
   }
 }

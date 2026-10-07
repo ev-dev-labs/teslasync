@@ -13,8 +13,8 @@
  *    Keys reached through indirection (`labelKey: 'nav.compactDrives'`) or a
  *    template literal (t(`palette.scope.${scope}`)) are discovered by AST
  *    analysis, not by a hand-curated list.
- * 2. Reachability — every leaf key has one authoritative fallback artifact;
- *    feature bundles also carry shared keys reached by their source closure.
+ * 2. Reachability — every leaf key in the catalog is emitted into exactly one
+ *    artifact the runtime can load, so no translated string is orphaned.
  * 3. Fallback locality — namespaces reachable from the shell or from generic
  *    shared components get a per-namespace `locale-detail-<ns>.json`. A toast
  *    string may never drag an unrelated battery or charging namespace along.
@@ -23,8 +23,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import ts from 'typescript'
-import { resolveSourceImport, staticClosure, translationKeys } from './i18n-source-graph.mjs'
-import { parseRoutes } from './generate-route-registry.mjs'
+import { staticClosure, translationKeys, translationNamespaces } from './i18n-source-graph.mjs'
 import {
   SHARED_GROUP,
   SHELL_GROUP,
@@ -53,7 +52,7 @@ const SHELL_RUNTIME_KEYS_PATH = join(I18N_ROOT, 'shell-runtime-keys.json')
 const KNOWN_MISSING_PATH = join(I18N_ROOT, 'known-missing-keys.json')
 // Shared controls used across dashboard, list, and detail routes should not
 // trigger a separate network request for each common label on first paint.
-const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources', 'a11y', 'changelog'])
+const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources'])
 /**
  * A per-namespace fallback chunk this small costs less to inline than the
  * request that fetches it costs in headers and round trips. Inlining also
@@ -83,41 +82,11 @@ function shellSourceClosure() {
     join(SOURCE_ROOT, 'App.tsx'),
     // The wildcard route is intentionally part of the cold shell contract.
     join(SOURCE_ROOT, 'features', 'system', 'pages', 'NotFoundPage.tsx'),
-    // This lazy root can auto-open on any route, including a cold NotFound.
-    // Only its translated UI is inlined; release-note content remains lazy.
-    join(SOURCE_ROOT, 'components', 'feedback', 'ChangelogModal.tsx'),
   ]
   // `import x from './en/shell.json'` resolves to a real file, so the raw
   // closure contains JSON assets. Parsing generated catalogs as TypeScript
   // would feed the generator its own output.
   return new Set([...staticClosure(SOURCE_ROOT, roots)].filter((file) => /\.(?:ts|tsx)$/.test(file)))
-}
-
-export function routeBundlePaths(appSource, availableBundles) {
-  const source = ts.createSourceFile('App.tsx', appSource, ts.ScriptTarget.Latest, true)
-  const lazyFeatures = new Map()
-  const visit = (node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer
-      && ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression)
-      && node.initializer.expression.text === 'lazy') {
-      const findImport = (child) => {
-        if (ts.isCallExpression(child) && child.expression.kind === ts.SyntaxKind.ImportKeyword) {
-          const specifier = stringLiteralText(child.arguments[0])
-          const file = specifier && resolveSourceImport(SOURCE_ROOT, join(SOURCE_ROOT, 'App.tsx'), specifier)
-          const feature = file?.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').match(/^features\/([^/]+)\//)?.[1]
-          if (feature) lazyFeatures.set(node.name.text, feature)
-        }
-        ts.forEachChild(child, findImport)
-      }
-      findImport(node.initializer)
-    }
-    ts.forEachChild(node, visit)
-  }
-  visit(source)
-  return Object.fromEntries(parseRoutes(appSource).flatMap(({ path, name }) => {
-    const feature = lazyFeatures.get(name)
-    return feature && availableBundles.has(feature) ? [[path, feature]] : []
-  }))
 }
 
 function sourceGroup(file, shellFiles) {
@@ -232,29 +201,11 @@ function usageManifest(catalog) {
   const shellInlineKeys = new Set()
   const shellDeferredKeys = new Set()
   const shellDynamicPrefixes = new Set()
-  const sourceKeyCache = new Map()
-  const literalKeyCache = new Map()
-  const dependencyCache = new Map()
-
-  const literalKeys = (file) => {
-    if (!literalKeyCache.has(file)) literalKeyCache.set(file, translationKeys(file))
-    return literalKeyCache.get(file)
-  }
-  const closureKeys = (file) => {
-    if (!sourceKeyCache.has(file)) {
-      const { indirect, deferred, prefixes } = indirectTranslationKeys(file, catalogLeaves)
-      sourceKeyCache.set(file, new Set([
-        ...literalKeys(file), ...indirect, ...deferred,
-        ...[...prefixes].flatMap(prefix => keysUnderPrefix(prefix, catalogLeaves)),
-      ]))
-    }
-    return sourceKeyCache.get(file)
-  }
 
   for (const file of sourceFiles) {
     const group = sourceGroup(file, shellFiles)
-    for (const key of literalKeys(file)) referencedKeys.add(key)
-    for (const namespace of new Set([...literalKeys(file)].map(key => key.split('.')[0]))) {
+    for (const key of translationKeys(file)) referencedKeys.add(key)
+    for (const namespace of translationNamespaces(file)) {
       if (!(namespace in catalog)) continue
       if (group === SHARED_GROUP && isGenericSharedSource(file)) sharedNamespaces.add(namespace)
       const counts = usage.get(namespace) ?? new Map()
@@ -263,7 +214,7 @@ function usageManifest(catalog) {
     }
   }
   for (const file of shellFiles) {
-    for (const key of literalKeys(file)) {
+    for (const key of translationKeys(file)) {
       if (key.split('.')[0] in catalog) shellInlineKeys.add(key)
     }
     const { indirect, deferred, prefixes } = indirectTranslationKeys(file, catalogLeaves)
@@ -316,25 +267,6 @@ function usageManifest(catalog) {
       ? `detail-${namespace}`
       : namespaceToBundle[namespace]
   }
-  const featureRequiredKeys = {}
-  const featureBundles = new Set(Object.keys(bundles).filter(
-    bundle => ![SHELL_GROUP, SHARED_GROUP, UNREFERENCED_GROUP].includes(bundle),
-  ))
-  for (const bundle of featureBundles) {
-    const roots = sourceFiles.filter(file =>
-      file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').startsWith(`features/${bundle}/`),
-    )
-    const keys = new Set()
-    for (const file of staticClosure(SOURCE_ROOT, roots, dependencyCache)) {
-      if (!/\.(?:ts|tsx)$/.test(file)) continue
-      for (const key of closureKeys(file)) {
-        for (const sibling of siblingKeys(catalog, key)) {
-          if (getNested(catalog, sibling) !== undefined) keys.add(sibling)
-        }
-      }
-    }
-    featureRequiredKeys[bundle] = [...keys].sort()
-  }
   return {
     manifest: {
       namespaceToBundle,
@@ -348,8 +280,6 @@ function usageManifest(catalog) {
       autoDiscoveredRuntimeKeys: [...autoDiscoveredRuntimeKeys].sort(),
       unreferencedNamespaces: bundles[UNREFERENCED_GROUP],
       namespaceFallbackBundles,
-      featureRequiredKeys,
-      routeBundles: routeBundlePaths(readFileSync(join(SOURCE_ROOT, 'App.tsx'), 'utf8'), featureBundles),
     },
     // Kept out of the serialized manifest: this is every literal `t()` key in
     // the tree and only feeds known-missing detection.
@@ -405,12 +335,6 @@ function expectedFiles(catalog) {
     if (bundle === SHELL_GROUP || bundle === SHARED_GROUP) continue
     const resource = {}
     for (const namespace of namespaces) resource[namespace] = catalog[namespace]
-    for (const key of manifest.featureRequiredKeys[bundle] ?? []) {
-      if (getNested(shellResource, key) !== undefined || getNested(resource, key) !== undefined) continue
-      if (!setNested(resource, key, getNested(catalog, key))) shadowedKeys.push(key)
-    }
-    ;(manifest.composedNamespaces ??= {})[bundle] = Object.keys(resource)
-      .filter(namespace => !namespaces.includes(namespace)).sort()
     if (Object.keys(resource).length > 0) files.set(`locale-${bundle}.json`, serialized(resource))
   }
   files.set('runtime-manifest.json', serialized(runtimeManifestOf(manifest)))

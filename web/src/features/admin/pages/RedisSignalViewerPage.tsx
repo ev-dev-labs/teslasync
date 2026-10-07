@@ -3,23 +3,28 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   Database,
+  Hash,
   Layers,
   RefreshCw,
   Search,
   Server,
+  ToggleLeft,
   Trash2,
+  Type as TypeIcon,
 } from 'lucide-react'
 
-import { PageLayout, LayoutCard } from '@/components/layout'
+import { PageContainer } from '@/components/layout'
 import {
   Badge,
   Button,
   Code,
   ConfirmDialog,
   DataTable,
+  GlassPanel,
   HelperText,
   Input,
   MaskedValue,
+  PanelTitle,
   Select,
   Text,
   Toggle,
@@ -30,8 +35,10 @@ import {
   DataFreshnessAuto,
   KVList,
   MetricBar,
+  MetricCard,
 } from '@/components/data-display'
-import { EmptyState, QueryError, Skeleton, useToast } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
+import { useToast } from '@/components/feedback/Toast'
 import { FadeIn } from '@/components/motion'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import {
@@ -42,12 +49,9 @@ import {
 } from '@/api/hooks/useRedisSignals'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
-
-import { isApiError } from '@/lib/resilience'
+import { fmtInt } from '@/lib/numberFormat'
+import { isApiError, type ApiError } from '@/lib/resilience'
 import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { deriveDataState } from '@/api/dataState';
-import { RedisOperationalBrief } from '../components/statstrip-ingest-dlq-redis/RedisOperationalBrief';
 
 /* ─── signal categorization ─────────────────────────────────────────── */
 
@@ -109,8 +113,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
   return [
     {
       key: 'name',
-      filterValue: (row) => row.name ?? null,
-      header: t('redis.signalName', 'Signal name'),
+      header: t('redis.signalName', 'Signal Name'),
       sortable: true,
       render: (row) => <Text mono size="sm" color="primary">{row.name}</Text>,
     },
@@ -151,7 +154,6 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
     },
     {
       key: 'type',
-      filterValue: (row) => row.type ?? null,
       header: t('redis.type', 'Type'),
       sortable: true,
       render: (row) => (
@@ -165,8 +167,6 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
     },
     {
       key: 'category',
-      filterValue: (row) => row.category ?? null,
-      filterValueLabel: (_value, row) => t(`redis.categoryName.${row.category}`, row.category),
       header: t('redis.category', 'Category'),
       sortable: true,
       render: (row) => (
@@ -183,9 +183,8 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
    ═══════════════════════════════════════════════════════════════════════ */
 
 export default function RedisSignalViewerPage() {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
-  usePageTitle(t('redis.title', 'Redis signal viewer'))
+  usePageTitle(t('redis.title', 'Redis Signal Viewer'))
   const { formatDateTime } = useDateFormat()
 
   const {
@@ -218,12 +217,12 @@ export default function RedisSignalViewerPage() {
     data: signalData,
     isLoading,
     isFetching,
+    error,
+    isError,
     refetch,
   } = signalQuery
   const purgeOne = usePurgeRedisSignals()
   const purgeAll = usePurgeAllRedisSignals()
-  const source = deriveDataState(signalQuery, { provenance: 'live' })
-  const fatalError = source.fatalError
 
   const selectedVehicle = useMemo(
     () => vehicleList.find((v) => v.id === selectedVehicleId),
@@ -332,6 +331,16 @@ export default function RedisSignalViewerPage() {
     return counts
   }, [rows])
 
+  const typeCounts = useMemo(() => {
+    const counts = { number: 0, string: 0, boolean: 0 }
+    for (const row of rows) {
+      if (row.type === 'number') counts.number += 1
+      else if (row.type === 'string') counts.string += 1
+      else if (row.type === 'boolean') counts.boolean += 1
+    }
+    return counts
+  }, [rows])
+
   const columns = useMemo(() => buildColumns(t), [t])
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc')
 
@@ -340,13 +349,14 @@ export default function RedisSignalViewerPage() {
   // When the upstream query failed, the diagnostic
   // banner takes over so the operator sees the real failure mode (cache
   // not wired, redis unreachable, generic 5xx, network) instead of the
-  // legacy "no signals cached" black box. Summary metrics also display a
+  // legacy "no signals cached" black box. Metric cards also display a
   // placeholder so the top-of-page numbers don't lie about a 0 count.
-  const errorBannerProps: DiagnosticErrorProps = !fatalError
+  const errorBannerProps: DiagnosticErrorProps = !isError
     ? {}
-    : isApiError(fatalError)
-      ? { serverError: fatalError }
+    : isApiError(error)
+      ? { serverError: error as ApiError }
       : { serverError: null, networkError: true }
+  const showStatPlaceholder = isLoading || isError
 
   const vehicleOptions = vehicleList.map((v) => ({
     value: String(v.id),
@@ -387,42 +397,77 @@ export default function RedisSignalViewerPage() {
   )
 
   return (
-    <PageLayout
-      title={t('redis.title', 'Redis signal viewer')}
+    <PageContainer
+      title={t('redis.title', 'Redis Signal Viewer')}
       subtitle={t('redis.subtitle', 'Inspect cached signal values in Redis (L2)')}
-      contextActions={actions}
-      dataSources={[{
-        id: 'redis-signals',
-        label: t('redis.cachedSignals', 'Cached signals'),
-        query: signalQuery,
-        enabled: selectedVehicleId !== null,
-      }]}
+      actions={actions}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <RedisOperationalBrief
-          data={selectedVehicleId === null ? undefined : signalData}
-          loading={selectedVehicleId !== null && source.status === 'initial'}
-          retained={source.hasData && signalQuery.isError}
-          enabled={selectedVehicleId !== null}
-          error={fatalError}
-        />
+        <section
+          aria-label={t('redis.kpis', 'Cache metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
+        >
+          <MetricCard
+            label={t('redis.totalSignals', 'Total Signals')}
+            value={showStatPlaceholder ? '—' : fmtInt(signalData?.signal_count ?? 0)}
+            icon={<Database className="h-5 w-5" aria-hidden="true" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('redis.numbers', 'Numbers')}
+            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.number)}
+            icon={<Hash className="h-5 w-5" aria-hidden="true" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('redis.strings', 'Strings')}
+            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.string)}
+            icon={<TypeIcon className="h-5 w-5" aria-hidden="true" />}
+            color="amber"
+          />
+          <MetricCard
+            label={t('redis.booleans', 'Booleans')}
+            value={showStatPlaceholder ? '—' : fmtInt(typeCounts.boolean)}
+            icon={<ToggleLeft className="h-5 w-5" aria-hidden="true" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('redis.l1Signals', 'L1 Signals')}
+            value={showStatPlaceholder || !meta ? '—' : fmtInt(meta.l1_signal_count)}
+            subtitle={t('redis.l1Subtitle', 'In-process store')}
+            icon={<Layers className="h-5 w-5" aria-hidden="true" />}
+            color="blue"
+          />
+          <MetricCard
+            label={t('redis.l2Fields', 'L2 Fields')}
+            value={showStatPlaceholder || !meta ? '—' : fmtInt(meta.redis_field_count)}
+            subtitle={t('redis.l2Subtitle', 'Redis HSET')}
+            icon={<Server className="h-5 w-5" aria-hidden="true" />}
+            color="green"
+          />
+        </section>
       </FadeIn>
 
       {/* 2 — Main bento: signals table (hero) + cache side column */}
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 3xl:grid-cols-4">
         {/* Hero — cached signals table with its own filter row */}
         <FadeIn delay={0.05} className="xl:col-span-2 3xl:col-span-3">
-          <LayoutCard title={t('redis.cachedSignals', 'Cached signals')}>
-              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <div className="relative min-w-0">
-                  <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <PanelTitle className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('redis.cachedSignals', 'Cached Signals')}
+              </PanelTitle>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
                   <Input
                     aria-label={t('redis.searchLabel', 'Filter signals by name')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
-                    className="ps-9 sm:w-56"
+                    className="pl-9 sm:w-56"
                   />
                 </div>
                 <Select
@@ -430,7 +475,7 @@ export default function RedisSignalViewerPage() {
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
                   options={[
-                    { value: 'all', label: t('redis.allCategories', 'All categories') },
+                    { value: 'all', label: t('redis.allCategories', 'All Categories') },
                     ...CATEGORY_ORDER.map((c) => ({
                       value: c,
                       label: `${t(`redis.categoryName.${c}`, c)} (${categoryCounts[c] ?? 0})`,
@@ -438,6 +483,8 @@ export default function RedisSignalViewerPage() {
                   ]}
                 />
               </div>
+            </div>
+
             <div className="mt-4">
               {selectedVehicleId === null ? (
                 <EmptyState /* no-action: transient empty state — surfaces when no vehicle is selected; no specific recovery action available */
@@ -453,7 +500,7 @@ export default function RedisSignalViewerPage() {
                   <Skeleton className="h-8 w-full" />
                 </div>
               ) : filteredRows.length === 0 ? (
-                rows.length === 0 || fatalError ? (
+                rows.length === 0 || isError ? (
                   <RedisDiagnosticEmptyState
                     vehicleId={selectedVehicleId}
                     meta={meta}
@@ -470,8 +517,6 @@ export default function RedisSignalViewerPage() {
                 <DataTable
                   tableId="admin:redis-signals"
                   data={filteredRows}
-                  enableValueFilters
-                  filterData={rows}
                   columns={columns}
                   mobileColumns={['name', 'value', 'type']}
                   keyExtractor={(row) => row.name}
@@ -484,7 +529,7 @@ export default function RedisSignalViewerPage() {
                 />
               )}
             </div>
-          </LayoutCard>
+          </GlassPanel>
         </FadeIn>
 
         {/* Side column — diagnostics, category mix, destructive cache actions */}
@@ -492,15 +537,19 @@ export default function RedisSignalViewerPage() {
           {/* Cache diagnostics — folds the mode / VIN / last-seen chips into a
               richer meta readout that stays visible alongside the table. */}
           <FadeIn delay={0.1}>
-            <LayoutCard title={t('redis.cacheDiagnostics', 'Cache diagnostics')}>
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('redis.cacheDiagnostics', 'Cache Diagnostics')}
+              </PanelTitle>
               <div className="mt-3">
                 {selectedVehicleId === null ? (
                   <EmptyState /* no-action: transient — no vehicle selected yet */
                     icon={<Server className="h-8 w-8" />}
                     message={t('redis.diagSelect', 'Select a vehicle to inspect its cache state')}
                   />
-                ) : fatalError ? (
-                  <QueryError error={fatalError} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
+                ) : isError ? (
+                  <QueryError error={error} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
                 ) : isLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-6 w-full" />
@@ -533,13 +582,17 @@ export default function RedisSignalViewerPage() {
                   />
                 )}
               </div>
-            </LayoutCard>
+            </GlassPanel>
           </FadeIn>
 
           {/* Signal categories — surfaces the category mix that previously
               only lived inside the filter dropdown labels. */}
           <FadeIn delay={0.15}>
-            <LayoutCard title={t('redis.categories', 'Signal categories')}>
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('redis.categories', 'Signal Categories')}
+              </PanelTitle>
               <div className="mt-3">
                 {selectedVehicleId === null ? (
                   <EmptyState /* no-action: transient — no vehicle selected yet */
@@ -552,8 +605,6 @@ export default function RedisSignalViewerPage() {
                     <Skeleton className="h-8 w-full" />
                     <Skeleton className="h-8 w-full" />
                   </div>
-                ) : fatalError ? (
-                  <QueryError error={fatalError} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
                 ) : rows.length === 0 ? (
                   <EmptyState /* no-action: transient — no categorized signals cached */
                     icon={<Layers className="h-8 w-8" />}
@@ -574,14 +625,18 @@ export default function RedisSignalViewerPage() {
                   </div>
                 )}
               </div>
-            </LayoutCard>
+            </GlassPanel>
           </FadeIn>
 
           {/* Danger zone — destructive cache actions behind explicit confirm.
               Per-vehicle uses the standard danger-confirm; cluster-wide
               PurgeAll requires the operator to type "PURGE ALL". */}
           <FadeIn delay={0.2}>
-            <LayoutCard title={t('redis.cacheActions', 'Cache actions')}>
+            <GlassPanel className="border border-rose-500/20 bg-rose-500/5 p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4 text-rose-300" aria-hidden="true" />
+                {t('redis.cacheActions', 'Cache Actions')}
+              </PanelTitle>
               <HelperText className="mt-2">
                 {t('redis.cacheActionsHint', 'Purge deletes the Redis L2 HSET only. The in-process L1 cache on each pod is untouched and refills from new telemetry.')}
               </HelperText>
@@ -591,7 +646,6 @@ export default function RedisSignalViewerPage() {
                   variant="danger"
                   onClick={openPurgeOne}
                   disabled={selectedVehicleId === null || isPurging}
-                  wrapLabel
                   className="justify-center"
                   title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
                 >
@@ -603,15 +657,14 @@ export default function RedisSignalViewerPage() {
                   variant="danger"
                   onClick={openPurgeAll}
                   disabled={isPurging}
-                  wrapLabel
-                  className="justify-center"
+                  className="justify-center !bg-red-700 hover:!bg-red-800"
                   title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  {t('redis.purgeAllButton', 'Purge all Redis')}
+                  {t('redis.purgeAllButton', 'Purge All Redis')}
                 </Button>
               </div>
-            </LayoutCard>
+            </GlassPanel>
           </FadeIn>
         </div>
       </section>
@@ -638,7 +691,7 @@ export default function RedisSignalViewerPage() {
         }
         confirmLabel={
           purgeMode === 'all'
-            ? t('redis.purgeAllConfirm', 'Purge all vehicles')
+            ? t('redis.purgeAllConfirm', 'Purge All Vehicles')
             : t('redis.purgeConfirm', 'Purge Redis (L2)')
         }
         cancelLabel={t('common.cancel', 'Cancel')}
@@ -656,6 +709,6 @@ export default function RedisSignalViewerPage() {
           setPurgeTargetLabel('')
         }}
       />
-    </PageLayout>
+    </PageContainer>
   )
 }

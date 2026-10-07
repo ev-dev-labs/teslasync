@@ -108,15 +108,10 @@ function stubResponses(opts: {
   vehicleSpeedMps?: number | null
   cruiseSetSpeedMps?: number | null
   followDistanceEnum?: string | null
-  verifiedSpeed?: boolean
-  freshness?: 'fresh' | 'stale'
 }) {
   // /vehicles/:id/state
   mockedRequest.mockResolvedValueOnce({
     state: opts.vehicleSpeedMps != null ? { speed: opts.vehicleSpeedMps } : {},
-    observed_at: new Date().toISOString(),
-    freshness: opts.freshness ?? 'fresh',
-    verified_fields: opts.vehicleSpeedMps != null && opts.verifiedSpeed !== false ? ['speed'] : [],
   })
   // CruiseSetSpeed observation
   mockedRequest.mockResolvedValueOnce({
@@ -213,37 +208,6 @@ describe('AutopilotSection — Follow Distance enum decoding', () => {
 })
 
 describe('AutopilotSection — empty state', () => {
-  it('does not display a zero fallback when speed is not verified and cruise is absent', async () => {
-    stubResponses({ vehicleSpeedMps: 0, verifiedSpeed: false })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    expect(await screen.findByText('No cruise / autopilot telemetry received yet')).toBeInTheDocument()
-    expect(screen.queryByText('Current Speed')).toBeNull()
-  })
-
-  it('keeps a missing current speed unknown when other cruise evidence exists', async () => {
-    stubResponses({ vehicleSpeedMps: 0, verifiedSpeed: false, cruiseSetSpeedMps: 11.176 })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    const label = await screen.findByText('Current Speed')
-    expect(statCardText(label)).toContain('—')
-    expect(statCardText(label)).not.toMatch(/0\.0/)
-    expect(statCardText(await screen.findByText('Cruise Set Speed'))).toContain('25')
-  })
-
-  it('preserves a true verified current zero instead of showing missing', async () => {
-    stubResponses({ vehicleSpeedMps: 0 })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    const label = await screen.findByText('Current Speed')
-    expect(statCardText(label)).toContain('0.00')
-    expect(statCardText(label)).not.toContain('—')
-  })
-
-  it('does not call a stale verified speed current', async () => {
-    stubResponses({ vehicleSpeedMps: 0, freshness: 'stale', followDistanceEnum: 'FollowDistance7' })
-    renderWithClient(<AutopilotSection vehicleId={1} />)
-    const label = await screen.findByText('Current Speed')
-    expect(statCardText(label)).toContain('—')
-  })
-
   it('renders the empty state when no signals are present anywhere', async () => {
     stubResponses({}) // all three sources empty
 

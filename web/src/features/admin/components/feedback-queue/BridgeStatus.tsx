@@ -10,9 +10,7 @@ import { Icons } from '@/lib/icons'
  *  live region (`role="status"`) labelled by the visible heading, so assistive
  *  tech announces the outcome once the async status resolves and reports the
  *  in-flight load via `aria-busy`. */
-export function BridgeStatus({
-  enabled, repo, loading, unknown = false,
-}: { enabled: boolean; repo: string; loading: boolean; unknown?: boolean }) {
+export function BridgeStatus({ enabled, repo, loading }: { enabled: boolean; repo: string; loading: boolean }) {
   const { t } = useTranslation()
   const titleId = useId()
   return (
@@ -23,8 +21,6 @@ export function BridgeStatus({
       <div role="status" aria-labelledby={titleId} aria-busy={loading}>
         {loading ? (
           <Skeleton height={16} width="60%" />
-        ) : unknown ? (
-          <Text as="span" variant="bodySm">{t('common.unknown', 'Unknown')}</Text>
         ) : enabled ? (
           <div className="flex items-center gap-2">
             <Icons.securityCheck className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />

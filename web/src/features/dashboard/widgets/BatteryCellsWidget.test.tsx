@@ -73,19 +73,6 @@ const { batteryCellsMock, vehiclesMock } = vi.hoisted(() => ({
 
 vi.mock('@/api/hooks/useEnergy', () => ({ useBatteryCells: batteryCellsMock }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vehiclesMock }));
-let temperatureUnit: '°C' | '°F' = '°C';
-vi.mock('@/hooks/useUnits', async () => {
-  const { formatTemperature } = await import('@/lib/unitConversion');
-  return {
-    useUnits: () => ({
-      formatTemperature: (value: number | null | undefined, options?: { precision?: number }) =>
-        formatTemperature(value, {
-          distance: 'km', speed: 'km/h', temperature: temperatureUnit,
-          pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US',
-        }, options),
-    }),
-  };
-});
 
 import BatteryCellsWidget, { cellStatus } from './BatteryCellsWidget';
 import type { BatteryCellSummary } from '@/types/energy';
@@ -145,17 +132,11 @@ function renderWidget(node: ReactElement) {
 }
 
 beforeEach(() => {
-  temperatureUnit = '°C';
   batteryCellsMock.mockReset();
   vehiclesMock.mockReset();
   // Sensible defaults; individual tests override as needed.
   vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
   batteryCellsMock.mockReturnValue(makeQuery(makeSummary()));
-});
-
-it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
-  renderWidget(<BatteryCellsWidget size={{ cols, rows: 4 }} />);
-  expect(screen.getByRole('heading', { name: 'Battery cells', level: 3 })).toBeVisible();
 });
 
 // ── cellStatus (pure) ────────────────────────────────────────────────────────
@@ -174,53 +155,16 @@ describe('cellStatus', () => {
     expect(cellStatus(Number.NaN, 3.7)).toBe('unknown');
     expect(cellStatus(Number.POSITIVE_INFINITY, 3.7)).toBe('unknown');
     expect(cellStatus(Number.NEGATIVE_INFINITY, 3.7)).toBe('unknown');
-    expect(cellStatus(3.7, null)).toBe('unknown');
-    expect(cellStatus(3.7, Number.NaN)).toBe('unknown');
   });
 });
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('BatteryCellsWidget', () => {
-  it('converts cell and summary temperatures at the display boundary for Fahrenheit', () => {
-    temperatureUnit = '°F';
-    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
-    expect(screen.getByText('3.701 V / 75.2°F')).toBeInTheDocument();
-    expect(screen.getByText('73.6°F')).toBeInTheDocument();
-    expect(screen.getByText('76.1°F')).toBeInTheDocument();
-    expect(screen.getByText('78.8°F')).toBeInTheDocument();
-  });
-  it('shows localized cell states as visible text, not just colors', () => {
-    renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
-    expect(screen.getByText('Healthy')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Error')).toBeInTheDocument();
-  });
-
-  it('retains cell readings and summary during a cached refresh failure', () => {
-    batteryCellsMock.mockReturnValue(makeQuery(makeSummary(), { error: new Error('transient'), isError: true }));
-    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
-    expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
-    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('keeps missing voltage and temperature readings unknown', () => {
-    batteryCellsMock.mockReturnValue(makeQuery(makeSummary({
-      avg_voltage: Number.NaN,
-      cells: [{ cell_id: 1, module: 1, voltage: Number.NaN, temperature: Number.NaN }],
-      min_temperature: Number.NaN,
-    })));
-    renderWidget(<BatteryCellsWidget size={SIZE_WIDE} />);
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.getByText('— / —')).toBeInTheDocument();
-    expect(screen.queryByText(/NaN/)).toBeNull();
-  });
   it('renders cells and the min/max/avg/spread summary at medium size', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
 
     // Title header (visible above compact).
-    expect(screen.getByText('Battery cells')).toBeInTheDocument();
+    expect(screen.getByText('Battery Cells')).toBeInTheDocument();
 
     // Compact cell labels + per-cell voltage values.
     expect(screen.getByText('C1')).toBeInTheDocument();
@@ -236,10 +180,10 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Avg V')).toBeInTheDocument();
     expect(screen.getByText('3.700 V')).toBeInTheDocument();
     expect(screen.getByText('Spread')).toBeInTheDocument();
-    expect(screen.getByText('17.00 mV')).toBeInTheDocument();
+    expect(screen.getByText('17.0 mV')).toBeInTheDocument();
 
     // The temperature summary is a wide-only row — absent here.
-    expect(screen.queryByText('Min temp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Min Temp')).not.toBeInTheDocument();
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
@@ -267,24 +211,26 @@ describe('BatteryCellsWidget', () => {
 
     // Wide labels include module + a combined voltage/temperature value.
     expect(screen.getByText('Cell 1 · M1')).toBeInTheDocument();
-    expect(screen.getByText('3.701 V / 24.0°C')).toBeInTheDocument();
+    expect(screen.getByText('3.701 V / 24.0°')).toBeInTheDocument();
 
     // Wide-only temperature summary row.
-    expect(screen.getByText('Min temp')).toBeInTheDocument();
-    expect(screen.getByText('23.1°C')).toBeInTheDocument();
-    expect(screen.getByText('Avg temp')).toBeInTheDocument();
-    expect(screen.getByText('24.5°C')).toBeInTheDocument();
-    expect(screen.getByText('Max temp')).toBeInTheDocument();
-    expect(screen.getByText('26.0°C')).toBeInTheDocument();
+    expect(screen.getByText('Min Temp')).toBeInTheDocument();
+    expect(screen.getByText('23.1°')).toBeInTheDocument();
+    expect(screen.getByText('Avg Temp')).toBeInTheDocument();
+    expect(screen.getByText('24.5°')).toBeInTheDocument();
+    expect(screen.getByText('Max Temp')).toBeInTheDocument();
+    expect(screen.getByText('26.0°')).toBeInTheDocument();
   });
 
-  it('keeps per-cell values readable with the compact heading', () => {
+  it('hides the title and per-cell values in compact layout', () => {
     renderWidget(<BatteryCellsWidget size={SIZE_COMPACT} />);
 
-    expect(screen.getByRole('heading', { name: 'Battery cells', level: 3 })).toBeVisible();
+    // 1×1 widget: the title chrome is suppressed by design.
+    expect(screen.queryByText('Battery Cells')).not.toBeInTheDocument();
     // Labels still render...
     expect(screen.getByText('C1')).toBeInTheDocument();
-    expect(screen.getByText('3.701 V')).toBeInTheDocument();
+    // ...but the compact grid omits the per-cell voltage value.
+    expect(screen.queryByText('3.701 V')).not.toBeInTheDocument();
   });
 
   it('shows the "no cell data" grid placeholder while still rendering the summary when cells are empty', () => {
@@ -297,14 +243,13 @@ describe('BatteryCellsWidget', () => {
     expect(screen.getByText('Min V')).toBeInTheDocument();
   });
 
-  it('keeps summary placeholders alongside the empty cells section when data is absent', () => {
+  it('renders the empty state (and no summary) when data is null', () => {
     batteryCellsMock.mockReturnValue(makeQuery(undefined));
 
     renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
 
     expect(screen.getByText('No battery cell data')).toBeInTheDocument();
-    expect(screen.getByText('Min V')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(4);
+    expect(screen.queryByText('Min V')).not.toBeInTheDocument();
   });
 
   it('renders a loading skeleton without any content while fetching the first time', () => {

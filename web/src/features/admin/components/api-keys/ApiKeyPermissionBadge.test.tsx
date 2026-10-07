@@ -64,7 +64,7 @@ describe('ApiKeyPermissionBadge', () => {
 
   it('renders the read-write permission with amber text on a neon-amber chip', () => {
     const { chip, svg } = renderBadge('read-write');
-    expect(chip?.textContent?.trim()).toBe('Read-write');
+    expect(chip?.textContent?.trim()).toBe('Read-Write');
     expect(chip?.className).toContain('bg-neon-amber/10');
     expect(chip?.className).toContain('ring-neon-amber/20');
     expect(chip?.className).toContain('text-amber-300');

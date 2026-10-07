@@ -1,17 +1,17 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChartCard, LayoutCard } from '@/components/layout';
+import { Route } from 'lucide-react';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { QueryError } from '@/components/feedback';
 import {
-  ChartTooltip, ChartGradient,
+  ChartContainer, ChartTooltip, ChartGradient,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   axisTickSm, chartGrid, chartAnimation,
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { safeNumber } from '@/lib/numberFormat';
+import { fmtNumber, safeNumber } from '@/lib/numberFormat';
 import type { TripDetail } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TripDrivesChartProps {
   trip: TripDetail | undefined;
@@ -27,7 +27,6 @@ interface TripDrivesChartProps {
  * converted to the user's unit at the display boundary.
  */
 export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: TripDrivesChartProps) {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
 
@@ -42,7 +41,7 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
         // reading never feeds a broken bar to Recharts at the display boundary.
         distance: convertDistanceFromSI(safeNumber(d.distance_m), unitPrefs.distance),
       })),
-    [trip?.drives, unitPrefs.distance, t, displayPrecision, displayLocale],
+    [trip?.drives, unitPrefs.distance, t],
   );
 
   const dataColumns = useMemo(
@@ -51,22 +50,26 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
       {
         key: 'distance',
         label: distanceLabel,
-        format: (v: unknown) => fmtNumber(v as number),
+        format: (v: unknown) => fmtNumber(v as number, 1),
       },
     ],
-    [t, distanceLabel, fmtNumber],
+    [t, distanceLabel],
   );
 
   if (isError) {
     return (
-      <LayoutCard title={title}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-3 flex items-center gap-2">
+          <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {title}
+        </PanelTitle>
         <QueryError
           error={error}
           resourceName={t('trips.detail.resourceName', 'Trip')}
           listHref="/trips"
           onRetry={onRetry}
         />
-      </LayoutCard>
+      </GlassPanel>
     );
   }
 
@@ -75,15 +78,13 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
     : 280;
 
   return (
-    <ChartCard
+    <ChartContainer
       title={title}
       ariaLabel={t('trips.detail.chart.aria', 'Distance travelled per drive within this trip, as a horizontal bar chart')}
       loading={isLoading && !trip}
       empty={!isLoading && chartData.length === 0}
       height={chartHeight}
       exportFilename="teslasync-trip-drives"
-      size="standard"
-      exportable
       data={chartData}
       dataColumns={dataColumns}
     >
@@ -104,6 +105,6 @@ export function TripDrivesChart({ trip, isLoading, isError, error, onRetry }: Tr
           />
         </BarChart>
       </ResponsiveContainer>
-    </ChartCard>
+    </ChartContainer>
   );
 }

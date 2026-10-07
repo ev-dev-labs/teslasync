@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { isApiError } from '@/api/client'
-import { deriveDataState } from '@/api/dataState'
 import {
   DataStateNotice,
   EmptyState,
@@ -43,7 +42,6 @@ export function ManagementEndpointBody({
   emptyMessage,
 }: ManagementEndpointBodyProps) {
   const { t } = useTranslation()
-  const state = deriveDataState({ data, error, isLoading: loading })
   const prerequisiteUnavailable =
     isApiError(error) && [402, 412].includes(error.status)
 
@@ -60,24 +58,7 @@ export function ManagementEndpointBody({
       />
     )
   }
-  const refreshNotice = state.refreshError ? <DataStateNotice
-    state="stale"
-    title={t('dataState.stale.title', 'Data may be stale')}
-    message={t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
-  /> : null
-  if (hasRenderableData(data)) {
-    return <>
-      {refreshNotice}
-      {prerequisiteUnavailable && <DataStateNotice
-        state="unsupported"
-        title={t('vehicleManagement.state.prerequisiteRequired', 'Prerequisite required')}
-        message={managementErrorText(error, t('vehicleManagement.state.prerequisiteError',
-          'Tesla did not confirm the required account scope or prerequisite.'))}
-      />}
-      <ManagementDataView data={data} kind={kind} />
-    </>
-  }
-  if (loading && !state.hasData) {
+  if (loading) {
     return (
       <ListSkeleton
         rows={3}
@@ -87,7 +68,7 @@ export function ManagementEndpointBody({
       />
     )
   }
-  if (prerequisiteUnavailable && !state.hasData) {
+  if (prerequisiteUnavailable) {
     return (
       <DataStateNotice
         state="unsupported"
@@ -105,10 +86,10 @@ export function ManagementEndpointBody({
       />
     )
   }
-  if (state.fatalError) {
+  if (error) {
     return (
       <ErrorDisplay
-        error={state.fatalError}
+        error={error}
         message={managementErrorText(
           error,
           t(
@@ -120,11 +101,12 @@ export function ManagementEndpointBody({
       />
     )
   }
+  if (hasRenderableData(data)) {
+    return <ManagementDataView data={data} kind={kind} />
+  }
   if (hasCompletedResult) {
     return (
-      <>
-      {refreshNotice}
-      {/* no-action: Refresh and operation actions are already exposed in the endpoint card header. */}
+      // no-action: Refresh and operation actions are already exposed in the endpoint card header.
       <EmptyState
         title={t(
           'vehicleManagement.state.emptyResult',
@@ -136,13 +118,10 @@ export function ManagementEndpointBody({
         )}
         className="py-5"
       />
-      </>
     )
   }
   return (
-    <>
-    {refreshNotice}
-    {/* no-action: Refresh and operation actions are already exposed in the endpoint card header. */}
+    // no-action: Refresh and operation actions are already exposed in the endpoint card header.
     <EmptyState
       title={emptyTitle ?? t('vehicleManagement.state.empty', 'No cached data')}
       message={
@@ -154,6 +133,5 @@ export function ManagementEndpointBody({
       }
       className="py-5"
     />
-    </>
   )
 }

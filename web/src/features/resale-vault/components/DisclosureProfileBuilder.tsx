@@ -9,7 +9,7 @@
  * those, and says so explicitly.
  */
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel } from '@/components/ui';
 import { RadioCard, Checkbox, Toggle, Select } from '@/components/ui';
 import { PanelTitle, HelperText } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
@@ -48,8 +48,9 @@ export function DisclosureProfileBuilder({
   ];
 
   return (
-    <LayoutCard title={t('resaleVault.disclosure.title', 'Disclosure profile')}>
+    <GlassPanel padding="lg" className="space-y-6">
       <div>
+        <PanelTitle>{t('resaleVault.disclosure.title', 'Disclosure Profile')}</PanelTitle>
         <HelperText className="mt-1">
           {t(
             'resaleVault.disclosure.subtitle',
@@ -82,7 +83,7 @@ export function DisclosureProfileBuilder({
         <HelperText className="mt-1 mb-2">
           {isCustom
             ? t('resaleVault.disclosure.sectionsCustomHint', 'Check every section this report should include.')
-            : t('resaleVault.disclosure.sectionsFixedHint', 'Fixed by the selected profile. Switch to custom to edit individually.')}
+            : t('resaleVault.disclosure.sectionsFixedHint', 'Fixed by the selected profile. Switch to Custom to edit individually.')}
         </HelperText>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {allSections.map((section) => {
@@ -144,6 +145,6 @@ export function DisclosureProfileBuilder({
           { list: HARD_EXCLUDED_CATEGORIES.join(', ') },
         )}
       </InlineCallout>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

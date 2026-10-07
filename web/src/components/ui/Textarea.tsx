@@ -1,5 +1,4 @@
 import { forwardRef, useId } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
 import { HelpIcon, type HelpIconProps } from './HelpIcon';
@@ -9,8 +8,7 @@ export interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTex
   /**
  * Optional `<HelpIcon>` rendered immediately after the label. The
  * HelpIcon's `for` defaults to the textarea's resolved id so screen
- * For an implicit id, the accessible name uses the visible label. Explicit
- * id/help target/name overrides retain their existing precedence.
+ * readers announce "Help for {{id}}" when the trigger is focused.
  */
   help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
@@ -43,11 +41,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     'aria-describedby': ariaDescribedBy,
     ...props
   }, ref) => {
-    const { t } = useTranslation();
-    // Labels can repeat or change with locale; useId keeps implicit field
-    // and feedback identities stable without replacing an explicit caller id.
+    // Stable fallback id so the error message is always programmatically
+    // associated via aria-describedby — even for aria-label-only textareas
+    // that supply neither `id` nor `label`. useId is SSR-safe and unique
+    // per instance, so two such textareas on one page never collide.
     const reactId = useId();
-    const textareaId = id ?? reactId;
+    const textareaId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : reactId);
     const errorId = `${textareaId}-error`;
     const hintId = `${textareaId}-hint`;
     const feedbackId = error ? errorId : hint ? hintId : undefined;
@@ -63,15 +62,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             >
               {label}
             </Label>
-            {help && (
-              <HelpIcon
-                {...help}
-                for={help.for ?? textareaId}
-                ariaLabel={help.ariaLabel ?? (id == null && help.for == null && label
-                  ? t('a11y.helpFor', { field: label, defaultValue: `Help for ${label}` })
-                  : undefined)}
-              />
-            )}
+            {help && <HelpIcon {...help} for={help.for ?? textareaId} />}
           </div>
         )}
         <textarea

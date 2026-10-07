@@ -2,10 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { Text } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
-
+import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { CostSection } from './CostSection';
 import type { CoreStats, LifetimeMetrics } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LifetimeSummaryProps {
   lifetimeMetrics: LifetimeMetrics | null;
@@ -29,7 +28,6 @@ function LifetimeMetric({ label, value }: { label: string; value: string }) {
 export function LifetimeSummary({
   lifetimeMetrics, coreStats, isLoading, error, onRetry,
 }: LifetimeSummaryProps) {
-  const { fmtWithUnit, fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -49,11 +47,11 @@ export function LifetimeSummary({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 3xl:grid-cols-4">
           <LifetimeMetric
             label={t('costAnalysis.lifetime.totalSpent', 'Total Spent')}
-            value={formatCurrency(coreStats.totalCost)}
+            value={formatCurrency(coreStats.totalCost, 2)}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.totalEnergy', 'Total Energy')}
-            value={fmtWithUnit(coreStats.totalEnergy, 'kWh')}
+            value={fmtWithUnit(coreStats.totalEnergy, 'kWh', 1)}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.totalSessions', 'Total Sessions')}
@@ -61,19 +59,19 @@ export function LifetimeSummary({
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.avgSessionCost', 'Avg Session Cost')}
-            value={formatCurrency(lifetimeMetrics.avgSessionCost)}
+            value={formatCurrency(lifetimeMetrics.avgSessionCost, 2)}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.avgEnergy', 'Avg Energy / Session')}
-            value={fmtWithUnit(lifetimeMetrics.avgSessionEnergy, 'kWh')}
+            value={fmtWithUnit(lifetimeMetrics.avgSessionEnergy, 'kWh', 1)}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.avgDuration', 'Avg Duration')}
-            value={`${fmtNumber(lifetimeMetrics.avgDuration)} min`}
+            value={`${fmtNumber(lifetimeMetrics.avgDuration, 0)} min`}
           />
           <LifetimeMetric
             label={t('costAnalysis.lifetime.freeSessions', 'Free Sessions')}
-            value={`${fmtInt(lifetimeMetrics.freeCount)} (${fmtWithUnit(lifetimeMetrics.freeEnergy, 'kWh')})`}
+            value={`${fmtInt(lifetimeMetrics.freeCount)} (${fmtWithUnit(lifetimeMetrics.freeEnergy, 'kWh', 1)})`}
           />
         </div>
       )}

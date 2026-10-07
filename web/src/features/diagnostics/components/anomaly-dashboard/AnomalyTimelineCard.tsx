@@ -4,12 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { SeverityBadge, TimeStamp } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import { severityTokens, normalizeSeverity, typography } from '@/lib/tokens';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { AnomalyEntry } from '@/api/hooks/useAnomalies';
 
 import { anomalyTypeLabel } from './anomalyHelpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AnomalyTimelineCardProps {
   anomaly: AnomalyEntry;
@@ -22,7 +21,6 @@ interface AnomalyTimelineCardProps {
  * with `fmtNumber`.
  */
 function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const tone = severityTokens[normalizeSeverity(anomaly.severity)];
 
@@ -50,7 +48,7 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
         </Text>
         {anomaly.z_score > 0 && (
           <Text size="2xs" color="muted" className="tabular-nums">
-            {fmtNumber(anomaly.z_score)}σ
+            {fmtNumber(anomaly.z_score, 1)}σ
           </Text>
         )}
       </div>
@@ -61,13 +59,13 @@ function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {
         <span>
           {t('anomaly.value', 'Value')}:{' '}
           <Text as="span" size="2xs" color="secondary" className="tabular-nums">
-            {fmtNumber(anomaly.value)}
+            {fmtNumber(anomaly.value, 2)}
           </Text>
         </span>
         <span>
           {t('anomaly.baseline', 'Baseline')}:{' '}
           <Text as="span" size="2xs" color="secondary" className="tabular-nums">
-            {fmtNumber(anomaly.baseline)}
+            {fmtNumber(anomaly.baseline, 2)}
           </Text>
         </span>
       </div>

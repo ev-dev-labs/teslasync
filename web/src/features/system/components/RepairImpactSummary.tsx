@@ -16,8 +16,9 @@ interface RepairImpactSummaryProps {
 
 function fieldLabel(field: string): string {
   return field
-    .replace(/_/g, ' ')
-    .replace(/^./, (character) => character.toUpperCase());
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 function formatPreviewValue(value: RepairPreviewValue | undefined): string {

@@ -18,7 +18,6 @@ import {
 } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressEvidenceSupportProps {
   result: CycleStressResult;
@@ -31,7 +30,6 @@ export function CycleStressEvidenceSupport({
   state,
   locale,
 }: CycleStressEvidenceSupportProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const support = result.coverage.support;
 
@@ -65,6 +63,7 @@ export function CycleStressEvidenceSupport({
               value={`${cycleStressNumber(
                 support.index,
                 locale,
+                1,
               )}/100`}
               subtitle={cycleStressBandLabel(t, support.band)}
               icon={<ShieldCheck className="h-5 w-5" />}
@@ -78,6 +77,7 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.intervals.value,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.support.target',
@@ -95,6 +95,7 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.cycles.value,
                 locale,
+                1,
               )}
               subtitle={t(
                 'cycleStress.support.target',
@@ -112,6 +113,7 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.activeWeeks.value,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.support.target',
@@ -133,6 +135,7 @@ export function CycleStressEvidenceSupport({
                         value: cycleStressNumber(
                           result.coverage.daysSinceLastObservation,
                           locale,
+                          1,
                         ),
                       },
                     )
@@ -152,6 +155,7 @@ export function CycleStressEvidenceSupport({
               value={cycleStressNumber(
                 support.sourceCoverage.value,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.support.outOfTwo',

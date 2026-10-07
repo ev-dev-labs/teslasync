@@ -31,13 +31,12 @@ export function NotificationSoundChannelRow({
   return (
     <div
       className={cn(
-        'flex min-h-11 min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors',
+        'flex min-h-11 items-center justify-between gap-3 rounded-lg border border-white/[0.04] bg-white/[0.02] px-3 py-2 transition-colors',
         !master && 'opacity-60',
       )}
     >
       <Toggle label={label} checked={enabled} onChange={onToggle} size="sm" />
       <Button
-        wrapLabel
         variant="ghost"
         size="sm"
         type="button"

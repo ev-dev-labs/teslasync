@@ -1,121 +1,62 @@
 import { useTranslation } from 'react-i18next';
-import { OperationalBrief } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import type { DataProvenance, DataStatus } from '@/api/dataState';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
-import type {
-  ActionCenterProviderStatus,
-  ActionCenterSummary as Summary,
-} from '@/types/actionCenter';
+import { GlassPanel, MetricLabel, MetricValue } from '@/components/ui';
+import { Skeleton } from '@/components/feedback';
+import { Icons } from '@/lib/icons';
+import type { ActionCenterSummary as Summary } from '@/types/actionCenter';
 
 interface ActionCenterSummaryProps {
   summary: Summary | null;
   loading: boolean;
-  status: DataStatus;
-  provenance: DataProvenance;
-  generatedAt: string | null;
-  vehicleName: string | null;
-  providers: readonly ActionCenterProviderStatus[];
 }
 
-export function ActionCenterSummary({
-  summary, loading, status, provenance, generatedAt, vehicleName, providers,
-}: ActionCenterSummaryProps) {
+export function ActionCenterSummary({ summary, loading }: ActionCenterSummaryProps) {
   const { t } = useTranslation();
-  const metrics: readonly StatMetric[] = [
+  const metrics = [
+    { key: 'open', label: t('actionCenter.summary.open', 'Open'), value: summary?.open, Icon: Icons.notifications },
     {
-      metricId: 'count', occurrenceId: 'open',
-      label: t('actionCenter.summary.open', 'Open'), rawValue: summary?.open,
-      description: t('actionCenter.summary.openHelp', 'Generated recommendations in the open state.'),
-    },
-    {
-      metricId: 'count', occurrenceId: 'critical',
+      key: 'critical',
       label: t('actionCenter.summary.critical', 'Critical'),
-      rawValue: summary?.critical,
-      description: t('actionCenter.summary.criticalHelp', 'Generated recommendations with critical priority across all inbox states.'),
+      value: summary?.critical,
+      Icon: Icons.securityAlert,
     },
+    { key: 'high', label: t('actionCenter.summary.high', 'High'), value: summary?.high, Icon: Icons.warning },
     {
-      metricId: 'count', occurrenceId: 'high',
-      label: t('actionCenter.summary.high', 'High'), rawValue: summary?.high,
-      description: t('actionCenter.summary.highHelp', 'Generated recommendations with high priority across all inbox states.'),
-    },
-    {
-      metricId: 'count', occurrenceId: 'acknowledged',
+      key: 'acknowledged',
       label: t('actionCenter.summary.acknowledged', 'Acknowledged'),
-      rawValue: summary?.acknowledged,
-      description: t('actionCenter.summary.acknowledgedHelp', 'Generated recommendations in the acknowledged state.'),
+      value: summary?.acknowledged,
+      Icon: Icons.successFilled,
     },
     {
-      metricId: 'count', occurrenceId: 'snoozed',
+      key: 'snoozed',
       label: t('actionCenter.summary.snoozed', 'Snoozed'),
-      rawValue: summary?.snoozed,
-      description: t('actionCenter.summary.snoozedHelp', 'Generated recommendations in the snoozed state.'),
+      value: summary?.snoozed,
+      Icon: Icons.clock,
     },
     {
-      metricId: 'count', occurrenceId: 'dismissed',
+      key: 'dismissed',
       label: t('actionCenter.summary.dismissed', 'Dismissed'),
-      rawValue: summary?.dismissed,
-      description: t('actionCenter.summary.dismissedHelp', 'Generated recommendations in the dismissed state.'),
+      value: summary?.dismissed,
+      Icon: Icons.error,
     },
-  ];
-  const operationalMetrics = useOperationalMetrics(metrics);
-  const labels: Record<DataStatus, string> = {
-    initial: t('actionCenter.summary.status.initial', 'Awaiting summary evidence'),
-    initialFailure: t('actionCenter.summary.status.initialFailure', 'Summary request failed'),
-    ok: t('actionCenter.summary.status.ok', 'Summary returned'),
-    stale: t('actionCenter.summary.status.stale', 'Retained summary'),
-    partial: t('actionCenter.summary.status.partial', 'Partial source coverage'),
-    unavailable: t('actionCenter.summary.status.unavailable', 'Summary unavailable'),
-  };
-  const coverageIncomplete = summary != null
-    && (providers.length === 0 || providers.some((provider) => provider.status !== 'available'));
-  const effectiveStatus = status === 'ok'
-    ? summary == null ? 'unavailable' : coverageIncomplete ? 'partial' : status
-    : status;
-  const scope = t(
-    'actionCenter.summary.scope',
-    '{{vehicle}} · Before priority, source, state, and pagination filters',
-    { vehicle: vehicleName ?? t('actionCenter.filters.allVehicles', 'All vehicles') },
-  );
-  const windowContext = t(
-    'actionCenter.summary.windowContext',
-    'Provider-specific evidence windows and limits apply; these counts are not an all-time total.',
-  );
+  ] as const;
 
   return (
-    <section aria-label={t('actionCenter.summary.label', 'Action center summary')}>
-      <OperationalBrief
-        compact
-        loading={loading}
-        eyebrow={t('actionCenter.summary.eyebrow', 'Decision inbox')}
-        title={t('actionCenter.summary.title', 'Decision queue overview')}
-        description={t('actionCenter.summary.description', 'Recommendation state and priority counts from generated evidence, not just the visible page.')}
-        statusLabel={labels[effectiveStatus]}
-        statusTone={effectiveStatus === 'initialFailure' ? 'danger'
-          : effectiveStatus === 'stale' || effectiveStatus === 'partial' ? 'warning' : 'neutral'}
-        metrics={operationalMetrics}
-        scope={scope}
-        freshness={generatedAt
-          ? t('actionCenter.summary.generatedAt', 'Generated {{date}}', { date: formatDateTime(generatedAt) })
-          : t('actionCenter.summary.generatedUnknown', 'Generation time unavailable')}
-        provenance={provenance}
-        narrative={{
-          whatChanged: scope,
-          whyItMatters: windowContext,
-          confidence: { label: 'not_scored', score: null, basis: [] },
-          likelyCause: null,
-          recommendedResponse: null,
-          limitations: [
-            windowContext,
-            ...(coverageIncomplete
-              ? [t('actionCenter.summary.coverageIncomplete', 'Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.')]
-              : []),
-          ],
-          evidence: [],
-          provenance: [{ source: t('actionCenter.summary.evidenceSource', 'Server-generated recommendation evidence'), method: provenance }],
-        }}
-      />
+    <section aria-label={t('actionCenter.summary.label', 'Action Center summary')}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {metrics.map(({ key, label, value, Icon }) => (
+          <GlassPanel key={key} padding="md" className="min-h-24">
+            <div className="flex items-center justify-between gap-2">
+              <MetricLabel>{label}</MetricLabel>
+              <Icon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            </div>
+            {loading ? (
+              <Skeleton className="mt-3 h-7 w-12" />
+            ) : (
+              <MetricValue className="mt-2">{value ?? 0}</MetricValue>
+            )}
+          </GlassPanel>
+        ))}
+      </div>
     </section>
   );
 }

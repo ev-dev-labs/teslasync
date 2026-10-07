@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { useSyncExternalStore, type ReactNode } from 'react';
@@ -27,11 +27,8 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown, opts?: Record<string, unknown>) => {
-        if (typeof fallbackOrOpts === 'string') {
-          return fallbackOrOpts.replace(/{{(\w+)}}/g, (match, name: string) =>
-            opts && name in opts ? String(opts[name]) : match);
-        }
+      t: (key: string, fallbackOrOpts?: unknown) => {
+        if (typeof fallbackOrOpts === 'string') return fallbackOrOpts;
         if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
           const o = fallbackOrOpts as Record<string, unknown>;
           if (typeof o.defaultValue === 'string') {
@@ -169,7 +166,6 @@ function aiEnabledSettings() {
 interface ControlledStream {
   push: (chunk: string) => Promise<void>;
   close: () => Promise<void>;
-  fail: (error: Error) => Promise<void>;
 }
 
 function makeControlledFetch(): {
@@ -191,10 +187,6 @@ function makeControlledFetch(): {
     },
     close: async () => {
       ref.ctrl?.close();
-      await Promise.resolve();
-    },
-    fail: async (error: Error) => {
-      ref.ctrl?.error(error);
       await Promise.resolve();
     },
   };
@@ -277,105 +269,6 @@ afterEach(() => {
 });
 
 describe('LiveLogsPage', () => {
-  it('uses the real compact Brief for raw client counts and retains captions and counters in Review details', async () => {
-    const { fetchImpl, stream } = makeControlledFetch();
-    renderPage(fetchImpl);
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled());
-    await act(async () => {
-      await stream.push('event: log\ndata: {"level":"info","message":"brief evidence"}\n\n');
-      await stream.push('event: drop\ndata: {"count":3}\n\n');
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await screen.findByText('brief evidence');
-    const brief = screen.getByTestId('live-logs-operational-brief');
-    expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    for (const key of ['visible', 'buffered', 'received']) {
-      const metric = brief.querySelector(`[data-operational-metric="${key}"]`);
-      expect(metric).toHaveAttribute('data-value-state', 'value');
-      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('1');
-    }
-    const drops = brief.querySelector('[data-operational-metric="drops"]');
-    expect(drops).toHaveAttribute('data-value-state', 'value');
-    expect(drops?.querySelector('[data-operational-value]')).toHaveTextContent('3');
-    for (const caption of ['After filters', 'max', 'Since mount', 'Buffer overflow', 'Server filter']) {
-      expect(brief).toHaveTextContent(caption);
-    }
-    const review = within(brief).getByRole('button', { name: 'Review details' });
-    review.focus();
-    expect(review).toHaveFocus();
-    fireEvent.click(review);
-    const drawer = await screen.findByRole('dialog', { name: 'Log stream summary details' });
-    expect(drawer).toHaveTextContent('Clear buffer also resets received and drop counters.');
-    expect(drawer).toHaveTextContent('The rolling buffer is capacity-limited; it is not durable replay or complete server history.');
-    expect(drawer).toHaveTextContent('Server filter');
-    fireEvent.keyDown(drawer, { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Log stream summary details' })).toBeNull());
-    expect(screen.getByText('brief evidence')).toBeInTheDocument();
-    expect(screen.getByTestId('livelogs-download-button')).toBeEnabled();
-    fireEvent.click(screen.getByTestId('livelogs-clear-button'));
-    await waitFor(() => {
-      for (const key of ['visible', 'buffered', 'received', 'drops']) {
-        expect(brief.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`)).toHaveTextContent('0');
-      }
-    });
-    await act(async () => { await stream.close(); });
-  });
-
-  it('keeps retained buffer counters and recovery controls when the SSE connection fails', async () => {
-    const { fetchImpl, stream } = makeControlledFetch();
-    renderPage(fetchImpl);
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled());
-    await act(async () => {
-      await stream.push('event: log\ndata: {"level":"info","message":"retained brief event"}\n\n');
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await screen.findByText('retained brief event');
-    await act(async () => { await stream.fail(new Error('brief connection failed')); });
-    const brief = screen.getByTestId('live-logs-operational-brief');
-    expect(brief).toHaveTextContent('Connection error');
-    expect(screen.getByTestId('livelogs-error')).toHaveTextContent('brief connection failed');
-    expect(brief.querySelector('[data-operational-metric="buffered"] [data-operational-value]')).toHaveTextContent('1');
-    expect(screen.getByText('retained brief event')).toBeInTheDocument();
-    expect(screen.getByTestId('livelogs-reconnect-button')).toBeEnabled();
-    expect(screen.getByTestId('livelogs-download-button')).toBeEnabled();
-  });
-
-  it('keeps the compact field preview and exposes every exact raw field through the keyboard-reachable full-event disclosure', async () => {
-    const { fetchImpl, stream } = makeControlledFetch();
-    renderPage(fetchImpl);
-    await waitFor(() => expect(fetchImpl).toHaveBeenCalled());
-    const payload = JSON.stringify({
-      level: 'info', message: 'rich evidence',
-      first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6,
-      seventh: 'this field was beyond the compact preview <script>escaped sentinel</script>',
-      eighth: 'x'.repeat(150),
-    });
-    await act(async () => {
-      await stream.push(`event: log\ndata: ${payload}\n\n`);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-    await screen.findByText('rich evidence');
-    expect(screen.getByText('+2')).toBeInTheDocument();
-    const disclosure = screen.getByRole('button', { name: 'Full log event' });
-    disclosure.focus();
-    expect(disclosure).toHaveFocus();
-    fireEvent.click(disclosure);
-    const evidence = await screen.findByRole('group', { name: 'Full log event' });
-    expect(evidence.querySelector('code')?.textContent).toBe(payload);
-    expect(evidence).toHaveTextContent('this field was beyond the compact preview');
-    expect(evidence).toHaveTextContent('x'.repeat(150));
-    expect(evidence.querySelector('script')).toBeNull();
-    expect(screen.getByRole('dialog', { name: 'Full log event' })).toBeInTheDocument();
-    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Full log event' }), { key: 'Escape' });
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Full log event' })).toBeNull());
-    expect(screen.getByText('rich evidence')).toBeInTheDocument();
-    expect(screen.getByTestId('livelogs-download-button')).toBeEnabled();
-    await act(async () => { await stream.close(); });
-  });
   it('commits a known vehicle to global scope only on blur or Enter', async () => {
     selectedVehicleState.vehicleId = 12;
     selectedVehicleState.vehicles = [{ id: 1 }, { id: 12 }];
@@ -449,15 +342,6 @@ describe('LiveLogsPage', () => {
       expect(screen.getByText(/hello world/)).toBeInTheDocument();
     });
     expect(screen.getByText(/second event/)).toBeInTheDocument();
-    expect(within(screen.getByRole('row', { name: /hello world/ })).getByText('Info')).toBeInTheDocument();
-    expect(within(screen.getByRole('row', { name: /second event/ })).getByText('Warn')).toBeInTheDocument();
-    expect(screen.queryByText('INFO')).not.toBeInTheDocument();
-    expect(screen.queryByText('WARN')).not.toBeInTheDocument();
-    const levelHeader = screen.getByRole('columnheader', { name: /^Level\b/ });
-    fireEvent.click(within(levelHeader).getByRole('button', { name: / filter$/ }));
-    const menu = screen.getByRole('dialog', { name: / filter$/ });
-    expect(within(menu).getByRole('checkbox', { name: 'Info' })).toBeInTheDocument();
-    expect(within(menu).getByRole('checkbox', { name: 'Warn' })).toBeInTheDocument();
 
     await act(async () => {
       await stream.close();

@@ -79,10 +79,6 @@ vi.mock('react-i18next', async () => {
 })
 
 import StatusApiDocsPage from './StatusApiDocsPage'
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
-}));
 
 /** The documented contract, in render order. The page derives its counts. */
 const DOCUMENTED_PATHS = [
@@ -148,9 +144,9 @@ describe('StatusApiDocsPage — overview & integrations', () => {
     renderPage()
 
     expect(screen.getByText('Base path')).toBeInTheDocument()
-    expect(screen.getByText('Content-type')).toBeInTheDocument()
+    expect(screen.getByText('Content-Type')).toBeInTheDocument()
     expect(
-      screen.getByText('ForwardAuth or authorization header'),
+      screen.getByText('ForwardAuth or Authorization header'),
     ).toBeInTheDocument()
     // The base path is documented both as an overview fact AND as the
     // `/status` endpoint path, so it appears at least twice.
@@ -270,7 +266,7 @@ describe('StatusApiDocsPage — navigation & footer', () => {
     renderPage()
 
     fireEvent.click(
-      screen.getByRole('button', { name: /Back to System status/i }),
+      screen.getByRole('button', { name: /Back to System Status/i }),
     )
 
     expect(navigateMock).toHaveBeenCalledWith('/system-status')

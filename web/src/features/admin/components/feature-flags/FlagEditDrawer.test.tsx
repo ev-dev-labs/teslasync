@@ -83,11 +83,11 @@ if (!window.matchMedia) {
 afterEach(() => cleanup());
 
 // ── Field / control accessors (accessible-name driven) ──
-const keyField = () => screen.getByLabelText(/Flag key/i) as HTMLInputElement;
+const keyField = () => screen.getByLabelText(/flag key/i) as HTMLInputElement;
 const valueField = () =>
   screen.getByLabelText(/value \(json\)/i) as HTMLTextAreaElement;
 const reasonField = () => screen.getByLabelText(/reason/i) as HTMLInputElement;
-const saveButton = () => screen.getByRole('button', { name: /Save flag/i });
+const saveButton = () => screen.getByRole('button', { name: /save flag/i });
 const cancelButton = () => screen.getByRole('button', { name: /^cancel$/i });
 
 interface SetupOverrides {
@@ -202,7 +202,7 @@ describe('FlagEditDrawer', () => {
 
     fillValid('feature.new', '{ not json', 'reason');
 
-    expect(screen.getByText(/Invalid JSON/i)).toBeInTheDocument();
+    expect(screen.getByText(/invalid json/i)).toBeInTheDocument();
     expect(saveButton()).toBeDisabled();
 
     // Clicking the disabled control must not commit.

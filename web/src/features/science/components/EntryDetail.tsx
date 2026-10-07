@@ -4,38 +4,26 @@ import type {
 import {
   Badge,
   Caption,
-  Table,
   Text
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { asList, unknown, useT } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
-  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const t = useT();
-  const kv = (label: string, obj?: Record<string, unknown>) => {
+  const kv = (obj?: Record<string, unknown>) => {
     if (!obj) return null;
     const rows = Object.entries(obj).filter(([, v]) => v != null);
     if (rows.length === 0) return null;
     return (
-      <Table aria-label={label}>
-        <tbody>
-          {rows.map(([k, v]) => (
-            <tr key={k}>
-              <th scope="row" className="font-normal">
-                <Text size="sm" color="secondary" mono>{k}</Text>
-              </th>
-              <td className={typeof v === 'number' ? 'text-right tabular-nums' : undefined}>
-                <Text size="sm" color="secondary" mono>
-                  {typeof v === 'number' ? fmtScientificNumber(v, 3) : String(v)}
-                </Text>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
+      <div className="space-y-0.5">
+        {rows.map(([k, v]) => (
+          <Text key={k} as="p" size="sm" color="secondary" mono>
+            {k}: {typeof v === 'number' ? fmtNumber(v, 3) : String(v)}
+          </Text>
+        ))}
+      </div>
     );
   };
   return (
@@ -43,12 +31,12 @@ export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
       <Text as="p" size="sm">{entry.hypothesis}</Text>
       <div className="flex flex-wrap gap-2">
         <Badge variant={entry.unknown ? 'warning' : 'success'} size="sm">
-          n={fmtNumber(entry.n)} · {entry.method} · {entry.ci_method}
+          n={fmtNumber(entry.n, 0)} · {entry.method} · {entry.ci_method}
         </Badge>
         {entry.holdout_frac != null ? (
           <Badge variant="neutral" size="sm">
-            {t('science.holdout', 'holdout')}: {fmtNumber(entry.holdout_frac * 100)}%
-            {entry.holdout_rmse != null ? ` RMSE ${fmtNumber(Number(entry.holdout_rmse))}` : ''}
+            {t('science.holdout', 'holdout')}: {fmtNumber(entry.holdout_frac * 100, 0)}%
+            {entry.holdout_rmse != null ? ` RMSE ${fmtNumber(Number(entry.holdout_rmse), 2)}` : ''}
           </Badge>
         ) : null}
         <Badge variant="neutral" size="sm">{entry.firmware_epoch || unknown(t)}</Badge>
@@ -61,13 +49,13 @@ export function EntryDetail({ entry }: { entry: ScienceNotebookEntry }) {
       </Text>
       <Text as="p" size="sm" color="secondary">
         {t('science.notebook.residual', 'Fit residual (mean / RMSE)')}:{' '}
-        {entry.residual_mean != null ? fmtScientificNumber(entry.residual_mean, 3) : unknown(t)} / {entry.residual_rmse != null ? fmtScientificNumber(entry.residual_rmse, 3) : unknown(t)}
+        {entry.residual_mean != null ? fmtNumber(entry.residual_mean, 3) : unknown(t)} / {entry.residual_rmse != null ? fmtNumber(entry.residual_rmse, 3) : unknown(t)}
       </Text>
       <Text as="p" size="sm" color="secondary">
         {t('science.notebook.recordId', 'Generated record')}: {entry.id}
       </Text>
-      {kv(t('science.notebook.parameters', 'Parameters'), entry.parameters)}
-      {kv(t('science.notebook.ci', 'Confidence intervals'), entry.ci)}
+      {kv(entry.parameters)}
+      {kv(entry.ci)}
       <Caption>{formatDateTime(entry.start)} → {formatDateTime(entry.end)}</Caption>
       <Text as="p" size="sm" color="secondary">{entry.honesty}</Text>
     </div>

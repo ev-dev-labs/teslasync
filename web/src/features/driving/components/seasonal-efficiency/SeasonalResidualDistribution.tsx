@@ -7,14 +7,12 @@ import { useTranslation } from 'react-i18next';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayIntensity, formatIntensityWhPerM, toDisplayIntensity } from './formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalResidualDistribution({
   analysis,
   state,
   units,
 }: SeasonalSectionProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const diagnosticTiles = [
     {
@@ -85,7 +83,7 @@ export function SeasonalResidualDistribution({
                 dataColumns={[
                   { key: 'key', label: t('seasonalEfficiency.residual.bin', 'Residual bin') },
                   { key: 'center', label: t('seasonalEfficiency.residual.center', 'Bin center'), format: (value) => formatDisplayIntensity(typeof value === 'number' ? value : null, units.unitPrefs) },
-                  { key: 'distanceShare', label: t('seasonalEfficiency.residual.distanceShare', 'Distance share (%)'), format: (value) => typeof value === 'number' && Number.isFinite(value) ? `${fmtNumber(value)}%` : '—' },
+                  { key: 'distanceShare', label: t('seasonalEfficiency.residual.distanceShare', 'Distance share (%)'), format: (value) => typeof value === 'number' && Number.isFinite(value) ? `${value.toFixed(1)}%` : '—' },
                   { key: 'samples', label: t('seasonalEfficiency.residual.samples', 'Samples') },
                 ]}
               >

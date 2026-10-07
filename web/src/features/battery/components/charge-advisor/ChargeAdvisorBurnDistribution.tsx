@@ -2,14 +2,12 @@ import { BarChart3, Sigma } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui';
-
+import { fmtPercent } from '@/lib/numberFormat';
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorBurnDistribution({ analysis, state }: ChargeAdvisorComponentProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const distribution = analysis.burnDistribution;
   const metrics = [
@@ -38,7 +36,7 @@ export function ChargeAdvisorBurnDistribution({ analysis, state }: ChargeAdvisor
           <div key={label} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <Text variant="caption">{label}</Text>
             <Text className="mt-1 text-lg font-semibold text-cyan-300">
-              {value == null ? '—' : fmtPercent(value)}
+              {value == null ? '—' : fmtPercent(value, 1)}
             </Text>
           </div>
         ))}

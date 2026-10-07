@@ -189,8 +189,6 @@ export function runtimeManifestOf(manifest) {
     missing: manifest.knownMissingKeys ?? [],
     detail,
     grouped,
-    ...(manifest.routeBundles ? { routes: manifest.routeBundles } : {}),
-    ...(manifest.composedNamespaces ? { composed: manifest.composedNamespaces } : {}),
   }
 }
 
@@ -210,13 +208,12 @@ export function completeNamespacesIn(catalog, shell) {
     .sort()
 }
 
-function loadableNamespaces(files, manifest) {
+function loadableNamespaces(files) {
   const loadable = new Map()
   for (const [name, contents] of files) {
     if (!name.startsWith('locale-')) continue
     const bundle = name.slice('locale-'.length, -'.json'.length)
     for (const [namespace, value] of Object.entries(JSON.parse(contents))) {
-      if (manifest.namespaceFallbackBundles[namespace] !== bundle) continue
       loadable.set(namespace, { bundle, value })
     }
   }
@@ -234,7 +231,7 @@ export function validateManifest(catalog, files, manifest, shadowedKeys = []) {
   const shell = JSON.parse(files.get('shell.json'))
   const runtime = JSON.parse(files.get('runtime-manifest.json'))
   const catalogLeaves = new Set(leafKeys(catalog))
-  const loadable = loadableNamespaces(files, manifest)
+  const loadable = loadableNamespaces(files)
   const errors = []
 
   for (const key of shadowedKeys) {
@@ -302,32 +299,6 @@ export function validateManifest(catalog, files, manifest, shadowedKeys = []) {
     const actual = new Set(leafKeys(entry.value, namespace))
     for (const key of leafKeys(catalog[namespace], namespace)) {
       if (!actual.has(key)) errors.push(`unreachable catalog key ${key}`)
-    }
-    for (const [bundle, keys] of Object.entries(manifest.featureRequiredKeys ?? {})) {
-      const file = files.get(`locale-${bundle}.json`)
-      const resource = file ? JSON.parse(file) : {}
-      for (const key of keys) {
-        if (getNested(shell, key) === undefined
-          && JSON.stringify(getNested(resource, key)) !== JSON.stringify(getNested(catalog, key))) {
-          errors.push(`feature closure key missing or inconsistent in ${bundle}: ${key}`)
-        }
-      }
-      const composed = Object.keys(resource).filter(
-        namespace => !manifest.bundles[bundle].includes(namespace),
-      ).sort()
-      for (const namespace of composed) {
-        for (const key of leafKeys(resource[namespace], namespace)) {
-          if (JSON.stringify(getNested(resource, key)) !== JSON.stringify(getNested(catalog, key))) {
-            errors.push(`composed catalog key inconsistent in ${bundle}: ${key}`)
-          }
-        }
-      }
-      if (JSON.stringify(composed) !== JSON.stringify(runtime.composed?.[bundle] ?? [])) {
-        errors.push(`runtime composed namespaces disagree with bundle ${bundle}`)
-      }
-    }
-    if (JSON.stringify(runtime.routes ?? {}) !== JSON.stringify(manifest.routeBundles ?? {})) {
-      errors.push('runtime route bundles disagree with the generated manifest')
     }
   }
   // The slim runtime projection must resolve exactly what the full manifest does.

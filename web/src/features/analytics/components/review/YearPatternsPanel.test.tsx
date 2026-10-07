@@ -131,7 +131,7 @@ describe('YearPatternsPanel — metric (km) rendering', () => {
     expect(screen.getByText('5 PM')).toBeInTheDocument();
 
     // Stats: cadence, distance/drive (km), efficiency (Wh/km).
-    expect(screen.getByText('5.50')).toBeInTheDocument();
+    expect(screen.getByText('5.5')).toBeInTheDocument();
     expect(screen.getByText('drives/week')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('km/drive avg')).toBeInTheDocument();
@@ -219,7 +219,7 @@ describe('YearPatternsPanel — null-safety', () => {
     expect(container.textContent).not.toContain('NaN');
     expect(container.textContent).not.toContain('undefined');
     // Cadence keeps one decimal; distance + efficiency collapse to "0".
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
     expect(screen.getAllByText('0')).toHaveLength(2);
   });
 });

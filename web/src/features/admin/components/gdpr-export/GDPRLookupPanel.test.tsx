@@ -55,7 +55,7 @@ function setup(over: SetupOverrides = {}) {
     <GDPRLookupPanel idInput={over.idInput ?? ''} onIdChange={onIdChange} onLookup={onLookup} />,
   );
   const input = screen.getByLabelText('Artifact ID') as HTMLInputElement;
-  const button = screen.getByRole('button', { name: /Look up/i });
+  const button = screen.getByRole('button', { name: /look up/i });
   return { ...utils, input, button, onIdChange, onLookup };
 }
 
@@ -130,7 +130,7 @@ describe('GDPRLookupPanel — change handling', () => {
     const onLookup = vi.fn();
     render(<StatefulHarness onLookup={onLookup} />);
     const input = screen.getByLabelText('Artifact ID') as HTMLInputElement;
-    const button = screen.getByRole('button', { name: /Look up/i });
+    const button = screen.getByRole('button', { name: /look up/i });
 
     // Starts empty → disabled.
     expect(input).toHaveValue('');
@@ -212,7 +212,7 @@ describe('GDPRLookupPanel — null-safety', () => {
     ).not.toThrow();
 
     const input = screen.getByLabelText('Artifact ID') as HTMLInputElement;
-    const button = screen.getByRole('button', { name: /Look up/i });
+    const button = screen.getByRole('button', { name: /look up/i });
     // `?? ''` keeps the control controlled + empty rather than uncontrolled.
     expect(input).toHaveValue('');
     expect(button).toBeDisabled();

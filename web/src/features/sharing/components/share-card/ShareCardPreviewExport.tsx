@@ -2,8 +2,7 @@ import { ImageDown, Share2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { Button, Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardCompositionProps } from './types';
 
@@ -22,24 +21,26 @@ export function ShareCardPreviewExport({
   return (
     <section
       data-testid="share-card-preview-export"
-      aria-label={t('shareCard.preview.aria', 'Share card preview and local SVG export')}
+      aria-label={t('shareCard.preview.aria', 'Share Card preview and local SVG export')}
     >
-      <LayoutCard
-        title={t('shareCard.preview.title', 'Full preview and export')}
-        description={t('shareCard.preview.subtitle', 'Accessible preview of the exact local SVG payload')}
-        actions={(
+      <GlassPanel className="min-h-[360px] p-4 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <PanelTitle>{t('shareCard.preview.title', 'Full preview and export')}</PanelTitle>
+            <Text as="p" variant="caption" className="mt-1">
+              {t('shareCard.preview.subtitle', 'Accessible preview of the exact local SVG payload')}
+            </Text>
+          </div>
           <Button
             type="button"
             variant="secondary"
-            wrapLabel
             onClick={onDownload}
             disabled={!svg}
           >
             <ImageDown className="h-4 w-4" aria-hidden="true" />
             {t('shareCard.preview.download', 'Download safe SVG')}
           </Button>
-        )}
-      >
+        </div>
         <ShareCardSectionBody state={state} skeletonHeight={300}>
           {!analysis.card.ready || !svg ? (
             <EmptyState
@@ -75,7 +76,7 @@ export function ShareCardPreviewExport({
             </div>
           )}
         </ShareCardSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

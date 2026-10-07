@@ -165,7 +165,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  const rendered = render(
+  return render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -174,62 +174,30 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   )
-  return { ...rendered, qc }
 }
 
 const statusCallCount = () =>
   mockedRequest.mock.calls.filter((c) => c[0] === '/gas-price/status').length
 
-const kpiRegion = () => screen.getByRole('region', { name: /Gas price summary/i })
+const kpiRegion = () => screen.getByRole('region', { name: /gas price summary/i })
 
 beforeEach(() => {
   mockedRequest.mockReset()
 })
 
-describe('GasPriceAutoPollPage retained sources', () => {
-  it('keeps status, configuration, history and trend after both feeds fail to refresh', async () => {
-    install()
-    const { qc } = renderPage()
-    await screen.findByText('Configuration')
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeInTheDocument())
-    install({ statusError: true, historyError: true })
-    await qc.invalidateQueries()
-    await waitFor(() => expect(qc.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
-    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
-    expect(screen.getAllByRole('heading', { name: 'Price trend' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1)
-    expect(screen.getByRole('button', { name: 'Poll now' })).toBeEnabled()
-  })
-})
-
 describe('GasPriceAutoPollPage — full render', () => {
-  it('uses a real price brief retaining source denominations, help and polling controls', async () => {
-    install()
-    renderPage()
-    const summary = screen.getByTestId('gas-price-summary')
-    await within(summary).findByText('Running')
-    expect(summary).toHaveAttribute('data-operational-brief')
-    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
-    expect(summary).toHaveTextContent('per gal')
-    expect(summary).toHaveTextContent('per kWh')
-    expect(summary).toHaveTextContent('Gasoline cost expressed as an equivalent price')
-    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
-    expect(screen.getByRole('dialog')).toHaveTextContent('history chart is a separate source')
-    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
-  })
-
   it('renders the header, poll action, and all four sections from live data', async () => {
     install()
     renderPage()
 
     // Header + primary action.
     expect(
-      screen.getByRole('heading', { name: 'Gas price auto-poll' }),
+      screen.getByRole('heading', { name: 'Gas Price Auto-Poll' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText('Automatically fetch US average gas prices from EIA'),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Poll Now' })).toBeInTheDocument()
 
     // KPI band resolves.
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
@@ -239,16 +207,16 @@ describe('GasPriceAutoPollPage — full render', () => {
     // Every section panel is present.
     expect(screen.getByText('Configuration')).toBeInTheDocument()
     expect(
-      screen.getAllByRole('heading', { name: 'Price trend' }).length,
+      screen.getAllByRole('heading', { name: 'Price Trend' }).length,
     ).toBeGreaterThan(0)
-    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument()
 
     // Trend chart draws (role=img wrapper) and the table lists rows.
     expect(
-      screen.getByRole('img', { name: /line chart of historical Gas prices/i }),
+      screen.getByRole('img', { name: /line chart of historical gas prices/i }),
     ).toBeInTheDocument()
     const historyPanel = screen
-      .getByRole('heading', { name: 'Price history' })
+      .getByRole('heading', { name: 'Price History' })
       .closest('[data-print-card]')
     expect(historyPanel).not.toBeNull()
     expect(within(historyPanel as HTMLElement).getByRole('table')).toBeInTheDocument()
@@ -262,7 +230,7 @@ describe('GasPriceAutoPollPage — KPI band states', () => {
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
     // The control panel also mirrors the running state (aria-checked switch).
-    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toHaveAttribute(
+    expect(screen.getByRole('switch', { name: 'Auto-Poll' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
@@ -284,7 +252,7 @@ describe('GasPriceAutoPollPage — KPI band states', () => {
     expect(within(kpiRegion()).getAllByText('—').length).toBeGreaterThanOrEqual(2)
     // Never-polled sentinel is rendered, not a broken date.
     expect(within(kpiRegion()).getByText('Never')).toBeInTheDocument()
-    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toHaveAttribute(
+    expect(screen.getByRole('switch', { name: 'Auto-Poll' })).toHaveAttribute(
       'aria-checked',
       'false',
     )
@@ -297,7 +265,7 @@ describe('GasPriceAutoPollPage — loading, error, empty', () => {
     const { container } = renderPage()
 
     // The page shell + action stay mounted; sections show skeletons.
-    expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Poll Now' })).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
     // No resolved data + no error surfaced yet.
     expect(screen.queryByText('Running')).toBeNull()
@@ -334,7 +302,7 @@ describe('GasPriceAutoPollPage — loading, error, empty', () => {
     expect(screen.getByText('No price history recorded yet.')).toBeInTheDocument()
     // With no rows the chart is NOT drawn.
     expect(
-      screen.queryByRole('img', { name: /line chart of historical Gas prices/i }),
+      screen.queryByRole('img', { name: /line chart of historical gas prices/i }),
     ).toBeNull()
   })
 })
@@ -345,7 +313,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
     renderPage()
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'Poll now' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Poll Now' }))
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -360,7 +328,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
     renderPage()
 
     await waitFor(() => expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument())
-    const btn = screen.getByRole('button', { name: 'Poll now' })
+    const btn = screen.getByRole('button', { name: 'Poll Now' })
     fireEvent.click(btn)
 
     await waitFor(() => expect(btn).toBeDisabled())
@@ -371,7 +339,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
     install({ status: makeStatus({ enabled: true }) })
     renderPage()
 
-    const toggle = await screen.findByRole('switch', { name: 'Auto-poll' })
+    const toggle = await screen.findByRole('switch', { name: 'Auto-Poll' })
     fireEvent.click(toggle)
 
     await waitFor(() =>
@@ -388,7 +356,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
 
     // The history table's pagination adds its own <select>, so target the
     // interval control by its accessible ("Poll Interval") name.
-    const select = await screen.findByRole('combobox', { name: /Poll interval/i })
+    const select = await screen.findByRole('combobox', { name: /poll interval/i })
     fireEvent.change(select, { target: { value: 'daily' } })
 
     await waitFor(() =>
@@ -408,7 +376,7 @@ describe('GasPriceAutoPollPage — history table', () => {
     install()
     renderPage()
 
-    const historyHeading = await screen.findByRole('heading', { name: 'Price history' })
+    const historyHeading = await screen.findByRole('heading', { name: 'Price History' })
     const historyPanel = historyHeading.closest('[data-print-card]')
     expect(historyPanel).not.toBeNull()
     const table = await within(historyPanel as HTMLElement).findByRole('table')

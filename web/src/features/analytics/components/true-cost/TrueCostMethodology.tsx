@@ -22,7 +22,7 @@ export function TrueCostMethodology({
   return (
     <section
       data-testid="tco-methodology"
-      aria-label={t('tco.methodology.aria', 'True cost methodology and limitations')}
+      aria-label={t('tco.methodology.aria', 'True Cost methodology and limitations')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-2 flex items-center gap-2">

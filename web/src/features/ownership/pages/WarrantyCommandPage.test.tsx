@@ -63,8 +63,7 @@ import {
   useCreateWarrantyClaim,
 } from '@/api/hooks/useOwnership';
 import WarrantyCommandPage from './WarrantyCommandPage';
-import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { Warranty, WarrantyCoverage, WarrantyOverview } from '@/types/ownership';
+import type { Warranty } from '@/types/ownership';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOverview = useWarrantyOverview as unknown as ReturnType<typeof vi.fn>;
@@ -89,8 +88,6 @@ function makeWarranty(overrides: Partial<Warranty> = {}): Warranty {
     currency: 'USD',
     notes: '',
     version: 1,
-    created_at: '2026-01-01T00:00:00Z',
-    updated_at: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -108,52 +105,6 @@ function makeQuery(data: unknown) {
 
 function makeMutation(overrides: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, variables: undefined, ...overrides };
-}
-
-function makeOverview(): WarrantyOverview {
-  const coverage: WarrantyCoverage = {
-    warranty: makeWarranty(),
-    active: true,
-    elapsed_s: 86400,
-    remaining_s: 31536000,
-    time_used_pct: 1,
-    distance_used_m: 1000,
-    distance_remaining_m: 191000,
-    distance_used_pct: 0.5,
-    observed_pace_m_per_s: null,
-    time_expiry_at: '2034-01-01T00:00:00Z',
-    distance_expiry_at: null,
-    projected_expiry_at: '2034-01-01T00:00:00Z',
-    binding_limit: 'time',
-    capacity_retention_pct: null,
-    capacity_floor_breach_at: null,
-    capacity_headroom_pct: null,
-    claim_window_closing_s: null,
-    readiness: [],
-    readiness_score: 80,
-    claims: [{
-      id: 91, warranty_id: 1, title: 'Observed warranty claim', status: 'submitted',
-      opened_at: '2026-02-01T00:00:00Z', closed_at: null, amount_minor: 12345,
-      evidence_note: 'Full claim evidence retained.',
-      created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-01T00:00:00Z',
-    }],
-    status: 'active',
-    narrative: 'Coverage governed by the entered contract.',
-  };
-  return {
-    vehicle_id: 7, as_of: '2026-02-01T00:00:00Z', odometer_m: 1000,
-    coverages: [coverage], active_count: 1, expiring_soon_count: 0,
-    next_expiry_at: '2034-01-01T00:00:00Z', total_claimed_minor: 12345,
-    currency: 'USD', evidence_bundle_hash: 'complete-warranty-digest',
-    quality: { status: 'sufficient', sample_count: 42, coverage_pct: 100, window_start: null, window_end: null, reasons: [] },
-    evidence: [],
-  };
-}
-
-function card(title: string): HTMLElement {
-  const element = screen.getByRole('heading', { name: title }).closest('[data-card]');
-  if (!(element instanceof HTMLElement)) throw new Error(`Missing card: ${title}`);
-  return element;
 }
 
 function renderPage() {
@@ -193,65 +144,6 @@ beforeEach(() => {
 });
 
 describe('WarrantyCommandPage — confirm-gated delete', () => {
-  it('uses the real coverage brief while keeping contract provenance, projected expiry and claim amounts', () => {
-    mockOverview.mockReturnValue(makeQuery(makeOverview()));
-    renderPage();
-    expectOperationalBand('Coverage posture', ['active', 'expiring', 'next', 'odometer', 'claimed']);
-    expect(summaryMetric('Coverage posture', 'active')).toHaveAttribute('data-value-state', 'value');
-    expect(summaryMetric('Coverage posture', 'expiring')).toHaveAttribute('data-value-state', 'value');
-    expect(summaryMetric('Coverage posture', 'claimed')).toHaveTextContent('$123.45');
-    expect(summaryMetric('Coverage posture', 'odometer')).toHaveTextContent('Derived from recorded drives');
-    fireEvent.click(within(card('Coverage posture')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('TeslaSync does not know your contract');
-    expect(screen.getByRole('dialog')).toHaveTextContent('Derived from recorded drives');
-    expect(mockRemove().mutate).not.toHaveBeenCalled();
-  });
-
-  it('keeps overview-owned claim history and amounts visible when the separate coverage register fails', () => {
-    mockOverview.mockReturnValue(makeQuery(makeOverview()));
-    mockWarranties.mockReturnValue({ ...makeQuery(undefined), error: new Error('register failed') });
-    renderPage();
-
-    const ledger = card('Claim ledger');
-    expect(within(ledger).getByText('Observed warranty claim')).toBeInTheDocument();
-    expect(within(ledger).getByText('$123.45')).toBeInTheDocument();
-    expect(within(ledger).getByText('Full claim evidence retained.')).toBeInTheDocument();
-    expect(within(ledger).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    expect(card('Coverage posture')).toHaveTextContent('$123.45');
-    expect(screen.getByText('complete-warranty-digest')).toBeInTheDocument();
-    expect(mockOverview).toHaveBeenCalledWith(7);
-    expect(mockWarranties).toHaveBeenCalledWith(7);
-    expect(mockClaim().mutate).not.toHaveBeenCalled();
-  });
-
-  it('marks a failed overview as unavailable claim history, not a successful empty register', () => {
-    const refetch = vi.fn();
-    mockOverview.mockReturnValue({ ...makeQuery(undefined), error: new Error('overview failed'), refetch });
-    renderPage();
-
-    expect(screen.getByText('Battery Shield')).toBeInTheDocument();
-    const ledger = card('Claim ledger');
-    expect(within(ledger).queryByText('No claims recorded yet.')).not.toBeInTheDocument();
-    fireEvent.click(within(ledger).getByRole('button', { name: 'Retry' }));
-    expect(refetch).toHaveBeenCalledOnce();
-  });
-
-  it('retains claim history with the overview retry, independently of a healthy register', () => {
-    const refetch = vi.fn();
-    const registerRefetch = vi.fn();
-    mockOverview.mockReturnValue({ ...makeQuery(makeOverview()), error: new Error('overview refresh failed'), refetch });
-    mockWarranties.mockReturnValue({ ...makeQuery({ items: [makeWarranty()] }), refetch: registerRefetch });
-    renderPage();
-
-    const ledger = card('Claim ledger');
-    expect(within(ledger).getByText('Observed warranty claim')).toBeInTheDocument();
-    expect(within(ledger).getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
-    fireEvent.click(within(ledger).getByRole('button', { name: 'Retry' }));
-    expect(refetch).toHaveBeenCalledOnce();
-    expect(registerRefetch).not.toHaveBeenCalled();
-    expect(within(card('Recorded coverages')).queryByText(/Previously loaded data remains visible/)).not.toBeInTheDocument();
-  });
-
   it('opens a danger confirm naming the coverage instead of deleting on click', () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));

@@ -91,10 +91,6 @@ import {
 } from '@/api/hooks/useIncidents';
 import { ToastProvider } from '@/components/feedback/Toast';
 import IncidentTimelinePage from './IncidentTimelinePage';
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
-}));
 
 const mockUseIncident = useIncident as unknown as ReturnType<typeof vi.fn>;
 const mockUsePatchIncident =
@@ -110,7 +106,7 @@ function baseIncident(overrides?: Partial<Incident>): Incident {
     title: 'API gateway intermittent 502s',
     description:
       'Customers report bursty 502 responses from the public API gateway.',
-    severity: 'Major',
+    severity: 'major',
     status: 'monitoring',
     source: 'auto',
     affected_components: ['api-gateway', 'edge-cache'],
@@ -202,23 +198,6 @@ beforeEach(() => {
 });
 
 describe('IncidentTimelinePage', () => {
-  it('retains incident updates and recovery actions when a background refresh fails', () => {
-    const retry = vi.fn();
-    mockUseIncident.mockReturnValue({
-      ...loadedQuery(baseIncident()),
-      isError: true,
-      error: new Error('refresh failed'),
-      refetch: retry,
-    });
-    renderAt();
-    expect(screen.getByRole('heading', { level: 1, name: 'API gateway intermittent 502s' })).toBeInTheDocument();
-    expect(screen.getByText('Restart completed. Watching error rate before resolving.')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Resolve' })).toBeEnabled();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
-    expect(retry).toHaveBeenCalledOnce();
-  });
-
   it('parses the route :id into a positive numeric id (invalid / 0 / negative → null)', () => {
     mockUseIncident.mockReturnValue(loadedQuery(undefined));
 
@@ -284,7 +263,7 @@ describe('IncidentTimelinePage', () => {
 
     // The error branch must win over the not-found empty state.
     expect(
-      screen.queryByText(/Incident Not found/i),
+      screen.queryByText(/Incident not found/i),
     ).not.toBeInTheDocument();
   });
 
@@ -293,9 +272,9 @@ describe('IncidentTimelinePage', () => {
 
     renderAt();
 
-    expect(screen.getByText(/Incident Not found/i)).toBeInTheDocument();
+    expect(screen.getByText(/Incident not found/i)).toBeInTheDocument();
     const link = screen.getByRole('link', {
-      name: /Back to System status/i,
+      name: /Back to System Status/i,
     });
     expect(link).toHaveAttribute('href', '/system-status');
   });

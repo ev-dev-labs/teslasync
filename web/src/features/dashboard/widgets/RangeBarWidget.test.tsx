@@ -7,20 +7,21 @@
  * of two layouts driven by `size`:
  *   • compact (cols === 1 && rows === 1): a single big primary-range figure with
  *     a "<unit> rated" (or "<unit> ideal") caption and no title;
- *   • full (anything larger): a primary range and a secondary range measurement
+ *   • full (anything larger): a "Rated Range" and an "Ideal Range" MetricBar
  *     plus an EPA-variance readout when BOTH ranges are known.
  *
  * What this file pins:
  *   - the SI-floor CONTRACT: `state.rated_range` / `state.ideal_range` arrive in
  *     METERS and are converted to the user's display unit exactly once — the
- *     both measurements are in the display unit, without an invented relative
- *     gauge ceiling; the km branch converts differently from the mi branch;
+ *     MetricBar `value` AND `max` are both in the display unit (a bug that left
+ *     `max` in SI metres would collapse every bar to ~0%), and the km branch
+ *     converts differently from the mi branch;
  *   - the LOADING fix — a hardening pin so the widget shows a skeleton while the
  *     *vehicle list itself* loads (previously `loading` only watched the state
  *     query, so at id 0 the disabled state query is not "loading" and the widget
  *     flashed the "No range data" empty state before any vehicle resolved);
  *   - the EMPTY state (never a blank panel) for an unresolved snapshot, a
- *     null `rated_range`/`ideal_range`; real zero readings stay visible;
+ *     both-ranges-zero snapshot, and null `rated_range`/`ideal_range`;
  *   - the EPA VARIANCE branch — the sign ("+"/"") and the null-guard that hides
  *     the readout when either side is unknown (no divide-by-zero, no "±0%");
  *   - the COMPACT primary-range fallback fix — prefer the rated figure, but fall
@@ -31,9 +32,10 @@
  *     the title heading (present in full, absent in compact).
  *
  * Strategy: `@/api/hooks/useVehicles` is the network boundary and is fully
- * controllable via hoisted mocks. The old `MetricBar` has a prop-recording
- * spy to ensure it is not used for an arbitrary largest-relative indicator.
- * SI→display derivation is asserted through visible values. `useUnits` is mocked
+ * controllable via hoisted mocks. `MetricBar` is stubbed with a prop-recording
+ * spy that also mirrors its label/sublabel into the DOM, so the widget's own
+ * SI→display derivation is observable both numerically (via the spy) and
+ * visually (via queries) without rendering framer-motion. `useUnits` is mocked
  * so the distance preference is deterministic. `react-i18next` echoes each
  * `t(key, fallback)` fallback (interpolating `{{var}}`) so assertions read
  * against English copy. `DataFreshness`'s display hooks are stubbed so the
@@ -179,8 +181,6 @@ interface StateOverrides {
   isFetching?: boolean;
   isStale?: boolean;
   isError?: boolean;
-  error?: unknown;
-  fetchStatus?: 'idle' | 'fetching' | 'paused';
   dataUpdatedAt?: number;
   refetch?: () => void;
 }
@@ -216,6 +216,11 @@ function renderWidget(size: WidgetSize = FULL, vehicleId?: number) {
   );
 }
 
+/** The props the widget handed the (mocked) MetricBar with the given label. */
+function metricBarProps(label: string): MetricBarProps | undefined {
+  return metricBarSpy.mock.calls.map((c) => c[0] as MetricBarProps).find((p) => p.label === label);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   setVehicles([makeVehicle()]);
@@ -226,22 +231,6 @@ beforeEach(() => {
 // ── Loading & empty states ────────────────────────────────────────────────────
 
 describe('RangeBarWidget — loading & empty states', () => {
-  it('shows an initial error without presenting it as an empty range', () => {
-    setState({ state: undefined, isError: true, error: new Error('offline') });
-    renderWidget();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No range data')).toBeNull();
-  });
-
-  it('retains both range readings and variance on a cached refresh failure', () => {
-    setState({ state: makeState(), isError: true, error: new Error('transient') });
-    renderWidget();
-    expect(screen.getByText('300.00')).toBeInTheDocument();
-    expect(screen.getByText('350.00 mi')).toBeInTheDocument();
-    expect(screen.getByText('+16.67%')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
   it('renders only a skeleton (no bars, no empty state) while the vehicle state loads', () => {
     setState({ isLoading: true, state: undefined });
     const { container } = renderWidget(FULL);
@@ -271,39 +260,47 @@ describe('RangeBarWidget — loading & empty states', () => {
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
 
-  it('keeps genuine zero ranges visible rather than reporting missing data', () => {
+  it('shows the empty state when a resolved snapshot reports zero rated AND zero ideal range', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: 0 }) });
     renderWidget(FULL);
 
-    expect(screen.queryByText('No range data')).toBeNull();
-    expect(screen.getByText('0.00')).toBeInTheDocument();
-    expect(screen.getByText('0.00 mi')).toBeInTheDocument();
+    expect(screen.getByText('No range data')).toBeInTheDocument();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
 
-  it('renders range measurements without inventing a largest-relative gauge ceiling', () => {
+  it('renders the range bars (not the empty state) once a snapshot with range resolves', () => {
     setState({ state: makeState() });
     renderWidget(FULL);
 
-    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Rated Range')).toBeInTheDocument();
     expect(screen.queryByText('No range data')).toBeNull();
-    expect(metricBarSpy).not.toHaveBeenCalled();
-    expect(screen.queryByRole('meter')).toBeNull();
+    expect(metricBarSpy).toHaveBeenCalledTimes(2);
   });
 });
 
 // ── Full layout: SI→display conversion ────────────────────────────────────────
 
 describe('RangeBarWidget — full layout unit conversion', () => {
-  it('converts SI metres to miles for both range readings exactly once', () => {
+  it('converts SI metres to miles for BOTH the rated and ideal MetricBars', () => {
     setUnits('mi');
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('300.00')).toBeInTheDocument();
-    expect(screen.getByText('mi')).toBeInTheDocument();
-    expect(screen.getByText('350.00 mi')).toBeInTheDocument();
-    expect(screen.queryByRole('meter')).toBeNull();
+    const rated = metricBarProps('Rated Range');
+    const ideal = metricBarProps('Ideal Range');
+
+    // value AND max are in DISPLAY units (miles). A regression that left `max`
+    // in SI metres (~563 270) would collapse both bars to ~0%.
+    expect(rated?.value).toBeCloseTo(300, 6);
+    expect(rated?.max).toBeCloseTo(350, 6);
+    expect(ideal?.value).toBeCloseTo(350, 6);
+    expect(ideal?.max).toBeCloseTo(350, 6);
+    expect(rated?.max).not.toBeCloseTo(mi(350), 0);
+
+    expect(rated?.color).toBe('#22d3ee');
+    expect(ideal?.color).toBe('#a78bfa');
+    expect(screen.getByText('300 mi')).toBeInTheDocument();
+    expect(screen.getByText('350 mi')).toBeInTheDocument();
   });
 
   it('converts to kilometres (a different divisor) when the distance preference is km', () => {
@@ -311,9 +308,12 @@ describe('RangeBarWidget — full layout unit conversion', () => {
     setState({ state: makeState({ rated_range: km(400), ideal_range: km(360) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('400.00')).toBeInTheDocument();
-    expect(screen.getByText('km')).toBeInTheDocument();
-    expect(screen.getByText('360.00 km')).toBeInTheDocument();
+    expect(metricBarProps('Rated Range')?.value).toBeCloseTo(400, 6);
+    expect(metricBarProps('Ideal Range')?.value).toBeCloseTo(360, 6);
+    // max is the larger of the two (rated) in km.
+    expect(metricBarProps('Rated Range')?.max).toBeCloseTo(400, 6);
+    expect(screen.getByText('400 km')).toBeInTheDocument();
+    expect(screen.getByText('360 km')).toBeInTheDocument();
   });
 });
 
@@ -326,7 +326,7 @@ describe('RangeBarWidget — EPA variance', () => {
 
     // (350 - 300) / 300 = +16.66…% → "+16.7%"
     expect(screen.getByText('EPA variance')).toBeInTheDocument();
-    expect(screen.getByText('+16.67%')).toBeInTheDocument();
+    expect(screen.getByText('+16.7%')).toBeInTheDocument();
   });
 
   it('shows a negative (unsigned "-") variance when ideal is below rated', () => {
@@ -335,14 +335,14 @@ describe('RangeBarWidget — EPA variance', () => {
     renderWidget(FULL);
 
     // (360 - 400) / 400 = -10% → "-10.0%"
-    expect(screen.getByText('-10.00%')).toBeInTheDocument();
+    expect(screen.getByText('-10.0%')).toBeInTheDocument();
   });
 
   it('hides the variance readout when the ideal range is unknown (no divide-by-zero)', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: 0 }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('Rated Range')).toBeInTheDocument();
     expect(screen.queryByText('EPA variance')).toBeNull();
   });
 
@@ -350,7 +350,7 @@ describe('RangeBarWidget — EPA variance', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: mi(300) }) });
     renderWidget(FULL);
 
-    expect(screen.getByText('Ideal range')).toBeInTheDocument();
+    expect(screen.getByText('Ideal Range')).toBeInTheDocument();
     expect(screen.queryByText('EPA variance')).toBeNull();
   });
 });
@@ -362,9 +362,8 @@ describe('RangeBarWidget — compact layout', () => {
     setState({ state: makeState({ rated_range: mi(300), ideal_range: mi(350) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('300.00')).toBeInTheDocument();
-    expect(screen.getByText('mi')).toBeInTheDocument();
-    expect(screen.getByText('Rated range')).toBeInTheDocument();
+    expect(screen.getByText('300')).toBeInTheDocument();
+    expect(screen.getByText('mi rated')).toBeInTheDocument();
     expect(screen.queryByRole('heading')).toBeNull();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
@@ -375,10 +374,9 @@ describe('RangeBarWidget — compact layout', () => {
     setState({ state: makeState({ rated_range: 0, ideal_range: mi(280) }) });
     renderWidget(COMPACT);
 
-    expect(screen.getByText('280.00')).toBeInTheDocument();
-    expect(screen.getByText('mi')).toBeInTheDocument();
-    expect(screen.getByText('Ideal range')).toBeInTheDocument();
-    expect(screen.queryByText('Rated range')).toBeNull();
+    expect(screen.getByText('280')).toBeInTheDocument();
+    expect(screen.getByText('mi ideal')).toBeInTheDocument();
+    expect(screen.queryByText('mi rated')).toBeNull();
   });
 });
 
@@ -411,7 +409,7 @@ describe('RangeBarWidget — vehicle resolution & hook contract', () => {
 // ── Null safety ───────────────────────────────────────────────────────────────
 
 describe('RangeBarWidget — null safety', () => {
-  it('keeps null/undefined ranges unknown and preserves both measurement sections', () => {
+  it('treats null/undefined rated_range and ideal_range as 0 and shows the empty state', () => {
     setState({
       state: makeState({
         rated_range: undefined as unknown as number,
@@ -421,8 +419,6 @@ describe('RangeBarWidget — null safety', () => {
     renderWidget(FULL);
 
     expect(screen.getByText('No range data')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.queryByText('0')).toBeNull();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });
 });
@@ -434,7 +430,7 @@ describe('RangeBarWidget — interactions & a11y', () => {
     const q = setState({ state: makeState() });
     renderWidget(FULL);
 
-    const refresh = screen.getAllByRole('button', { name: /^Refresh/i })[0];
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     expect(q.refetch).toHaveBeenCalledTimes(1);

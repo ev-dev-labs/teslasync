@@ -2,25 +2,23 @@ import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRunTwinLab } from '@/api/hooks/useAdvancedIntelligence';
 import {
-  Bar, BarChart, CartesianGrid, CHART_COLORS,
+  Bar, BarChart, CartesianGrid, ChartContainer, CHART_COLORS,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { StatCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { ChartCard, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { TwinScenarioInput } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, TwinScenarioForm } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 
 const createScenario = (index: number, name: string): TwinScenarioInput => ({
   name,
@@ -32,7 +30,6 @@ const createScenario = (index: number, name: string): TwinScenarioInput => ({
 });
 
 export default function TwinLabPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -41,7 +38,7 @@ export default function TwinLabPage() {
     createScenario(0, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 1 })),
     createScenario(1, t('advancedIntelligence.twin.form.scenario', 'Scenario {{number}}', { number: 2 })),
   ]);
-  usePageTitle(t('advancedIntelligence.twin.title', 'Twin lab'));
+  usePageTitle(t('advancedIntelligence.twin.title', 'Twin Lab'));
 
   const updateScenario = (index: number, patch: Partial<TwinScenarioInput>) => {
     setScenarios((current) => current.map((scenario, itemIndex) =>
@@ -55,23 +52,6 @@ export default function TwinLabPage() {
   };
 
   const result = mutation.data;
-  const summaryMetrics: readonly StatMetric[] = [
-    { occurrenceId: 'model', metricId: 'text', rawValue: result?.model_name,
-      label: t('advancedIntelligence.twin.baseline.model', 'Model'),
-      description: t('advancedIntelligence.twin.brief.model', 'Source-provided model name from this simulation result.') },
-    { occurrenceId: 'efficiency', metricId: 'efficiency', rawValue: result?.baseline.efficiency_wh_per_m,
-      label: t('advancedIntelligence.twin.baseline.efficiency', 'Efficiency'),
-      description: t('advancedIntelligence.twin.brief.efficiency', 'Calibrated energy intensity in preferred energy-per-distance units; missing calibration is not zero consumption.'),
-      display: { formatter: (raw, preferences) => ({
-        value: formatEfficiencyFromSI(raw, preferences.units), unit: '',
-      }) } },
-    { occurrenceId: 'usable-battery', metricId: 'energy', rawValue: result?.baseline.usable_battery_wh,
-      label: t('advancedIntelligence.twin.baseline.capacity', 'Usable battery'),
-      description: t('advancedIntelligence.twin.brief.capacity', 'Returned usable battery estimate for the calibrated baseline.') },
-    { occurrenceId: 'calibration-samples', metricId: 'count', rawValue: result?.baseline.calibration_sample_count,
-      label: t('advancedIntelligence.twin.baseline.samples', 'Calibration samples'),
-      description: t('advancedIntelligence.twin.brief.samples', 'Calibration sample count for this model, not scenario count or confidence.') },
-  ];
   const chartData = useMemo(() => (result?.scenarios ?? []).map((scenario) => ({
     name: scenario.name,
     low: scenario.range_low_m == null
@@ -83,8 +63,8 @@ export default function TwinLabPage() {
   })), [result, units.unitPrefs.distance]);
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.twin.title', 'Twin lab')}
+    <PageContainer
+      title={t('advancedIntelligence.twin.title', 'Twin Lab')}
       subtitle={t(
         'advancedIntelligence.twin.subtitle',
         'Compare calibrated, vehicle-specific counterfactuals with explicit uncertainty.',
@@ -130,33 +110,40 @@ export default function TwinLabPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <AnalysisBrief
-          id="advanced-intelligence-twin-brief"
+        <InsightPanel
           title={t('advancedIntelligence.twin.baseline.title', 'Calibrated baseline')}
-          description={t('advancedIntelligence.twin.brief.description', 'Vehicle-specific calibration returned by the simulation, with source measurements and uncertainty kept separate from real-world guarantees.')}
-          metrics={summaryMetrics}
-          vehicleId={result?.vehicle_id ?? vehicleId}
-          hasResult={result != null}
-          pending={mutation.isPending}
-          error={mutation.error}
-          quality={result?.data_quality}
-          evidence={result?.evidence}
-          limitations={result?.limitations}
-          generatedAt={result?.generated_at}
-          provenance={t('advancedIntelligence.twin.brief.source', 'Calibrated twin simulation')}
+          empty={!result}
           emptyMessage={t(
             'advancedIntelligence.twin.baseline.empty',
             'Run scenarios to view the calibrated baseline.',
           )}
-        />
+        >
+          <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={4}>
+            <StatCard
+              label={t('advancedIntelligence.twin.baseline.model', 'Model')}
+              value={result?.model_name ?? null}
+            />
+            <StatCard
+              label={t('advancedIntelligence.twin.baseline.efficiency', 'Efficiency')}
+              value={result
+                ? formatEfficiencyFromSI(result.baseline.efficiency_wh_per_m, units.unitPrefs)
+                : null}
+            />
+            <StatCard
+              label={t('advancedIntelligence.twin.baseline.capacity', 'Usable battery')}
+              value={units.formatEnergy(result?.baseline.usable_battery_wh)}
+            />
+            <StatCard
+              label={t('advancedIntelligence.twin.baseline.samples', 'Calibration samples')}
+              value={result ? fmtNumber(result.baseline.calibration_sample_count, 0) : null}
+            />
+          </Grid>
+        </InsightPanel>
       </FadeIn>
 
       <FadeIn delay={0.1}>
         {/* chart-legend-audit:skip uncertainty bounds and estimate form one modeled interval and must remain visible together */}
-        <ChartCard
-          size="standard"
-          toolbar
-          exportable
+        <ChartContainer
           title={t('advancedIntelligence.twin.uncertainty.title', 'Range-effect uncertainty comparison')}
           subtitle={t(
             'advancedIntelligence.twin.uncertainty.subtitle',
@@ -188,7 +175,7 @@ export default function TwinLabPage() {
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyState /* no-action: the scenario add/remove controls above this chart are the trigger surface; uncertainty bars appear once at least two scenarios have supported results. */ message={t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')} />}
-        </ChartCard>
+        </ChartContainer>
       </FadeIn>
 
       <FadeIn delay={0.15}>
@@ -207,7 +194,7 @@ export default function TwinLabPage() {
                 {(scenario.sensitivity_drivers ?? []).map((driver) => (
                   <div key={driver.driver} className="mt-2 flex justify-between gap-3 text-sm">
                     <span className="text-[var(--text-muted)]">{driver.driver}</span>
-                    <span>{fmtNumber(driver.effect_pct)}%</span>
+                    <span>{fmtNumber(driver.effect_pct, 1)}%</span>
                   </div>
                 ))}
               </div>
@@ -227,6 +214,6 @@ export default function TwinLabPage() {
           ]}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

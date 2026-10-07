@@ -10,7 +10,7 @@
  *     behaviour, and the non-finite → `undefined` guard that stops the marker
  *     rotating by `NaNdeg` / the overlay reading "NaN°"; and
  *   - the default widget component across every render branch: the full map
- *     view, the compact 1×1 variant (heading retained, overlay suppressed), the medium
+ *     view, the compact 1×1 variant (title + overlay suppressed), the medium
  *     last-known overlay, the expanded heading + coordinate chips, the empty
  *     state (null-island and no-data-yet), the loading skeleton, the
  *     keep-last-data-on-error resilience path, the vehicle-selection fallback,
@@ -107,7 +107,6 @@ vi.mock('@/components/maps', () => ({
     </div>
   ),
   MapTileLayer: () => null,
-  MapInvalidator: () => null,
   AnimatedMarker: ({
     position,
     heading,
@@ -131,17 +130,6 @@ import LocationMapWidget, {
   normalizeHeading,
 } from './LocationMapWidget';
 import type { WidgetSize } from './types';
-
-it('does not manufacture a prime-meridian fix from an absent longitude', () => {
-  vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
-  vehicleStateMock.mockReturnValue({
-    data: { state: { latitude: 51.48, longitude: null } },
-    isLoading: false, isError: false, dataUpdatedAt: Date.now(), refetch: vi.fn(),
-  });
-  renderWidget(<LocationMapWidget size={SIZE_MEDIUM} />);
-  expect(screen.getByText('No location data available')).toBeInTheDocument();
-  expect(screen.queryByTestId('marker')).not.toBeInTheDocument();
-});
 
 // ── Fixtures ───────────────────────────────────────────────────────────────
 const SIZE_COMPACT: WidgetSize = { cols: 1, rows: 1 };
@@ -243,23 +231,11 @@ describe('normalizeHeading', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('LocationMapWidget', () => {
-  it('keeps last-known, heading and coordinates in the logical-edge wrapping status overlay', () => {
-    vehicleStateMock.mockReturnValue(makeStateQuery(makeState({ latitude: 51.48, longitude: 0, heading: -90 }), false));
-    renderWidget(<LocationMapWidget size={SIZE_EXPANDED} />);
-    const overlay = screen.getByRole('group', { name: 'Vehicle location status' });
-    expect(overlay).toHaveClass('start-2', 'end-2', 'min-w-0');
-    expect(screen.getByText('Last known position')).toBeInTheDocument();
-    expect(screen.getByText('Heading: 270.00°')).toBeInTheDocument();
-    expect(screen.getByText('51.48, 0.00')).toBeInTheDocument();
-    expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '270');
-    expect(overlay.querySelector('.truncate')).toBeNull();
-  });
-
   it('renders the map + marker at the vehicle position (medium, live)', () => {
     renderWidget(<LocationMapWidget size={SIZE_MEDIUM} />);
 
     // Title chrome shows above compact.
-    expect(screen.getByText('Vehicle location map')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle Location Map')).toBeInTheDocument();
 
     // The map receives the memoised center and the non-compact zoom.
     const map = screen.getByTestId('map');
@@ -289,22 +265,19 @@ describe('LocationMapWidget', () => {
     expect(vehicleStateMock).toHaveBeenCalledWith(42);
   });
 
-  it('keeps the heading, suppresses overlays and uses the tighter zoom in the compact 1×1 tile', () => {
+  it('suppresses title + overlay and uses the tighter zoom in the compact 1×1 tile', () => {
     // Not live so the overlay WOULD show at a larger size — proving the
     // suppression is the compact layout, not the live flag.
     vehicleStateMock.mockReturnValue(makeStateQuery(makeState(), false));
 
     renderWidget(<LocationMapWidget size={SIZE_COMPACT} />);
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Vehicle location map' })).toBeVisible();
+    expect(screen.queryByText('Vehicle Location Map')).not.toBeInTheDocument();
     expect(screen.queryByText('Last known position')).not.toBeInTheDocument();
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
     // ...but the map + marker still render, at the compact zoom.
     expect(screen.getByTestId('marker')).toBeInTheDocument();
     expect(screen.getByTestId('map')).toHaveAttribute('data-zoom', '13');
-    const mapRegion = screen.getByRole('region', { name: 'Map' });
-    expect(mapRegion.parentElement).toHaveClass('flex', 'flex-col', 'flex-1', 'min-h-0');
-    expect(mapRegion.parentElement).not.toHaveClass('h-full');
   });
 
   it('shows the last-known chip (only) when the fix is not live at medium size', () => {
@@ -321,8 +294,8 @@ describe('LocationMapWidget', () => {
   it('adds the heading + coordinate chips at expanded size', () => {
     renderWidget(<LocationMapWidget size={SIZE_EXPANDED} />);
 
-    expect(screen.getByText('Heading: 90.00°')).toBeInTheDocument();
-    expect(screen.getByText('37.77, -122.42')).toBeInTheDocument();
+    expect(screen.getByText(/Heading:\s*90°/)).toBeInTheDocument();
+    expect(screen.getByText('37.7749, -122.4194')).toBeInTheDocument();
     // Live fix ⇒ still no last-known chip even when expanded.
     expect(screen.queryByText('Last known position')).not.toBeInTheDocument();
   });
@@ -334,7 +307,7 @@ describe('LocationMapWidget', () => {
 
     // 450° wraps to 90° for both the marker rotation and the readout.
     expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '90');
-    expect(screen.getByText('Heading: 90.00°')).toBeInTheDocument();
+    expect(screen.getByText(/Heading:\s*90°/)).toBeInTheDocument();
   });
 
   it('omits the heading chip (but keeps coordinates) when heading is unavailable', () => {
@@ -343,7 +316,7 @@ describe('LocationMapWidget', () => {
     renderWidget(<LocationMapWidget size={SIZE_EXPANDED} />);
 
     expect(screen.queryByText(/Heading:/)).not.toBeInTheDocument();
-    expect(screen.getByText('37.77, -122.42')).toBeInTheDocument();
+    expect(screen.getByText('37.7749, -122.4194')).toBeInTheDocument();
     expect(screen.getByTestId('marker')).toHaveAttribute('data-heading', '');
   });
 

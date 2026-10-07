@@ -10,7 +10,6 @@ import { Badge, Column, DataTable } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useAuditLog } from '../hooks/useAuditLog';
-import { PackRepositorySource } from './PackRepositorySource';
 import type { AuditAction, AuditLogEntry } from '../lib/auditLog';
 
 const ACTION_VARIANT: Record<AuditAction, 'info' | 'success' | 'warning' | 'danger' | 'neutral'> = {
@@ -36,23 +35,18 @@ export function AuditLogPanel() {
   const columns: Column<AuditLogEntry>[] = [
     {
       key: 'timestamp',
-      filterValue: (r) => r.timestampIso,
-      filterValueLabel: (_value, r) => formatDateTime(r.timestampIso),
       header: t('intelPacks.audit.colWhen', 'When'),
       render: (r) => <span className="text-xs text-[var(--text-muted)] whitespace-nowrap">{formatDateTime(r.timestampIso)}</span>,
       visibleOnMobile: true,
     },
     {
       key: 'action',
-      filterValue: (r) => r.action,
       header: t('intelPacks.audit.colAction', 'Action'),
       render: (r) => <Badge variant={ACTION_VARIANT[r.action] ?? 'neutral'} size="sm">{r.action}</Badge>,
       visibleOnMobile: true,
     },
     {
       key: 'pack',
-      filterValue: (r) => r.packId,
-      filterValueLabel: (_value, r) => r.packName || r.packId,
       header: t('intelPacks.audit.colPack', 'Pack'),
       render: (r) => <span className="text-sm text-[var(--text-primary)]">{r.packName || r.packId}</span>,
     },
@@ -63,24 +57,21 @@ export function AuditLogPanel() {
     },
   ];
 
+  if (rows.length === 0) {
+    // no-action: transient — this log fills automatically as install/uninstall/rollback actions occur; there is no user action to populate an empty audit trail.
+    return <EmptyState icon={<ScrollText className="h-10 w-10" />} message={t('intelPacks.audit.empty', 'No actions have been recorded yet.')} />;
+  }
+
   return (
-    <PackRepositorySource query={auditQuery} label={t('intelPacks.tabs.audit', 'Audit log')}>
-      {rows.length === 0 ? (
-        // no-action: actions in the other marketplace panels populate the local log.
-        <EmptyState icon={<ScrollText className="h-10 w-10" />} message={t('intelPacks.audit.empty', 'No actions have been recorded yet.')} />
-      ) : (
-        <DataTable
-          enableValueFilters
-          tableId="intelligence-packs:audit-log"
-          columns={columns}
-          data={rows}
-          keyExtractor={(r) => r.id}
-          pagination
-          mobileColumns={['timestamp', 'action']}
-          emptyMessage={t('intelPacks.audit.empty', 'No actions have been recorded yet.')}
-          name="IntelligencePacksAuditLog"
-        />
-      )}
-    </PackRepositorySource>
+    <DataTable
+      tableId="intelligence-packs:audit-log"
+      columns={columns}
+      data={rows}
+      keyExtractor={(r) => r.id}
+      pagination
+      mobileColumns={['timestamp', 'action']}
+      emptyMessage={t('intelPacks.audit.empty', 'No actions have been recorded yet.')}
+      name="IntelligencePacksAuditLog"
+    />
   );
 }

@@ -359,20 +359,20 @@ describe('MaintenancePage', () => {
 
     // Page shell + every panel heading.
     expect(screen.getByRole('heading', { level: 1, name: 'Maintenance' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Maintenance items/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Service projections/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Estimated annual cost', exact: true })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Maintenance by category/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Service records/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Maintenance Items/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Service Projections/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Estimated Annual Cost/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Maintenance by Category/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Service Records/i })).toBeInTheDocument();
 
     // KPI band — the raw-status reduce, scoped to its a11y landmark so the
     // labels don't collide with the status badges elsewhere on the page.
     const kpis = within(screen.getByRole('region', { name: 'Maintenance summary' }));
-    expect(kpis.getByText('Total items', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
-    expect(kpis.getByText('Overdue', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
-    expect(kpis.getByText('Due soon', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
-    expect(kpis.getByText('Healthy', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
-    expect(kpis.getByText('Completed', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
+    expect(kpis.getByText('Total Items')).toBeInTheDocument();
+    expect(kpis.getByText('Overdue')).toBeInTheDocument();
+    expect(kpis.getByText('Due Soon')).toBeInTheDocument();
+    expect(kpis.getByText('Healthy')).toBeInTheDocument();
+    expect(kpis.getByText('Completed')).toBeInTheDocument();
     expect(kpis.getByText('4')).toBeInTheDocument(); // total items
     expect(kpis.getByText('3')).toBeInTheDocument(); // distinct categories
 
@@ -386,8 +386,8 @@ describe('MaintenancePage', () => {
     expect(screen.getAllByText('30 km').length).toBeGreaterThanOrEqual(1);
 
     // Cost stats (deterministic scalar branches).
-    expect(screen.getByText('$200.00')).toBeInTheDocument(); // total spent
-    expect(screen.getByText('$100.00')).toBeInTheDocument(); // avg / service (200 / 2)
+    expect(screen.getByText('$200')).toBeInTheDocument(); // total spent
+    expect(screen.getByText('$100')).toBeInTheDocument(); // avg / service (200 / 2)
 
     // Service-records table cells.
     expect(screen.getByText('Annual inspection')).toBeInTheDocument();
@@ -448,7 +448,7 @@ describe('MaintenancePage', () => {
 
     expect(screen.getByRole('heading', { level: 1, name: 'Maintenance' })).toBeInTheDocument();
     // KPI band collapses to its skeleton — the labels are absent while loading.
-    expect(screen.queryByText('Total items')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total Items')).not.toBeInTheDocument();
     // Skeletons render across the page (KPI + items + projections + cost + records).
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(10);
     // No resolved item or error copy.
@@ -489,7 +489,7 @@ describe('MaintenancePage', () => {
     expect(screen.getByText('No maintenance items to categorize yet.')).toBeInTheDocument();
     expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
     // Shell + AI slot still mount.
-    expect(screen.getByText('Total items', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
+    expect(screen.getByText('Total Items')).toBeInTheDocument();
     expect(screen.getByTestId('ai-predictive-maintenance')).toBeInTheDocument();
   });
 
@@ -552,7 +552,7 @@ describe('MaintenancePage', () => {
     renderPage();
 
     // (39000 - 20000) / 20000 = 95% → derived status "overdue".
-    expect(screen.getByText('95.00%')).toBeInTheDocument();
+    expect(screen.getByText('95%')).toBeInTheDocument();
     const bar = screen.getByRole('progressbar', { name: 'Tire Rotation service progress' });
     expect(bar).toHaveAttribute('aria-valuenow', '95');
     expect(
@@ -569,10 +569,10 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Total spent', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
-    expect(screen.getByText('Avg / service', { selector: '[data-operational-metric] > div:first-child > :first-child' })).toBeInTheDocument();
+    expect(screen.getByText('Total Spent')).toBeInTheDocument();
+    expect(screen.getByText('Avg / Service')).toBeInTheDocument();
     // Single record → the <2-dates branch: every figure collapses to $500.
-    expect(screen.getAllByText('$500.00').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('$500').length).toBeGreaterThanOrEqual(2);
   });
 
   it('renders a 0% bar for a malformed last_service_date instead of a NaN one (regression)', () => {
@@ -590,7 +590,7 @@ describe('MaintenancePage', () => {
     const bar = screen.getByRole('progressbar', { name: 'Air Filter service progress' });
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     expect(bar).not.toHaveAttribute('aria-valuenow', 'NaN');
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0%')).toBeInTheDocument();
   });
 
   it('sorts by due date stably: null/invalid-due items sort last and tie-break by name (regression)', () => {
@@ -634,8 +634,8 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    const recordsHeading = screen.getByRole('heading', { name: /Service records/i });
-    const panel = recordsHeading.closest('[data-card]');
+    const recordsHeading = screen.getByRole('heading', { name: /Service Records/i });
+    const panel = recordsHeading.closest('div');
     expect(panel).not.toBeNull();
     const scoped = within(panel as HTMLElement);
     // Blank description + blank provider both fall back to "—".

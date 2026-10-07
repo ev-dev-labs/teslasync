@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -15,18 +16,15 @@ import {
   axisTick,
   type ChartDataColumn,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type { ArchetypeSectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeHourlyProfile({
   summary,
   state,
 }: ArchetypeSectionProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -59,13 +57,12 @@ export function ArchetypeHourlyProfile({
         format: (value: unknown) => fmtInt(value),
       })),
     ],
-    [summary.clusters, t, fmtInt],
+    [summary.clusters, t],
   );
 
   return (
     <section data-testid="drive-archetypes-hourly">
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t('archetypes.hourly.title', 'Hourly archetype profile')}
         subtitle={t(
           'archetypes.hourly.subtitle',
@@ -110,7 +107,7 @@ export function ArchetypeHourlyProfile({
             </ResponsiveContainer>
           </ArchetypeSectionBody>
         )}
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

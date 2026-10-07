@@ -3,7 +3,7 @@
  *
  * A presentational chip that pairs a coloured FSM "dot" with the vehicle status
  * text. The dot colour is sourced from the single-source vehicle FSM theme
- * (@/types/fsm), the text preserves the raw status casing, and the chip
+ * (@/types/fsm), the text is the raw status (styled `capitalize`), and the chip
  * must fail closed — a nullish, blank, or whitespace-only status renders a
  * neutral em-dash placeholder rather than throwing (getStateDefinition lowercases
  * its argument, so a bare null/undefined used to blow up) or leaving a blank chip.
@@ -51,8 +51,9 @@ describe('StatusBadge — status → dot colour', () => {
   it.each(KNOWN_DOTS)('renders %s with its canonical dot colour and raw label', (status, dot) => {
     const { dot: dotEl, label } = renderBadge(status);
     expect(dotEl).toHaveClass(dot);
+    // Text is the raw status (not translated / Title-cased); `capitalize` is
+    // purely visual so the DOM text node stays lower-case.
     expect(label).toHaveTextContent(status);
-    expect(label).not.toHaveClass('capitalize', 'uppercase');
     expect(screen.getByText(status)).toBeInTheDocument();
   });
 
@@ -85,12 +86,6 @@ describe('StatusBadge — size variants', () => {
 });
 
 describe('StatusBadge — unknown & fail-closed states', () => {
-  it('preserves unknown backend casing without visual transformations', () => {
-    const { label } = renderBadge('APIReady');
-    expect(label).toHaveTextContent('APIReady');
-    expect(label).not.toHaveClass('capitalize', 'uppercase');
-  });
-
   it('falls back to a neutral dot for an unknown status but keeps the raw label', () => {
     // SystemHealthWidget maps a degraded system to 'away', which is not a vehicle
     // FSM state — it must render (grey dot + "away"), never throw.

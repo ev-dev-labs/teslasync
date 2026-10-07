@@ -76,7 +76,7 @@ describe('MetricTile — null-safety', () => {
 
   it('treats a genuine 0 as a reading, not an absence', () => {
     renderTile({ value: 0, unit: 'kWh' });
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('kWh')).toBeInTheDocument();
     expect(screen.queryByText('—')).not.toBeInTheDocument();
   });

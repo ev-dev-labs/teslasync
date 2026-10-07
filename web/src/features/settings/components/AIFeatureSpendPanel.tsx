@@ -4,9 +4,8 @@ import { Badge, Button, Caption, GlassPanel, PanelTitle, Text } from '@/componen
 import { useAiUsageByFeature, useAiUsageRecent } from '@/api/hooks/useAiUsage'
 import { useDataState } from '@/hooks/useDataState'
 import { useFormatting } from '@/hooks/useFormatting'
-
+import { fmtInt } from '@/lib/numberFormat'
 import { AI_FEATURES, type AiFeatureId } from '@/ai/features'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface Props {
   enabled: boolean
@@ -14,7 +13,6 @@ interface Props {
 }
 
 export function AIFeatureSpendPanel({ enabled, capCents }: Props) {
-  const { fmtInt } = useNumberFormatting();
   const { t, i18n } = useTranslation('settings')
   const { formatCurrency } = useFormatting()
   const breakdownQuery = useAiUsageByFeature(undefined, { enabled })

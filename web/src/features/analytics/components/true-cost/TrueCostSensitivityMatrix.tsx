@@ -58,12 +58,11 @@ export function TrueCostSensitivityMatrix({
   const columns = useMemo<Column<MatrixRow>[]>(() => [
     {
       key: 'price',
-      align: 'right',
       header: t('tco.sensitivity.priceFactor', 'Gas-price factor'),
       render: (row) => (
         <Text variant="label" mono>
           {t('tco.sensitivity.factorValue', '{{value}}×', {
-            value: display.formatNumber(row.priceFactor),
+            value: display.formatNumber(row.priceFactor, 1),
           })}
         </Text>
       ),
@@ -71,21 +70,18 @@ export function TrueCostSensitivityMatrix({
     },
     {
       key: 'lowMpg',
-      align: 'right',
       header: t('tco.sensitivity.lowMpg', '0.8× MPG'),
       render: (row) => cell(row.lowMpg),
       visibleOnMobile: true,
     },
     {
       key: 'baselineMpg',
-      align: 'right',
       header: t('tco.sensitivity.baselineMpg', '1.0× MPG'),
       render: (row) => cell(row.baselineMpg),
       visibleOnMobile: true,
     },
     {
       key: 'highMpg',
-      align: 'right',
       header: t('tco.sensitivity.highMpg', '1.2× MPG'),
       render: (row) => cell(row.highMpg),
     },
@@ -108,9 +104,6 @@ export function TrueCostSensitivityMatrix({
           {rows.length > 0 ? (
             <DataTable
               tableId="analytics:true-cost-sensitivity"
-              resizable={false}
-              columnReorder={false}
-              columnVisibility={false}
               columns={columns}
               data={rows}
               keyExtractor={(row) => row.priceFactor}

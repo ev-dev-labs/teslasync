@@ -183,10 +183,7 @@ export function useDialogFocus({
       }
       const first = current[0];
       const last = current[current.length - 1];
-      if (!container.contains(document.activeElement)) {
-        e.preventDefault();
-        (e.shiftKey ? last : first).focus();
-      } else if (e.shiftKey && document.activeElement === first) {
+      if (e.shiftKey && document.activeElement === first) {
         e.preventDefault();
         last.focus();
       } else if (!e.shiftKey && document.activeElement === last) {
@@ -195,19 +192,9 @@ export function useDialogFocus({
       }
     };
 
-    // Replacing a focused form control can move focus to body. Recover only
-    // the topmost dialog's keyboard handling, without taking another surface's focus.
-    const handleLostFocusKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.target !== document.body) return;
-      const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
-      if (dialogs[dialogs.length - 1] === container) handleKeyDown(e);
-    };
-
     container.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('keydown', handleLostFocusKeyDown);
     return () => {
       container.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('keydown', handleLostFocusKeyDown);
 
       // Only restore when the dialog still owns focus. If something
       // else already claimed it — a second dialog opened by this

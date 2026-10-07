@@ -312,7 +312,7 @@ describe('TelemetryGrid — tiles', () => {
     for (const label of ['Battery', 'Speed', 'Inside', 'Odometer', 'Charger', 'Sentry']) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
-    expect(screen.getByText('75.00%')).toBeInTheDocument()
+    expect(screen.getByText('75%')).toBeInTheDocument()
     // Battery sub delegates the rated range to formatDistance.
     expect(fmt.formatDistance).toHaveBeenCalledWith(300)
     expect(screen.getByText(/300 km\s+range/)).toBeInTheDocument()
@@ -322,17 +322,17 @@ describe('TelemetryGrid — tiles', () => {
 describe('TelemetryGrid — battery colour thresholds', () => {
   it('paints a high charge emerald', () => {
     render(<TelemetryGrid state={makeState({ battery_level: 80 })} />)
-    expect(screen.getByText('80.00%')).toHaveClass('text-emerald-300')
+    expect(screen.getByText('80%')).toHaveClass('text-emerald-300')
   })
 
   it('paints a mid charge amber', () => {
     render(<TelemetryGrid state={makeState({ battery_level: 35 })} />)
-    expect(screen.getByText('35.00%')).toHaveClass('text-amber-300')
+    expect(screen.getByText('35%')).toHaveClass('text-amber-300')
   })
 
   it('paints a low charge rose', () => {
     render(<TelemetryGrid state={makeState({ battery_level: 10 })} />)
-    expect(screen.getByText('10.00%')).toHaveClass('text-rose-300')
+    expect(screen.getByText('10%')).toHaveClass('text-rose-300')
   })
 })
 
@@ -364,7 +364,7 @@ describe('TelemetryGrid — temperature + odometer delegation', () => {
 
   it('formats the odometer with the precision-0 option', () => {
     render(<TelemetryGrid state={makeState({ odometer: 12345 })} />)
-    expect(fmt.formatDistance).toHaveBeenCalledWith(12345)
+    expect(fmt.formatDistance).toHaveBeenCalledWith(12345, { precision: 0 })
     expect(screen.getByText('12345 km')).toBeInTheDocument()
   })
 })
@@ -377,16 +377,16 @@ describe('TelemetryGrid — charger tile', () => {
       />,
     )
 
-    const value = screen.getByText('11.00 kW')
+    const value = screen.getByText('11 kW')
     expect(value).toBeInTheDocument()
     expect(value).toHaveClass('text-emerald-300')
-    expect(screen.getByText('Full in 2.00h')).toBeInTheDocument()
+    expect(screen.getByText('Full in 2.0h')).toBeInTheDocument()
   })
 
   it('shows "Not Charging" and no time-to-full when idle', () => {
     render(<TelemetryGrid state={makeState({ is_charging: false })} />)
 
-    expect(screen.getByText('Not charging')).toHaveClass('text-[var(--text-muted)]')
+    expect(screen.getByText('Not Charging')).toHaveClass('text-[var(--text-muted)]')
     expect(screen.queryByText(/Full in/)).toBeNull()
   })
 })
@@ -414,14 +414,14 @@ describe('LiveTelemetryPanels — composition', () => {
   it('renders the section header and every child panel heading', () => {
     render(<LiveTelemetryPanels {...makeLiveProps()} />)
 
-    expect(screen.getByRole('heading', { name: /Live telemetry/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Live Telemetry/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Powertrain/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Climate/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Security/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Vehicle state/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Tire pressure/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Energy & charging/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Media & navigation/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Vehicle State/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Tire Pressure/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Energy & Charging/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Media & Navigation/ })).toBeInTheDocument()
   })
 })
 
@@ -459,14 +459,14 @@ describe('LiveTelemetryPanels — vehicle state + sse', () => {
       />,
     )
 
-    const panel = within(panelFor(/Vehicle state/))
+    const panel = within(panelFor(/Vehicle State/))
     expect(panel.getByText('Live')).toBeInTheDocument()
     expect(panel.getByText('On')).toBeInTheDocument()
   })
 
   it('hides the Live badge when disconnected', () => {
     render(<LiveTelemetryPanels {...makeLiveProps({ sseConnected: false })} />)
-    expect(within(panelFor(/Vehicle state/)).queryByText('Live')).toBeNull()
+    expect(within(panelFor(/Vehicle State/)).queryByText('Live')).toBeNull()
   })
 })
 
@@ -474,11 +474,11 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
   it('converts Pa→kPa, formats each tire, and reports all-normal', () => {
     render(<LiveTelemetryPanels {...makeLiveProps({ tireData: makeTire() })} />)
 
-    const panel = within(panelFor(/Tire pressure/))
+    const panel = within(panelFor(/Tire Pressure/))
     // paToKpa(290000) === 290 → formatPressure(290) → "290 bar", one per tire.
     expect(fmt.formatPressure).toHaveBeenCalledWith(290)
     expect(panel.getAllByText('290 bar')).toHaveLength(4)
-    expect(panel.getByText(/All normal/)).toBeInTheDocument()
+    expect(panel.getByText(/All Normal/)).toBeInTheDocument()
   })
 
   it('surfaces charging state + battery level in EnergyChargingPanel', () => {
@@ -494,7 +494,7 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
       />,
     )
 
-    const panel = within(panelFor(/Energy & charging/))
+    const panel = within(panelFor(/Energy & Charging/))
     expect(panel.getByText('Charging')).toBeInTheDocument()
     expect(panel.getByText('66.00%')).toBeInTheDocument()
     expect(panel.getByText('240.00')).toBeInTheDocument()
@@ -514,13 +514,13 @@ describe('LiveTelemetryPanels — tire + charging + media', () => {
       />,
     )
 
-    const panel = within(panelFor(/Media & navigation/))
+    const panel = within(panelFor(/Media & Navigation/))
     expect(panel.getByText('Song X')).toBeInTheDocument()
     expect(panel.getByText('Artist Y')).toBeInTheDocument()
     expect(panel.getByText('Home Base')).toBeInTheDocument()
     // 5000 m → convertDistanceFromSI(5000,'km') === 5 → "5.00 km".
     expect(panel.getByText('5.00 km')).toBeInTheDocument()
-    expect(panel.getByText('12.00 min')).toBeInTheDocument()
+    expect(panel.getByText('12 min')).toBeInTheDocument()
   })
 })
 
@@ -551,6 +551,6 @@ describe('LiveTelemetryPanels — empty states', () => {
 
     // Panels never disappear — their shells/headings still render.
     expect(screen.getByRole('heading', { name: /Powertrain/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Vehicle state/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Vehicle State/ })).toBeInTheDocument()
   })
 })

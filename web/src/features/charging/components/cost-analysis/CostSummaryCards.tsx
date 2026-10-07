@@ -7,9 +7,8 @@ import { GlassPanel } from '@/components/ui';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useSettings } from '@/hooks/useSettings';
-
+import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import type { CoreStats } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CostSummaryCardsProps {
   coreStats: CoreStats | null;
@@ -35,7 +34,6 @@ export function CostSummaryCards({
   onRetry,
   onResetRange,
 }: CostSummaryCardsProps) {
-  const { fmtInt, fmtWithUnit, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { settings } = useSettings();
@@ -92,42 +90,42 @@ export function CostSummaryCards({
         color="cyan"
         icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.totalCost', 'Total Cost')}
-        value={formatCurrency(coreStats?.totalCost ?? 0)}
+        value={formatCurrency(coreStats?.totalCost ?? 0, 2)}
         subtitle={`${fmtInt(coreStats?.count ?? 0)} ${t('costAnalysis.stats.sessions', 'sessions')}`}
       />
       <MetricCard
         color="amber"
         icon={<Zap className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.avgPerKwh', 'Avg $/kWh')}
-        value={formatCurrency(coreStats?.avgCostPerKwh ?? 0)}
+        value={formatCurrency(coreStats?.avgCostPerKwh ?? 0, 3)}
         subtitle={t('costAnalysis.stats.blendedRate', 'blended rate')}
       />
       <MetricCard
         color="blue"
         icon={<Car className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.costPerDist', { unit: isMiles ? 'Mile' : 'km', defaultValue: 'Cost Per {{unit}}' })}
-        value={formatCurrency(coreStats?.costPerDist ?? 0)}
+        value={formatCurrency(coreStats?.costPerDist ?? 0, 3)}
         subtitle={`${t('costAnalysis.stats.per', 'per')} ${distanceUnit}`}
       />
       <MetricCard
         color="green"
         icon={<Zap className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.totalEnergy', 'Total Energy')}
-        value={fmtWithUnit(coreStats?.totalEnergy ?? 0, 'kWh')}
-        subtitle={`${fmtNumber(coreStats?.gallonsEquiv ?? 0)} ${t('costAnalysis.stats.galEquiv', 'gal equiv')}`}
+        value={fmtWithUnit(coreStats?.totalEnergy ?? 0, 'kWh', 1)}
+        subtitle={`${fmtNumber(coreStats?.gallonsEquiv ?? 0, 1)} ${t('costAnalysis.stats.galEquiv', 'gal equiv')}`}
       />
       <MetricCard
         color="green"
         icon={<Fuel className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.gasSavings', 'Gas Savings $')}
-        value={formatCurrency(coreStats?.savings ?? 0)}
-        subtitle={`${t('costAnalysis.stats.vs', 'vs')} ${formatCurrency(gasPrice)}/${gasUnitLabel}`}
+        value={formatCurrency(coreStats?.savings ?? 0, 2)}
+        subtitle={`${t('costAnalysis.stats.vs', 'vs')} ${formatCurrency(gasPrice, 2)}/${gasUnitLabel}`}
       />
       <MetricCard
         color="green"
         icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
         label={t('costAnalysis.stats.savingsPercent', 'Savings %')}
-        value={`${fmtNumber(coreStats?.savingsPercent ?? 0)}%`}
+        value={`${fmtNumber(coreStats?.savingsPercent ?? 0, 1)}%`}
         subtitle={t('costAnalysis.stats.vsGasoline', 'vs gasoline')}
       />
     </div>

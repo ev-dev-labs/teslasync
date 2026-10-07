@@ -77,21 +77,21 @@ vi.mock('@/components/ui', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     title,
     subtitle,
-    contextActions,
+    actions,
     children,
   }: {
     title: string;
     subtitle: string;
-    contextActions: ReactNode;
+    actions: ReactNode;
     children: ReactNode;
   }) => (
     <main>
       <h1>{title}</h1>
       <p>{subtitle}</p>
-      {contextActions}
+      {actions}
       {children}
     </main>
   ),
@@ -150,10 +150,6 @@ vi.mock('../components/efficiency-target', () => {
   };
 });
 
-vi.mock('../components/operationalbrief-a-m/EfficiencyTargetBrief', async () => ({
-  EfficiencyTargetBrief: (await import('../components/efficiency-target')).EfficiencyTargetKpis,
-}));
-
 import EfficiencyTargetPage from './EfficiencyTargetPage';
 
 function query(overrides: Record<string, unknown> = {}) {
@@ -209,8 +205,8 @@ describe('EfficiencyTargetPage', () => {
   });
 
   it.each([
-    ['loading', query({ data: undefined, isLoading: true })],
-    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
+    ['loading', query({ isLoading: true })],
+    ['error', query({ isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every mounted section', (expected, result) => {
     historyMock.mockReturnValue(result);
     render(<EfficiencyTargetPage />);

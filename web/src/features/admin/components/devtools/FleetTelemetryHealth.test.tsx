@@ -201,7 +201,7 @@ describe('FleetTelemetryHealth', () => {
 
     // Both card headings render.
     expect(screen.getByText('Error VINs')).toBeInTheDocument()
-    expect(screen.getByText('Error log')).toBeInTheDocument()
+    expect(screen.getByText('Error Log')).toBeInTheDocument()
 
     // The affected-vehicles badge counts the VIN list.
     expect(screen.getByText(/affected/)).toHaveTextContent('2 affected')
@@ -247,7 +247,7 @@ describe('FleetTelemetryHealth', () => {
 
     // Card chrome is present immediately…
     expect(screen.getByText('Error VINs')).toBeInTheDocument()
-    expect(screen.getByText('Error log')).toBeInTheDocument()
+    expect(screen.getByText('Error Log')).toBeInTheDocument()
 
     // …with two skeletons and none of the settled-state content.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2)

@@ -47,10 +47,10 @@ export function TotpCompatibleApps() {
         {COMPATIBLE_APPS.map((name) => (
           <li
             key={name}
-            className="flex min-w-0 items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 ring-1 ring-[var(--border-subtle)]"
+            className="flex items-center gap-2 rounded-lg bg-white/[0.02] px-3 py-2 ring-1 ring-white/[0.06]"
           >
             <Smartphone className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
-            <Text as="span" variant="body" className="min-w-0 break-words">
+            <Text as="span" variant="body">
               {name}
             </Text>
           </li>

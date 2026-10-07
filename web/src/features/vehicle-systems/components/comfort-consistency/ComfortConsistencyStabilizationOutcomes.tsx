@@ -5,7 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -13,11 +13,15 @@ import {
   YAxis,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+import { Grid } from '@/components/layout';
+import {
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
@@ -25,7 +29,6 @@ import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyStabilizationOutcomesProps {
   summary: ComfortConsistencySummary;
@@ -34,30 +37,42 @@ interface ComfortConsistencyStabilizationOutcomesProps {
   formatDelta: TemperatureDeltaFormatter;
 }
 
+function OutcomeMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <MetricLabel>{label}</MetricLabel>
+      <Text as="p" variant="body" className="mt-1">{value}</Text>
+    </div>
+  );
+}
+
 export function ComfortConsistencyStabilizationOutcomes({
   summary,
   state,
   formatDuration,
   formatDelta,
 }: ComfortConsistencyStabilizationOutcomesProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.overshootDistribution.map((bin) => ({
     band:
       bin.upperC == null
         ? t('comfortConsistency.stabilization.over', '> {{value}}', {
-            value: formatDelta(bin.lowerC),
+            value: formatDelta(bin.lowerC, { precision: 2 }),
           })
         : t('comfortConsistency.stabilization.range', '{{lower}}-{{upper}}', {
-            lower: formatDelta(bin.lowerC),
-            upper: formatDelta(bin.upperC),
+            lower: formatDelta(bin.lowerC, { precision: 2 }),
+            upper: formatDelta(bin.upperC, { precision: 2 }),
           }),
     windows: bin.windows,
   }));
 
   return (
     <section data-testid="comfort-consistency-stabilization-outcomes">
-      <LayoutCard title={t('comfortConsistency.stabilization.title', 'Stabilization and overshoot outcomes')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <TimerReset className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('comfortConsistency.stabilization.title', 'Stabilization and overshoot outcomes')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.stabilization.subtitle',
@@ -70,31 +85,44 @@ export function ComfortConsistencyStabilizationOutcomes({
           requirement="runs"
           skeletonHeight={360}
         >
-          <VehicleOperationalBrief embedded id="comfort-consistency-stabilization-summary"
-            title={t('comfortConsistency.stabilization.title', 'Stabilization and overshoot outcomes')}
-            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
-            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('comfortConsistency.stabilization.subtitle', 'Only active fragments whose first observed sample is outside the comfort band enter the stabilization denominator.') }}
-            metrics={[
-              ...[
-                { key: 'fragments', label: t('comfortConsistency.stabilization.fragments', 'Active fragments'), value: summary.activeRunCount },
-                { key: 'in-band', label: t('comfortConsistency.stabilization.inBandStarts', 'In-band-first fragments'), value: summary.insideBandStartRuns },
-                { key: 'outside', label: t('comfortConsistency.stabilization.candidates', 'Outside-band fragments'), value: summary.stabilizationWindows.length },
-                { key: 'stabilized', label: t('comfortConsistency.stabilization.stabilized', 'Sustained-band observed'), value: summary.stabilizedWindows },
-                { key: 'not-observed', label: t('comfortConsistency.stabilization.notObserved', 'Not observed stabilized'), value: summary.unstabilizedWindows },
-                { key: 'censored', label: t('comfortConsistency.stabilization.censoredUnstabilized', 'Censored without stabilization'), value: summary.censoredUnstabilizedWindows },
-              ].map(fact => ({
-                metricId: 'count' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
-                display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
-              })),
-              { metricId: 'count', occurrenceId: 'hot-cold', label: t('comfortConsistency.stabilization.hotCold', 'Hot / cold fragments'), rawValue: summary.hotStartWindows,
-                display: { formatter: raw => ({ value: `${fmtInt(raw)} / ${fmtInt(summary.coldStartWindows)}`, unit: '' }) } },
-              { metricId: 'duration', occurrenceId: 'median-time', label: t('comfortConsistency.stabilization.medianTime', 'Median observed time to band'), rawValue: summary.medianStabilizationS,
-                display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
-              { metricId: 'number', occurrenceId: 'median-overshoot', label: t('comfortConsistency.stabilization.medianOvershoot', 'Median observed overshoot'), rawValue: summary.medianOvershootC,
-                display: { formatter: raw => ({ value: formatDelta(raw), unit: '' }) } },
-            ]}
-          />
+          <Grid cols={{ default: 2, md: 4 }} gap={3}>
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.fragments', 'Active fragments')}
+              value={fmtInt(summary.activeRunCount)}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.inBandStarts', 'In-band-first fragments')}
+              value={fmtInt(summary.insideBandStartRuns)}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.candidates', 'Outside-band fragments')}
+              value={fmtInt(summary.stabilizationWindows.length)}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.hotCold', 'Hot / cold fragments')}
+              value={`${fmtInt(summary.hotStartWindows)} / ${fmtInt(summary.coldStartWindows)}`}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.stabilized', 'Sustained-band observed')}
+              value={fmtInt(summary.stabilizedWindows)}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.notObserved', 'Not observed stabilized')}
+              value={fmtInt(summary.unstabilizedWindows)}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.censoredUnstabilized', 'Censored without stabilization')}
+              value={fmtInt(summary.censoredUnstabilizedWindows)}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.medianTime', 'Median observed time to band')}
+              value={formatDuration(summary.medianStabilizationS, { precision: 2 })}
+            />
+            <OutcomeMetric
+              label={t('comfortConsistency.stabilization.medianOvershoot', 'Median observed overshoot')}
+              value={formatDelta(summary.medianOvershootC)}
+            />
+          </Grid>
           {summary.stabilizationWindows.length === 0 ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="mt-4 py-5"
@@ -105,7 +133,7 @@ export function ComfortConsistencyStabilizationOutcomes({
               )}
             />
           ) : (
-            <EmbeddedChart toolbar exportable size="standard"
+            <ChartContainer
               className="mt-4"
               title={t('comfortConsistency.stabilization.plotTitle', 'Observed overshoot distribution')}
               ariaLabel={t(
@@ -133,10 +161,10 @@ export function ComfortConsistencyStabilizationOutcomes({
                   />
                 </BarChart>
               </ResponsiveContainer>
-            </EmbeddedChart>
+            </ChartContainer>
           )}
         </ComfortConsistencySectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

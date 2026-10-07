@@ -53,6 +53,12 @@ export function vehicleIcon(color: string = DEFAULT_VEHICLE_COLOR): L.DivIcon {
           box-shadow:0 0 10px ${safe};
         "></div>
       </div>
+      <style>
+        @keyframes vehicle-pulse {
+          0%, 100% { transform: scale(1); opacity: 0.25; }
+          50% { transform: scale(1.6); opacity: 0; }
+        }
+      </style>
     `,
   });
 }

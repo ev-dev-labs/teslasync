@@ -3,13 +3,14 @@
  *
  * Exercises every export of TirePressureHistoryWidget.tsx:
  *   - `RECOMMENDED_RANGE_KPA` — the SI (kPa) recommended-range constant,
- *   - `buildChartData` — the canonical created_at-filter / converter-map / sort helper,
+ *   - `buildChartData` — the pure timestamp-filter / converter-map / sort helper,
  *   - `latestNonNull` — the pure "last non-null reading" resolver,
  *   - `recommendedPressureRange` — the reference-line resolver (the R2 unit-bug
- *     regression guard: physical kPa thresholds are bridged to canonical Pa
- *     before display conversion, so Min/Max share the plotted pressure domain), and
+ *     regression guard: the range is fed to the converter as kilopascals, NOT
+ *     Pascals, so the Min/Max lines land on the plotted domain instead of ~1000×
+ *     too high), and
  *   - the default widget across every render branch: the medium panel (title +
- *     per-tire summary), the titled compact tile, loading / error / empty
+ *     per-tire summary), the compact tile (no title), loading / error / empty
  *     states, vehicle selection, newest-reading-wins ordering, and the
  *     manual-refresh interaction.
  *
@@ -23,20 +24,16 @@
  *     transitive <DataFreshness> header resolves.
  *   - The global test-setup (src/test-setup.ts) already mocks `useSettings`
  *     (km / °C / **bar** / precision 2 / en-US) and `useTimezone` (UTC), so the
- *     REAL `usePressureFormat` (Pa → display units) and `useDateFormat` run — this test
+ *     REAL `usePressureFormat` (kPa → bar) and `useDateFormat` run — this test
  *     covers the genuine conversion path end to end.
  *
  * `@testing-library/user-event` is intentionally NOT a dependency of this
  * codebase — interactions use `fireEvent`, consistent with the other slice tests.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactElement, ReactNode } from 'react';
-import * as settingsHook from '@/hooks/useSettings';
-import { convertPressureFromSI, PASCALS_PER_KPA } from '@/lib/unitConversion';
-import { camelCaseKeys } from '@/lib/resilience';
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import type { ReactElement } from 'react';
 
 // jsdom lacks matchMedia; <DataFreshness>'s useMotionPreference touches it on
 // first paint. Install a no-op reporting no reduced-motion before any import.
@@ -87,19 +84,7 @@ vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vehiclesMock }));
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return {
-    ...actual, ...chartTestDoubles,
-    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-    LineChart: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-    XAxis: () => null,
-    YAxis: () => null,
-    Tooltip: () => null,
-    Line: () => null,
-    chartGrid: null,
-    ReferenceLine: ({ y, label }: { y: number; label: { value: string } }) => (
-      <div data-testid="pressure-reference" data-value={y}>{label.value}</div>
-    ),
-  };
+  return { ...actual, ...chartTestDoubles };
 });
 
 import TirePressureHistoryWidget, {
@@ -109,11 +94,6 @@ import TirePressureHistoryWidget, {
   recommendedPressureRange,
   type ChartDatum,
 } from './TirePressureHistoryWidget';
-
-it.each([1, 2, 3])('identifies tire pressure history at %i columns', (cols) => {
-  renderWidget(<TirePressureHistoryWidget size={{ cols, rows: 4 }} />);
-  expect(screen.getByRole('heading', { name: 'Tire pressure history' })).toBeInTheDocument();
-});
 import type { TirePressureReading } from '@/types/vehicle-systems';
 import type { WidgetSize } from './types';
 
@@ -121,11 +101,10 @@ import type { WidgetSize } from './types';
 const SIZE_COMPACT: WidgetSize = { cols: 1, rows: 1 };
 const SIZE_MEDIUM: WidgetSize = { cols: 2, rows: 3 };
 
-// Wire pressure is canonical Pa; render-boundary conversion produces bar:
-//   250000 → 2.5, 260000 → 2.6, 240000 → 2.4, 270000 → 2.7.
-type HistoryReading = Omit<TirePressureReading, 'timestamp'> & { created_at: string };
-
-function makeReading(overrides: Partial<HistoryReading> = {}): HistoryReading {
+// SI kilopascals — the on-the-wire pressure unit the app converts at the render
+// boundary. Chosen to render as distinct one-decimal bar values (÷100):
+//   250 → 2.5, 260 → 2.6, 240 → 2.4, 270 → 2.7.
+function makeReading(overrides: Partial<TirePressureReading> = {}): TirePressureReading {
   return {
     id: '1',
     vehicleId: '42',
@@ -135,7 +114,7 @@ function makeReading(overrides: Partial<HistoryReading> = {}): HistoryReading {
     rearRight: 270_000,
     tpmsHardWarning: false,
     tpmsSoftWarning: false,
-    created_at: '2024-11-01T10:00:00.000Z',
+    timestamp: '2024-11-01T10:00:00.000Z',
     ...overrides,
   };
 }
@@ -149,7 +128,7 @@ interface QueryOverrides {
   refetch?: () => void;
 }
 
-function makeQuery(data?: unknown, over: QueryOverrides = {}) {
+function makeQuery(data?: TirePressureReading[], over: QueryOverrides = {}) {
   return {
     data,
     isLoading: false,
@@ -163,9 +142,7 @@ function makeQuery(data?: unknown, over: QueryOverrides = {}) {
 }
 
 function renderWidget(node: ReactElement) {
-  const view = render(<MemoryRouter>{node}</MemoryRouter>);
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Tire pressure history');
-  return view;
+  return render(<MemoryRouter>{node}</MemoryRouter>);
 }
 
 // A converter matching the real bar projection (kPa → bar), with the same
@@ -180,9 +157,6 @@ beforeEach(() => {
   vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
   tireHistoryMock.mockReturnValue(makeQuery([makeReading()]));
 });
-afterEach(() => {
-  vi.restoreAllMocks();
-});
 
 // ── RECOMMENDED_RANGE_KPA (constant) ─────────────────────────────────────────
 describe('RECOMMENDED_RANGE_KPA', () => {
@@ -193,36 +167,16 @@ describe('RECOMMENDED_RANGE_KPA', () => {
 
 // ── buildChartData (pure) ────────────────────────────────────────────────────
 describe('buildChartData', () => {
-  it('consumes the real created_at wire shape after request normalization, without a timestamp adapter', () => {
-    const wire = [
-      { id: 2, ts: '2024-11-02T00:00:00.000Z', created_at: '2024-11-02T00:00:00.000Z', front_left: 250_000, front_right: null, rear_left: 0, rear_right: 270_000 },
-      { id: 1, ts: '2024-11-01T00:00:00.000Z', created_at: '2024-11-01T00:00:00.000Z', front_left: 210_000, front_right: 260_000, rear_left: null, rear_right: 240_000 },
-    ];
-    const normalized = camelCaseKeys(wire);
-    expect(buildChartData(normalized, barConv)).toEqual([
-      { time: wire[1].created_at, fl: 2.1, fr: 2.6, rl: null, rr: 2.4 },
-      { time: wire[0].created_at, fl: 2.5, fr: null, rl: 0, rr: 2.7 },
-    ]);
-    expect(buildChartData([{ timestamp: wire[0].created_at, frontLeft: 250_000 }], barConv)).toEqual([]);
-    expect(buildChartData([null, false, 42, 'invalid', { created_at: 'invalid' }], barConv)).toEqual([]);
-    expect(wire.every((row) => !('timestamp' in row))).toBe(true);
-  });
-  it('rejects invalid history collections and timestamps without manufacturing a zero', () => {
-    expect(buildChartData({} as unknown as TirePressureReading[], barConv)).toEqual([]);
-    expect(buildChartData([makeReading({ created_at: 'not-a-date' })], barConv)).toEqual([]);
-    expect(latestNonNull([{ time: 'now', fl: NaN, fr: 0, rl: null, rr: null }], 'fl')).toBeNull();
-    expect(latestNonNull([{ time: 'now', fl: NaN, fr: 0, rl: null, rr: null }], 'fr')).toBe(0);
-  });
-  it('drops rows without created_at, converts every corner, and sorts oldest→newest', () => {
-    const rows: HistoryReading[] = [
-      makeReading({ id: 'b', created_at: '2024-11-02T00:00:00.000Z', frontLeft: 250_000 }),
-      makeReading({ id: 'a', created_at: '2024-11-01T00:00:00.000Z', frontLeft: 210_000 }),
-      makeReading({ id: 'skip', created_at: '' }), // filtered out
+  it('drops timestamp-less rows, converts every corner, and sorts oldest→newest', () => {
+    const rows: TirePressureReading[] = [
+      makeReading({ id: 'b', timestamp: '2024-11-02T00:00:00.000Z', frontLeft: 250_000 }),
+      makeReading({ id: 'a', timestamp: '2024-11-01T00:00:00.000Z', frontLeft: 210_000 }),
+      makeReading({ id: 'skip', timestamp: '' }), // filtered out
     ];
 
     const out = buildChartData(rows, barConv);
 
-    // The empty-date row is filtered; the rest are ascending by time.
+    // The empty-timestamp row is filtered; the rest are ascending by time.
     expect(out).toHaveLength(2);
     expect(out.map((d) => d.time)).toEqual([
       '2024-11-01T00:00:00.000Z',
@@ -273,40 +227,26 @@ describe('latestNonNull', () => {
 
 // ── recommendedPressureRange (pure — R2 unit-bug regression guard) ────────────
 describe('recommendedPressureRange', () => {
-  it('bridges 240/280 kPa to canonical Pa before real bar conversion', () => {
-    const paToBar = vi.fn((pa: number | null | undefined): number | null =>
-      pa == null ? null : convertPressureFromSI(pa / PASCALS_PER_KPA, 'bar'));
-    const range = recommendedPressureRange(paToBar);
+  it('feeds the range to the converter as kilopascals → 2.4/2.8 bar (NOT 2400/2800)', () => {
+    const kpaToBar = (kpa: number | null | undefined): number | null =>
+      kpa == null || !Number.isFinite(kpa) ? null : kpa / 100;
+    const range = recommendedPressureRange(kpaToBar);
     expect(range).toEqual({ low: 2.4, high: 2.8 });
-    expect(paToBar).toHaveBeenNthCalledWith(1, 240_000);
-    expect(paToBar).toHaveBeenNthCalledWith(2, 280_000);
+    // Explicit guard against the old `* 100_000` Pascals bug (240000 → 2400 bar).
+    expect(range.low).not.toBe(2400);
+    expect(range.high).not.toBeGreaterThan(10);
   });
 
   it('projects into psi when the converter targets psi', () => {
-    const psiConv = (pa: number | null | undefined): number | null =>
-      pa == null ? null : convertPressureFromSI(pa / PASCALS_PER_KPA, 'psi');
+    const psiConv = (kpa: number | null | undefined): number | null =>
+      kpa == null ? null : kpa / 6.894757;
     const range = recommendedPressureRange(psiConv);
-    expect(range.low).toBeCloseTo(34.81, 2);
-    expect(range.high).toBeCloseTo(40.61, 2);
+    expect(range.low).toBeCloseTo(240 / 6.894757, 5);
+    expect(range.high).toBeCloseTo(280 / 6.894757, 5);
   });
 
-  it.each([
-    { unit: 'bar', low: 2.4, high: 2.8 },
-    { unit: 'psi', low: 34.81, high: 40.61 },
-  ] as const)('wires Min/Max reference positions through real usePressureFormat in $unit', ({ unit, low, high }) => {
-    const current = settingsHook.useSettings();
-    vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
-      ...current,
-      settings: { ...current.settings, unit_of_pressure: unit },
-    });
-    renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
-    const references = screen.getAllByTestId('pressure-reference');
-    expect(references).toHaveLength(2);
-    expect(references[0]).toHaveTextContent('Min');
-    expect(references[1]).toHaveTextContent('Max');
-    expect(Number(references[0].getAttribute('data-value'))).toBeCloseTo(low, 2);
-    expect(Number(references[1].getAttribute('data-value'))).toBeCloseTo(high, 2);
-    expect(screen.getAllByText(unit)).toHaveLength(4);
+  it('passes kilopascals straight through an identity (kPa) converter', () => {
+    expect(recommendedPressureRange((kpa) => kpa ?? null)).toEqual({ low: 240, high: 280 });
   });
 
   it('falls back to the bar equivalent when the converter yields null', () => {
@@ -316,71 +256,11 @@ describe('recommendedPressureRange', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('TirePressureHistoryWidget', () => {
-  it('retains locale and precision reactivity for canonical created_at readings', () => {
-    const wire = [{
-      id: 1,
-      ts: '2024-11-01T10:00:00.000Z',
-      created_at: '2024-11-01T10:00:00.000Z',
-      front_left: 250_000,
-      front_right: 260_000,
-      rear_left: 240_000,
-      rear_right: 270_000,
-    }];
-    const query = makeQuery(camelCaseKeys(wire));
-    tireHistoryMock.mockReturnValue(query);
-    renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
-    try {
-      act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
-      for (const reading of ['2,500', '2,600', '2,400', '2,700']) {
-        expect(screen.getByText(reading)).toBeInTheDocument();
-      }
-      expect(query.refetch).not.toHaveBeenCalled();
-      expect(wire[0].created_at).toBe('2024-11-01T10:00:00.000Z');
-      expect(wire[0].front_left).toBe(250_000);
-    } finally {
-      act(() => { setGlobalPrecision(2); setGlobalLocale('en-US'); });
-    }
-  });
-  it.each([
-    { cols: 1, unit: 'bar' },
-    { cols: 2, unit: 'bar' },
-    { cols: 3, unit: 'bar' },
-    { cols: 1, unit: 'psi' },
-    { cols: 2, unit: 'psi' },
-    { cols: 3, unit: 'psi' },
-  ] as const)('renders actual created_at wire readings at $cols columns in $unit', ({ cols, unit }) => {
-    const current = settingsHook.useSettings();
-    vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
-      ...current,
-      settings: { ...current.settings, unit_of_pressure: unit },
-    });
-    const wire = [{
-      id: 1,
-      ts: '2024-11-01T10:00:00.000Z',
-      created_at: '2024-11-01T10:00:00.000Z',
-      front_left: 250_000,
-      front_right: 260_000,
-      rear_left: 240_000,
-      rear_right: 270_000,
-    }];
-    tireHistoryMock.mockReturnValue(makeQuery(camelCaseKeys(wire)));
-    renderWidget(<TirePressureHistoryWidget size={{ cols, rows: 3 }} />);
-    expect(screen.getByRole('heading', { name: 'Tire pressure history' })).toBeInTheDocument();
-    expect(screen.queryByText('No tire pressure history')).not.toBeInTheDocument();
-    for (const pressure of [250_000, 260_000, 240_000, 270_000]) {
-      const expected = new Intl.NumberFormat('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }).format(convertPressureFromSI(pressure / PASCALS_PER_KPA, unit));
-      expect(screen.getByText(expected)).toBeInTheDocument();
-    }
-    expect(screen.getAllByText(unit)).toHaveLength(4);
-  });
   it('renders the title and the latest per-tire summary (kPa → bar) at medium size', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
     // Title header (visible above compact).
-    expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
+    expect(screen.getByText('Tire Pressure History')).toBeInTheDocument();
 
     // Per-corner labels.
     expect(screen.getByText('FL')).toBeInTheDocument();
@@ -389,34 +269,34 @@ describe('TirePressureHistoryWidget', () => {
     expect(screen.getByText('RR')).toBeInTheDocument();
 
     // Converted values (one decimal) + the bar unit on every tile.
-    expect(screen.getByText('2.50')).toBeInTheDocument(); // FL 250 kPa
-    expect(screen.getByText('2.60')).toBeInTheDocument(); // FR 260 kPa
-    expect(screen.getByText('2.40')).toBeInTheDocument(); // RL 240 kPa
-    expect(screen.getByText('2.70')).toBeInTheDocument(); // RR 270 kPa
+    expect(screen.getByText('2.5')).toBeInTheDocument(); // FL 250 kPa
+    expect(screen.getByText('2.6')).toBeInTheDocument(); // FR 260 kPa
+    expect(screen.getByText('2.4')).toBeInTheDocument(); // RL 240 kPa
+    expect(screen.getByText('2.7')).toBeInTheDocument(); // RR 270 kPa
     expect(screen.getAllByText('bar')).toHaveLength(4);
   });
 
   it('shows the newest reading in the summary even when the API returns rows out of order', () => {
     tireHistoryMock.mockReturnValue(
       makeQuery([
-        makeReading({ id: 'new', created_at: '2024-11-05T00:00:00.000Z', frontLeft: 290_000 }),
-        makeReading({ id: 'old', created_at: '2024-11-01T00:00:00.000Z', frontLeft: 300_000 }),
+        makeReading({ id: 'new', timestamp: '2024-11-05T00:00:00.000Z', frontLeft: 290_000 }),
+        makeReading({ id: 'old', timestamp: '2024-11-01T00:00:00.000Z', frontLeft: 300_000 }),
       ]),
     );
 
     renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
     // 290 kPa → 2.9 is the newest FL; the older 300 → 3.0 must not appear.
-    expect(screen.getByText('2.90')).toBeInTheDocument();
-    expect(screen.queryByText('3.00')).not.toBeInTheDocument();
+    expect(screen.getByText('2.9')).toBeInTheDocument();
+    expect(screen.queryByText('3.0')).not.toBeInTheDocument();
   });
 
-  it('identifies the compact per-tire summary', () => {
+  it('hides the title in compact layout but still renders the per-tire summary', () => {
     renderWidget(<TirePressureHistoryWidget size={SIZE_COMPACT} />);
 
-    expect(screen.getByRole('heading', { name: 'Tire pressure history' })).toBeInTheDocument();
+    expect(screen.queryByText('Tire Pressure History')).not.toBeInTheDocument();
     expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getByText('2.50')).toBeInTheDocument();
+    expect(screen.getByText('2.5')).toBeInTheDocument();
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {
@@ -456,7 +336,7 @@ describe('TirePressureHistoryWidget', () => {
     const { container } = renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Tire pressure history')).toBeInTheDocument();
+    expect(screen.queryByText('Tire Pressure History')).not.toBeInTheDocument();
     expect(screen.queryByText('FL')).not.toBeInTheDocument();
   });
 
@@ -467,7 +347,7 @@ describe('TirePressureHistoryWidget', () => {
 
     // Error is surfaced by the freshness chip; the summary still renders.
     expect(screen.getByText('FL')).toBeInTheDocument();
-    expect(screen.getByText('2.50')).toBeInTheDocument();
+    expect(screen.getByText('2.5')).toBeInTheDocument();
   });
 
   it('exposes an accessible refresh control that invokes refetch when activated', () => {

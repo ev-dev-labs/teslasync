@@ -19,12 +19,11 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekdayProfileProps {
   summary: UtilizationSummary;
@@ -35,7 +34,6 @@ export function WeekdayProfile({
   summary,
   state,
 }: WeekdayProfileProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { distanceUnit, toDisplayDistance } =
     useUtilizationDisplay();
@@ -144,7 +142,7 @@ export function WeekdayProfile({
               'utilization.columns.activeRate',
               'Active-day rate (%)',
             ),
-            format: (value) => `${fmtNumber(value)}%`,
+            format: (value) => `${fmtNumber(value, 1)}%`,
           },
           {
             key: 'averageDistance',
@@ -153,7 +151,7 @@ export function WeekdayProfile({
               'Distance ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'drives',
@@ -212,7 +210,7 @@ export function WeekdayProfile({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => `${fmtNumber(value)}%`}
+                  tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
                   width={44}
                 />
                 <YAxis
@@ -221,7 +219,7 @@ export function WeekdayProfile({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => fmtNumber(value)}
+                  tickFormatter={(value) => fmtNumber(value, 0)}
                   width={40}
                 />
                 <Tooltip
@@ -229,12 +227,12 @@ export function WeekdayProfile({
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === activeRateName
-                          ? `${fmtNumber(value)}%`
+                          ? `${fmtNumber(value, 1)}%`
                           : t(
                               'utilization.value.distance',
                               '{{value}} {{unit}}',
                               {
-                                value: fmtNumber(value),
+                                value: fmtNumber(value, 1),
                                 unit: distanceUnit,
                               },
                             )

@@ -7,9 +7,8 @@ import {
   Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis, axisTick,
   chartGrid,
 } from '@/components/charts';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { SweetSpotBand } from '../../lib/speedSweetSpot';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ConsumptionCurveRow
   extends Record<string, string | number | null> {
@@ -42,7 +41,6 @@ export function ConsumptionSpeedPlot({
   efficiencyUnit, distanceUnit, convertBandSpeed, isHidden: externalIsHidden,
   ariaLabel,
 }: ConsumptionSpeedPlotProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -55,20 +53,20 @@ export function ConsumptionSpeedPlot({
       {
         key: 'qualifiedConsumption',
         label: qualifiedName,
-        format: (v) => (v != null ? `${fmtNumber(v as number)} ${efficiencyUnit}` : '—'),
+        format: (v) => (v != null ? `${fmtNumber(v as number, 1)} ${efficiencyUnit}` : '—'),
       },
       {
         key: 'unqualifiedConsumption',
         label: unqualifiedName,
-        format: (v) => (v != null ? `${fmtNumber(v as number)} ${efficiencyUnit}` : '—'),
+        format: (v) => (v != null ? `${fmtNumber(v as number, 1)} ${efficiencyUnit}` : '—'),
       },
       {
         key: 'distance',
         label: distanceName,
-        format: (v) => `${fmtNumber(v as number)} ${distanceUnit}`,
+        format: (v) => `${fmtNumber(v as number, 1)} ${distanceUnit}`,
       },
     ],
-    [t, qualifiedName, unqualifiedName, distanceName, efficiencyUnit, distanceUnit, fmtNumber],
+    [t, qualifiedName, unqualifiedName, distanceName, efficiencyUnit, distanceUnit],
   );
 
   return (
@@ -105,7 +103,7 @@ export function ConsumptionSpeedPlot({
                 tickLine={false}
                 axisLine={false}
                 width={58}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => fmtNumber(value, 0)}
               />
               <YAxis
                 yAxisId="distance"
@@ -114,15 +112,15 @@ export function ConsumptionSpeedPlot({
                 tickLine={false}
                 axisLine={false}
                 width={52}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => fmtNumber(value, 0)}
               />
               <Tooltip
                 content={
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === distanceName
-                        ? `${fmtNumber(value)} ${distanceUnit}`
-                        : `${fmtNumber(value)} ${efficiencyUnit}`
+                        ? `${fmtNumber(value, 1)} ${distanceUnit}`
+                        : `${fmtNumber(value, 1)} ${efficiencyUnit}`
                     }
                   />
                 }

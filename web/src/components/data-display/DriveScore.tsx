@@ -145,7 +145,7 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
             >
               {score.total}
             </motion.span>
-            <span className="text-2xs text-[var(--text-muted)] tracking-wider">{t('driveScore.score', 'Score')}</span>
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">{t('driveScore.score', 'Score')}</span>
           </div>
         </div>
 
@@ -181,3 +181,4 @@ export function DriveScore({ drive }: { drive: DriveLike }) {
     </GlassPanel>
   )
 }
+

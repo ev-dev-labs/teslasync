@@ -2,14 +2,12 @@ import { Pencil, Plus, Trash2, Users } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Button, DataTable, StatusPill, type Column } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Button, DataTable, GlassPanel, PanelTitle, StatusPill, type Column } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { FleetAssignment } from '@/api/hooks/useFleetOps';
 
 interface AssignmentRosterProps {
   items: FleetAssignment[];
-  enableValueFilters?: boolean;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -22,7 +20,6 @@ interface AssignmentRosterProps {
 
 export function AssignmentRoster({
   items,
-  enableValueFilters = false,
   loading,
   error,
   onRetry,
@@ -37,32 +34,23 @@ export function AssignmentRoster({
     {
       key: 'driver',
       header: t('fleetOps.assignments.driver', 'Driver'),
-      filterValue: (item) => item.driver_id ?? null,
-      filterValueLabel: (_value, item) => item.driver_display_name,
       render: (item) => item.driver_display_name,
       visibleOnMobile: true,
     },
     {
       key: 'vehicle',
       header: t('fleetOps.assignments.vehicle', 'Vehicle'),
-      filterValue: (item) => item.vehicle_id ?? null,
-      filterValueLabel: (_value, item) => item.vehicle_display_name,
       render: (item) => item.vehicle_display_name,
       visibleOnMobile: true,
     },
     {
       key: 'starts_at',
       header: t('fleetOps.assignments.starts', 'Starts'),
-      filterValue: (item) => item.starts_at ?? null,
-      filterValueLabel: (_value, item) => formatDateTime(item.starts_at),
       render: (item) => formatDateTime(item.starts_at),
     },
     {
       key: 'ends_at',
       header: t('fleetOps.assignments.ends', 'Ends'),
-      filterValue: (item) => item.ends_at ?? null,
-      filterValueLabel: (_value, item) => item.ends_at
-        ? formatDateTime(item.ends_at) : t('fleetOps.assignments.ongoing', 'Ongoing'),
       render: (item) => item.ends_at ? formatDateTime(item.ends_at) : (
         <StatusPill color="bg-emerald-500">
           {t('fleetOps.assignments.ongoing', 'Ongoing')}
@@ -105,7 +93,9 @@ export function AssignmentRoster({
   ], [actionsDisabled, actionsDisabledReason, onDelete, onEdit, t]);
 
   return (
-    <LayoutCard title={t('fleetOps.assignments.title', 'Assignment roster')} actions={
+    <GlassPanel className="p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <PanelTitle>{t('fleetOps.assignments.title', 'Assignment roster')}</PanelTitle>
         <Button
           type="button"
           size="sm"
@@ -116,7 +106,7 @@ export function AssignmentRoster({
         >
           {t('fleetOps.assignments.add', 'Add assignment')}
         </Button>
-      }>
+      </div>
       {loading ? <Skeleton lines={5} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.assignments.resource', 'Assignments')} />
       ) : items.length === 0 ? (
@@ -132,12 +122,11 @@ export function AssignmentRoster({
           tableId="fleet-ops:assignments"
           columns={columns}
           data={items}
-          enableValueFilters={enableValueFilters}
           keyExtractor={(item) => item.id}
           mobileColumns={['driver', 'vehicle', 'actions']}
           pagination
         />
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

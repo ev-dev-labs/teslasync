@@ -41,7 +41,7 @@ const STEPS: TourStep[] = [
   },
   {
     target: '[data-tour="alert-studio-builder"]',
-    title: 'Build new rules in alert studio',
+    title: 'Build new rules in Alert Studio',
     description:
       'Compose any signal, threshold, and notification channel into a rule. The preview chart shows how the rule would have fired against the last 24h.',
     placement: 'bottom',
@@ -60,7 +60,7 @@ export const ALERTS_TOUR: TourDefinition = {
   id: 'alerts',
   routeMatch: /^\/notifications\/(inbox|studio)(?:\/|$)/,
   titleKey: 'tour.tours.alerts.title',
-  titleFallback: 'Alerts & alert studio',
+  titleFallback: 'Alerts & Alert Studio',
   descriptionKey: 'tour.tours.alerts.description',
   descriptionFallback: 'Triage the inbox and craft custom rules with previews.',
   version: 1,

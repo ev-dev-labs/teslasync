@@ -2,30 +2,26 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Radio, Wifi, WifiOff, RefreshCw, AlertTriangle, AlertCircle,
-  Activity, Server, Clock,
+  Activity, Layers, Gauge, Server, Clock,
 } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
-import { OperationalBrief } from '@/components/data-display';
+import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AIMqttSseInspectorExplanations } from '@/components/ai';
+import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { VehicleTelemetry } from '@/types/telemetry';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { mqttSummary } from '../components/statstrip-signals-mqtt/mqttSummary';
 
 /* ------------------------------------------------------------------ */
 /*  Constants & helpers                                                */
@@ -69,58 +65,42 @@ function buildVehicleColumns(
     {
       key: 'vin',
       header: t('mqtt.vin', 'VIN'),
-      filterValue: (v) => v.vin ?? null,
       render: (v) => <Text as="span" mono color="primary">{v.vin}</Text>,
     },
     {
       key: 'state',
       header: t('mqtt.state', 'State'),
-      filterValue: (v) => v.state ?? null,
       render: (v) => v.state
         ? <Badge variant={v.state === 'online' ? 'success' : 'neutral'} size="sm">{v.state}</Badge>
         : <Text as="span" color="muted">—</Text>,
     },
     {
       key: 'signals',
-      groupStart: true,
       header: t('mqtt.signals', 'Signals'),
-      align: 'right',
-      filterValue: (v) => v.signalCount ?? null,
-      filterValueLabel: (_value, v) => v.signalCount == null ? '—' : fmtInt(v.signalCount),
       className: 'text-right',
-      render: (v) => <Text as="span" mono color="secondary">{v.signalCount == null ? '—' : fmtInt(v.signalCount)}</Text>,
+      render: (v) => <Text as="span" mono color="secondary">{fmtInt(v.signalCount ?? 0)}</Text>,
     },
     {
       key: 'batches',
       header: t('mqtt.batches', 'Batches'),
-      align: 'right',
-      filterValue: (v) => v.batchCount ?? null,
-      filterValueLabel: (_value, v) => v.batchCount == null ? '—' : fmtInt(v.batchCount),
       className: 'text-right',
-      render: (v) => <Text as="span" mono color="secondary">{v.batchCount == null ? '—' : fmtInt(v.batchCount)}</Text>,
+      render: (v) => <Text as="span" mono color="secondary">{fmtInt(v.batchCount ?? 0)}</Text>,
     },
     {
       key: 'sigPerSec',
       header: t('mqtt.sigPerSec', 'Sig/sec'),
-      align: 'right',
-      filterValue: (v) => v.signalsPerSecond ?? null,
-      filterValueLabel: (_value, v) => v.signalsPerSecond == null ? '—' : fmtNumber(v.signalsPerSecond),
       className: 'text-right',
       render: (v) => <Text as="span" mono color="secondary">{v.signalsPerSecond != null ? fmtNumber(v.signalsPerSecond) : '—'}</Text>,
     },
     {
       key: 'lastReceived',
-      groupStart: true,
-      header: t('mqtt.lastReceived', 'Last received'),
+      header: t('mqtt.lastReceived', 'Last Received'),
       className: 'text-right',
       render: (v) => <Text as="span" color="muted" className="whitespace-nowrap">{v.lastReceived ? formatRelative(v.lastReceived) : '—'}</Text>,
     },
     {
       key: 'status',
       header: t('mqtt.status', 'Status'),
-      align: 'center',
-      filterValue: (v) => isVehicleStale(v),
-      filterValueLabel: (_value, v) => isVehicleStale(v) ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live'),
       className: 'text-center',
       render: (v) => {
         const isStale = isVehicleStale(v);
@@ -135,16 +115,11 @@ function buildVehicleColumns(
 /* ------------------------------------------------------------------ */
 
 export default function MQTTInspectorPage() {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime, formatRelative } = useDateFormat();
-  usePageTitle(t('mqtt.title', 'MQTT inspector'));
+  usePageTitle(t('mqtt.title', 'MQTT Inspector'));
 
-  const statusQuery = useMQTTStatus();
-  const { data: status, isLoading } = statusQuery;
-  const statusState = useDataState(statusQuery, { provenance: 'live' });
-  const error = statusState.fatalError;
-  const metricsUnavailable = !statusState.hasData || error != null;
+  const { data: status, isLoading, error } = useMQTTStatus();
 
   /* ---- derived totals ---- */
   const vehicles: VehicleTelemetry[] = Array.isArray(status?.vehicles) ? status.vehicles : [];
@@ -173,7 +148,7 @@ export default function MQTTInspectorPage() {
 
   const staleVehicles = useMemo(() => vehicles.filter(isVehicleStale), [vehicles]);
 
-  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative, displayPrecision, displayLocale]);
+  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative]);
 
   // AI explainer window: derive (from_unix, to_unix) from the current time so
   // the in-scope window covers the most recent 30 minutes of broker activity.
@@ -186,19 +161,12 @@ export default function MQTTInspectorPage() {
   }, []);
 
   const connected = status?.connected ?? false;
-  const summary = mqttSummary({
-    available: !metricsUnavailable, vehicles: vehicles.length,
-    signals: totalSignals, batches: totalBatches, rate: totalRate,
-    observedAt: statusQuery.dataUpdatedAt ? new Date(statusQuery.dataUpdatedAt).toISOString() : null,
-    precision: displayPrecision, locale: displayLocale,
-  }, t);
-  const briefMetrics = useOperationalMetrics(summary.metrics);
 
   return (
-    <PageLayout
-      title={t('mqtt.title', 'MQTT inspector')}
+    <PageContainer
+      title={t('mqtt.title', 'MQTT Inspector')}
       subtitle={t('mqtt.subtitle', 'MQTT connection status and streaming telemetry')}
-      metadataActions={
+      actions={
         <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
           <Caption className="inline-flex items-center gap-1">
             <RefreshCw className="h-3 w-3" aria-hidden="true" />
@@ -219,25 +187,36 @@ export default function MQTTInspectorPage() {
           </AlertBanner>
         </FadeIn>
       )}
-      <StaleRefreshWarning state={statusState} label={t('mqtt.connectionInfo', 'Connection')} />
 
-      {/* 1 — Summary: source broker counters and reported rates */}
+      {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section aria-label={t('mqtt.metrics', 'Stream metrics')}>
-          <OperationalBrief
-            compact
-            testId="mqtt-summary"
-            eyebrow={t('mqtt.title', 'MQTT inspector')}
-            title={t('mqtt.summary.title', 'Broker counters and reported rates')}
-            description={summary.period.kind === 'snapshot' ? summary.period.provenance : summary.period.label}
-            metrics={briefMetrics}
-            scope={summary.period.label}
-            statusLabel={metricsUnavailable
-              ? isLoading ? t('common.loading', 'Loading') : t('mqtt.summary.unavailable', 'Broker snapshot unavailable')
-              : statusState.refreshError || statusState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
-                : t('mqtt.summary.available', 'Broker snapshot available')}
-            statusTone={error ? 'danger' : statusState.refreshError || statusState.isRefreshBlocked ? 'warning' : 'neutral'}
-            freshness={statusQuery.dataUpdatedAt ? formatRelative(new Date(statusQuery.dataUpdatedAt)) : undefined}
+        <section
+          aria-label={t('mqtt.metrics', 'Stream metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          <MetricCard
+            label={t('mqtt.streamingVehicles', 'Streaming Vehicles')}
+            value={isLoading ? '—' : vehicles.length}
+            icon={<Radio className="h-5 w-5" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('mqtt.totalSignals', 'Total Signals')}
+            value={isLoading ? '—' : fmtInt(totalSignals)}
+            icon={<Activity className="h-5 w-5" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('mqtt.totalBatches', 'Total Batches')}
+            value={isLoading ? '—' : fmtInt(totalBatches)}
+            icon={<Layers className="h-5 w-5" />}
+            color="purple"
+          />
+          <MetricCard
+            label={t('mqtt.signalsPerSec', 'Signals / sec')}
+            value={isLoading ? '—' : fmtNumber(totalRate)}
+            icon={<Gauge className="h-5 w-5" />}
+            color="amber"
           />
         </section>
       </FadeIn>
@@ -252,13 +231,13 @@ export default function MQTTInspectorPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mqtt.signalThroughput', 'Signal throughput')}
+              {t('mqtt.signalThroughput', 'Signal Throughput')}
             </PanelTitle>
             {error && !status ? (
               <QueryError error={error} />
             ) : (
               <EmbeddedChart
-                title={t('mqtt.signalThroughput', 'Signal throughput')}
+                title={t('mqtt.signalThroughput', 'Signal Throughput')}
                 ariaLabel={t('mqtt.throughputAria', 'MQTT signal throughput over time')}
                 loading={isLoading && throughputHistory.length === 0}
                 error={!status && error != null ? error : undefined}
@@ -308,20 +287,20 @@ export default function MQTTInspectorPage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="min-w-0">
                     <Caption className="mb-1 block">{t('mqtt.broker', 'Broker')}</Caption>
-                    <Text as="p" mono variant="body" className="break-words">{status.broker ?? '—'}</Text>
+                    <Text as="p" mono variant="body" className="truncate">{status.broker ?? '—'}</Text>
                   </div>
                   <div className="min-w-0">
                     <Caption className="mb-1 flex items-center gap-1">
                       <Clock className="h-3 w-3" aria-hidden="true" />
                       {t('mqtt.uptime', 'Uptime')}
                     </Caption>
-                    <Text as="p" mono variant="body" className="break-words">
+                    <Text as="p" mono variant="body" className="truncate">
                       {status.uptimeSeconds != null ? formatUptime(status.uptimeSeconds) : '—'}
                     </Text>
                   </div>
                 </div>
                 <div>
-                  <Caption className="mb-1.5 block">{t('mqtt.topicPatterns', 'Topic patterns')}</Caption>
+                  <Caption className="mb-1.5 block">{t('mqtt.topicPatterns', 'Topic Patterns')}</Caption>
                   {topics.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {topics.map((topic) => (
@@ -358,7 +337,7 @@ export default function MQTTInspectorPage() {
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <PanelTitle className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('mqtt.vehicleBreakdown', 'Vehicle breakdown')}
+              {t('mqtt.vehicleBreakdown', 'Vehicle Breakdown')}
               {vehicles.length > 0 && (
                 <Text as="span" variant="caption" className="font-normal">
                   {vehicles.length} {t('mqtt.vehicles', 'vehicles')}
@@ -382,7 +361,6 @@ export default function MQTTInspectorPage() {
           ) : (
             <DataTable<VehicleTelemetry>
               tableId="telemetry:mqtt-inspector"
-              enableValueFilters
               columns={vehicleColumns}
               mobileColumns={['vin', 'status', 'lastReceived']}
               data={vehicles}
@@ -397,6 +375,6 @@ export default function MQTTInspectorPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

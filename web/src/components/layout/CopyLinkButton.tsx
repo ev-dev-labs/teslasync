@@ -2,8 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Link2 } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { Tooltip } from '../ui/Tooltip';
-import { cn } from '@/lib/cn';
 import { useOptionalToast } from '../feedback/Toast';
 
 /**
@@ -20,7 +18,7 @@ import { useOptionalToast } from '../feedback/Toast';
  * gracefully (no crash) when rendered outside a `<ToastProvider>` — the copy
  * still succeeds, only the transient confirmation toast is skipped.
  */
-export function CopyLinkButton({ className, iconOnly = false }: { className?: string; iconOnly?: boolean } = {}) {
+export function CopyLinkButton({ className }: { className?: string } = {}) {
   const { t } = useTranslation();
   const toast = useOptionalToast();
   const [copied, setCopied] = useState(false);
@@ -68,22 +66,17 @@ export function CopyLinkButton({ className, iconOnly = false }: { className?: st
     }
   }, [toast, t]);
 
-  const button = (
+  return (
     <Button
       type="button"
       variant="ghost"
       size="sm"
-      className={cn(iconOnly && 'h-11 w-11 justify-center p-0 sm:h-9 sm:w-9', className)}
+      className={className}
       icon={copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
       onClick={handleClick}
-      aria-label={copied && iconOnly
-        ? t('common.copyLink.copied', 'Copied')
-        : t('common.copyLink.label', 'Copy link to this view')}
+      aria-label={t('common.copyLink.label', 'Copy link to this view')}
     >
-      {!iconOnly && (copied ? t('common.copyLink.copied', 'Copied') : t('common.copyLink.action', 'Copy link'))}
+      {copied ? t('common.copyLink.copied', 'Copied') : t('common.copyLink.action', 'Copy link')}
     </Button>
   );
-  return iconOnly
-    ? <Tooltip content={copied ? t('common.copyLink.copied', 'Copied') : t('common.copyLink.action', 'Copy link')} side="left">{button}</Tooltip>
-    : button;
 }

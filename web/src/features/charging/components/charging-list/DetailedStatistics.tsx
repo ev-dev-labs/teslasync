@@ -2,10 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { AnimatedNumber, Currency } from '@/components/data-display';
-
+import { fmtWithUnit } from '@/lib/numberFormat';
 import { formatDuration } from '../ChargingSessionCard';
 import type { ChargingStats, EnhancedStats } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DetailedStatisticsProps {
   stats: ChargingStats;
@@ -16,7 +15,6 @@ interface DetailedStatisticsProps {
 const FALLBACK_COMMON_TYPE: [string, number] = ['—', 0];
 
 export function DetailedStatistics({ stats, enhanced }: DetailedStatisticsProps) {
-  const { fmtWithUnit, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safety: these props are already-computed aggregates, but guard every
@@ -52,7 +50,7 @@ export function DetailedStatistics({ stats, enhanced }: DetailedStatisticsProps)
           <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.totalCost', 'Total Cost')}</p>
         </div>
         <div>
-          <p className="text-lg font-bold text-emerald-300"><Currency value={stats?.avgCostPerKwh} precision={displayPrecision} /></p>
+          <p className="text-lg font-bold text-emerald-300"><Currency value={stats?.avgCostPerKwh} precision={3} /></p>
           <p className="text-2xs text-[var(--text-muted)]">{t('charging.stats.avgCostPerKwh', 'Avg $/kWh')}</p>
         </div>
       </div>

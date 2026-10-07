@@ -87,8 +87,6 @@ describe('DataFreshness', () => {
     )
     expect(screen.getByText('just now')).toBeInTheDocument()
     expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveClass('border-0', 'bg-transparent')
-    expect(screen.getByRole('status')).not.toHaveClass('rounded-pill')
   })
 
   it('formats a 5-minute-old timestamp as "5m ago"', () => {
@@ -201,10 +199,7 @@ describe('DataFreshness', () => {
         onRefresh={onRefresh}
       />,
     )
-    const refresh = screen.getByRole('button', { name: /Refresh data/ })
-    expect(refresh).toHaveClass('border-0', 'bg-transparent', '!px-0')
-    expect(refresh).not.toHaveClass('rounded-pill')
-    fireEvent.click(refresh)
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }))
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
@@ -221,7 +216,6 @@ describe('DataFreshness', () => {
     )
     const root = container.firstElementChild!
     expect(root).toBeDisabled()
-    expect(root).toHaveClass('disabled:!bg-transparent')
     fireEvent.click(root)
     expect(onRefresh).not.toHaveBeenCalled()
   })

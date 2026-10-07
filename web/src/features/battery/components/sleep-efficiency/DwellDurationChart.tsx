@@ -17,11 +17,10 @@ import {
   type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DwellDatum extends ChartDataRow {
   state: string;
@@ -33,7 +32,6 @@ export function DwellDurationChart({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const data = useMemo<DwellDatum[]>(
     () =>
@@ -67,7 +65,7 @@ export function DwellDurationChart({
               }),
       },
     ],
-    [t, fmtNumber],
+    [t],
   );
 
   return (

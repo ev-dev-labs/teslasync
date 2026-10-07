@@ -21,7 +21,6 @@ export {
 export { PillFilterBar, type PillFilterBarProps, type PillItem } from './PillFilterBar';
 export { PersonaSelect, type PersonaSelectProps } from './PersonaSelect';
 export { SearchInput, type SearchInputProps } from './SearchInput';
-export { TableToolbar, type TableToolbarProps, type TableControls } from './TableToolbar';
 export { TagInput, type TagInputProps, type TagInputHandle, type TagSeparator } from './TagInput';
 export {
   TreeSelect,
@@ -30,19 +29,12 @@ export {
   type TreeLeaf,
 } from './TreeSelect';
 export { UnitInput, type UnitInputProps } from './UnitInput';
-export { SignalUnitInput, type SignalUnitInputProps } from './SignalUnitInput';
-export { UnitListInput } from './UnitListInput';
 export {
   ValidationSummary,
   type ValidationSummaryProps,
   type ValidationError,
 } from './ValidationSummary';
 export { VehicleSelect, type VehicleSelectProps } from './VehicleSelect';
-export {
-  WeekdaySelect,
-  type WeekdaySelectOption,
-  type WeekdaySelectProps,
-} from './WeekdaySelect';
 export {
   VehicleMultiSelect,
   hydrateVehicleSelection,

@@ -10,11 +10,10 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { rangeStatusLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AccountingRow {
   key: string;
@@ -27,7 +26,6 @@ export function RangeSourceCoverage({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const stateAccounting = analysis.stateAccounting;
   const eventAccounting = analysis.events.accounting;
@@ -133,7 +131,7 @@ export function RangeSourceCoverage({
         ),
       },
     ],
-    [t, fmtInt],
+    [t],
   );
   const requestedWindow =
     analysis.range.requestedStart && analysis.range.requestedEnd

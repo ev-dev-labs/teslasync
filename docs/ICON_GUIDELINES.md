@@ -175,10 +175,3 @@ that makes a shell module reach the whole registry.
    npm run perf:check                          # startup icon + feature locality
    find dist -name '*.map' -delete             # never publish the maps
    ```
-
-   The locale runtime gate uses the existing populated API fixtures against
-   the production preview, without seeding away first-visit app behavior.
-   It waits for API and locale requests to settle rather than network idle:
-   a healthy live SSE connection intentionally remains open. Route request
-   caps and grouped-catalog locality allowances are unchanged; unmatched
-   fixture requests fail the measurement.

@@ -2,50 +2,33 @@ import { useTranslation } from 'react-i18next'
 import { Navigation, BatteryCharging, MapPin } from 'lucide-react'
 
 import { GlassPanel } from '@/components/ui'
-import { OperationalBrief, type StatMetric } from '@/components/data-display'
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
+import { MetricCard } from '@/components/data-display'
 import { LinearGauge } from '@/components/charts'
 import { useUnits } from '@/hooks/useUnits'
-
+import { fmtNumber } from '@/lib/numberFormat'
 import type { VehicleState } from '@/api/types'
 import { batteryColor } from './helpers'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useVehicleDetailSummary, type VehicleDetailSummaryProps } from '../statstrip-vehicle-detail/useVehicleDetailSummary'
 
-interface BatteryRangePanelProps extends VehicleDetailSummaryProps {
-  state: VehicleState | undefined
+interface BatteryRangePanelProps {
+  state: VehicleState
 }
 
-export function BatteryRangePanel({ state, sourceQuery }: BatteryRangePanelProps) {
-  const { fmtNumber } = useNumberFormatting();
+export function BatteryRangePanel({ state }: BatteryRangePanelProps) {
   const { t } = useTranslation()
   const { formatDistance } = useUnits()
-  const summary = useVehicleDetailSummary(t('vehicles.detail.liveStateResource', 'Live vehicle state'), sourceQuery, null, state != null)
 
-  // The shared gauge owns missing geometry; do not invent a measured 0%.
-  const batteryLevel = state?.battery_level
-  const isCharging = state?.is_charging
-  const timeToFull = state?.time_to_full_charge
+  // Null-safe battery level. `state.battery_level` can arrive undefined/null
+  // from partial SignalStore snapshots (or the camelCaseKeys transform): the
+  // LinearGauge would otherwise compute `strokeDashoffset={NaN}` and
+  // `batteryColor` would misreport an unknown level as critical-low red.
+  const batteryLevel = state.battery_level ?? 0
+  const isCharging = Boolean(state.is_charging)
+  const timeToFull = state.time_to_full_charge ?? 0
   const chargeSubtitle =
-    isCharging && timeToFull != null && Number.isFinite(timeToFull) && timeToFull > 0
-      ? `${t('vehicles.detail.fullIn', 'Full in')} ${fmtNumber(timeToFull)}h`
+    isCharging && timeToFull > 0
+      ? `${t('vehicles.detail.fullIn', 'Full in')} ${fmtNumber(timeToFull, 1)}h`
       : undefined
 
-  const rawMetrics: readonly StatMetric[] = [
-    { metricId: 'distance', occurrenceId: 'rated-range', label: t('vehicles.detail.ratedRange', 'Rated range'),
-      rawValue: state?.rated_range, context: <Navigation aria-hidden="true" className="h-4 w-4" /> },
-    { metricId: 'distance', occurrenceId: 'ideal-range', label: t('vehicles.detail.idealRange', 'Ideal range'),
-      rawValue: state?.ideal_range, context: <MapPin aria-hidden="true" className="h-4 w-4" /> },
-    { metricId: 'status', label: t('common.charging', 'Charging'),
-      rawValue: isCharging == null ? null : isCharging
-        ? t('common.charging', 'Charging') : t('common.notCharging', 'Not charging'),
-      context: <div className="space-y-1">
-        <BatteryCharging aria-hidden="true" className="h-4 w-4" />
-        {isCharging && <span>{`${formatDistance(state?.charge_rate)}/h`}</span>}
-        {chargeSubtitle && <span className="block">{chargeSubtitle}</span>}
-      </div> },
-  ]
-  const metrics = useOperationalMetrics(rawMetrics)
   return (
     <GlassPanel className="p-6">
       <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-start">
@@ -55,16 +38,35 @@ export function BatteryRangePanel({ state, sourceQuery }: BatteryRangePanelProps
             max={100}
             label={t('common.battery', 'Battery')}
             unit="%"
-            color={batteryColor(batteryLevel ?? NaN)}
+            color={batteryColor(batteryLevel)}
             size={140}
           />
         </div>
-        <OperationalBrief compact testId="vehicle-live-overview-summary"
-          className="w-full min-w-0 flex-1" {...summary.brief}
-          eyebrow={t('vehicles.detail.overview', 'Live overview')}
-          title={t('vehicles.detail.brief.overviewTitle', 'Range and charging')}
-          description={t('vehicles.detail.brief.overviewDescription', 'Rated and ideal range with the reported charging state, range-added rate and available time-to-full estimate.')}
-          metrics={metrics} />
+        <div className="flex-1 grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <MetricCard
+            label={t('vehicles.detail.ratedRange', 'Rated Range')}
+            value={formatDistance(state.rated_range, { precision: 0 })}
+            icon={<Navigation aria-hidden="true" className="h-4 w-4" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('vehicles.detail.idealRange', 'Ideal Range')}
+            value={formatDistance(state.ideal_range, { precision: 0 })}
+            icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('common.charging', 'Charging')}
+            value={
+              isCharging
+                ? `${formatDistance(state.charge_rate)}/h`
+                : t('common.notCharging', 'Not Charging')
+            }
+            icon={<BatteryCharging aria-hidden="true" className="h-4 w-4" />}
+            color={isCharging ? 'green' : 'cyan'}
+            subtitle={chargeSubtitle}
+          />
+        </div>
       </div>
     </GlassPanel>
   )

@@ -144,9 +144,9 @@ describe('TirePressurePanel — panel chrome + a11y', () => {
     renderPanel(tire())
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Tire pressure' }),
+      screen.getByRole('heading', { level: 3, name: 'Tire Pressure' }),
     ).toBeInTheDocument()
-    expect(tSpy).toHaveBeenCalledWith('common.tirePressure', 'Tire pressure')
+    expect(tSpy).toHaveBeenCalledWith('common.tirePressure', 'Tire Pressure')
   })
 
   it('marks the decorative gauge icon as hidden from assistive tech', () => {
@@ -171,7 +171,7 @@ describe('TirePressurePanel — empty branch', () => {
     )
     // No corner tiles and no status phrase leak through the empty branch.
     expect(screen.queryAllByRole('group')).toHaveLength(0)
-    expect(screen.queryByText('All normal')).toBeNull()
+    expect(screen.queryByText('All Normal')).toBeNull()
   })
 
   it('treats an undefined snapshot the same as null', () => {
@@ -209,9 +209,9 @@ describe('TirePressurePanel — populated / all-safe (metric · bar)', () => {
     renderPanel(tire())
 
     const chip = screen.getByRole('status')
-    expect(chip).toHaveTextContent('All normal')
+    expect(chip).toHaveTextContent('All Normal')
     expect(chip.className).toContain('text-green-400')
-    expect(tSpy).toHaveBeenCalledWith('telemetry.tireAllNormal', 'All normal')
+    expect(tSpy).toHaveBeenCalledWith('telemetry.tireAllNormal', 'All Normal')
 
     // Every safe corner is painted green (border derived from the SI band).
     expect(corner('Front left').className).toContain('border-green-500/30')
@@ -227,9 +227,9 @@ describe('TirePressurePanel — severity branches', () => {
     expect(within(warned).getByText('2.20 bar')).toBeInTheDocument()
 
     const chip = screen.getByRole('status')
-    expect(chip).toHaveTextContent('Check pressure')
+    expect(chip).toHaveTextContent('Check Pressure')
     expect(chip.className).toContain('text-amber-400')
-    expect(tSpy).toHaveBeenCalledWith('telemetry.tireCheckPressure', 'Check pressure')
+    expect(tSpy).toHaveBeenCalledWith('telemetry.tireCheckPressure', 'Check Pressure')
   })
 
   it('escalates the chip to red "Attention Needed" when any corner is critical', () => {
@@ -240,7 +240,7 @@ describe('TirePressurePanel — severity branches', () => {
     expect(within(critical).getByText('1.90 bar')).toBeInTheDocument()
 
     const chip = screen.getByRole('status')
-    expect(chip).toHaveTextContent('Attention needed')
+    expect(chip).toHaveTextContent('Attention Needed')
     expect(chip.className).toContain('text-red-400')
     // A still-safe corner keeps its own green band even while the fleet is red.
     expect(corner('Rear right').className).toContain('border-green-500/30')

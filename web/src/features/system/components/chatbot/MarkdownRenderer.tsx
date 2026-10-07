@@ -104,8 +104,8 @@ const ReactMarkdownLazy = lazy(async () => {
           },
           table({ children }) {
             return (
-              <div className="my-2 max-w-full overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto my-2">
+                <Table className="text-xs border border-[var(--border-subtle)]">
                   {children}
                 </Table>
               </div>
@@ -113,13 +113,13 @@ const ReactMarkdownLazy = lazy(async () => {
           },
           th({ children }) {
             return (
-              <th scope="col">
+              <th className="border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-1 text-left font-semibold text-[var(--text-primary)]">
                 {children}
               </th>
             );
           },
           td({ children }) {
-            return <td>{children}</td>;
+            return <td className="border border-[var(--border-subtle)] px-2 py-1 text-[var(--text-primary)]">{children}</td>;
           },
         }}
       >

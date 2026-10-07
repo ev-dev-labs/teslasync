@@ -1,8 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  Navigation,
+  Zap,
+  Clock,
   Route,
   Battery,
+  DollarSign,
   Thermometer,
   Send,
   AlertTriangle,
@@ -14,36 +18,31 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
-import { PageLayout, LayoutCard } from '@/components/layout';
-import { FormSection } from '@/components/forms';
-import { Button, Select, Slider, Text, Caption } from '@/components/ui';
-import type { StatMetric } from '@/components/data-display/stat-reference';
-import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
-import { AlertBanner, EmptyState, StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, Select, Slider, PanelTitle, Text, Caption } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { AlertBanner, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
-import { AITripPlannerLLMAgent } from '@/components/ai';
+import { AITripPlannerLLMAgent } from '@/components/ai/AITripPlannerLLMAgent';
 import { usePlanTrip } from '@/api/hooks/useDriving';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { AddressInput } from '../components/AddressInput';
 import { SOCRouteChart } from '../components/SOCRouteChart';
 import { TripCopilotCard } from '../components/TripCopilotCard';
-import { TripCostBrief } from '../components/operationalbrief-n-z/TripCostBrief';
+import { TripCostCard } from '../components/TripCostCard';
 import { TripLegList } from '../components/TripLegList';
 import { TripPlannerMap } from '../components/TripPlannerMap';
 import { TripShareImportBanner } from '../components/TripShareImportBanner';
 import { useTripShareTarget } from '../hooks/useTripShareTarget';
 import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PLACEHOLDER = '—';
 
 export default function TripPlannerPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('tripPlanner.title', 'Trip Planner'));
   const { unitPrefs, formatEnergy } = useUnits();
@@ -118,13 +117,6 @@ export default function TripPlannerPage() {
       params: { lat: destination.lat, lon: destination.lng },
     });
   }, [destination, activeVehicle, commandMutation]);
-  const planState = useDataState({
-    data: plan ?? undefined,
-    error: planMutation.error,
-    isError: planMutation.isError,
-    isFetching: planMutation.isPending,
-    refetch: handlePlan,
-  }, { provenance: 'inferred' });
 
   const speedOptions = useMemo(() => [
     { value: '0.8', label: t('tripPlanner.speed.relaxed', 'Relaxed (−20%)') },
@@ -138,11 +130,6 @@ export default function TripPlannerPage() {
   const chargeStops = plan?.charge_stops ?? [];
   const weather = plan?.weather_impact;
   const socCurve = plan?.soc_curve ?? [];
-  const planScope = !route
-    ? t('tripPlanner.brief.noPlan', 'No computed route yet')
-    : legs.length > 0
-      ? `${legs[0]?.from?.name ?? '—'} → ${legs[legs.length - 1]?.to?.name ?? '—'}`
-      : t('tripPlanner.brief.scopeUnknown', 'Last computed plan; submitted route labels were not returned');
 
   // Stable input bag for the opt-in AI agent — grouped + memoized so the
   // memoized feature card doesn't re-render on unrelated state changes.
@@ -159,47 +146,57 @@ export default function TripPlannerPage() {
     [vehicleId, origin, destination, currentSOC, minArrivalSOC, speedFactor],
   );
 
-  const kpis: readonly StatMetric[] = [
+  const kpis = useMemo(() => [
     {
-      occurrenceId: 'distance', metricId: 'distance',
+      key: 'distance',
       label: t('tripPlanner.stats.distance', 'Distance'),
-      rawValue: route?.total_distance_m,
-      display: { formatter: (raw) => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+      value: route
+        ? `${convertDistanceFromSI(route.total_distance_m, distanceUnit).toFixed(0)} ${distanceUnit}`
+        : PLACEHOLDER,
+      icon: <Route className="h-4 w-4" />,
+      color: 'cyan' as const,
     },
     {
-      occurrenceId: 'totalTime', metricId: 'duration',
+      key: 'totalTime',
       label: t('tripPlanner.stats.totalTime', 'Total Time'),
-      rawValue: route?.total_duration_s,
-      display: { formatter: (raw) => ({ value: raw < 0 ? '' : formatDuration(raw / 60), unit: '' }) },
+      value: route ? formatDuration(route.total_duration_s / 60) : PLACEHOLDER,
+      icon: <Clock className="h-4 w-4" />,
+      color: 'blue' as const,
     },
     {
-      occurrenceId: 'drivingTime', metricId: 'duration',
+      key: 'drivingTime',
       label: t('tripPlanner.stats.drivingTime', 'Driving'),
-      rawValue: route?.driving_duration_s,
-      display: { formatter: (raw) => ({ value: raw < 0 ? '' : formatDuration(raw / 60), unit: '' }) },
+      value: route ? formatDuration(route.driving_duration_s / 60) : PLACEHOLDER,
+      icon: <Navigation className="h-4 w-4" />,
+      color: 'green' as const,
     },
     {
-      occurrenceId: 'chargingTime', metricId: 'duration',
+      key: 'chargingTime',
       label: t('tripPlanner.stats.chargingTime', 'Charging'),
-      rawValue: route?.charging_duration_s,
-      display: { formatter: (raw) => ({ value: raw < 0 ? '' : raw > 0 ? formatDuration(raw / 60) : PLACEHOLDER, unit: '' }) },
+      value: route && route.charging_duration_s > 0 ? formatDuration(route.charging_duration_s / 60) : PLACEHOLDER,
+      icon: <Zap className="h-4 w-4" />,
+      color: 'amber' as const,
     },
     {
-      occurrenceId: 'energy', metricId: 'energy',
+      key: 'energy',
       label: t('tripPlanner.stats.energy', 'Energy'),
-      rawValue: route?.total_energy_wh,
-      display: { formatter: (raw) => ({ value: formatEnergy(raw), unit: '' }) },
+      value: route ? formatEnergy(route.total_energy_wh, { precision: 1 }) : PLACEHOLDER,
+      icon: <Battery className="h-4 w-4" />,
+      color: 'purple' as const,
     },
     {
-      occurrenceId: 'cost', metricId: 'currency',
+      key: 'cost',
       label: t('tripPlanner.stats.cost', 'Est. Cost'),
-      rawValue: route?.estimated_cost,
-      display: { formatter: (raw) => ({ value: raw > 0 ? formatCurrency(raw) : t('common.free', 'Free'), unit: '' }) },
+      value: route
+        ? (route.estimated_cost > 0 ? formatCurrency(route.estimated_cost) : t('common.free', 'Free'))
+        : PLACEHOLDER,
+      icon: <DollarSign className="h-4 w-4" />,
+      color: 'green' as const,
     },
-  ];
+  ], [route, distanceUnit, formatEnergy, formatCurrency, t]);
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('tripPlanner.title', 'Trip Planner')}
       subtitle={t('tripPlanner.subtitle', 'Plan your route with range estimation and charging stops')}
     >
@@ -217,7 +214,11 @@ export default function TripPlannerPage() {
           aria-label={t('tripPlanner.form.title', 'Plan Your Trip')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5 3xl:grid-cols-4"
         >
-          <FormSection title={t('tripPlanner.form.title', 'Plan Your Trip')} className="xl:col-span-1">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <PanelTitle className="mb-4 flex items-center gap-2">
+              <Navigation className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              {t('tripPlanner.form.title', 'Plan Your Trip')}
+            </PanelTitle>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
               <AddressInput
@@ -263,7 +264,6 @@ export default function TripPlannerPage() {
 
             <div className="mt-4 flex flex-wrap items-center gap-3">
               <Button
-                wrapLabel
                 onClick={handlePlan}
                 disabled={!canPlan || planMutation.isPending}
                 className="min-h-11 gap-2"
@@ -275,7 +275,6 @@ export default function TripPlannerPage() {
               </Button>
               {plan && destination && (
                 <Button
-                  wrapLabel
                   onClick={handleSendToCar}
                   variant="secondary"
                   disabled={commandMutation.isPending}
@@ -295,19 +294,14 @@ export default function TripPlannerPage() {
               )}
             </div>
 
-            {planState.fatalError && (
+            {planMutation.isError && (
               <AlertBanner variant="danger" className="mt-4">
                 {t('tripPlanner.form.error', 'Failed to compute trip plan. Please try again.')}
               </AlertBanner>
             )}
-            {(commandMutation.isError || (commandMutation.isSuccess && commandMutation.data?.success === false)) && (
-              <AlertBanner variant="danger" role="alert">
-                {commandMutation.data?.error || t('tripPlanner.form.commandError', 'Could not send the destination to the vehicle. Try Send to Car again.')}
-              </AlertBanner>
-            )}
-          </FormSection>
+          </GlassPanel>
 
-          <div className="min-w-0 xl:col-span-2 3xl:col-span-3">
+          <div className="xl:col-span-2 3xl:col-span-3">
             <TripPlannerMap
               origin={origin}
               destination={destination}
@@ -318,23 +312,22 @@ export default function TripPlannerPage() {
         </section>
       </FadeIn>
 
-      <StaleRefreshWarning state={planState} label={t('tripPlanner.title', 'Trip Planner')} />
-
       {/* Row 2 — KPI band: always rendered, placeholders until a plan exists */}
       <FadeIn delay={0.1}>
-        <DrivingSummaryBrief
-          id="trip-planner-brief"
-          title={t('tripPlanner.stats.title', 'Trip summary')}
-          description={t('tripPlanner.brief.description', 'Route estimates from the current plan, not recorded travel or a billing quote.')}
-          metrics={kpis}
-          scope={planScope}
-          provenance={t('tripPlanner.brief.provenance', 'Deterministic trip-plan response using the submitted route, battery level, and preferences.')}
-          loading={planMutation.isPending && !route}
-          unavailable={!route}
-          retained={planState.isRefreshBlocked}
-          freshness={planMutation.isPending && route
-            ? t('tripPlanner.brief.refreshing', 'Recomputing; showing the last computed plan') : undefined}
-        />
+        <section
+          aria-label={t('tripPlanner.stats.title', 'Trip summary')}
+          className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+        >
+          {kpis.map((kpi) => (
+            <MetricCard
+              key={kpi.key}
+              label={kpi.label}
+              value={kpi.value}
+              icon={kpi.icon}
+              color={kpi.color}
+            />
+          ))}
+        </section>
       </FadeIn>
 
       {/* Row 3 — Feasibility: loud, full-width critical alert when infeasible */}
@@ -352,7 +345,7 @@ export default function TripPlannerPage() {
       {/* Row 4 — Analysis bento: SOC curve (hero) + trip insights side panel */}
       <FadeIn delay={0.2}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-          <div className="min-w-0 xl:col-span-2">
+          <div className="xl:col-span-2">
             <SOCRouteChart
               socCurve={socCurve}
               chargeStops={chargeStops}
@@ -360,9 +353,11 @@ export default function TripPlannerPage() {
             />
           </div>
 
-          <LayoutCard title={t('tripPlanner.insights.title', 'Trip Insights')} actions={
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <PanelTitle className="mb-3 flex items-center gap-2">
               <Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          }>
+              {t('tripPlanner.insights.title', 'Trip Insights')}
+            </PanelTitle>
 
             {!route ? (
               <EmptyState
@@ -422,7 +417,7 @@ export default function TripPlannerPage() {
                       {weather.avg_temp_c != null && (
                         <Caption className="mt-1 block">
                           {t('tripPlanner.weather.factor', 'Efficiency factor: {{factor}}×', {
-                            factor: fmtNumber(weather.efficiency_factor),
+                            factor: fmtNumber(weather.efficiency_factor, 2),
                           })}
                         </Caption>
                       )}
@@ -435,7 +430,7 @@ export default function TripPlannerPage() {
                 )}
               </div>
             )}
-          </LayoutCard>
+          </GlassPanel>
         </section>
       </FadeIn>
 
@@ -443,9 +438,7 @@ export default function TripPlannerPage() {
       <FadeIn delay={0.22}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
           <TripCopilotCard currentSoc={currentSOC} minArrivalSoc={minArrivalSOC} />
-          <TripCostBrief comparison={plan?.cost_comparison}
-            scope={planScope}
-            loading={planMutation.isPending && !plan?.cost_comparison} retained={planState.isRefreshBlocked} />
+          <TripCostCard comparison={plan?.cost_comparison} />
         </section>
       </FadeIn>
 
@@ -453,7 +446,7 @@ export default function TripPlannerPage() {
       <FadeIn delay={0.25}>
         <TripLegList legs={legs} chargeStops={chargeStops} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }
 

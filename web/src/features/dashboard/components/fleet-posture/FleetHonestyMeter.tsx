@@ -31,7 +31,7 @@ export function FleetHonestyMeter({
 
   return (
     <div className="space-y-2" data-testid="fleet-honesty-meter">
-      <Caption className="font-semibold tracking-[0.1em]">
+      <Caption className="font-semibold uppercase tracking-[0.1em]">
         {t('honesty.title', 'Telemetry honesty')}
       </Caption>
       <Text as="p" variant="caption">

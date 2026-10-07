@@ -15,16 +15,15 @@ const NOW = Date.parse('2025-06-01T12:00:00Z')
 
 // ── Drive the incidents query synchronously. The factory reads `queryState`
 //    lazily (at hook-call time), which sidesteps vi.mock hoisting. ──
-const queryState: { data: IncidentListResponse | undefined; calledWith: unknown; error: Error | null } = {
+const queryState: { data: IncidentListResponse | undefined; calledWith: unknown } = {
   data: undefined,
   calledWith: undefined,
-  error: null,
 }
 
 vi.mock('@/api/hooks/useIncidents', () => ({
   useIncidents: (params: unknown) => {
     queryState.calledWith = params
-    return { data: queryState.data, error: queryState.error, refetch: vi.fn() }
+    return { data: queryState.data }
   },
 }))
 
@@ -81,7 +80,6 @@ beforeEach(() => {
   seq = 0
   queryState.data = undefined
   queryState.calledWith = undefined
-  queryState.error = null
 })
 
 describe('IncidentsCard', () => {
@@ -93,11 +91,13 @@ describe('IncidentsCard', () => {
     expect(queryState.calledWith).toEqual({ activeOnly: true })
   })
 
-  it('keeps unknown initial state distinct from an authoritative empty read', () => {
+  it('collapses to nothing while the query is loading or has errored (no data)', () => {
     queryState.data = undefined
-    renderCard()
-    expect(screen.getByRole('heading', { name: /Active incidents/ })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading Active incidents' })).toBeInTheDocument()
+    const { container } = renderCard()
+
+    // A supplementary card must not push an empty panel or a scary error onto
+    // the page before/while data resolves.
+    expect(container.firstChild).toBeNull()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
@@ -150,16 +150,7 @@ describe('IncidentsCard', () => {
 
     expect(screen.getByText('minor')).toHaveClass('text-amber-300')
     expect(screen.getByText('major')).toHaveClass('text-orange-300')
-    expect(screen.getByText('critical')).toHaveClass('text-rose-300')
-  })
-
-  it('retains active incident evidence and form access after a failed refresh', () => {
-    queryState.data = { incidents: [makeIncident({ title: 'Retained incident' })], count: 1 }
-    queryState.error = new Error('refresh failed')
-    renderCard()
-    expect(screen.getByRole('link', { name: /Retained incident/ })).toBeInTheDocument()
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Log incident' })).toBeEnabled()
+    expect(screen.getByText('critical')).toHaveClass('text-red-400')
   })
 
   it('falls back to a safe "unknown" tone for a severity outside the known enum (no crash)', () => {

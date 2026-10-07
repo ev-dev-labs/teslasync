@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Caption, Code, DataTable, PinButton, HelpTooltip, Text, type Column } from '@/components/ui';
+import { DataTable, PinButton, HelpTooltip, type Column } from '@/components/ui';
 import { SourceLayerBadge, type SignalSource } from '@/components/data-display';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { SignalDiffRow } from '@/api/hooks/useTelemetry';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Virtualized diff table for the SignalDiff page.
@@ -79,7 +78,6 @@ export function SignalDiffTable({
   pinnedSignals,
   className,
 }: SignalDiffTableProps) {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   const sortedRows = useMemo(() => {
@@ -111,52 +109,48 @@ export function SignalDiffTable({
         header: t('signalDiff.signal', 'Signal'),
         sortable: true,
         render: (row) => (
-          <Code className="whitespace-nowrap">{row.name}</Code>
+          <span className="font-mono text-xs text-[var(--text-primary)]">{row.name}</span>
         ),
       },
       {
         key: 'value_a',
-        align: 'right',
         header: t('signalDiff.valueA', 'Window A'),
         className: 'text-right',
         render: (row) => (
-          <Text mono size="xs" color="secondary" className="whitespace-nowrap">
+          <span className="font-mono text-xs text-[var(--text-secondary)]">
             {formatRaw(row.value_a)}
-          </Text>
+          </span>
         ),
       },
       {
         key: 'value_b',
-        align: 'right',
         header: t('signalDiff.valueB', 'Window B'),
         className: 'text-right',
         render: (row) => (
-          <Text mono size="xs" color="primary" className="whitespace-nowrap">
+          <span className="font-mono text-xs text-[var(--text-primary)]">
             {formatRaw(row.value_b)}
-          </Text>
+          </span>
         ),
       },
       {
         key: 'delta',
-        align: 'right',
         header: t('signalDiff.delta', 'Δ'),
         className: 'text-right w-28',
         sortable: true,
         render: (row) => {
           const lbl = deltaLabel(row.value_a, row.value_b);
           if (lbl.kind === 'none') {
-            return <Caption>—</Caption>;
+            return <span className="text-xs text-[var(--text-muted)]">—</span>;
           }
           if (lbl.kind === 'change') {
-            return <Caption className="text-amber-300">{t('signalDiff.deltaChanged', 'changed')}</Caption>;
+            return <span className="text-xs text-amber-300">{t('signalDiff.deltaChanged', 'changed')}</span>;
           }
           const positive = (lbl.delta ?? 0) > 0;
           const negative = (lbl.delta ?? 0) < 0;
           return (
-            <Text
-              mono
-              size="xs"
+            <span
               className={cn(
+                'font-mono text-xs',
                 positive && 'text-emerald-300',
                 negative && 'text-rose-300',
                 !positive && !negative && 'text-[var(--text-muted)]',
@@ -165,15 +159,14 @@ export function SignalDiffTable({
               {positive ? '+' : ''}
               {fmtNumber(lbl.delta ?? 0)}
               {lbl.pct != null
-                ? ` (${lbl.pct >= 0 ? '+' : ''}${fmtNumber(lbl.pct)}%)`
+                ? ` (${lbl.pct >= 0 ? '+' : ''}${fmtNumber(lbl.pct, 1)}%)`
                 : ''}
-            </Text>
+            </span>
           );
         },
       },
       {
         key: 'source_a',
-        align: 'center',
         header: t('signalDiff.sourceA', 'Src A'),
         className: 'w-16 text-center',
         render: (row) => (
@@ -182,7 +175,6 @@ export function SignalDiffTable({
       },
       {
         key: 'source_b',
-        align: 'center',
         header: t('signalDiff.sourceB', 'Src B'),
         className: 'w-16 text-center',
         render: (row) => (
@@ -190,7 +182,7 @@ export function SignalDiffTable({
         ),
       },
     ],
-    [t, vehicleId, fmtNumber, displayPrecision, displayLocale],
+    [t, vehicleId],
   );
 
   const emptyMessage = filterActive
@@ -199,22 +191,22 @@ export function SignalDiffTable({
 
   if (loading) {
     return (
-      <div className={cn('min-w-0 w-full rounded-md border border-[var(--border-subtle)] bg-[var(--surface-1)] p-6', className)} role="status">
-        <Text as="div" variant="bodySm" className="text-center">
+      <div className={cn('w-full rounded-md border border-[var(--border-subtle)] bg-white/[0.02] p-6', className)}>
+        <div className="text-center text-sm text-[var(--text-muted)]">
           {t('signalDiff.tableLoading', 'Loading…')}
-        </Text>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={cn('min-w-0 max-w-full w-full', className)}>
+    <div className={cn('w-full', className)}>
       {/* Legend explaining the technical columns. `Column.header` in the
           shared `<DataTable>` is `string`-only (cannot embed React nodes),
           so the per-column tooltips live here above the header row. */}
-      <div className="mb-2 flex min-w-0 flex-wrap items-center gap-3 px-1">
+      <div className="mb-2 flex flex-wrap items-center gap-3 px-1 text-xs text-[var(--text-muted)]">
         <span className="inline-flex items-center gap-1">
-          <Text mono variant="caption">{t('signalDiff.legend.delta', 'Δ')}</Text>
+          <span className="font-mono uppercase tracking-wide">{t('signalDiff.legend.delta', 'Δ')}</span>
           <HelpTooltip
             size="xs"
             i18nKey="help.signal.deltaCol"
@@ -223,9 +215,9 @@ export function SignalDiffTable({
           />
         </span>
         <span className="inline-flex items-center gap-1">
-          <Text mono variant="caption">
+          <span className="font-mono uppercase tracking-wide">
             {t('signalDiff.legend.source', 'Src A / Src B')}
-          </Text>
+          </span>
           <HelpTooltip
             size="xs"
             i18nKey="help.signal.sourceLayer"

@@ -9,7 +9,7 @@ import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
 import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { cn } from '@/lib/cn';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import {
   MapContainer,
@@ -25,7 +25,6 @@ import {
   type MapStyle,
 } from './index';
 import type { ReplaySpeed } from '@/hooks/useTripReplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -179,7 +178,6 @@ export function RoutePlayback({
   className,
   emptyMessage,
 }: RoutePlaybackProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
   const { describeRoute } = useA11ySummary();
@@ -408,10 +406,10 @@ export function RoutePlayback({
               {currentIndex + 1}/{points.length}
             </span>
             {cp.speed != null && (
-              <span className="text-[var(--text-secondary)]">{fmtNumber(cp.speed)} km/h</span>
+              <span className="text-[var(--text-secondary)]">{fmtNumber(cp.speed, 1)} km/h</span>
             )}
             {cp.soc != null && (
-              <span className="text-emerald-300">{fmtNumber(cp.soc)}%</span>
+              <span className="text-emerald-300">{fmtNumber(cp.soc, 0)}%</span>
             )}
           </div>
         )}

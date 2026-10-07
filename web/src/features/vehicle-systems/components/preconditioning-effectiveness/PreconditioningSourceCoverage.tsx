@@ -1,18 +1,23 @@
-import { Cloud, Database, Route } from 'lucide-react';
+import { CalendarRange, Cloud, Database, Route } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { Badge, Text } from '@/components/ui';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+import { Grid } from '@/components/layout';
+import {
+  Badge,
+  GlassPanel,
+  MetricLabel,
+  MetricValue,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import type {
   PreconditioningQueryState,
   PreconditioningSourceQueryState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningSourceCoverageProps {
   summary: PreconditioningSummary;
@@ -25,13 +30,27 @@ function sourceReady(source: PreconditioningSourceQueryState): boolean {
   return source.isResolved && !source.error;
 }
 
+function SourceMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <MetricLabel>{label}</MetricLabel>
+      <MetricValue>{value}</MetricValue>
+    </div>
+  );
+}
+
 export function PreconditioningSourceCoverage({
   summary,
   state,
   formatDuration,
   locale,
 }: PreconditioningSourceCoverageProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const climateReady = sourceReady(state.climate);
   const drivesReady = sourceReady(state.drives);
@@ -67,7 +86,14 @@ export function PreconditioningSourceCoverage({
 
   return (
     <section data-testid="preconditioning-source-coverage">
-      <LayoutCard title={t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <CalendarRange className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t(
+            'preconditioningEffectiveness.coverage.title',
+            'Source and temporal coverage',
+          )}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.coverage.subtitle',
@@ -88,22 +114,12 @@ export function PreconditioningSourceCoverage({
               </div>
               <Badge variant={climateStatus.variant}>{climateStatus.label}</Badge>
             </div>
-            <VehicleOperationalBrief embedded id="preconditioning-climate-source-summary"
-              title={t('preconditioningEffectiveness.coverage.climateSource', 'Climate history source')}
-              available={climateReady} loading={state.climate.isLoading}
-              retained={Boolean(state.climate.refreshError) || (climateReady && state.climate.isPaused)}
-              period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.climateSource', 'Climate history source'),
-                reason: t('preconditioningEffectiveness.coverage.subtitle', 'The climate endpoint defaults to seven days; drive history is separately bounded at 1,000 rows, so their spans need not align.') }}
-              metrics={[
-                { key: 'returned', label: t('preconditioningEffectiveness.coverage.returned', 'Returned rows'), value: summary.climateRows.returnedRows },
-                { key: 'unique', label: t('preconditioningEffectiveness.coverage.uniqueTimes', 'Unique timestamps'), value: summary.climateRows.uniqueTimestampRows },
-                { key: 'thermal', label: t('preconditioningEffectiveness.coverage.thermal', 'Thermally complete'), value: summary.climateSources.thermallyCompleteRows },
-                { key: 'known-hvac', label: t('preconditioningEffectiveness.coverage.knownHvac', 'Known HVAC state'), value: summary.climateSources.knownHvacRows },
-              ].map(fact => ({
-                metricId: 'count' as const, occurrenceId: fact.key, label: fact.label, rawValue: climateReady ? fact.value : null,
-                display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
-              }))}
-            />
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.returned', 'Returned rows')} value={climateReady ? fmtInt(summary.climateRows.returnedRows) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.uniqueTimes', 'Unique timestamps')} value={climateReady ? fmtInt(summary.climateRows.uniqueTimestampRows) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.thermal', 'Thermally complete')} value={climateReady ? fmtInt(summary.climateSources.thermallyCompleteRows) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.knownHvac', 'Known HVAC state')} value={climateReady ? fmtInt(summary.climateSources.knownHvacRows) : '—'} />
+            </div>
             <Text as="p" variant="caption" className="mt-4">
               {t(
                 'preconditioningEffectiveness.coverage.climateRange',
@@ -116,10 +132,10 @@ export function PreconditioningSourceCoverage({
                     ? formatDateTime(new Date(summary.coverage.climateLatestMs), { locale })
                     : '—',
                   span: climateReady
-                    ? formatDuration(summary.coverage.climateSpanS)
+                    ? formatDuration(summary.coverage.climateSpanS, { precision: 2 })
                     : '—',
                   gap: climateReady
-                    ? formatDuration(summary.coverage.climateMedianGapS)
+                    ? formatDuration(summary.coverage.climateMedianGapS, { precision: 2 })
                     : '—',
                 },
               )}
@@ -138,19 +154,12 @@ export function PreconditioningSourceCoverage({
               </div>
               <Badge variant={driveStatus.variant}>{driveStatus.label}</Badge>
             </div>
-            <VehicleOperationalBrief embedded id="preconditioning-drive-source-summary"
-              title={t('preconditioningEffectiveness.coverage.driveSource', 'Drive history source')}
-              available={drivesReady} loading={state.drives.isLoading}
-              retained={Boolean(state.drives.refreshError) || (drivesReady && state.drives.isPaused)}
-              period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.driveSource', 'Drive history source'),
-                reason: t('preconditioningEffectiveness.coverage.contract', 'Coverage reports returned telemetry only. A longer drive span does not imply climate evidence exists around every departure.') }}
-              metrics={[
-                { metricId: 'count', occurrenceId: 'returned', label: t('preconditioningEffectiveness.coverage.returned', 'Returned rows'), rawValue: drivesReady ? summary.driveRows.returnedRows : null, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-                { metricId: 'count', occurrenceId: 'valid', label: t('preconditioningEffectiveness.coverage.validDrives', 'Unique valid drives'), rawValue: drivesReady ? summary.driveRows.uniqueValidDrives : null, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-                { metricId: 'count', occurrenceId: 'overlap', label: t('preconditioningEffectiveness.coverage.overlap', 'Windows overlapping coverage'), rawValue: climateReady && drivesReady ? summary.coverage.overlappingDriveWindows : null, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-                { metricId: 'duration', occurrenceId: 'span', label: t('preconditioningEffectiveness.coverage.driveSpan', 'Drive span'), rawValue: drivesReady ? summary.coverage.driveSpanS : null, display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) } },
-              ]}
-            />
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.returned', 'Returned rows')} value={drivesReady ? fmtInt(summary.driveRows.returnedRows) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.validDrives', 'Unique valid drives')} value={drivesReady ? fmtInt(summary.driveRows.uniqueValidDrives) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.overlap', 'Windows overlapping coverage')} value={climateReady && drivesReady ? fmtInt(summary.coverage.overlappingDriveWindows) : '—'} />
+              <SourceMetric label={t('preconditioningEffectiveness.coverage.driveSpan', 'Drive span')} value={drivesReady ? formatDuration(summary.coverage.driveSpanS, { precision: 2 }) : '—'} />
+            </div>
             <Text as="p" variant="caption" className="mt-4">
               {t(
                 'preconditioningEffectiveness.coverage.driveRange',
@@ -176,7 +185,7 @@ export function PreconditioningSourceCoverage({
             )}
           </Text>
         </div>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

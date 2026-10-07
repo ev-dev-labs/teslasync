@@ -18,8 +18,9 @@
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageLayout, LayoutCard } from '@/components/layout';
-import { Tabs, HelperText, type TabItem } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Tabs, type TabItem } from '@/components/ui';
+import { PanelTitle, HelperText } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { InlineCallout } from '@/components/feedback';
 import { ShieldCheck } from 'lucide-react';
@@ -53,14 +54,14 @@ type VaultTabKey = 'evidence' | 'disclosure' | 'preview' | 'import' | 'audit';
 
 export default function WarrantyResaleVaultPage() {
   const { t } = useTranslation();
-  const pageTitle = t('resaleVault.page.title', 'Warranty & resale vault');
+  const pageTitle = t('resaleVault.page.title', 'Warranty & Resale Vault');
   usePageTitle(pageTitle);
 
   const { vehicleId: numericVehicleId } = useSelectedVehicle();
   const vehicleId = numericVehicleId != null ? String(numericVehicleId) : null;
 
   const disclosure = useDisclosureSelection();
-  const { evidence, isLoading, hasPartialErrors, sources } = useVaultEvidence(vehicleId, disclosure.selection.sensitive);
+  const { evidence, isLoading, hasPartialErrors } = useVaultEvidence(vehicleId, disclosure.selection.sensitive);
   const vault = useSigningVault();
 
   const report = useMemo(
@@ -72,10 +73,10 @@ export default function WarrantyResaleVaultPage() {
 
   const tabs: TabItem[] = [
     { key: 'evidence', label: t('resaleVault.tabs.evidence', 'Evidence') },
-    { key: 'disclosure', label: t('resaleVault.tabs.disclosure', 'Disclosure profile') },
-    { key: 'preview', label: t('resaleVault.tabs.preview', 'Preview & sign') },
-    { key: 'import', label: t('resaleVault.tabs.import', 'Import & verify') },
-    { key: 'audit', label: t('resaleVault.tabs.audit', 'Audit trail') },
+    { key: 'disclosure', label: t('resaleVault.tabs.disclosure', 'Disclosure Profile') },
+    { key: 'preview', label: t('resaleVault.tabs.preview', 'Preview & Sign') },
+    { key: 'import', label: t('resaleVault.tabs.import', 'Import & Verify') },
+    { key: 'audit', label: t('resaleVault.tabs.audit', 'Audit Trail') },
   ];
 
   if (numericVehicleId == null) {
@@ -83,7 +84,7 @@ export default function WarrantyResaleVaultPage() {
   }
 
   return (
-    <PageLayout
+    <PageContainer
       title={pageTitle}
       subtitle={t(
         'resaleVault.page.subtitle',
@@ -91,22 +92,25 @@ export default function WarrantyResaleVaultPage() {
       )}
     >
       <FadeIn>
-        <LayoutCard title={t('resaleVault.intro.title', 'Local-first, selectively disclosed')}
-          actions={<ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
+        <GlassPanel padding="lg" className="space-y-2">
+          <PanelTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
+            {t('resaleVault.intro.title', 'Local-first, selectively disclosed')}
+          </PanelTitle>
           <HelperText>
             {t(
               'resaleVault.intro.body',
               'Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).',
             )}
           </HelperText>
-        </LayoutCard>
+        </GlassPanel>
       </FadeIn>
 
       <Tabs
         tabs={tabs}
         activeTab={activeTab}
         onChange={(key) => setActiveTab(key as VaultTabKey)}
-        ariaLabel={t('resaleVault.tabs.ariaLabel', 'Warranty & resale vault sections')}
+        ariaLabel={t('resaleVault.tabs.ariaLabel', 'Warranty & Resale Vault sections')}
         className="mt-4"
       />
 
@@ -117,7 +121,7 @@ export default function WarrantyResaleVaultPage() {
               <InlineCallout variant="info" icon={<ShieldCheck />}>
                 {t(
                   'resaleVault.evidence.scopeNote',
-                  'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what actually leaves your browser.',
+                  'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure Profile tab to control what actually leaves your browser.',
                 )}
               </InlineCallout>
               <EvidenceInventoryPanel
@@ -125,15 +129,14 @@ export default function WarrantyResaleVaultPage() {
                 selection={disclosure.selection}
                 isLoading={isLoading}
                 hasPartialErrors={hasPartialErrors}
-                sources={sources}
               />
-              <BatterySummaryPanel battery={evidence.battery} sources={sources.filter((source) => source.section === 'battery')} />
+              <BatterySummaryPanel battery={evidence.battery} />
               <BatteryCertificatePanel vehicleId={vehicleId} />
-              <MaintenanceSummaryPanel maintenance={evidence.maintenance} sources={sources.filter((source) => source.section === 'maintenance')} />
-              <SoftwareUpdateSummaryPanel softwareUpdates={evidence.software_updates} sources={sources.filter((source) => source.section === 'software_updates')} />
+              <MaintenanceSummaryPanel maintenance={evidence.maintenance} />
+              <SoftwareUpdateSummaryPanel softwareUpdates={evidence.software_updates} />
               <WarrantySummaryPanel warranty={evidence.warranty} />
-              <DrivingChargingSummaryPanel driving={evidence.driving_history} charging={evidence.charging_history} sources={sources} />
-              <IncidentSummaryPanel incidents={evidence.security_incidents} sources={sources.filter((source) => source.section === 'security_incidents')} />
+              <DrivingChargingSummaryPanel driving={evidence.driving_history} charging={evidence.charging_history} />
+              <IncidentSummaryPanel incidents={evidence.security_incidents} />
             </div>
           </FadeIn>
         )}
@@ -173,6 +176,6 @@ export default function WarrantyResaleVaultPage() {
           </FadeIn>
         )}
       </div>
-    </PageLayout>
+    </PageContainer>
   );
 }

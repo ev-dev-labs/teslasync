@@ -1,12 +1,16 @@
+import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
+import { Grid } from '@/components/layout';
 import {
   Badge,
+  GlassPanel,
   MetricLabel,
+  MetricValue,
+  PanelTitle,
   Text,
 } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import {
   CABIN_ROW_EXCLUSION_REASONS,
   type CabinThermalSummary,
@@ -14,8 +18,6 @@ import {
 import { cabinRowExclusionLabel } from './labels';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 interface CabinThermalAccountingMatrixProps {
   summary: CabinThermalSummary;
@@ -59,7 +61,6 @@ export function CabinThermalAccountingMatrix({
   summary,
   state,
 }: CabinThermalAccountingMatrixProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = summary.accounting;
   const rejectionSum = summary.rejectionReasonCounts.reduce(
@@ -76,7 +77,11 @@ export function CabinThermalAccountingMatrix({
 
   return (
     <section data-testid="cabin-thermal-accounting">
-      <LayoutCard title={t('cabinThermal.accounting.title', 'Data and accounting matrix')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('cabinThermal.accounting.title', 'Data and accounting matrix')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.accounting.subtitle',
@@ -115,23 +120,24 @@ export function CabinThermalAccountingMatrix({
           <Text as="h4" variant="label" className="mb-3 mt-5">
             {t('cabinThermal.accounting.exclusions', 'Mutually exclusive raw-row exclusions')}
           </Text>
-          <VehicleOperationalBrief embedded id="cabin-thermal-exclusions-summary"
-            title={t('cabinThermal.accounting.exclusions', 'Mutually exclusive raw-row exclusions')}
-            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
-            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('cabinThermal.accounting.subtitle', 'Exact identities prevent returned rows, normalized samples, candidates, and accepted fits from being conflated.') }}
-            metrics={[
-              ...CABIN_ROW_EXCLUSION_REASONS.map(reason => ({
-                metricId: 'count' as const, occurrenceId: reason,
-                label: cabinRowExclusionLabel(t, reason), rawValue: summary.rowExclusions[reason],
-                display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
-              })),
-              { metricId: 'count', occurrenceId: 'hvac-on', label: t('cabinThermal.accounting.hvacOn', 'Normalized HVAC-on rows'), rawValue: accounting.hvacOnRows, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-              { metricId: 'count', occurrenceId: 'hvac-unknown', label: t('cabinThermal.accounting.hvacUnknown', 'Normalized HVAC-unknown rows'), rawValue: accounting.hvacUnknownRows, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-            ]}
-          />
+          <Grid cols={{ default: 2, md: 3, xl: 4 }} gap={3}>
+            {CABIN_ROW_EXCLUSION_REASONS.map((reason) => (
+              <div key={reason} className="rounded-lg border border-[var(--border-subtle)] p-3">
+                <MetricLabel>{cabinRowExclusionLabel(t, reason)}</MetricLabel>
+                <MetricValue className="mt-1">{fmtInt(summary.rowExclusions[reason])}</MetricValue>
+              </div>
+            ))}
+            <div className="rounded-lg border border-[var(--border-subtle)] p-3">
+              <MetricLabel>{t('cabinThermal.accounting.hvacOn', 'Normalized HVAC-on rows')}</MetricLabel>
+              <MetricValue className="mt-1">{fmtInt(accounting.hvacOnRows)}</MetricValue>
+            </div>
+            <div className="rounded-lg border border-[var(--border-subtle)] p-3">
+              <MetricLabel>{t('cabinThermal.accounting.hvacUnknown', 'Normalized HVAC-unknown rows')}</MetricLabel>
+              <MetricValue className="mt-1">{fmtInt(accounting.hvacUnknownRows)}</MetricValue>
+            </div>
+          </Grid>
         </CabinThermalSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

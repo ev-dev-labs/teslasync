@@ -3,22 +3,22 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Car, RefreshCw, Gauge, Zap, Activity, ListChecks,
+  Car, RefreshCw, Battery, Gauge, Zap, Activity, ListChecks,
   ExternalLink, Lock, Shield, ArrowLeftRight, AlertCircle,
   BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
-import { PrefetchLink, PageLayout, Section } from '@/components/layout';
-import { VehiclePanelGrid } from '../components/modernization';
+import { PageContainer, PrefetchLink } from '@/components/layout';
 import { VirtualizedVehicleGrid } from '@/components/vehicles';
 import {
   GlassPanel, Badge, Button, ConfirmDialog, PinButton,
-  PanelTitle, Text, Popover, MaskedValue,
+  SectionTitle, PanelTitle, Text, Popover, MaskedValue,
 } from '@/components/ui';
 import {
   AnimatedNumber,
   DataProvenanceBadge,
   MetricBar,
+  MetricCard,
   OperationalBrief,
   EntityPreviewDrawer,
   type OperationalAttention,
@@ -36,7 +36,7 @@ import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { knownNumber, type DataStatus } from '@/api/dataState';
+import { knownNumber } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
@@ -49,7 +49,7 @@ import {
 import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
 import { usePinned } from '@/api/hooks/usePinned';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { formatObservationAge } from '@/lib/observationAge';
 import { batteryColor, statusHexColor } from '@/lib/colors';
 import { maskFor } from '@/lib/maskValue';
@@ -57,14 +57,11 @@ import { typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState, VehicleStateReadings } from '@/api/types';
+import type { VehicleState } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 import type { TFunction } from 'i18next';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -75,7 +72,7 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
  * fields stay available to consumers that need to distinguish a fresh reading
  * from one retained through a failed refresh.
  */
-type LoadedEntry = FleetStateEntry & { state: VehicleStateReadings };
+type LoadedEntry = FleetStateEntry & { state: VehicleState };
 const FLEET_VIRTUALIZATION_THRESHOLD = 24;
 
 /* ── Preview trust helpers ─────────────────────────────────── */
@@ -94,7 +91,7 @@ const FLEET_VIRTUALIZATION_THRESHOLD = 24;
 function currentFieldValue(
   entry: FleetStateEntry | undefined,
   field: VerifiedVehicleStateField,
-  render: (state: VehicleStateReadings) => string,
+  render: (state: VehicleState) => string,
   t: TFunction,
 ): { value: string; detail?: string } {
   if (entry?.state == null) {
@@ -183,34 +180,29 @@ function previewTrustSummary(
 /**
  * Mirrors the redesigned bento layout while the fleet list loads: KPI band →
  * overview bento (hero battery + status) → responsive vehicle-card grid.
- * Rendered inside the shared PageLayout so the title bar appears instantly
+ * Rendered inside a real `<PageContainer>` so the title bar appears instantly
  * and layout shift stays at zero when the real content arrives.
  */
 function VehicleListSkeleton() {
   const { t } = useTranslation();
   return (
-    <PageLayout
+    <PageContainer
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
     >
       <div className="space-y-6" data-testid="vehicle-list-skeleton">
         <StatGridSkeleton cards={4} />
-        <VehiclePanelGrid
-          label={t('vehicles.overview', 'Fleet overview')}
-          items={[
-            { id: 'battery-loading', size: 'half', content: <Skeleton className="h-64 rounded-xl" /> },
-            { id: 'status-loading', size: 'half', content: <Skeleton className="h-64 rounded-xl" /> },
-          ]}
-        />
-        <VehiclePanelGrid
-          label={t('vehicles.allVehicles', 'All vehicles')}
-          items={Array.from({ length: 6 }, (_, i) => ({
-            id: `vehicle-loading-${i}`, size: 'quarter',
-            content: <Skeleton className="h-52 rounded-xl" />,
-          }))}
-        />
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
+          <Skeleton className="h-64 rounded-xl xl:col-span-2" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-52 rounded-xl" />
+          ))}
+        </div>
       </div>
-    </PageLayout>
+    </PageContainer>
   );
 }
 
@@ -221,7 +213,7 @@ function StatChip({ icon, label, value }: { icon: ReactNode; label: string; valu
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1',
+        'inline-flex items-center gap-1 rounded-md bg-white/[0.03] px-2 py-1',
         typography.size.xs,
         typography.color.secondary,
       )}
@@ -243,7 +235,6 @@ interface FleetKpisProps {
   totalRange: number | null;
   chargingCount: number;
   chargingCoverageCount: number;
-  sourceStatus: DataStatus;
 }
 
 /** Full-width responsive metric grid summarising the whole fleet. */
@@ -253,33 +244,44 @@ function FleetKpis({
   totalRange,
   chargingCount,
   chargingCoverageCount,
-  sourceStatus,
 }: FleetKpisProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const unknownLabel = t('common.unknownValue', '—');
   return (
-    <VehicleEvidenceBrief
-      id="fleet-current-summary"
-      title={t('vehicles.summarySnapshot', 'Current verified fleet readings')}
-      description={t('vehicles.briefSummaryDescription', 'Registered vehicle count and independently verified battery, range, and charge-state readings. Missing coverage is not zero.')}
-      status={sourceStatus === 'ok' && (chargingCoverageCount < totalVehicles || avgBattery == null || totalRange == null) ? 'partial' : sourceStatus}
-      scope={t('vehicles.briefSummaryScope', 'Current field coverage differs by measurement; no common observation timestamp is supplied')}
-      provenance={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
-      metrics={[
-        { metricId: 'count', occurrenceId: 'fleet-total', label: t('vehicles.totalVehicles', 'Total vehicles'), rawValue: totalVehicles },
-        { metricId: 'percent', occurrenceId: 'fleet-average-battery', label: t('vehicles.avgBattery', 'Avg battery'),
-          rawValue: avgBattery,
-          display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
-        { metricId: 'distance', occurrenceId: 'fleet-total-range',
-          label: `${t('vehicles.totalRange', 'Total range')} (${unitPrefs.distance})`,
-          rawValue: totalRange,
-          display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, unitPrefs.distance)), unit: '' }) } },
-        { metricId: 'count', occurrenceId: 'fleet-charging-coverage', label: t('vehicles.chargingLiveState', 'Charging / live state'),
-          rawValue: chargingCoverageCount === 0 ? null : chargingCount,
-          display: { countTotal: chargingCoverageCount } },
-      ]}
-    />
+    <section
+      aria-label={t('vehicles.summary', 'Fleet summary')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+    >
+      <MetricCard
+        label={t('vehicles.totalVehicles', 'Total Vehicles')}
+        value={totalVehicles}
+        icon={<Car className="h-5 w-5" />}
+        color="cyan"
+      />
+      <MetricCard
+        label={t('vehicles.avgBattery', 'Avg Battery')}
+        value={avgBattery == null ? unknownLabel : `${fmtNumber(avgBattery)}%`}
+        icon={<Battery className="h-5 w-5" />}
+        color="green"
+      />
+      <MetricCard
+        label={`${t('vehicles.totalRange', 'Total Range')} (${unitPrefs.distance})`}
+        value={totalRange == null
+          ? unknownLabel
+          : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
+        icon={<Gauge className="h-5 w-5" />}
+        color="purple"
+      />
+      <MetricCard
+        label={t('vehicles.chargingLiveState', 'Charging / Live state')}
+        value={chargingCoverageCount === 0
+          ? unknownLabel
+          : `${chargingCount} / ${chargingCoverageCount}`}
+        icon={<Zap className="h-5 w-5" />}
+        color="green"
+      />
+    </section>
   );
 }
 
@@ -307,7 +309,7 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('vehicles.batteryStatus', 'Fleet battery status')}
+          {t('vehicles.batteryStatus', 'Fleet Battery Status')}
         </PanelTitle>
         <Text variant="bodySm">
           {avgBattery == null ? (
@@ -429,7 +431,7 @@ function FleetStatusPanel({
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.statusBreakdown', 'Fleet status')}
+        {t('vehicles.statusBreakdown', 'Fleet Status')}
       </PanelTitle>
 
       {showErrorInstead ? (
@@ -597,7 +599,6 @@ interface VehicleCardProps {
 
 /** One vehicle in the responsive fleet grid — all data + row actions. */
 function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const state = entry?.state ?? null;
@@ -616,20 +617,26 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
   return (
     <GlassPanel
       hover
+      glow="cyan"
       padding="none"
       data-tour="vehicles-card"
       className="group flex h-full flex-col overflow-hidden"
     >
+      <div
+        className="h-1 bg-gradient-to-r from-cyan-400 via-purple-400 to-emerald-400 opacity-40 transition-opacity group-hover:opacity-80"
+        aria-hidden="true"
+      />
+
       <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
         {/* Header — name, status, pin */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <PrefetchLink
                 to={`/vehicles/${vehicle.id}`}
                 className={cn(
                   typography.role.panelTitle,
-                  'block min-h-11 max-w-full min-w-0 break-words rounded py-2 transition-colors hover:text-[var(--theme-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+                  'truncate rounded outline-none transition-colors hover:text-cyan-300 focus-visible:text-cyan-300 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
                 )}
               >
                 {vehicle.display_name || maskFor(vehicle.vin ?? '', 'vin')}
@@ -643,7 +650,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
                 </Badge>
               ) : null}
             </div>
-            <Text variant="caption" as="p" className="mt-1 break-words">
+            <Text variant="caption" as="p" className="mt-1 truncate">
               {modelLine || t('vehicles.unknownModel', 'Unknown model')}
               {' · '}
               <MaskedValue
@@ -681,7 +688,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
           >
             <div
               className="h-full rounded-full transition-all duration-slow"
-              style={{ width: `${level ?? 0}%`, backgroundColor: color }}
+              style={{ width: `${level ?? 0}%`, background: `linear-gradient(90deg, ${color}99, ${color})` }}
             />
           </div>
         </div>
@@ -734,7 +741,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
             to={`/vehicles/${vehicle.id}`}
             aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-[var(--theme-primary)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+              'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-cyan-300 outline-none transition-colors hover:text-cyan-200 focus-visible:ring-1 focus-visible:ring-cyan-400/40',
               typography.size.sm,
               typography.weight.medium,
             )}
@@ -756,7 +763,6 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
 /* ── Page ──────────────────────────────────────────────────── */
 
 export default function VehicleListPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   usePageTitle(t('nav.vehicles', 'Fleet'));
@@ -941,7 +947,10 @@ export default function VehicleListPage() {
         entry={entryById.get(vehicle.id)}
         onDelete={setDeleteTarget}
         onPreview={() => {
-          setPreviewVehicle(vehicle);
+          setPreviewTarget({
+            vehicle,
+            entry: entryById.get(vehicle.id),
+          });
         }}
       />
     ),
@@ -1081,7 +1090,7 @@ export default function VehicleListPage() {
           ),
           description: t(
             'operations.vehicles.serviceAttentionDescription',
-            'High- or critical-severity maintenance is still open in fleet operations.',
+            'High- or critical-severity maintenance is still open in Fleet Operations.',
           ),
           tone: 'danger' as const,
         }]
@@ -1142,7 +1151,7 @@ export default function VehicleListPage() {
         recordId: String(workOrder.id),
         method: t(
           'operations.vehicles.narrative.workOrderMethod',
-          'Open high- or critical-severity fleet operations work order.',
+          'Open high- or critical-severity Fleet Operations work order.',
         ),
       },
     })),
@@ -1197,7 +1206,7 @@ export default function VehicleListPage() {
         workOrdersQuery.isError
           ? t(
               'operations.vehicles.narrative.workOrderLimitedBasis',
-              'Fleet operations work orders were unavailable.',
+              'Fleet Operations work orders were unavailable.',
             )
           : t(
               'operations.vehicles.narrative.workOrderBasis',
@@ -1211,7 +1220,7 @@ export default function VehicleListPage() {
       urgentWorkOrders.length > 0
         ? t(
             'operations.vehicles.narrative.serviceResponse',
-            'Review the urgent fleet operations work orders before assigning affected vehicles.',
+            'Review the urgent Fleet Operations work orders before assigning affected vehicles.',
           )
         : offlineCount > 0
           ? t(
@@ -1241,7 +1250,7 @@ export default function VehicleListPage() {
         ? [
             t(
               'operations.vehicles.narrative.workOrderLimitation',
-              'Service readiness is incomplete while fleet operations work orders are unavailable.',
+              'Service readiness is incomplete while Fleet Operations work orders are unavailable.',
             ),
           ]
         : []),
@@ -1281,13 +1290,19 @@ export default function VehicleListPage() {
   const syncMut = useSyncVehicles();
   const deleteMut = useDeleteVehicle();
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
-  const [previewVehicle, setPreviewVehicle] = useState<Vehicle | null>(null);
-  // Selection survives refreshes, but its trust entry must follow the current
-  // batch so an already-open drawer cannot keep certifying an old Live value.
-  const previewTarget = previewVehicle ? {
-    vehicle: vehicleList.find((vehicle) => vehicle.id === previewVehicle.id) ?? previewVehicle,
-    entry: entryById.get(previewVehicle.id),
-  } : null;
+  const [previewTarget, setPreviewTarget] = useState<{
+    vehicle: Vehicle;
+    /**
+     * The FULL fleet entry, not a bare `state`.
+     *
+     * The drawer used to store the raw state and call `deriveVehicleStatus`,
+     * which happily reported a reading retained through a failed refresh as
+     * the vehicle's CURRENT status and rendered every stale metric as if it
+     * were live. Keeping the entry keeps the outcome + freshness +
+     * verified-field provenance attached to the numbers they qualify.
+     */
+    entry: FleetStateEntry | undefined;
+  } | null>(null);
   /* Status and trust for the drawer come from the SHARED contract, so the
    * preview can never claim a retained reading is the vehicle's current
    * state — the exact defect this replaces. */
@@ -1320,27 +1335,6 @@ export default function VehicleListPage() {
     navigate(`/vehicle-comparison?${params.toString()}`);
   };
 
-  const postureMetrics = useOperationalMetrics([
-    { metricId: 'count', occurrenceId: 'vehicles', rawValue: vehicleList.length },
-    { metricId: 'count', occurrenceId: 'online', rawValue: fleetStatePending || noCoverage ? null : fleet.liveStateCount,
-      display: { formatter: raw => ({ value: `${raw}/${vehicleList.length}`, unit: '' }) } },
-    { metricId: 'count', occurrenceId: 'readiness', rawValue: fleetStatePending || fleet.batteryCoverageCount === 0 ? null : fleet.readyCount,
-      display: { formatter: raw => ({ value: `${raw}/${fleet.batteryCoverageCount}`, unit: '' }) } },
-    { metricId: 'percent', occurrenceId: 'utilization', rawValue: fleetStatePending ? null : utilizationPct,
-      display: { formatter: raw => ({ value: `${raw}%`, unit: '' }) } },
-    { metricId: fleet.softwareVersions.length === 1 ? 'text' : 'count', occurrenceId: 'software',
-      rawValue: fleetStatePending || fleet.softwareVersions.length === 0 ? null
-        : fleet.softwareVersions.length === 1 ? fleet.softwareVersions[0] : fleet.softwareVersions.length,
-      display: { formatter: raw => ({
-        value: t('operations.vehicles.softwareVersionCount', '{{count}} versions', { count: raw }), unit: '',
-      }) } },
-    { metricId: 'count', occurrenceId: 'service',
-      rawValue: workOrdersQuery.isLoading || workOrdersQuery.isError ? null : openWorkOrders.length,
-      display: { formatter: raw => ({
-        value: t('operations.vehicles.openWorkOrders', '{{count}} open', { count: raw }), unit: '',
-      }) } },
-  ]);
-
   /* ── Loading / error short-circuits ── */
   if (isLoading) {
     return <VehicleListSkeleton />;
@@ -1351,7 +1345,7 @@ export default function VehicleListPage() {
   // on screen and is surfaced by <StaleRefreshWarning> below instead.
   if (vehiclesState.status === 'initialFailure') {
     return (
-      <PageLayout
+      <PageContainer
         title={t('nav.vehicles', 'Fleet')}
         subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       >
@@ -1362,13 +1356,13 @@ export default function VehicleListPage() {
             resourceName={t('nav.vehicles', 'Fleet')}
           />
         </GlassPanel>
-      </PageLayout>
+      </PageContainer>
     );
   }
 
   /* ── Render ── */
   return (
-    <PageLayout
+    <PageContainer
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
       query={[vehiclesQuery, fleetFreshnessQuery, workOrdersQuery]}
@@ -1439,9 +1433,8 @@ export default function VehicleListPage() {
         label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
       />
 
-      {vehicleList.length === 0 && (
-        <GlassPanel padding="md">
-          <EmptyState
+      {vehicleList.length === 0 ? (
+        <EmptyState
           icon={<Car className="h-10 w-10" />}
           title={t('vehicles.emptyTitle', 'No vehicles yet')}
           message={t(
@@ -1449,14 +1442,10 @@ export default function VehicleListPage() {
             'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.',
           )}
           action={{ label: t('vehicles.syncButton', 'Sync from Tesla'), onClick: handleSync }}
-          />
-        </GlassPanel>
-      )}
-      <VehiclePanelGrid
-        label={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
-        items={[{ id: 'fleet-operational-posture', size: 'full', content: vehicleList.length > 0 ? (
+        />
+      ) : (
+        <>
           <OperationalBrief
-            compact
             testId="fleet-operational-brief"
             eyebrow={t('operations.vehicles.eyebrow', 'Fleet posture')}
             title={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
@@ -1504,10 +1493,8 @@ export default function VehicleListPage() {
             metrics={[
               {
                 key: 'vehicles',
-                label: t('vehicles.totalVehicles', 'Total vehicles'),
-                value: postureMetrics[0].value,
-                rawValue: postureMetrics[0].rawValue,
-                valueState: postureMetrics[0].valueState,
+                label: t('vehicles.totalVehicles', 'Total Vehicles'),
+                value: vehicleList.length,
                 detail: t(
                   'operations.vehicles.totalDetail',
                   'Vehicles currently registered in this TeslaSync workspace.',
@@ -1517,9 +1504,9 @@ export default function VehicleListPage() {
               {
                 key: 'online',
                 label: t('operations.vehicles.online', 'Live state available'),
-                value: postureMetrics[1].value,
-                rawValue: postureMetrics[1].rawValue,
-                valueState: postureMetrics[1].valueState,
+                value: fleetStatePending || noCoverage
+                  ? '—'
+                  : `${fleet.liveStateCount}/${vehicleList.length}`,
                 detail: t(
                   'operations.vehicles.onlineDetail',
                   'Vehicles with a current state response available.',
@@ -1535,9 +1522,9 @@ export default function VehicleListPage() {
                 label: t('operations.vehicles.readiness', 'Departure ready'),
                 // Without a fresh reading for ANY vehicle, "0/N ready" is an
                 // assertion that the fleet cannot depart — from no evidence.
-                value: postureMetrics[2].value,
-                rawValue: postureMetrics[2].rawValue,
-                valueState: postureMetrics[2].valueState,
+                value: fleetStatePending || fleet.batteryCoverageCount === 0
+                  ? '—'
+                  : `${fleet.readyCount}/${fleet.batteryCoverageCount}`,
                 detail: [
                   t(
                     'operations.vehicles.readinessDetail',
@@ -1554,9 +1541,9 @@ export default function VehicleListPage() {
               {
                 key: 'utilization',
                 label: t('operations.vehicles.utilization', 'Live utilization'),
-                value: postureMetrics[3].value,
-                rawValue: postureMetrics[3].rawValue,
-                valueState: postureMetrics[3].valueState,
+                value: fleetStatePending || utilizationPct == null
+                  ? '—'
+                  : `${utilizationPct}%`,
                 detail: [
                   t(
                     'operations.vehicles.utilizationDetail',
@@ -1570,9 +1557,15 @@ export default function VehicleListPage() {
               {
                 key: 'software',
                 label: t('operations.vehicles.softwarePosture', 'Software posture'),
-                value: postureMetrics[4].value,
-                rawValue: postureMetrics[4].rawValue,
-                valueState: postureMetrics[4].valueState,
+                value: fleetStatePending || fleet.softwareVersions.length === 0
+                  ? '—'
+                  : fleet.softwareVersions.length === 1
+                    ? fleet.softwareVersions[0]
+                    : t(
+                        'operations.vehicles.softwareVersionCount',
+                        '{{count}} versions',
+                        { count: fleet.softwareVersions.length },
+                      ),
                 detail: t(
                   'operations.vehicles.softwareCoverageDetail',
                   'Based on {{covered}} of {{total}} vehicles with a current software reading.',
@@ -1590,9 +1583,13 @@ export default function VehicleListPage() {
               {
                 key: 'service',
                 label: t('operations.vehicles.serviceAttention', 'Service attention'),
-                value: postureMetrics[5].value,
-                rawValue: postureMetrics[5].rawValue,
-                valueState: postureMetrics[5].valueState,
+                value: workOrdersQuery.isLoading || workOrdersQuery.isError
+                  ? '—'
+                  : t(
+                      'operations.vehicles.openWorkOrders',
+                      '{{count}} open',
+                      { count: openWorkOrders.length },
+                    ),
                 detail: workOrdersQuery.isError
                   ? t(
                       'operations.vehicles.serviceUnavailableMetric',
@@ -1615,28 +1612,13 @@ export default function VehicleListPage() {
             attention={fleetAttention}
             provenance={t(
               'operations.vehicles.provenance',
-              'Based on the registered fleet, the latest independently resolved live state for each vehicle, and fleet operations work orders.',
+              'Based on the registered fleet, the latest independently resolved live state for each vehicle, and Fleet Operations work orders.',
             )}
           />
-        ) : (
-          <GlassPanel padding="md">
-            {/* // no-action: No registered fleet to assess; the header and fleet-empty Sync from Tesla controls recover this source. */}
-            <EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
-              section: t('operations.vehicles.eyebrow', 'Fleet posture'),
-            })} />
-          </GlassPanel>
-        ) }]}
-      />
 
           {/* 1 — KPI band */}
           <FadeIn delay={0.05}>
-            <Section id="fleet-summary" title={t('vehicles.summary', 'Fleet summary')}>
-            {vehicleList.length === 0 ? (
-              // no-action: Summary needs registered vehicles; use the existing header or fleet-empty Sync from Tesla action.
-              <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
-                section: t('vehicles.summary', 'Fleet summary'),
-              })} /></GlassPanel>
-            ) : fleetStatePending ? (
+            {fleetStatePending ? (
               <StatGridSkeleton cards={4} />
             ) : (
               <FleetKpis
@@ -1645,19 +1627,17 @@ export default function VehicleListPage() {
                 totalRange={fleet.totalRange}
                 chargingCount={fleet.chargingCount}
                 chargingCoverageCount={fleet.chargingCoverageCount}
-                sourceStatus={fleetStateData.status}
               />
             )}
-            </Section>
           </FadeIn>
 
-          {/* 2 — Existing surface-owning panels, composed by the shared grid. */}
-          <Section id="fleet-overview" title={t('vehicles.overview', 'Fleet overview')}>
-            {vehicleList.length > 0 ? (
-            <VehiclePanelGrid
-              label={t('vehicles.overview', 'Fleet overview')}
-              items={[
-                { id: 'fleet-battery', size: 'half', content: <FadeIn delay={0.1} className="h-full">
+          {/* 2 — Overview bento: hero battery (2/3) + status breakdown (1/3) */}
+          <section aria-labelledby="fleet-overview-heading">
+            <SectionTitle id="fleet-overview-heading" className="mb-3">
+              {t('vehicles.overview', 'Fleet overview')}
+            </SectionTitle>
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
+              <FadeIn delay={0.1} className="h-full xl:col-span-2">
                 <FleetBatteryPanel
                   entries={fleet.batteryEntries}
                   avgBattery={fleet.avgBattery}
@@ -1669,8 +1649,8 @@ export default function VehicleListPage() {
                   ))}
                   onRetry={() => statesQuery.refetch()}
                 />
-              </FadeIn> },
-                { id: 'fleet-status', size: 'half', content: <FadeIn delay={0.15} className="h-full">
+              </FadeIn>
+              <FadeIn delay={0.15} className="h-full">
                 <FleetStatusPanel
                   counts={statusCounts}
                   total={vehicleList.length}
@@ -1679,20 +1659,16 @@ export default function VehicleListPage() {
                   summary={fleetSummary}
                   onRetry={() => statesQuery.refetch()}
                 />
-              </FadeIn> },
-              ]}
-            />
-            ) : (
-              // no-action: Overview has no fleet to inspect; existing page-level Sync from Tesla controls already recover registration.
-              <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
-                section: t('vehicles.overview', 'Fleet overview'),
-              })} /></GlassPanel>
-            )}
-          </Section>
+              </FadeIn>
+            </div>
+          </section>
 
           {/* 3 — All vehicles: responsive full-width card grid */}
-          <Section id="all-vehicles" title={t('vehicles.allVehicles', 'All vehicles')}>
-            <div data-tour="vehicles-list" className="min-w-0">
+          <section aria-labelledby="all-vehicles-heading" data-tour="vehicles-list">
+            <SectionTitle id="all-vehicles-heading" className="mb-3 flex items-center gap-2">
+              <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
+              {t('vehicles.allVehicles', 'All Vehicles')}
+            </SectionTitle>
             {sortedVehicleList.length > FLEET_VIRTUALIZATION_THRESHOLD ? (
               <VirtualizedVehicleGrid
                 vehicles={sortedVehicleList}
@@ -1701,30 +1677,23 @@ export default function VehicleListPage() {
                 onVisibleVehiclesChange={warmVisibleVehicles}
               />
             ) : (
-              <StaggerContainer>
-                <VehiclePanelGrid
-                  label={t('vehicles.virtualizedFleetLabel', 'Vehicle fleet')}
-                  items={sortedVehicleList.map((vehicle) => ({
-                    id: `vehicle-${vehicle.id}`, size: 'quarter',
-                    content: <StaggerItem className="h-full">{renderVehicleCard(vehicle)}</StaggerItem>,
-                  }))}
-                />
+              <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+                {sortedVehicleList.map((vehicle) => (
+                  <StaggerItem key={vehicle.id} className="h-full">
+                    {renderVehicleCard(vehicle)}
+                  </StaggerItem>
+                ))}
               </StaggerContainer>
             )}
-            {sortedVehicleList.length === 0 && (
-              // no-action: This is an empty registered fleet, not a local filter; header and fleet-empty Sync from Tesla already provide recovery.
-              <GlassPanel padding="md"><EmptyState message={t('vehicles.layout.noSectionRecords', 'No fleet records for {{section}}.', {
-                section: t('vehicles.allVehicles', 'All vehicles'),
-              })} /></GlassPanel>
-            )}
-            </div>
-          </Section>
+          </section>
+        </>
+      )}
 
       {/* Delete confirmation */}
       <ConfirmDialog
         open={deleteTarget !== null}
         loading={deleteMut.isPending}
-        title={t('vehicles.removeTitle', 'Remove vehicle')}
+        title={t('vehicles.removeTitle', 'Remove Vehicle')}
         message={
           deleteTarget
             ? t('vehicles.removeMessage', {
@@ -1740,7 +1709,7 @@ export default function VehicleListPage() {
       />
       <EntityPreviewDrawer
         open={previewTarget !== null}
-        onClose={() => setPreviewVehicle(null)}
+        onClose={() => setPreviewTarget(null)}
         eyebrow={t('vehicles.preview.eyebrow', 'Vehicle preview')}
         title={
           previewTarget?.vehicle.display_name
@@ -1899,6 +1868,6 @@ export default function VehicleListPage() {
             : []
         }
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

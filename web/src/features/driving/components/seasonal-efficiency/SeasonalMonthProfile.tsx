@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayIntensity, formatMonth, toDisplayIntensity } from './formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalMonthProfile({
   analysis,
@@ -16,7 +15,6 @@ export function SeasonalMonthProfile({
   timeZone,
   units,
 }: SeasonalSectionProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const chartData = analysis.months.map((month) => ({
     monthKey: `${month.month}-${formatMonth(month.month, locale, timeZone)}`,

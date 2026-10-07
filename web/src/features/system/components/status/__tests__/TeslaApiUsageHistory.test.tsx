@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { TeslaApiUsageHistory, toUtcUsageRange } from '../TeslaApiUsageHistory'
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
-}));
 
 const useHistory = vi.hoisted(() => vi.fn())
 vi.mock('@/api/hooks/useTeslaUsage', async (importOriginal) => ({
@@ -23,8 +18,7 @@ vi.mock('@/components/forms', () => ({
   RangePicker: ({ onChange }: { onChange: (range: { start: string; end: string }) => void }) =>
     <button onClick={() => onChange({ start: '2024-01-01', end: '2024-01-07' })}>Older range</button>,
 }))
-vi.mock('@/components/ui', async importOriginal => ({
-  ...await importOriginal<typeof import('@/components/ui')>(),
+vi.mock('@/components/ui', () => ({
   GlassPanel: ({ children }: { children: ReactNode }) => <section>{children}</section>,
   Text: ({ children }: { children: ReactNode }) => <p>{children}</p>,
   Select: ({ onChange, options }: { onChange: (event: { target: { value: string } }) => void; options: { value: string; label: string }[] }) =>
@@ -32,8 +26,7 @@ vi.mock('@/components/ui', async importOriginal => ({
       {options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
     </select>,
 }))
-vi.mock('@/components/data-display', async importOriginal => ({
-  ...await importOriginal<typeof import('@/components/data-display')>(),
+vi.mock('@/components/data-display', () => ({
   UsageCard: ({ emptyMessage, bands, details }: { emptyMessage?: string; bands?: { label: string; value: string }[]; details?: { label: string; value: string }[] }) =>
     <section data-testid="breakdown">
       {emptyMessage}
@@ -60,18 +53,6 @@ const point = {
 beforeEach(() => useHistory.mockReset())
 
 describe('Tesla usage selected history', () => {
-  it('retains raw selected totals and category evidence with the real review drawer on refresh failure', () => {
-    useHistory.mockReturnValue({ data: { points: [point], total: { ...point } }, isLoading: false, error: new Error('background refresh'), refetch: vi.fn() })
-    const { container } = render(<MemoryRouter><TeslaApiUsageHistory /></MemoryRouter>)
-    expect(screen.getByText('Retained source')).toBeInTheDocument()
-    expect(container.querySelector('[data-operational-metric="api-requests"] [data-operational-value]')).toHaveTextContent('1,550')
-    expect(screen.getByTestId('breakdown')).toHaveTextContent('Commands: 1,000 · $1.0000')
-    expect(screen.getByRole('combobox', { name: 'Group by' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
-    expect(within(screen.getByRole('dialog')).getByText('1,550')).toBeInTheDocument()
-    expect(within(screen.getByRole('dialog')).getAllByText(/Local observations only, not a Tesla invoice/).length).toBeGreaterThan(0)
-  })
-
   it('uses exact UTC inclusive-date to exclusive-end conversion and rejects oversized or reversed windows', () => {
     expect(toUtcUsageRange({ start: '2024-01-01', end: '2024-01-07' })).toEqual({
       start: '2024-01-01T00:00:00.000Z', end: '2024-01-08T00:00:00.000Z',

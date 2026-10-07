@@ -1,19 +1,14 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, EmbeddedChart, axisTick, axisTickSm, chartGrid, useThemeChartPalette, useMeasuredAxisWidth } from '@/components/charts';
-import { Badge, Caption } from '@/components/ui';
+import { LinearGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, EmbeddedChart, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
+import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetGaugeHero } from './shared';
-import { knownNumber } from '@/api/dataState';
-import { safeArray } from '@/lib/safeArray';
-import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const G_MAX = 1.2;
 
@@ -27,6 +22,13 @@ function deriveSeverity(avgAccel: number, avgBrake: number): Severity {
   return 'aggressive';
 }
 
+const SEVERITY_COLORS: Record<Severity, string> = {
+  calm: '#10b981',
+  normal: '#22d3ee',
+  sporty: '#f59e0b',
+  aggressive: '#ef4444',
+};
+
 function isSmooth(maxG: number): boolean {
   return maxG < 0.4;
 }
@@ -39,7 +41,6 @@ function gaugeColor(g: number): string {
 }
 
 export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
@@ -60,17 +61,11 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
     data: distData,
     isLoading: distLoading,
     isFetching: distFetching,
-    error: distError,
-    isError: distIsError,
-    isStale: distStale,
-    refetch: distRefetch,
     dataUpdatedAt: distUpdatedAt,
   } = useAccelerationDistribution(vehicleIdStr);
 
-  const isLoading = !dynamics && !distData && dynLoading;
-  const updatedAt = dynUpdatedAt > 0 && distUpdatedAt > 0
-    ? Math.min(dynUpdatedAt, distUpdatedAt)
-    : Math.max(dynUpdatedAt ?? 0, distUpdatedAt ?? 0);
+  const isLoading = dynLoading || distLoading;
+  const updatedAt = Math.max(dynUpdatedAt ?? 0, distUpdatedAt ?? 0);
   const isFetching = dynFetching || distFetching;
 
   // Only replace the whole widget with a full-panel error on the INITIAL
@@ -79,15 +74,7 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   // otherwise-valid numbers — it is surfaced through the freshness
   // indicator's error state instead (WidgetShell forwards `isError` to
   // <DataFreshness>).
-  const trust = useDataState({
-    data: dynamics ?? distData, error: dynError ?? distError, isLoading: dynLoading, isFetching,
-    isError: dynIsError || distIsError, isStale: dynStale || distStale, dataUpdatedAt: updatedAt, refetch: dynRefetch,
-  }, { provenance: 'historical' });
-  const blockingError = !distData ? trust.fatalError?.message ?? null : null;
-  const refresh = () => {
-    void dynRefetch();
-    void distRefetch?.();
-  };
+  const blockingError = !dynamics && dynError ? String(dynError) : null;
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -95,67 +82,56 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   // Chart colors derive from the active theme.
   const palette = useThemeChartPalette();
 
-  const peaks = [dynamics?.maxAccelerationG, dynamics?.maxBrakingG, dynamics?.maxCorneringG].map(knownNumber);
-  const knownPeaks = peaks.filter((value): value is number => value != null);
-  const maxG = knownPeaks.length > 0 ? Math.max(...knownPeaks) : null;
-  const smooth = maxG != null && isSmooth(maxG);
-  const completePeaks = knownPeaks.length === peaks.length;
+  const maxG = Math.max(
+    dynamics?.maxAccelerationG ?? 0,
+    dynamics?.maxBrakingG ?? 0,
+    dynamics?.maxCorneringG ?? 0,
+  );
+  const smooth = isSmooth(maxG);
 
   const severity = useMemo(
-    () => {
-      const acceleration = knownNumber(dynamics?.avgAccelerationG);
-      const braking = knownNumber(dynamics?.avgBrakingG);
-      return acceleration == null || braking == null ? null : deriveSeverity(acceleration, braking);
-    },
+    () => deriveSeverity(dynamics?.avgAccelerationG ?? 0, dynamics?.avgBrakingG ?? 0),
     [dynamics?.avgAccelerationG, dynamics?.avgBrakingG],
   );
 
   const histogramData = useMemo(() => {
-    const values = safeArray(distData?.values);
+    const values = distData?.values ?? [];
     if (values.length === 0) return [];
     const step = G_MAX / values.length;
     return values.map((count, i) => ({
-      range: `${fmtNumber(i * step)}`,
-      count: knownNumber(count),
+      range: `${fmtNumber(i * step, 2)}`,
+      count: count ?? 0,
     }));
-  }, [distData, fmtNumber]);
-  const countAxisLabels = useMemo(() => [0, ...histogramData.map(point => point.count)
-    .filter((value): value is number => value != null && Number.isFinite(value))].map(String), [histogramData]);
-  const countAxisWidth = useMeasuredAxisWidth({
-    labels: countAxisLabels, fontSize: axisTick.fontSize, minWidth: 60, padding: 24, enabled: isWide,
-  });
+  }, [distData]);
 
   // Compact layout: large number + badge
   if (isCompact) {
     return (
       <WidgetShell
-        title={t('widget.drivingDynamics.title', 'Driving dynamics')}
         loading={isLoading}
-        dataState={trust.hasData ? trust : undefined}
         error={blockingError}
         updatedAt={updatedAt}
         isFetching={isFetching}
-        isStale={dynStale || distStale}
-        isError={dynIsError || distIsError}
-        onRefresh={refresh}
+        isStale={dynStale}
+        isError={dynIsError}
+        onRefresh={() => dynRefetch()}
       >
         {dynamics ? (
           <div className="h-full flex flex-col items-center justify-center gap-2">
-            <WidgetBigNumber
-              value={maxG == null ? null : fmtNumber(maxG)}
-              label={t('widget.drivingDynamics.maxG', 'Max g')}
-              align="center"
-              animated={false}
-              subtitle={!completePeaks ? t('widget.drivingDynamics.partialPeaks', 'Partial peak readings') : undefined}
-            />
-            {completePeaks && <Badge
+            <span className="text-3xl font-bold text-[var(--text-primary)]">
+              {fmtNumber(maxG, 2)}
+            </span>
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+              {t('widget.drivingDynamics.maxG', 'Max g')}
+            </span>
+            <Badge
               variant={smooth ? 'success' : 'warning'}
               className="min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               {smooth
                 ? t('widget.drivingDynamics.smooth', 'Smooth')
                 : t('widget.drivingDynamics.aggressive', 'Aggressive')}
-            </Badge>}
+            </Badge>
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -171,104 +147,101 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
   // Standard + Wide layout
   return (
     <WidgetShell
-      title={t('widget.drivingDynamics.title', 'Driving dynamics')}
-      icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />}
+      title={t('widget.drivingDynamics.title', 'Driving Dynamics')}
+      icon={<Gauge className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      dataState={trust.hasData ? trust : undefined}
       error={blockingError}
       updatedAt={updatedAt}
       isFetching={isFetching}
-      isStale={dynStale || distStale}
-      isError={dynIsError || distIsError}
-      onRefresh={refresh}
+      isStale={dynStale}
+      isError={dynIsError}
+      onRefresh={() => dynRefetch()}
     >
-      {dynamics || histogramData.length > 0 ? (
-        <div className="min-h-full min-w-0 flex flex-col gap-3">
+      {dynamics ? (
+        <div className="h-full flex flex-col gap-3">
           {/* 3 LinearGauges */}
-          <div className="grid grid-cols-1 @xs:grid-cols-3 gap-3">
-            {[
-              { label: t('widget.drivingDynamics.accel', 'Accel'), value: knownNumber(dynamics?.avgAccelerationG) },
-              { label: t('widget.drivingDynamics.brake', 'Brake'), value: knownNumber(dynamics?.avgBrakingG) },
-              { label: t('widget.drivingDynamics.lateral', 'Lateral'), value: knownNumber(dynamics?.maxCorneringG) },
-            ].map((metric) => (
-              <div key={metric.label} className="flex min-w-0 flex-col items-center gap-1">
-                {metric.value == null ? (
-                  <WidgetBigNumber value={null} align="center" />
-                ) : (
-                  <WidgetGaugeHero
-                    compact
-                    gauge={{
-                      preserveReadingAndScale: true,
-                      kind: 'measurement',
-                      value: metric.value,
-                      max: G_MAX,
-                      label: fmtNumber(metric.value),
-                      unit: '',
-                      color: gaugeColor(metric.value),
-                    }}
-                  />
-                )}
-                <span className="text-xs text-[var(--text-secondary)]">{metric.label}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-around gap-2">
+            <div className="flex flex-col items-center gap-1">
+              <LinearGauge
+                value={dynamics.avgAccelerationG ?? 0}
+                max={G_MAX}
+                label={fmtNumber(dynamics.avgAccelerationG ?? 0, 2)}
+                color={gaugeColor(dynamics.avgAccelerationG ?? 0)}
+                size={80}
+              />
+              <span className="text-2xs text-[var(--text-muted)]">
+                {t('widget.drivingDynamics.accel', 'Accel')}
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <LinearGauge
+                value={dynamics.avgBrakingG ?? 0}
+                max={G_MAX}
+                label={fmtNumber(dynamics.avgBrakingG ?? 0, 2)}
+                color={gaugeColor(dynamics.avgBrakingG ?? 0)}
+                size={80}
+              />
+              <span className="text-2xs text-[var(--text-muted)]">
+                {t('widget.drivingDynamics.brake', 'Brake')}
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <LinearGauge
+                value={dynamics.maxCorneringG ?? 0}
+                max={G_MAX}
+                label={fmtNumber(dynamics.maxCorneringG ?? 0, 2)}
+                color={gaugeColor(dynamics.maxCorneringG ?? 0)}
+                size={80}
+              />
+              <span className="text-2xs text-[var(--text-muted)]">
+                {t('widget.drivingDynamics.lateral', 'Lateral')}
+              </span>
+            </div>
           </div>
 
           {/* Severity label */}
           <div className="flex justify-center">
-            {severity != null ? <Badge
+            <Badge
               variant={severity === 'calm' || severity === 'normal' ? 'success' : 'warning'}
-              size="sm"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
-              {t(`widget.drivingDynamics.severity.${severity}`, { calm: 'Calm', normal: 'Normal', sporty: 'Sporty', aggressive: 'Aggressive' }[severity])}
-            </Badge> : <Badge variant="neutral" size="sm">{t('widget.drivingDynamics.unknown', 'Unknown dynamics')}</Badge>}
+              <span style={{ color: SEVERITY_COLORS[severity] }}>
+                {t(`widget.drivingDynamics.severity.${severity}`, severity.charAt(0).toUpperCase() + severity.slice(1))}
+              </span>
+            </Badge>
           </div>
 
           {/* Wide: acceleration distribution histogram */}
-          {isWide && (
-            histogramData.length > 0 ? (
-            <div className="min-w-0">
-              <Caption className="mb-1 block text-2xs">
-                {t('widget.drivingDynamics.distribution', 'G-force distribution')}
-              </Caption>
-              <EmbeddedChart
-                title={t('widget.drivingDynamics.distribution', 'G-force distribution')}
-                ariaLabel={t(
-                  'widget.drivingDynamics.distributionAria',
-                  'Distribution of observed acceleration magnitudes',
-                )}
-                data={histogramData}
-                dataColumns={[
-                  { key: 'range', label: t('widget.drivingDynamics.gForce', 'G-force') },
-                  { key: 'count', label: t('widget.drivingDynamics.samples', 'Samples') },
-                ]}
-                height={160}
-                mobileHeight={144}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={histogramData} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
-                    {chartGrid}
-                    <XAxis dataKey="range" tick={axisTickSm} />
-                    <YAxis tick={axisTick} width={countAxisWidth} allowDecimals={false} />
-                    <Tooltip
-                      content={<ChartTooltip />}
-                      labelFormatter={(v) => `${v}g`}
-                    />
-                    <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </EmbeddedChart>
-            </div>
-            ) : (
-              <EmptyState
-                /* no-action: distribution populates from observed acceleration samples. */
-                icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
-                message={distError
-                  ? t('widget.drivingDynamics.distributionError', 'Acceleration distribution unavailable')
-                  : distLoading
-                    ? t('widget.drivingDynamics.distributionLoading', 'Loading acceleration distribution')
-                    : t('widget.drivingDynamics.distributionEmpty', 'No acceleration samples yet')}
-              />
-            )
+          {isWide && histogramData.length > 0 && (
+            <EmbeddedChart
+              title={t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
+              ariaLabel={t(
+                'widget.drivingDynamics.distributionAria',
+                'Distribution of observed acceleration magnitudes',
+              )}
+              data={histogramData}
+              dataColumns={[
+                { key: 'range', label: t('widget.drivingDynamics.gForce', 'G-force') },
+                { key: 'count', label: t('widget.drivingDynamics.samples', 'Samples') },
+              ]}
+              className="flex-1 min-h-0"
+            >
+              <p className="text-2xs text-[var(--text-muted)] mb-1">
+                {t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
+              </p>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={histogramData} margin={{ top: 4, right: 4, bottom: 0, left: -10 }}>
+                  {chartGrid}
+                  <XAxis dataKey="range" tick={axisTickSm} />
+                  <YAxis tick={axisTick} allowDecimals={false} />
+                  <Tooltip
+                    content={<ChartTooltip />}
+                    labelFormatter={(v) => `${v}g`}
+                  />
+                  <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </EmbeddedChart>
           )}
         </div>
       ) : (

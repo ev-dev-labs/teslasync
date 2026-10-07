@@ -56,12 +56,12 @@ export function FeatureConfigComposition({
     <GlassPanel className="h-full p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('featureConfig.composition', 'Enabled vs disabled by type')}
+        {t('featureConfig.composition', 'Enabled vs Disabled by Type')}
       </PanelTitle>
 
       <EmbeddedChart
         chartKey="admin-feature-config-composition"
-        title={t('featureConfig.composition', 'Enabled vs disabled by type')}
+        title={t('featureConfig.composition', 'Enabled vs Disabled by Type')}
         ariaLabel={t('featureConfig.compositionChartLabel', 'Enabled versus disabled feature counts grouped by feature type')}
         loading={isLoading}
         error={error instanceof Error ? error : error ? new Error(String(error)) : undefined}

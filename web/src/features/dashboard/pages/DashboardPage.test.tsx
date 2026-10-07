@@ -382,23 +382,9 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
-  it('retains the mounted grid and layout actions when the registry refresh fails', () => {
-    h.vehicles = makeQuery({
-      data: [{ id: 1, display_name: 'Model 3', vin: 'VIN1' }],
-      error: new Error('registry refresh failed'),
-      isError: true,
-    });
-    const { container } = renderPage();
-    expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Customize' })).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
   it('renders the Fleet Operations identity without a fixed posture brief or workflow column', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Fleet operations' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Fleet Operations' })).toBeInTheDocument();
     expect(
       screen.getByText('Monitor readiness, investigate exceptions, and act from one workspace'),
     ).toBeInTheDocument();
@@ -413,17 +399,12 @@ describe('DashboardPage — shell', () => {
     expect(screen.queryByTestId('layout-switcher')).toBeNull();
   });
 
-  it('renders the layout switcher in the compact shared header without a second workspace introduction', () => {
+  it('renders the layout switcher when dashboards exist', () => {
     h.layout.dashboards = [
       { id: 'd1', name: 'Main', widgets: [], layouts: {}, createdAt: '', updatedAt: '' },
     ];
     renderPage();
-    const switcher = screen.getByTestId('layout-switcher');
-    expect(switcher).toBeInTheDocument();
-    expect(switcher.closest('header')).toBeInTheDocument();
-    expect(screen.queryByText('Personal workspace')).not.toBeInTheDocument();
-    expect(screen.queryByText('Arrange the live modules your team checks most often.')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Dashboard layouts' })).toContainElement(switcher);
+    expect(screen.getByTestId('layout-switcher')).toBeInTheDocument();
   });
 });
 
@@ -488,14 +469,14 @@ describe('DashboardPage — edit-mode header', () => {
     h.layout.editMode = true;
     renderPage();
     expect(screen.queryByTestId('widget-picker')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Add widget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
     expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
   });
 
   it('auto-arrange button calls autoArrange and Done exits edit mode', () => {
     h.layout.editMode = true;
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Auto arrange' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Auto Arrange' }));
     expect(h.layout.autoArrange).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(h.layout.setEditMode).toHaveBeenCalledWith(false);
@@ -619,7 +600,7 @@ describe('DashboardPage — status ownership', () => {
     h.layout.editMode = true;
     renderPage();
     const pageHeader = screen
-      .getByRole('heading', { level: 1, name: 'Fleet operations' })
+      .getByRole('heading', { level: 1, name: 'Fleet Operations' })
       .closest('[data-role="page-header"]');
     if (!pageHeader) throw new Error('Dashboard page header was not rendered');
 
@@ -708,7 +689,7 @@ describe('DashboardPage — widget picker', () => {
   it('adding from the dock calls addWidgets and marks onboarding complete', () => {
     h.layout.editMode = true;
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add widget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
     expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('picker-add'));
     expect(h.layout.addWidgets).toHaveBeenCalledWith(['battery-gauge']);

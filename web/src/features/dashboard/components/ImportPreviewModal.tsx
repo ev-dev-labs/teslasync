@@ -138,7 +138,7 @@ export function ImportPreviewModal({
 
   const tabs = useMemo(
     () => [
-      { key: 'file', label: t('import.fromFile', 'From file') },
+      { key: 'file', label: t('import.fromFile', 'From File') },
       { key: 'paste', label: t('import.fromClipboard', 'Paste JSON') },
       { key: 'url', label: t('import.fromUrl', 'From URL') },
     ],
@@ -151,7 +151,7 @@ export function ImportPreviewModal({
       <Modal
         open={open}
         onClose={handleClose}
-        title={t('import.preview', 'Import preview')}
+        title={t('import.preview', 'Import Preview')}
         size="lg"
         className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)] max-h-[80vh] overflow-y-auto"
       >
@@ -168,7 +168,7 @@ export function ImportPreviewModal({
     <Modal
       open={open}
       onClose={handleClose}
-      title={t('import.title', 'Import dashboard')}
+      title={t('import.title', 'Import Dashboard')}
       size="lg"
       className="bg-[#0f1218] border border-white/[0.08] text-[var(--text-on-accent)]"
     >
@@ -184,7 +184,7 @@ export function ImportPreviewModal({
           <FadeIn>
             <div
               role="tabpanel"
-              aria-label={t('import.fromFile', 'From file')}
+              aria-label={t('import.fromFile', 'From File')}
               onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
               onDragLeave={() => setIsDragOver(false)}
               onDrop={handleDrop}
@@ -201,7 +201,7 @@ export function ImportPreviewModal({
               </p>
               <UiButton variant="ghost" onClick={() => fileInputRef.current?.click()}>
                 <FileUp className="h-4 w-4 mr-2" />
-                {t('import.browse', 'Browse files')}
+                {t('import.browse', 'Browse Files')}
               </UiButton>
               <UiInput
                 ref={fileInputRef}
@@ -231,7 +231,7 @@ export function ImportPreviewModal({
                 disabled={!pastedJson.trim()}
               >
                 <FileJson className="h-4 w-4 mr-2" />
-                {t('import.validate', 'Validate & preview')}
+                {t('import.validate', 'Validate & Preview')}
               </UiButton>
             </div>
           </FadeIn>
@@ -343,7 +343,7 @@ function ImportPreview({
 
             {/* Widget availability list */}
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              <p className="text-xs font-medium text-[var(--text-secondary)] tracking-wider">
+              <p className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
                 {t('import.widgets', 'Widgets')}
               </p>
               {availableWidgets.map((widgetId) => {
@@ -387,7 +387,7 @@ function ImportPreview({
         {isValid && dashboard && (
           <UiButton variant="primary" size="sm" onClick={onConfirm}>
             <CheckCircle2 className="h-4 w-4 mr-2" />
-            {t('import.confirm', 'Import dashboard')}
+            {t('import.confirm', 'Import Dashboard')}
           </UiButton>
         )}
       </div>

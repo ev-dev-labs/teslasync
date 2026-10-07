@@ -204,17 +204,17 @@ describe('CostSummaryCards — populated tiles', () => {
 
     // Avg $/kWh — 3dp currency.
     expect(screen.getByText('Avg $/kWh')).toBeInTheDocument();
-    expect(screen.getByText('$0.12')).toBeInTheDocument();
+    expect(screen.getByText('$0.123')).toBeInTheDocument();
 
     // Cost Per Mile — 3dp currency + "per mi" subtitle.
     expect(screen.getByText('Cost Per Mile')).toBeInTheDocument();
-    expect(screen.getByText('$0.05')).toBeInTheDocument();
+    expect(screen.getByText('$0.050')).toBeInTheDocument();
     expect(screen.getByText('per mi')).toBeInTheDocument();
 
     // Total Energy — kWh value + gal-equiv subtitle.
     expect(screen.getByText('Total Energy')).toBeInTheDocument();
-    expect(screen.getByText('250.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('7.50 gal equiv')).toBeInTheDocument();
+    expect(screen.getByText('250.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('7.5 gal equiv')).toBeInTheDocument();
 
     // Gas Savings — currency value + "vs $/gal" subtitle.
     expect(screen.getByText('Gas Savings $')).toBeInTheDocument();
@@ -223,7 +223,7 @@ describe('CostSummaryCards — populated tiles', () => {
 
     // Savings % — 1dp percent.
     expect(screen.getByText('Savings %')).toBeInTheDocument();
-    expect(screen.getByText('38.30%')).toBeInTheDocument();
+    expect(screen.getByText('38.3%')).toBeInTheDocument();
   });
 
   it('switches the distance tile to the metric label + unit when isMiles is false', () => {
@@ -293,9 +293,9 @@ describe('CostSummaryCards — null-safety hardening', () => {
 
     // count survives; everything else degrades to a formatted zero.
     expect(screen.getByText('3 sessions')).toBeInTheDocument();
-    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('0.00 gal equiv')).toBeInTheDocument();
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.0 gal equiv')).toBeInTheDocument();
+    expect(screen.getByText('0.0%')).toBeInTheDocument();
     // totalCost + savings both render "$0.00".
     expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(2);
     expect(container.textContent).not.toMatch(/NaN/);

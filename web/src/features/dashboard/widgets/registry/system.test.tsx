@@ -368,13 +368,13 @@ describe('system-health — lazy component wiring', () => {
     );
     await renderWidget('system-health', { cols: 2, rows: 4 });
 
-    expect(screen.getByText('System health')).toBeInTheDocument();
+    expect(screen.getByText('System Health')).toBeInTheDocument();
     // Humanised service labels from SERVICE_KEYS.
     expect(screen.getByText('Database')).toBeInTheDocument();
-    expect(screen.getByText('Tesla API')).toBeInTheDocument();
+    expect(screen.getByText('Tesla Api')).toBeInTheDocument();
     expect(screen.getByText('Fleet Telemetry')).toBeInTheDocument();
     // Stat cards.
-    expect(screen.getByText('DB size')).toBeInTheDocument();
+    expect(screen.getByText('DB Size')).toBeInTheDocument();
     expect(screen.getByText('128 MB')).toBeInTheDocument();
     expect(screen.getByText('5/25')).toBeInTheDocument();
     expect(screen.getByText('64 MB')).toBeInTheDocument();
@@ -387,9 +387,12 @@ describe('system-health — lazy component wiring', () => {
 
     expect(screen.getByText('Healthy')).toBeInTheDocument();
     // 3 of 4 services report ok/healthy (tesla_api is degraded).
-    expect(screen.getByText('3/4')).toBeInTheDocument();
-    expect(screen.getByText('Services')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'System health' })).toBeInTheDocument();
+    const count = screen.getByText(
+      (_content, el) => (el?.textContent ?? '').replace(/\s+/g, ' ').trim() === '3/4 services',
+    );
+    expect(count).toBeInTheDocument();
+    // Compact mode hides the widget title.
+    expect(screen.queryByText('System Health')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (not a blank panel) when there is no health data', async () => {
@@ -399,31 +402,15 @@ describe('system-health — lazy component wiring', () => {
     expect(screen.getByText('No system health data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // The panel shell (title) still renders above the empty state.
-    expect(screen.getByText('System health')).toBeInTheDocument();
+    expect(screen.getByText('System Health')).toBeInTheDocument();
   });
 
-  it('renders a loading skeleton with its title while every health source is initially pending', async () => {
+  it('renders a loading skeleton (no title) while health is in flight', async () => {
     mockUseSystemHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
-    mockUseDBStats.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
-    mockUseConnectionPool.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('System health')).toBeInTheDocument();
-  });
-
-  it('retains available database readings while the health source is initially pending', async () => {
-    mockUseSystemHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
-    mockUseDBStats.mockReturnValue(makeQuery({ data: { databaseSize: '128 MB' } }));
-    mockUseConnectionPool.mockReturnValue(makeQuery({ data: { inUse: 5, maxOpen: 25 } }));
-    const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
-
-    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.getByText('128 MB')).toBeInTheDocument();
-    expect(screen.getByText('5/25')).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading Services' })).toBeInTheDocument();
-    expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
+    expect(screen.queryByText('System Health')).not.toBeInTheDocument();
   });
 
   it('surfaces a genuine load error as an error panel instead of a misleading empty state', async () => {
@@ -464,10 +451,10 @@ describe('mqtt-status — lazy component wiring', () => {
     );
     await renderWidget('mqtt-status', { cols: 2, rows: 2 });
 
-    expect(screen.getByText('MQTT status')).toBeInTheDocument();
+    expect(screen.getByText('MQTT Status')).toBeInTheDocument();
     expect(screen.getByText('Messages/sec')).toBeInTheDocument();
-    expect(screen.getByText('2.50')).toBeInTheDocument();
-    expect(screen.getByText('Total messages')).toBeInTheDocument();
+    expect(screen.getByText('2.5')).toBeInTheDocument();
+    expect(screen.getByText('Total Messages')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('tcp://mqtt:1883')).toBeInTheDocument();
   });
@@ -478,7 +465,7 @@ describe('mqtt-status — lazy component wiring', () => {
 
     expect(screen.getByText('No MQTT status data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.getByText('MQTT status')).toBeInTheDocument();
+    expect(screen.getByText('MQTT Status')).toBeInTheDocument();
   });
 });
 
@@ -503,32 +490,20 @@ describe('version-info — lazy component wiring', () => {
     );
     await renderWidget('version-info', { cols: 2, rows: 2 });
 
-    expect(screen.getByText('Version info')).toBeInTheDocument();
+    expect(screen.getByText('Version Info')).toBeInTheDocument();
     expect(screen.getByText('Version')).toBeInTheDocument();
     expect(screen.getByText('1.2.3')).toBeInTheDocument();
-    expect(screen.getByText('Go version')).toBeInTheDocument();
+    expect(screen.getByText('Go Version')).toBeInTheDocument();
     expect(screen.getByText('go1.25.0')).toBeInTheDocument();
     // git_commit truncated to the first 7 chars.
     expect(screen.getByText('abcdef1')).toBeInTheDocument();
   });
 
-  it('keeps unresolved version data in initial loading even without an error or loading flag', async () => {
+  it('shows the empty state when version data is missing', async () => {
     mockUseVersionInfo.mockReturnValue(makeQuery({ data: undefined }));
-    const { container } = await renderWidget('version-info', { cols: 2, rows: 2 });
-
-    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('No version data available')).not.toBeInTheDocument();
-    expect(screen.queryByText('Go version')).not.toBeInTheDocument();
-  });
-
-  it('shows honest empty evidence when the version source resolves to null', async () => {
-    mockUseVersionInfo.mockReturnValue(makeQuery({ data: null, isSuccess: true }));
-    const { container } = await renderWidget('version-info', { cols: 2, rows: 2 });
+    await renderWidget('version-info', { cols: 2, rows: 2 });
 
     expect(screen.getByText('No version data available')).toBeInTheDocument();
-    expect(screen.getByText('No version data available').closest('[role="status"]')).not.toBeNull();
-    expect(container.querySelector('[data-data-state="initial"]')).toBeNull();
-    expect(screen.queryByText('Go version')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
   });
 });

@@ -1,18 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Slider, PanelTitle, Text } from '@/components/ui';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { deriveDataState } from '@/api/dataState';
+import { GlassPanel, Slider } from '@/components/ui';
 import { Timeline, TimelineScrubber } from '@/components/data-display';
 import type { TimelineItemData } from '@/components/data-display';
 import { InlineCallout } from '@/components/feedback';
+import { QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import type { ClipRecord, DashcamSettings } from '../../lib/types';
 import type { UseReconstructionResult } from '../../hooks/useReconstruction';
 import { toReconstructionMarkers } from '../../lib/timelineAlignment';
 import { SignalPicker } from './SignalPicker';
 import { ReconstructionSeriesList } from './ReconstructionSeriesList';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { SignalEvidenceSourceList } from '@/features/diagnostics/components/SignalEvidenceSourceList';
 
 export interface ReconstructionTimelineProps {
   clip: ClipRecord;
@@ -42,11 +39,10 @@ export function ReconstructionTimeline({
   onSelectedSignalsChange,
   result,
 }: ReconstructionTimelineProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
 
-  if (clip.capturedAtRaw == null || result.clipEpochMs == null) {
+  if (clip.capturedAtRaw == null) {
     return (
       <GlassPanel padding="md">
         <InlineCallout variant="warning">
@@ -69,38 +65,26 @@ export function ReconstructionTimeline({
     );
   }
 
-  const reconstruction = result.reconstruction;
-  const source = deriveDataState({
-    data: result.hasRetainedHistory ? reconstruction ?? undefined : undefined,
-    error: result.isError ? result.error : null,
-    isError: result.isError,
-    isLoading: result.isLoading,
-    refetch: result.refetch,
-  }, { provenance: 'historical' });
-  const clockLabel = (seconds: number) => t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: fmtNumber(seconds) });
-  const markers = reconstruction ? toReconstructionMarkers(reconstruction).map((marker, index) => {
-    const event = reconstruction.incidentSequence[index - 2];
-    return {
-      ...marker,
-      id: index === 0 ? 'clip-start' : index === 1 ? 'clip-end' : event.id,
-      label: index === 0 ? t('dashcam.reconstruction.clipStart', 'Clip start')
-        : index === 1 ? t('dashcam.reconstruction.clipEnd', 'Clip end') : event.signal,
-      description: event?.description,
-      timeLabel: clockLabel(index === 0 ? reconstruction.clipWindow.startSeconds
-        : index === 1 ? reconstruction.clipWindow.endSeconds : event.atSeconds),
-    };
-  }) : [];
+  const markers = result.reconstruction ? toReconstructionMarkers(result.reconstruction) : [];
   const incidentItems: TimelineItemData[] = (result.reconstruction?.incidentSequence ?? []).map((evt) => ({
     title: evt.signal,
     subtitle: evt.description,
-    time: t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: fmtNumber(evt.atSeconds) }),
+    time: t('dashcam.events.atSeconds', 't={{seconds}}s', { seconds: evt.atSeconds.toFixed(1) }),
   }));
 
   return (
-    <LayoutCard
-      title={t('dashcam.reconstruction.title', 'Telemetry-synchronized reconstruction')}
-      description={t('dashcam.reconstruction.description', 'Filenames carry no timezone. Adjust the assumed camera clock offset below if the reconstruction looks shifted.')}
-    >
+    <GlassPanel padding="md" className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+          {t('dashcam.reconstruction.title', 'Telemetry-synchronized reconstruction')}
+        </h3>
+        <p className="text-xs text-[var(--text-muted)]">
+          {t(
+            'dashcam.reconstruction.description',
+            'Filenames carry no timezone. Adjust the assumed camera clock offset below if the reconstruction looks shifted.',
+          )}
+        </p>
+      </div>
 
       <Slider
         label={t('dashcam.reconstruction.offsetLabel', 'Assumed camera clock offset from UTC')}
@@ -127,60 +111,41 @@ export function ReconstructionTimeline({
         </InlineCallout>
       )}
 
-      <SignalEvidenceSourceList
-        sources={result.sources ?? []}
-        label={t('dataSources.labels.selectedSignalHistory', 'Selected signal history')}
-      />
+      <QueryError error={result.isError ? result.error : null} />
 
-      <SourceContent
-        state={source.fatalError ? 'error' : source.refreshError ? 'retained'
-          : result.isLoading && !source.hasData ? 'loading' : source.hasData ? 'ready' : 'empty'}
-        label={t('dashcam.reconstruction.title', 'Telemetry-synchronized reconstruction')}
-        error={source.fatalError}
-        errorMessage={t('dashcam.reconstruction.loadFailed', 'Telemetry reconstruction could not be loaded.')}
-        emptyMessage={selectedSignals.length === 0
-          ? t('dashcam.reconstruction.selectSignals', 'Choose telemetry signals above to build a reconstruction.')
-          : t('dashcam.reconstruction.noData', 'No telemetry reconstruction is available for this clip.')}
-        errorRecovery={{ onRetry: () => { void result.refetch(); } }}
-      >
-      {reconstruction && (
+      {result.reconstruction && (
         <>
           <div className="space-y-1">
             <TimelineScrubber
-              mode="readOnly"
-              label={t('dashcam.reconstruction.title', 'Telemetry-synchronized reconstruction')}
-              duration={reconstruction.reconstructionWindow.endSeconds - reconstruction.reconstructionWindow.startSeconds}
-              clockOriginSeconds={reconstruction.reconstructionWindow.startSeconds}
-              formatTime={clockLabel}
+              progress={0}
+              duration={result.reconstruction.reconstructionWindow.endSeconds - result.reconstruction.reconstructionWindow.startSeconds}
               markers={markers}
+              onSeek={() => {}}
             />
-            <Text as="p" variant="caption">
+            <p className="text-xs text-[var(--text-muted)]">
               {t('dashcam.reconstruction.window', 'Window: {{pre}} pre-roll → clip → {{post}} post-roll', {
                 pre: formatDuration(settings.reconstructionPreRollSeconds),
                 post: formatDuration(settings.reconstructionPostRollSeconds),
               })}
-            </Text>
+            </p>
           </div>
 
-          <ReconstructionSeriesList series={reconstruction.series} />
+          <ReconstructionSeriesList series={result.reconstruction.series} />
 
           {incidentItems.length > 0 ? (
             <div className="space-y-2">
-              <PanelTitle>
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 {t('dashcam.reconstruction.incidentSequence', 'Incident sequence (statistical)')}
-              </PanelTitle>
-              <Timeline items={incidentItems} chronology="oldest-first" />
+              </h4>
+              <Timeline items={incidentItems} />
             </div>
           ) : (
-            <Text as="p" variant="caption">
-              {result.sources?.some(({ state }) => !state.hasData || state.status === 'unavailable')
-                ? t('dataState.partial.message', 'Some sources did not respond. Available results remain visible and are not treated as complete.')
-                : t('dashcam.reconstruction.noIncidents', 'No statistically significant telemetry changes were detected in this window.')}
-            </Text>
+            <p className="text-xs text-[var(--text-muted)]">
+              {t('dashcam.reconstruction.noIncidents', 'No statistically significant telemetry changes were detected in this window.')}
+            </p>
           )}
         </>
       )}
-      </SourceContent>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

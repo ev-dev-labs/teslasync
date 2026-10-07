@@ -5,14 +5,13 @@ import { RefreshCw } from 'lucide-react';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { PageLayout } from '@/components/layout';
-import { deriveDataState } from '@/api/dataState';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import {
   convertTempFromSI,
   type TemperatureUnitPref,
@@ -38,19 +37,17 @@ import {
   type TemperatureDeltaFormatter,
 } from '../components/preconditioning-effectiveness';
 import { summarizePreconditioningEffectiveness } from '../lib/preconditioningEffectiveness';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function convertDeltaC(valueC: number, unit: TemperatureUnitPref): number {
   return convertTempFromSI(valueC, unit) - convertTempFromSI(0, unit);
 }
 
 export default function PreconditioningEffectivenessPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(
     t(
       'preconditioningEffectiveness.title',
-      'Preconditioning effectiveness',
+      'Preconditioning Effectiveness',
     ),
   );
   const { vehicleId } = useSelectedVehicle();
@@ -58,8 +55,6 @@ export default function PreconditioningEffectivenessPage() {
   const { unitPrefs, formatDuration } = useUnits();
   const climateQuery = useClimateHistory(vehicleIdStr);
   const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000);
-  const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
-  const drivesSource = deriveDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizePreconditioningEffectiveness(
       climateQuery.data ?? [],
@@ -98,8 +93,14 @@ export default function PreconditioningEffectivenessPage() {
         isFetching: climateQuery.isFetching,
         isPaused:
           !climateHasData && climateQuery.fetchStatus === 'paused',
-        error: climateSource.fatalError,
-        refreshError: climateSource.refreshError,
+        error:
+          climateQuery.isError && !climateHasData
+            ? climateQuery.error
+            : null,
+        refreshError:
+          climateQuery.isError && climateHasData
+            ? climateQuery.error
+            : null,
         onRetry: retryClimate,
       },
       drives: {
@@ -117,8 +118,14 @@ export default function PreconditioningEffectivenessPage() {
         isFetching: drivesQuery.isFetching,
         isPaused:
           !drivesHaveData && drivesQuery.fetchStatus === 'paused',
-        error: drivesSource.fatalError,
-        refreshError: drivesSource.refreshError,
+        error:
+          drivesQuery.isError && !drivesHaveData
+            ? drivesQuery.error
+            : null,
+        refreshError:
+          drivesQuery.isError && drivesHaveData
+            ? drivesQuery.error
+            : null,
         onRetry: retryDrives,
       },
       onRefresh: refreshAll,
@@ -132,8 +139,6 @@ export default function PreconditioningEffectivenessPage() {
       climateQuery.isLoading,
       climateQuery.isPending,
       climateQuery.isSuccess,
-      climateSource.fatalError,
-      climateSource.refreshError,
       drivesHaveData,
       drivesQuery.error,
       drivesQuery.fetchStatus,
@@ -142,8 +147,6 @@ export default function PreconditioningEffectivenessPage() {
       drivesQuery.isLoading,
       drivesQuery.isPending,
       drivesQuery.isSuccess,
-      drivesSource.fatalError,
-      drivesSource.refreshError,
       refreshAll,
       retryClimate,
       retryDrives,
@@ -166,23 +169,23 @@ export default function PreconditioningEffectivenessPage() {
       const prefix = options?.signed && value > 0 ? '+' : '';
       return `${prefix}${fmtNumber(value, precision)} ${unitPrefs.temperature}`;
     },
-    [convertDelta, unitPrefs.precision, unitPrefs.temperature, fmtNumber],
+    [convertDelta, unitPrefs.precision, unitPrefs.temperature],
   );
   const locale = unitPrefs.locale ?? 'en-US';
   const refreshing = climateQuery.isFetching || drivesQuery.isFetching;
 
   return (
-    <PageLayout
+    <PageContainer
       title={t(
         'preconditioningEffectiveness.title',
-        'Preconditioning effectiveness',
+        'Preconditioning Effectiveness',
       )}
       subtitle={t(
         'preconditioningEffectiveness.subtitle',
         'Observational pre-drive cabin readiness with explicit source, exclusion, support, and uncertainty accounting',
       )}
       query={[climateQuery, drivesQuery]}
-      secondaryActions={(
+      actions={(
         <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
@@ -294,6 +297,6 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.16}>
         <PreconditioningMethodology summary={summary} state={queryState} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

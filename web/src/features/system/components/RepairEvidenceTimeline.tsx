@@ -71,15 +71,7 @@ export function RepairEvidenceTimeline({ suggestion }: RepairEvidenceTimelinePro
       aria-label={t('dataRepair.card.evidence', 'Evidence timeline')}
       className="rounded-lg bg-[var(--surface-2)] p-3"
     >
-      <Timeline
-        items={items}
-        label={t('dataRepair.card.evidence', 'Evidence timeline')}
-        chronology="oldest-first"
-        summaryBounds={{
-          start: Number.isFinite(Date.parse(suggestion.started_at)) ? at(suggestion.started_at) : null,
-          end: Number.isFinite(Date.parse(contradiction.ts)) ? at(contradiction.ts) : null,
-        }}
-      />
+      <Timeline items={items} />
     </section>
   );
 }

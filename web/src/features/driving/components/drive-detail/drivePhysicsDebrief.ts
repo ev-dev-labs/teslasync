@@ -31,13 +31,13 @@ export function interpretDriveDebrief(
   fsd: DriveFsdInsight | undefined,
 ): DrivePhysicsDebrief {
   const samples = chart ?? [];
-  const powers = samples.map((row) => finite(row.power)).filter((value): value is number => value != null);
-  // An average aggregate is not a measured peak. Zero is a valid sample.
-  const peakPowerKw = powers.length > 0 ? powers.reduce((max, value) => Math.max(max, value), -Infinity) : null;
+  const peakPowerKw = finite(stats?.powerMax);
   const energyWh = finite(stats?.energyWh) ?? 0;
   const regenWh = finite(stats?.regenWh) ?? 0;
   const regenShare = energyWh > 0 ? regenWh / (energyWh + regenWh) : null;
-  const hasPower = powers.length > 0;
+  const hasPower = samples.some((row) => Number.isFinite(row.power) && row.power !== 0)
+    || (peakPowerKw != null && peakPowerKw !== 0)
+    || regenWh > 0;
 
   const beats: DebriefBeat[] = [];
   if (!hasPower) {

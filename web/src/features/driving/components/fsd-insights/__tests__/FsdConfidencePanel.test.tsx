@@ -97,7 +97,7 @@ describe('FsdConfidencePanel', () => {
     expect(
       screen.getByText('Feb 2, 2026 – Mar 3, 2026 (America/Los_Angeles)'),
     ).toBeInTheDocument();
-    expect(screen.getByText('28 of 30 (93.33%)')).toBeInTheDocument();
+    expect(screen.getByText('28 of 30 (93.3%)')).toBeInTheDocument();
     expect(screen.getByText('12 self-driving / 14 driving')).toBeInTheDocument();
     expect(screen.getByText('Yes — distance is derivable')).toBeInTheDocument();
     expect(screen.getByText('28 of 30')).toBeInTheDocument();
@@ -250,7 +250,7 @@ describe('FsdConfidencePanel', () => {
 
     renderPanel(<FsdConfidencePanel insights={insights} state={state()} />);
 
-    expect(screen.getByText('1 of 30 (3.33%)')).toBeInTheDocument();
+    expect(screen.getByText('1 of 30 (3.3%)')).toBeInTheDocument();
     expect(screen.getByText('Usable counter basis')).toBeInTheDocument();
   });
 

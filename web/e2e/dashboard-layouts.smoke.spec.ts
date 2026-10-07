@@ -22,7 +22,7 @@ for (const theme of ['dark', 'light'] as const) {
       expect((await gallery.boundingBox())?.height).toBeLessThanOrEqual(900)
       await page.screenshot({ path: testInfo.outputPath(`layout-packs-${width}-${theme}.png`), animations: 'disabled' })
 
-      await gallery.getByRole('button', { name: /Blank dashboard/ }).click()
+      await gallery.getByRole('button', { name: /Blank Dashboard/ }).click()
       await gallery.getByRole('button', { name: 'Create layout' }).click()
       await expect(gallery).toHaveCount(0)
       await expect(page.getByText('No widgets yet')).toBeVisible()
@@ -133,7 +133,7 @@ test('mobile New Layout creates populated Operations Desk without mixing templat
   await page.getByRole('button', { name: 'Switch dashboard layout' }).click()
   await page.getByRole('menuitem', { name: 'New from template…' }).click()
   const gallery = page.getByRole('dialog', { name: 'Create a layout' })
-  await expect(gallery.getByRole('button', { name: /Blank dashboard/ })).toBeVisible()
+  await expect(gallery.getByRole('button', { name: /Blank Dashboard/ })).toBeVisible()
   await gallery.getByRole('button', { name: /Operations Desk/ }).click()
   await expect(gallery).toContainText('Fleet Posture')
   await gallery.getByRole('button', { name: 'Create layout' }).click()

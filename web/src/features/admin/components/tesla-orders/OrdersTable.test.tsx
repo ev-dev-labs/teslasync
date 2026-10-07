@@ -21,17 +21,14 @@
  * test-setup mock (en-US, UTC), so useDateFormat is fully offline — no network.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown, values?: Record<string, unknown>) => {
-        const text = typeof fallback === 'string' ? fallback : key;
-        return text.replace(/{{(\w+)}}/g, (match, name: string) => String(values?.[name] ?? match));
-      },
+      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -83,44 +80,6 @@ afterEach(() => {
 });
 
 describe('OrdersTable', () => {
-  it('filters the full loaded fleet before pagination, including values beyond the first page', () => {
-    const orders = Array.from({ length: 30 }, (_, index) =>
-      makeOrder({
-        id: index + 1,
-        order_id: `RN-${index + 1}`,
-        model: index === 29 ? 'Model Y' : 'Model 3',
-      }),
-    );
-    render(<OrdersTable orders={orders} />);
-    expect(screen.queryByText('RN-30')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
-    const menu = screen.getByRole('dialog', { name: 'Model filter' });
-    expect(within(menu).getByRole('checkbox', { name: 'Model Y' })).toBeChecked();
-    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Select all shown values' }));
-    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Model Y' }));
-    fireEvent.click(within(menu).getByRole('button', { name: 'Done' }));
-
-    expect(dataRows()).toHaveLength(1);
-    expect(screen.getByText('RN-30')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    expect(dataRows()).toHaveLength(25);
-  });
-
-  it('keeps checklist candidates from the complete loaded dataset when text search narrows visible rows', () => {
-    render(<OrdersTable orders={[
-      makeOrder({ id: 1, order_id: 'RN-3', model: 'Model 3' }),
-      makeOrder({ id: 2, order_id: 'RN-Y', model: 'Model Y' }),
-    ]} />);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Filter orders' }), { target: { value: 'RN-3' } });
-    expect(dataRows()).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Model filter' }));
-    expect(screen.getByRole('checkbox', { name: 'Model Y' })).toBeInTheDocument();
-    expect(screen.getByRole('checkbox', { name: 'Model 3' })).toBeInTheDocument();
-  });
-
   it('renders every column and falls back to an em-dash for missing vin / delivery / upgradable', () => {
     const orders = [
       makeOrder({
@@ -169,8 +128,8 @@ describe('OrdersTable', () => {
     ];
     render(<OrdersTable orders={orders} />);
 
-    const inProgress = screen.getByText('In production');
-    const ready = screen.getByText('Ready for delivery');
+    const inProgress = screen.getByText('In Production');
+    const ready = screen.getByText('Ready For Delivery');
     const delivered = screen.getByText('Delivered');
     const cancelled = screen.getByText('Cancelled');
 

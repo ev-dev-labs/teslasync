@@ -1,8 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { fmtScientificNumber } from '@/lib/numberFormat';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface RouteEndpoint {
   /** Resolved street address or place name (preferred). */
@@ -49,16 +47,11 @@ function haversineMeters(
  * to a `📍 lat, lon` coord string; returns `null` when neither is
  * available so the caller can render a single placeholder.
  */
-export function endpointLabel(
-  endpoint: RouteEndpoint,
-  formatCoordinate = (value: number) => fmtScientificNumber(value, 5),
-): string | null {
+export function endpointLabel(endpoint: RouteEndpoint): string | null {
   const addr = endpoint.address?.trim();
   if (addr) return addr;
   if (endpoint.lat != null && endpoint.lon != null) {
-    // Five decimal degrees retain metre-scale location detail; user precision
-    // can increase this diagnostic floor, never reduce it.
-    return `📍 ${formatCoordinate(endpoint.lat)}, ${formatCoordinate(endpoint.lon)}`;
+    return `📍 ${endpoint.lat.toFixed(2)}, ${endpoint.lon.toFixed(2)}`;
   }
   return null;
 }
@@ -84,14 +77,8 @@ export function RouteDisplay({
   testId,
 }: RouteDisplayProps) {
   const { t } = useTranslation();
-  const { fmtScientificNumber: formatCoordinate } = useNumberFormatting();
-  const startLabel = endpointLabel(start, (value) => formatCoordinate(value, 5));
-  const endLabel = end ? endpointLabel(end, (value) => formatCoordinate(value, 5)) : null;
-  // Classification historically compares the 2dp endpoint keys as well as
-  // haversine distance. Keep that canonical key independent of display
-  // precision/locale so this display-only change cannot reclassify a route.
-  const canonicalStart = endpointLabel(start, (value) => value.toFixed(2));
-  const canonicalEnd = end ? endpointLabel(end, (value) => value.toFixed(2)) : null;
+  const startLabel = endpointLabel(start);
+  const endLabel = end ? endpointLabel(end) : null;
   const noLocation = t('route.noLocationData', 'No location data');
 
   const hasCoords = (e: RouteEndpoint | undefined): e is { lat: number; lon: number } =>
@@ -101,7 +88,7 @@ export function RouteDisplay({
   // some representation, OR (b) start/end addresses match, OR
   // (c) coordinates are within the threshold and we have at least one
   // endpoint label to show.
-  const addressesMatch = !!canonicalStart && !!canonicalEnd && canonicalStart === canonicalEnd;
+  const addressesMatch = !!startLabel && !!endLabel && startLabel === endLabel;
   const coordsClose =
     hasCoords(start) && hasCoords(end) &&
     haversineMeters(start.lat, start.lon, end.lat, end.lon) < roundTripThresholdM;

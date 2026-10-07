@@ -26,16 +26,16 @@ export function VehicleConfigSection({ vehicleConfig, softwareVersion }: Vehicle
       value != null ? (value ? t('common.yes', 'Yes') : t('common.no', 'No')) : '—'
 
     return [
-      { label: t('vehicles.detail.carType', 'Car type'), value: vehicleConfig.car_type ?? '—' },
+      { label: t('vehicles.detail.carType', 'Car Type'), value: vehicleConfig.car_type ?? '—' },
       { label: t('vehicles.detail.trim', 'Trim'), value: vehicleConfig.trim ?? '—' },
-      { label: t('vehicles.detail.color', 'Exterior color'), value: vehicleConfig.exterior_color ?? '—' },
+      { label: t('vehicles.detail.color', 'Exterior Color'), value: vehicleConfig.exterior_color ?? '—' },
       { label: t('vehicles.detail.wheels', 'Wheels'), value: vehicleConfig.wheel_type ?? '—' },
-      { label: t('vehicles.detail.roofColor', 'Roof color'), value: vehicleConfig.roof_color ?? '—' },
-      { label: t('vehicles.detail.chargePort', 'Charge port'), value: vehicleConfig.charge_port ?? '—' },
-      { label: t('vehicles.detail.rhd', 'Right-hand drive'), value: yesNo(vehicleConfig.right_hand_drive) },
-      { label: t('vehicles.detail.europeVehicle', 'Europe vehicle'), value: yesNo(vehicleConfig.europe_vehicle) },
-      { label: t('vehicles.detail.offroadLightbar', 'Offroad lightbar'), value: yesNo(vehicleConfig.offroad_lightbar_present) },
-      { label: t('vehicles.detail.rearSeatHeaters', 'Rear seat heaters'), value: vehicleConfig.rear_seat_heaters ?? '—' },
+      { label: t('vehicles.detail.roofColor', 'Roof Color'), value: vehicleConfig.roof_color ?? '—' },
+      { label: t('vehicles.detail.chargePort', 'Charge Port'), value: vehicleConfig.charge_port ?? '—' },
+      { label: t('vehicles.detail.rhd', 'Right-Hand Drive'), value: yesNo(vehicleConfig.right_hand_drive) },
+      { label: t('vehicles.detail.europeVehicle', 'Europe Vehicle'), value: yesNo(vehicleConfig.europe_vehicle) },
+      { label: t('vehicles.detail.offroadLightbar', 'Offroad Lightbar'), value: yesNo(vehicleConfig.offroad_lightbar_present) },
+      { label: t('vehicles.detail.rearSeatHeaters', 'Rear Seat Heaters'), value: vehicleConfig.rear_seat_heaters ?? '—' },
       { label: t('vehicles.detail.sunroofInstalled', 'Sunroof'), value: vehicleConfig.sunroof_installed ?? '—' },
       { label: t('vehicles.detail.softwareVersion', 'Software'), value: vehicleConfig.software_update_version ?? softwareVersion ?? '—' },
     ]
@@ -45,7 +45,7 @@ export function VehicleConfigSection({ vehicleConfig, softwareVersion }: Vehicle
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <Settings className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.detail.vehicleConfig', 'Vehicle configuration')}
+        {t('vehicles.detail.vehicleConfig', 'Vehicle Configuration')}
       </PanelTitle>
       {configItems.length > 0 ? (
         <KVList items={configItems} columns={2} />

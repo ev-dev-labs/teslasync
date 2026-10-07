@@ -22,7 +22,7 @@
  *      block).
  *
  * Strategy mirrors the sibling PeriodComparePage suite: render the REAL page +
- * REAL shared subtree (PageContainer, OperationalBrief, Timeline, TabNav, Pagination,
+ * REAL shared subtree (PageContainer, MetricCard, Timeline, TabNav, Pagination,
  * QueryError, charts). Only the network `request` helper and react-i18next are
  * mocked. `useVehicles` runs for real (driven by the mocked `request`) so the
  * active-vehicle derivation and its enabled/disabled query gate are genuinely
@@ -36,7 +36,7 @@
  * (`waitForCount`), never a heading.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -197,7 +197,7 @@ function renderPage(initialEntries: string[] = ['/command-history']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  const view = render(
+  return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={initialEntries}>
         <SelectedVehicleProvider>
@@ -206,7 +206,6 @@ function renderPage(initialEntries: string[] = ['/command-history']) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  return { ...view, client };
 }
 
 /** The KPI band is the only `<section aria-label>` → exposed as role "region". */
@@ -217,14 +216,14 @@ function kpiBand() {
 /** The GlassPanel (`[data-print-card]`) that owns the command timeline. */
 function timelinePanel(): HTMLElement {
   return screen
-    .getByRole('heading', { name: 'Command timeline' })
+    .getByRole('heading', { name: 'Command Timeline' })
     .closest('[data-print-card]') as HTMLElement;
 }
 
 /** The GlassPanel that owns the status breakdown bars. */
 function statusPanel(): HTMLElement {
   return screen
-    .getByRole('heading', { name: 'Status breakdown' })
+    .getByRole('heading', { name: 'Status Breakdown' })
     .closest('[data-print-card]') as HTMLElement;
 }
 
@@ -253,7 +252,7 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5); // feed resolved for the derived active vehicle
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Command history' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Command History' })).toBeInTheDocument();
     expect(screen.getByText('Audit log of all vehicle commands')).toBeInTheDocument();
 
     expect(historyCalls().some((u) => /\/vehicles\/10\/commands\/history/.test(u))).toBe(true);
@@ -268,29 +267,21 @@ describe('CommandHistoryPage — happy path', () => {
     await waitForCount(5);
 
     const band = kpiBand();
-    expect(band.querySelector('[data-operational-brief]')).toBeInTheDocument();
-    expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     for (const label of [
-      'Total commands',
+      'Total Commands',
       'Commands (24h)',
-      'Success rate',
+      'Success Rate',
       'Failed',
-      'Most used',
-      'Last sent',
+      'Most Used',
+      'Last Sent',
     ]) {
       expect(within(band).getByText(label)).toBeInTheDocument();
     }
     expect(within(band).getByText('5')).toBeInTheDocument(); // total
     expect(within(band).getByText('3')).toBeInTheDocument(); // 24h
-    const rate = within(band).getByText('Success rate').closest('[data-operational-metric]') as HTMLElement;
-    expect(rate.querySelector('[data-operational-value]')).toHaveTextContent('60.00%');
+    expect(within(band).getByText('60%')).toBeInTheDocument(); // success rate
     expect(within(band).getByText('2')).toBeInTheDocument(); // failed
     expect(within(band).getByText('Lock')).toBeInTheDocument(); // most-used, i18n-resolved
-    expect(within(band).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
-    const last = within(band).getByText('Last sent').closest('[data-operational-metric]') as HTMLElement;
-    expect(last).toHaveTextContent(new Date(RECENT).getUTCFullYear().toString());
-    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
   });
 
   it('renders all four analytics/detail panels with data (never their empty states)', async () => {
@@ -299,14 +290,14 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5);
 
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
-    expect(screen.getByRole('heading', { level: 3, name: 'Top commands' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 3, name: 'Status breakdown' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { level: 3, name: 'Top Commands' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Status Breakdown' })).toBeInTheDocument();
 
     // Status breakdown percentages exercise pctLabel(n, total): 3/5 and 2/5.
     // Regex avoids depending on the middle-dot glyph in "3 · 60%".
-    expect(within(statusPanel()).getByText(/60\.00%/)).toBeInTheDocument();
-    expect(within(statusPanel()).getByText(/40\.00%/)).toBeInTheDocument();
+    expect(within(statusPanel()).getByText(/60%/)).toBeInTheDocument();
+    expect(within(statusPanel()).getByText(/40%/)).toBeInTheDocument();
 
     // Analytics rendered data, not the "no commands in range" placeholder.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
@@ -319,8 +310,8 @@ describe('CommandHistoryPage — happy path', () => {
     await waitForCount(5);
 
     const tl = timelinePanel();
-    expect(within(tl).getByText('Wake up')).toBeInTheDocument();
-    expect(within(tl).getByText('Honk horn')).toBeInTheDocument();
+    expect(within(tl).getByText('Wake Up')).toBeInTheDocument();
+    expect(within(tl).getByText('Honk Horn')).toBeInTheDocument();
     // Subtitles are timeline-only: JSON params and the error prefix.
     expect(within(tl).getByText(/foo: bar/)).toBeInTheDocument();
     expect(within(tl).getByText(/Error: Vehicle offline/)).toBeInTheDocument();
@@ -340,13 +331,10 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
       expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
     );
     // Panels stay mounted; the KPI band is present even while the feed loads.
-    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
     expect(kpiBand()).toBeInTheDocument();
-    // OperationalBrief keeps labels mounted, while values wait for data.
-    expect(within(kpiBand()).getByText('Total commands')).toBeInTheDocument();
-    expect(kpiBand().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    expect(kpiBand().querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(kpiBand().querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    // … but its cards wait for data: skeletons, never fabricated zeros.
+    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
     // No analytics empty copy while genuinely loading.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
   });
@@ -359,7 +347,7 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await waitFor(() => expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(4));
     // The KPI band joins the error states (no fabricated zeros) …
     expect(within(kpiBand()).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(within(kpiBand()).queryByText('Total commands')).not.toBeInTheDocument();
+    expect(within(kpiBand()).queryByText('Total Commands')).not.toBeInTheDocument();
 
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThan(0);
@@ -389,28 +377,9 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     await waitFor(() =>
       expect(screen.getAllByText('Select a vehicle to view command activity').length).toBe(3),
     );
-    expect(screen.getAllByText('Select a vehicle to view command activity')).toHaveLength(3);
+    expect(screen.getByText('Select a vehicle to view command history')).toBeInTheDocument();
     // The command feed is gated off — enabled:!!vehicleId — so it never fires.
     expect(historyCalls().length).toBe(0);
-    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
-    expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
-  });
-
-  it('retains all six summary values and their scope during a failed background refresh', async () => {
-    installRequest({ commands: richCommands() });
-    const { client } = renderPage();
-    await waitForCount(5);
-    installRequest({ commandsMode: 'reject', commandsError: new ApiError('refresh failed', 500) });
-    await act(async () => { await client.invalidateQueries(); });
-
-    await waitFor(() =>
-      expect(within(kpiBand()).getByText('Data may be stale')).toBeInTheDocument(),
-    );
-    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
-    expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
-    expect(within(kpiBand()).getByText('Last 24 hours within the selected window')).toBeInTheDocument();
-    expect(within(timelinePanel()).getByText('Wake up')).toBeInTheDocument();
-    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
   });
 });
 
@@ -422,7 +391,7 @@ describe('CommandHistoryPage — daily bucketing timezone', () => {
     installRequest({ commands: [mkCmd({ created_at: '2026-01-15T00:30:00Z' })] });
     renderPage();
 
-    const caption = await screen.findByText('Daily activity — data table');
+    const caption = await screen.findByText('Daily Activity — data table');
     const table = caption.closest('table') as HTMLElement;
     expect(within(table).getByText('01-14')).toBeInTheDocument();
     expect(within(table).queryByText('01-15')).not.toBeInTheDocument();
@@ -443,8 +412,8 @@ describe('CommandHistoryPage — filters & interactions', () => {
     // 2 of 5 commands failed → timeline narrows; the success-only "Wake Up" leaves.
     await screen.findByText('2 commands');
     const tl = timelinePanel();
-    expect(within(tl).getByText('Honk horn')).toBeInTheDocument();
-    expect(within(tl).queryByText('Wake up')).not.toBeInTheDocument();
+    expect(within(tl).getByText('Honk Horn')).toBeInTheDocument();
+    expect(within(tl).queryByText('Wake Up')).not.toBeInTheDocument();
     // KPI band is unaffected by the timeline filter (still full history).
     expect(within(kpiBand()).getByText('5')).toBeInTheDocument();
   });
@@ -462,7 +431,7 @@ describe('CommandHistoryPage — filters & interactions', () => {
 
     await screen.findByText('1 commands');
     const tl = timelinePanel();
-    expect(within(tl).getByText('Wake up')).toBeInTheDocument();
+    expect(within(tl).getByText('Wake Up')).toBeInTheDocument();
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
@@ -484,12 +453,12 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     renderPage();
 
     // 30 > PAGE_SIZE (25) → pager shown on page 1.
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
     expect(screen.getByText(/Showing 1.25 of 30/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
     expect(screen.getByText(/Showing 26.30 of 30/)).toBeInTheDocument();
   });
 
@@ -497,7 +466,7 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     installRequest({ commands: manyCommands(30) });
     renderPage(['/command-history?page=5']); // only 2 pages exist
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
     expect(screen.getByText(/Showing 26.30 of 30/)).toBeInTheDocument();
     // The timeline shows the clamped page's rows rather than an empty window.
     expect(within(timelinePanel()).queryByText('No commands have been sent yet')).not.toBeInTheDocument();
@@ -507,7 +476,7 @@ describe('CommandHistoryPage — pagination & page clamp', () => {
     installRequest({ commands: manyCommands(30) });
     renderPage(['/command-history?page=-3']);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
     expect(screen.getByText(/Showing 1.25 of 30/)).toBeInTheDocument();
   });
 });
@@ -523,9 +492,9 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     installRequest({ commands: raceCommands() });
     renderPage();
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
 
     const search = screen.getByRole('textbox', { name: 'Search commands' });
     fireEvent.change(search, { target: { value: 'wake' } });
@@ -534,7 +503,7 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     await waitFor(() => expect(search).toHaveValue('wake'));
     await screen.findByText('2 commands');
     const tl = timelinePanel();
-    expect(within(tl).getAllByText('Wake up')).toHaveLength(2);
+    expect(within(tl).getAllByText('Wake Up')).toHaveLength(2);
     expect(within(tl).queryByText('Honk Horn')).not.toBeInTheDocument();
   });
 
@@ -547,15 +516,15 @@ describe('CommandHistoryPage — URL-write race regressions', () => {
     installRequest({ commands: cmds });
     renderPage();
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 1 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('1 / 2')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Page 2 of 2' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('2 / 2')).toBeInTheDocument());
 
     // Switch to "failed" (4 items → single page). Page resets; timeline is not blank.
     fireEvent.click(screen.getByRole('button', { name: 'Failed' }));
 
     await screen.findByText('4 commands');
-    expect(within(timelinePanel()).getAllByText('Honk horn')).toHaveLength(4);
+    expect(within(timelinePanel()).getAllByText('Honk Horn')).toHaveLength(4);
     // <= PAGE_SIZE now, so the pager is gone entirely (not stuck on a blank page 2).
     expect(screen.queryByText('2 / 2')).not.toBeInTheDocument();
   });
@@ -578,9 +547,9 @@ describe('CommandHistoryPage — command name & subtitle formatting', () => {
 
     const tl = timelinePanel();
     // Curated label from COMMAND_LABELS.
-    expect(within(tl).getByText('Set charge limit')).toBeInTheDocument();
+    expect(within(tl).getByText('Set Charge Limit')).toBeInTheDocument();
     // Fallback Title-Case for an unmapped command.
-    expect(within(tl).getByText('Super secret mode')).toBeInTheDocument();
+    expect(within(tl).getByText('Super Secret Mode')).toBeInTheDocument();
     // Subtitle from JSON params.
     expect(within(tl).getByText(/percent: 80/)).toBeInTheDocument();
     // Subtitle from the error field.

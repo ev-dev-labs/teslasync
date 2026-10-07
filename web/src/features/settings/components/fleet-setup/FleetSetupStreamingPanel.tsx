@@ -7,18 +7,14 @@ import { useTranslation } from 'react-i18next'
 import { Badge, GlassPanel, HelperText, IconBox, PanelTitle, Text } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
 import { KVList } from '@/components/data-display'
-import { SourceContent, type SourceState } from '@/components/layout'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import type { OnboardingStatus } from '@/api/hooks/useOnboarding'
 
 interface FleetSetupStreamingPanelProps {
   onboarding: OnboardingStatus | undefined
-  state?: SourceState
-  error?: unknown
-  onRetry?: () => void
 }
 
-export function FleetSetupStreamingPanel({ onboarding, state = 'ready', error, onRetry }: FleetSetupStreamingPanelProps) {
+export function FleetSetupStreamingPanel({ onboarding }: FleetSetupStreamingPanelProps) {
   const { t } = useTranslation('settings')
   const { formatDateTime } = useDateFormat()
   const health = onboarding?.telemetry_health
@@ -59,14 +55,6 @@ export function FleetSetupStreamingPanel({ onboarding, state = 'ready', error, o
         </div>
       </div>
 
-      <SourceContent
-        state={state}
-        label={t('fleetSetup.stream.title', 'Streaming')}
-        emptyMessage={t('fleetSetup.stream.unavailable', 'Telemetry status unavailable.')}
-        errorMessage={t('fleetSetup.stream.unavailable', 'Telemetry status unavailable.')}
-        error={error}
-        errorRecovery={{ onRetry }}
-      >
       <div className="flex flex-wrap items-center gap-2">{badge}</div>
 
       {health === 'healthy' ? (
@@ -102,7 +90,6 @@ export function FleetSetupStreamingPanel({ onboarding, state = 'ready', error, o
           }}
         />
       )}
-      </SourceContent>
 
       <Text variant="bodySm" as="p">
         {t(

@@ -2,7 +2,7 @@ import { Milestone } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import {
   destinationBits,
@@ -12,7 +12,6 @@ import {
 } from './labels';
 import { DestinationTransitionsSectionBody } from './DestinationTransitionsSectionBody';
 import type { DestinationTransitionsQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LeadingSuccessorsDirectoryProps {
   model: DestinationTransitionResult;
@@ -25,7 +24,6 @@ export function LeadingSuccessorsDirectory({
   state,
   locale,
 }: LeadingSuccessorsDirectoryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const origins = model.states
     .filter((origin) => origin.outgoingTransitions > 0)

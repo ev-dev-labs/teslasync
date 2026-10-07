@@ -9,10 +9,10 @@
  * variable we advance by hand, and `requestAnimationFrame` callbacks are
  * captured and flushed on demand.
  */
-import { render, act, cleanup } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { AnimatedNumber } from './AnimatedNumber';
-import { getFormatterPreferences, setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
+import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 
 // ── Deterministic rAF + clock harness ────────────────────────────────────────
 
@@ -21,7 +21,6 @@ let nextRafId = 0;
 const frames = new Map<number, FrameRequestCallback>();
 let rafSpy: ReturnType<typeof vi.fn>;
 let cancelSpy: ReturnType<typeof vi.fn>;
-let previousPreferences: ReturnType<typeof getFormatterPreferences>;
 
 /** Flush every currently-pending animation-frame callback once, at the current clock. */
 function flushFrames() {
@@ -66,7 +65,6 @@ function setReducedMotion(reduce: boolean) {
 }
 
 beforeEach(() => {
-  previousPreferences = getFormatterPreferences();
   now = 0;
   nextRafId = 0;
   frames.clear();
@@ -97,11 +95,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
-  setGlobalPrecision(previousPreferences.precision);
-  setGlobalLocale(previousPreferences.locale);
 });
 
 // ── Basic rendering + props ──────────────────────────────────────────────────
@@ -207,15 +202,15 @@ describe('AnimatedNumber — edge cases', () => {
     expect(rafSpy).not.toHaveBeenCalled();
   });
 
-  it('keeps non-finite values unknown instead of showing measured zero', () => {
+  it('renders 0 instead of NaN for a non-finite value', () => {
     const { container: nan } = render(<AnimatedNumber value={NaN} />);
     runToCompletion();
-    expect(nan.textContent).toBe('—');
+    expect(nan.textContent).toBe('0');
     expect(nan.textContent).not.toContain('NaN');
 
     const { container: inf } = render(<AnimatedNumber value={Infinity} />);
     runToCompletion();
-    expect(inf.textContent).toBe('—');
+    expect(inf.textContent).toBe('0');
   });
 
   it('animates from the previous value on update instead of snapping back to zero', () => {

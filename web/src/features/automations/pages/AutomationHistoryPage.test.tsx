@@ -2,9 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { AutomationHistory, AutomationHistoryListResponse } from '@/api/types';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import '../../../i18n';
-import { formatDurationMs } from '@/lib/dateFormat';
 import AutomationHistoryPage from './AutomationHistoryPage';
 
 const state = vi.hoisted(() => ({
@@ -14,17 +12,7 @@ const state = vi.hoisted(() => ({
   isError: false,
   error: null as Error | null,
   refetch: vi.fn(),
-  metrics: [] as readonly StatMetric[],
 }));
-vi.mock('@/hooks/useOperationalMetrics', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
-  return {
-    useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
-      state.metrics = args[0];
-      return actual.useOperationalMetrics(...args);
-    },
-  };
-});
 vi.mock('@/api/hooks/useAutomations', () => ({
   useAutomationHistoryPage: (filters: unknown) => {
     state.filters(filters);
@@ -41,10 +29,6 @@ vi.mock('@/hooks/useRangeState', () => ({
     startInstant: '2026-09-01T07:00:00.000Z',
     endInstantExclusive: '2026-10-01T07:00:00.000Z',
   }),
-}));
-vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ settings: { unit_of_length: 'km', unit_of_temp: 'C',
-    unit_of_pressure: 'bar', locale: 'en-US', decimal_precision: 2, currency_symbol: '$' } }),
 }));
 
 const row: AutomationHistory = {
@@ -86,7 +70,7 @@ describe('Automation History', () => {
     }));
     expect(screen.getByRole('region', { name: 'Execution summary' })).toBeInTheDocument();
     expect(screen.getByText('Execution activity')).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Automation History' })).toBeInTheDocument();
     expect(screen.queryByLabelText(/Filter.*date|Start date|End date/i)).not.toBeInTheDocument();
   });
 
@@ -118,74 +102,8 @@ describe('Automation History', () => {
   it('opens execution detail from a full-width table row', () => {
     state.data = response([row]);
     render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
-    const table = screen.getByRole('table', { name: 'Automation history' });
+    const table = screen.getByRole('table', { name: 'Automation History' });
     fireEvent.click(within(table).getByRole('button', { name: 'Home arrival' }));
     expect(screen.getByRole('dialog', { name: 'Execution details' })).toBeInTheDocument();
-  });
-
-  it('opens the summary review drawer with full server scope and preserves execution controls', () => {
-    state.data = response([row], 60);
-    render(<MemoryRouter initialEntries={['/automations/history?automation_id=7&status=failed&page=2']}><AutomationHistoryPage /></MemoryRouter>);
-    const brief = screen.getByTestId('automation-history-brief');
-    expect(brief).toHaveTextContent('2026-09-01T07:00:00.000Z inclusive → 2026-10-01T07:00:00.000Z exclusive');
-    expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('60');
-    expect(brief.querySelector('[data-operational-metric="duration"] [data-operational-value]')).toHaveTextContent(formatDurationMs(1000));
-    expect(state.metrics.find((metric) => metric.occurrenceId === 'duration')).toMatchObject({
-      metricId: 'duration', rawValue: 1,
-    });
-    expect(state.metrics.find((metric) => metric.occurrenceId === 'rate')).toMatchObject({
-      metricId: 'percent', rawValue: 100,
-    });
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog', { name: 'Execution summary details' });
-    expect(within(drawer).getAllByText('Server summary across the selected period and rule/status filters, not just this page of rows.').length).toBeGreaterThan(0);
-    expect(within(drawer).getByText('60')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Filter executions by rule' })).toHaveValue('7');
-    expect(screen.getByRole('combobox', { name: 'Filter executions by status' })).toHaveValue('failed');
-    expect(screen.getByRole('button', { name: 'Home arrival' })).toBeInTheDocument();
-  });
-
-  it('keeps successful zero counts separate from undefined percentages and duration', () => {
-    state.data = response([]);
-    render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
-    const brief = screen.getByTestId('automation-history-brief');
-    expect(brief.querySelector('[data-operational-metric="total"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('No executions match this period and filters.')).toBeInTheDocument();
-  });
-
-  it('preserves measured zero duration and rate but rejects non-finite summary operands', () => {
-    state.data = response([row]);
-    state.data.summary.avg_duration_ms = 0;
-    state.data.summary.success_rate = 0;
-    const { rerender } = render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
-    const brief = screen.getByTestId('automation-history-brief');
-    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'value');
-    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'value');
-    expect(state.metrics.find((metric) => metric.occurrenceId === 'duration')?.rawValue).toBe(0);
-    state.data.summary.avg_duration_ms = Number.NaN;
-    state.data.summary.success_rate = Number.POSITIVE_INFINITY;
-    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
-    expect(brief.querySelector('[data-operational-metric="duration"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(brief.querySelector('[data-operational-metric="rate"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(brief.textContent).not.toMatch(/NaN|Infinity/);
-  });
-
-  it('retains summary, chart, filters and rows on refresh failure and offers source recovery', () => {
-    state.data = response([row], 60);
-    state.isError = true;
-    state.error = new Error('background history failure');
-    state.refetch.mockClear();
-    render(<MemoryRouter initialEntries={['/automations/history?automation_id=7&page=2']}><AutomationHistoryPage /></MemoryRouter>);
-    expect(screen.getByRole('region', { name: 'Execution summary' })).toBeInTheDocument();
-    expect(screen.getByText('Execution activity')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Home arrival' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Filter executions by rule' })).toHaveValue('7');
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(state.refetch).toHaveBeenCalledOnce();
-    expect(state.filters).toHaveBeenCalledWith(expect.objectContaining({ page: 2, automationId: 7 }));
-    expect(screen.queryByText('Server error')).not.toBeInTheDocument();
   });
 });

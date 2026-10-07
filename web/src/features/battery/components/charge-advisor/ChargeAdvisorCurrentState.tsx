@@ -3,14 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComponentProps) {
-  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const current = analysis.current;
   const sourceLabel = current.source === 'live'
@@ -26,7 +24,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
   const age = current.ageMs == null
     ? '—'
     : t('chargeAdvisor.current.ageDays', '{{days}} days', {
-      days: fmtNumber(current.ageMs / 86_400_000),
+      days: fmtInt(current.ageMs / 86_400_000),
     });
   const retrievalLabel = current.retrievalState === 'connected'
     ? t('chargeAdvisor.current.retrievalConnected', 'Connected')
@@ -45,14 +43,14 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
       )}
       icon={<BatteryMedium className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
       state={state}
-      dependency={current.source === 'live' ? 'live' : 'both'}
+      dependency="both"
       dataTestId="charge-advisor-current"
     >
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text variant="caption">{t('chargeAdvisor.current.battery', 'Battery SoC')}</Text>
           <Text className="mt-1 text-2xl font-semibold text-cyan-300">
-            {current.batteryPct == null ? '—' : fmtPercent(current.batteryPct)}
+            {current.batteryPct == null ? '—' : fmtPercent(current.batteryPct, 0)}
           </Text>
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
@@ -84,7 +82,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
             {current.chargeLimitPct == null
               ? t('chargeAdvisor.current.noLimit', 'Charge limit —')
               : t('chargeAdvisor.current.limit', 'Charge limit {{pct}}%', {
-                pct: fmtNumber(current.chargeLimitPct),
+                pct: Math.round(current.chargeLimitPct),
               })}
           </Text>
         </div>

@@ -33,10 +33,10 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-import { PageLayout } from '@/components/layout'
+import { PageContainer } from '@/components/layout'
 import { GlassPanel, IconBox, PanelTitle, SectionTitle, Text } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { AIRAGHelp } from '@/components/ai'
+import { AIRAGHelp } from '@/components/ai/AIRAGHelp'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import type { NeonColor } from '@/lib/tokens'
 import { HelpLinkCard, type HelpLink } from '../components/HelpLinkCard'
@@ -171,7 +171,7 @@ export default function HelpPage() {
   usePageTitle(t('help.title', 'Help'))
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('help.title', 'Help')}
       subtitle={t(
         'help.subtitle',
@@ -274,7 +274,7 @@ export default function HelpPage() {
               </Text>
             </div>
             <div
-              className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]"
+              className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(17rem,1fr))]"
               data-testid="help-baseline-links"
             >
               {HELP_LINKS.map((link) => (
@@ -284,6 +284,6 @@ export default function HelpPage() {
           </section>
         </FadeIn>
       </div>
-    </PageLayout>
+    </PageContainer>
   )
 }

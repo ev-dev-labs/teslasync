@@ -1,6 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Badge, Text } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
@@ -34,13 +33,7 @@ export function WidgetTipCards({
   emptyMessage,
   emptyIcon,
 }: WidgetTipCardsProps) {
-  const { t } = useTranslation();
   const limit = maxTips ?? (compact ? 1 : 3);
-  const impactLabels = {
-    high: t('dashboard.tipCards.impact.high', 'high'),
-    medium: t('dashboard.tipCards.impact.medium', 'medium'),
-    low: t('dashboard.tipCards.impact.low', 'low'),
-  };
 
   // Null-safety: callers build `tips` from possibly-undefined API data
   // (e.g. `data?.recommendations`). Coalesce before `.slice`/`.length` so a
@@ -51,19 +44,19 @@ export function WidgetTipCards({
     return (
       <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
         icon={emptyIcon}
-        message={emptyMessage ?? t('dashboard.tipCards.noRecommendations', 'No recommendations')}
+        message={emptyMessage ?? 'No recommendations'}
         className="py-4"
       />
     );
   }
 
   return (
-    <div role="list" className="h-full min-w-0 space-y-2 overflow-y-auto">
+    <div role="list" className="space-y-2 overflow-y-auto h-full">
       {visible.map((tip) => (
         <div
           key={tip.id}
           role="listitem"
-          className="flex min-h-[44px] min-w-0 items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+          className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3 min-h-[44px] flex items-start gap-3"
         >
           {tip.icon && (
             // Decorative leading glyph — the title conveys the meaning, so hide
@@ -74,31 +67,28 @@ export function WidgetTipCards({
           )}
 
           <div className="flex-1 min-w-0">
-            <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
-              <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm font-medium text-[var(--text-primary)]">
                 {tip.title}
-              </Text>
+              </span>
               {tip.impact && (
                 <Badge
                   variant={impactBadgeMap[tip.impact]}
                   size="sm"
-                  className="max-w-full shrink-0 whitespace-normal [overflow-wrap:anywhere]"
+                  className="shrink-0"
                 >
-                  {tip.impactLabel ?? impactLabels[tip.impact]}
+                  {tip.impactLabel ?? tip.impact}
                 </Badge>
               )}
             </div>
-            <Text
-              as="p"
-              size="xs"
-              color="secondary"
+            <p
               className={cn(
-                'mt-0.5 leading-relaxed [overflow-wrap:anywhere]',
+                'mt-0.5 text-xs text-[var(--text-secondary)] leading-relaxed',
                 compact && 'line-clamp-2',
               )}
             >
               {tip.description}
-            </Text>
+            </p>
           </div>
         </div>
       ))}

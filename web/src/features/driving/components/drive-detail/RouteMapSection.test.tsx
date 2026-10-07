@@ -371,9 +371,8 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     // The bottom row labels carry the "<label>: <time>" shape (distinct from the
     // bare popup labels above).
-    expect(screen.queryByText(/^Start:/)).toBeNull();
-    expect(screen.queryByText(/^End:/)).toBeNull();
-    expect(screen.getByRole('link', { name: 'Journey details' })).toHaveAttribute('href', '#journey');
+    expect(screen.getByText(/^Start:/)).toBeInTheDocument();
+    expect(screen.getByText(/^End:/)).toBeInTheDocument();
   });
 
   it('exposes the interactive map as a named region', () => {
@@ -392,7 +391,7 @@ describe('RouteMapSection — in-progress drive', () => {
     // The bottom "End: <time>" label is gated on a real endTs…
     expect(screen.queryByText(/^End:/)).toBeNull();
     // …while the start label is unconditional.
-    expect(screen.getByRole('link', { name: 'Journey details' })).toHaveAttribute('href', '#journey');
+    expect(screen.getByText(/^Start:/)).toBeInTheDocument();
   });
 });
 

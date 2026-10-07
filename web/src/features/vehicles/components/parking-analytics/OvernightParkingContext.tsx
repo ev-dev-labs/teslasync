@@ -14,13 +14,12 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertDurationFromSI } from '@/lib/unitConversion';
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface OvernightParkingContextProps {
   summary: ParkingSummary;
@@ -34,7 +33,6 @@ export function OvernightParkingContext({
   state,
   className,
 }: OvernightParkingContextProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const durationUnit = unitPrefs.duration;
@@ -80,7 +78,7 @@ export function OvernightParkingContext({
           'parking.overnight.subtitle',
           '{{pct}}% of observed dwell overlaps the local night window across {{count}} stints in {{timeZone}}.',
           {
-            pct: fmtNumber(summary.nightShare * 100),
+            pct: fmtNumber(summary.nightShare * 100, 0),
             count: summary.stints.length,
             timeZone: summary.coverage.timeZone,
           },
@@ -102,7 +100,7 @@ export function OvernightParkingContext({
     >
       <ChartContainer
         className="h-full"
-        title={t('parking.overnight.title', 'Overnight vs daytime context')}
+        title={t('parking.overnight.title', 'Overnight vs Daytime Context')}
         subtitle={subtitle}
         ariaLabel={t(
           'parking.overnight.aria',
@@ -125,12 +123,12 @@ export function OvernightParkingContext({
               'Observed dwell ({{unit}})',
               { unit: durationUnit },
             ),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'share',
             label: t('parking.share', 'Share'),
-            format: (value) => `${fmtNumber(value)}%`,
+            format: (value) => `${fmtNumber(value, 0)}%`,
           },
         ]}
       >
@@ -157,7 +155,7 @@ export function OvernightParkingContext({
                   outerRadius="78%"
                   paddingAngle={2}
                   label={({ name, percent }) =>
-                    `${String(name)} ${fmtNumber(Number(percent) * 100)}%`
+                    `${String(name)} ${fmtNumber(Number(percent) * 100, 0)}%`
                   }
                 >
                   {rows.map((row, index) => (
@@ -171,7 +169,7 @@ export function OvernightParkingContext({
                   content={
                     <ChartTooltip
                       valueFormatter={(value) =>
-                        `${fmtNumber(value)} ${durationUnit}`
+                        `${fmtNumber(value, 1)} ${durationUnit}`
                       }
                     />
                   }

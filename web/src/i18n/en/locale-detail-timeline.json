@@ -1,53 +1,27 @@
 {
   "timeline": {
     "title": "Timeline",
-    "summary": {
-      "period": "{{start}} – {{end}} (exclusive) · {{timezone}}",
-      "provenance": "Vehicle FSM summary for the requested window; continuous observation coverage is unknown",
-      "transitionDescription": "Sum of transition counts returned by the state summary for this window",
-      "drivingDescription": "Time in the driving state, rounded to whole minutes",
-      "chargingDescription": "Time in the charging state, rounded to whole minutes",
-      "idleSleepDescription": "Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes",
-      "missing": "No state summary is available for this window"
-    },
-    "source": {
-      "selectVehicle": "Select a vehicle to view its state history",
-      "paused": "{{section}} is paused while the connection is unavailable",
-      "unknown": "{{section}} is unavailable because the response did not contain the expected records",
-      "failed": "Unable to load {{section}}",
-      "loading": "Loading {{section}}",
-      "retained": "Showing retained {{section}} after a refresh failed",
-      "pausedRetained": "Refresh is paused; retained {{section}} remains available"
-    },
-    "daily": {
-      "utcNote": "Transition counts grouped by UTC day; state durations come from the summary"
-    },
-    "trigger": "Trigger",
-    "refresh": "Refresh timeline",
-    "noStateData": "No state distribution available yet",
-    "timeByState": "Time by state",
-    "kpis": "Summary metrics",
     "time": "Time",
-    "fromState": "From state",
-    "toState": "To state",
+    "fromState": "From State",
+    "toState": "To State",
     "duration": "Duration",
     "actions": "Actions",
     "inspect": "Inspect",
     "inspectTransition": "Inspect transition {{from}} to {{to}}",
-    "selectVehicle": "Select vehicle",
+    "selectVehicle": "Select Vehicle",
     "subtitle": "Vehicle state history and transitions",
-    "totalTransitions": "Total transitions",
-    "drivingTime": "Driving time",
-    "chargingTime": "Charging time",
-    "idleSleepTime": "Idle / sleep time",
-    "stateTimeline": "State timeline",
-    "dailyBreakdown": "Daily breakdown",
+    "totalTransitions": "Total Transitions",
+    "drivingTime": "Driving Time",
+    "chargingTime": "Charging Time",
+    "idleSleepTime": "Idle / Sleep Time",
+    "stateTimeline": "State Timeline",
+    "dailyBreakdown": "Daily Breakdown",
     "noDailyData": "No daily data available yet",
     "driving": "Driving",
     "charging": "Charging",
     "idle": "Idle",
     "sleeping": "Sleeping",
-    "stateTransitions": "State transitions",
+    "stateTransitions": "State Transitions",
     "noTransitions": "No state transitions recorded",
     "preview": {
       "eyebrow": "State transition",
@@ -58,7 +32,6 @@
       "triggerValue": "Trigger value"
     },
     "dailyBreakdownAria": "Daily transition counts by vehicle state",
-    "day": "Day",
-    "invalidComposition": "Proportional track unavailable for the returned dwell totals; individual state evidence remains visible."
+    "day": "Day"
   }
 }

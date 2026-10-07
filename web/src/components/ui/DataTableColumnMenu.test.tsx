@@ -144,7 +144,7 @@ describe('DataTableColumnMenu — visibility toggling', () => {
     setup()
     openMenu()
     const checks = screen.getAllByRole('checkbox')
-    expect(checks).toHaveLength(4)
+    expect(checks).toHaveLength(3)
     checks.forEach((c) => expect(c).toBeChecked())
     expect(screen.getByText('Name')).toBeInTheDocument()
     expect(screen.getByText('Detail')).toBeInTheDocument()
@@ -228,64 +228,6 @@ describe('DataTableColumnMenu — visibility toggling', () => {
   })
 })
 
-describe('DataTableColumnMenu — select all', () => {
-  it('places the checked bulk checkbox before every individual column', () => {
-    setup()
-    openMenu()
-    expect(screen.getAllByRole('checkbox')[0]).toHaveAccessibleName('Select all')
-    expect(screen.getAllByRole('checkbox')[0]).toBeChecked()
-  })
-
-  it('selects default-hidden columns from the mixed state without changing order', () => {
-    const { onChange } = setup({
-      columns: [{ key: 'name', header: 'Name' }, { key: 'status', header: 'Status', defaultVisible: false }],
-      layout: { order: ['status', 'name'], hidden: ['status'] },
-    })
-    openMenu()
-    const all = screen.getByRole('checkbox', { name: 'Select all' })
-    expect(all).toHaveAttribute('aria-checked', 'mixed')
-    expect(all).toBePartiallyChecked()
-    fireEvent.click(all)
-    expect(onChange).toHaveBeenCalledWith({ order: ['status', 'name'], hidden: [] })
-  })
-
-  it('bulk deselection retains the first reordered column when none is required', () => {
-    const { onChange } = setup({ layout: { order: ['detail', 'name', 'status'], hidden: [] } })
-    openMenu()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
-    expect(onChange).toHaveBeenCalledWith({ order: ['detail', 'name', 'status'], hidden: ['name', 'status'] })
-  })
-
-  it('bulk deselection retains all required columns', () => {
-    const { onChange } = setup({ columns: [
-      { key: 'name', header: 'Name', required: true },
-      { key: 'status', header: 'Status' },
-      { key: 'detail', header: 'Detail', required: true },
-    ] })
-    openMenu()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
-    expect(onChange).toHaveBeenCalledWith({ order: ['name', 'status', 'detail'], hidden: ['status'] })
-  })
-
-  it.each([
-    { columns: [{ key: 'name', header: 'Name' }] },
-    { columns: [{ key: 'name', header: 'Name', required: true }, { key: 'status', header: 'Status', required: true }] },
-  ])('disables bulk deselection when no column can be hidden: %j', ({ columns }) => {
-    const { onChange } = setup({ columns })
-    openMenu()
-    const all = screen.getByRole('checkbox', { name: 'Select all' })
-    expect(all).toBeDisabled()
-    fireEvent.click(all)
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it('omits bulk selection for an empty menu', () => {
-    setup({ columns: [] })
-    openMenu()
-    expect(screen.queryByRole('checkbox', { name: 'Select all' })).not.toBeInTheDocument()
-  })
-})
-
 describe('DataTableColumnMenu — reordering', () => {
   it('moves a column down and emits the reordered layout', () => {
     const { onChange } = setup()
@@ -333,7 +275,7 @@ describe('DataTableColumnMenu — reordering', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show or hide columns' }))
     expect(screen.getByTestId('datatable-column-menu')).toBeInTheDocument()
     expect(screen.queryByTestId('datatable-column-menu-up-name')).toBeNull()
-    expect(screen.getAllByRole('checkbox')).toHaveLength(4)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(3)
   })
 })
 

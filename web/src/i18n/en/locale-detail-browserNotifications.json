@@ -1,10 +1,10 @@
 {
   "browserNotifications": {
-    "title": "Browser notifications",
+    "title": "Browser Notifications",
     "subtitle": "Get notified when the app tab is in the background",
     "permissionError": "Could not request browser permission. Check site settings and try again.",
     "unsupported": "Browser notifications are not supported in this browser.",
-    "enable": "Enable browser notifications",
+    "enable": "Enable Browser Notifications",
     "enabled": "Enabled",
     "blocked": "Notifications are blocked. Enable in your browser settings.",
     "events": "Notify me about",

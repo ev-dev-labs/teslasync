@@ -3,20 +3,22 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
+  SeasonalAccounting,
+  SeasonalCalendarCoverage,
   SeasonalComponentDiagnostics,
   SeasonalDeseasonalizedTrend,
+  SeasonalEvidenceSupport,
   SeasonalFittedCurve,
+  SeasonalKpiEvidenceBand,
   SeasonalMethodology,
   SeasonalMonthProfile,
   SeasonalMonthSupport,
@@ -26,8 +28,6 @@ import {
   SeasonalYearDirectory,
   type SeasonalQueryState,
 } from '../components/seasonal-efficiency';
-import { SeasonalSummaryBrief } from '../components/operationalbrief-n-z/SeasonalSummaryBrief';
-import { SeasonalCoverageBrief } from '../components/operationalbrief-n-z/SeasonalCoverageBrief';
 import { analyzeSeasonalEfficiency } from '../lib/seasonalEfficiency';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
@@ -42,9 +42,8 @@ export default function SeasonalEfficiencyPage() {
   const timeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [nowMs] = useState(() => Date.now());
-  const hasCachedData = vehicleId != null && drivesState.hasData;
+  const hasCachedData = vehicleId != null && drivesQuery.data !== undefined;
   const isResolved = vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
     () => (vehicleId != null ? drivesQuery.data ?? [] : []),
@@ -58,10 +57,10 @@ export default function SeasonalEfficiencyPage() {
   );
   const state: SeasonalQueryState = {
     vehicleSelected: vehicleId != null,
-    isLoading: vehicleId != null && drivesState.status === 'initial',
+    isLoading: vehicleId != null && !hasCachedData && drivesQuery.isLoading,
     isResolved,
-    error: drivesState.fatalError,
-    refreshError: drivesState.refreshError,
+    error: drivesQuery.isError && !hasCachedData ? drivesQuery.error : null,
+    refreshError: drivesQuery.isError && hasCachedData ? drivesQuery.error : null,
     onRetry: () => void drivesQuery.refetch(),
   };
   const sectionProps = {
@@ -73,24 +72,20 @@ export default function SeasonalEfficiencyPage() {
   };
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('seasonalEfficiency.title', 'Seasonal Efficiency')}
-      query={drivesQuery}
       subtitle={t(
         'seasonalEfficiency.subtitle',
         'Vehicle-local calendar normalization with explicit evidence accounting and descriptive support',
       )}
     >
-      {drivesState.isRefreshBlocked && (
-        <StaleRefreshWarning state={drivesState} label={t('seasonalEfficiency.title', 'Seasonal Efficiency')} />
-      )}
       <FadeIn>
-        <SeasonalSummaryBrief {...sectionProps} />
+        <SeasonalKpiEvidenceBand {...sectionProps} />
       </FadeIn>
       <FadeIn delay={0.05}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalCoverageBrief kind="calendar" {...sectionProps} />
-          <SeasonalCoverageBrief kind="support" {...sectionProps} />
+          <SeasonalCalendarCoverage {...sectionProps} />
+          <SeasonalEvidenceSupport {...sectionProps} />
         </Grid>
       </FadeIn>
       <FadeIn delay={0.1}>
@@ -121,11 +116,11 @@ export default function SeasonalEfficiencyPage() {
         </Grid>
       </FadeIn>
       <FadeIn delay={0.35}>
-        <SeasonalCoverageBrief kind="accounting" {...sectionProps} />
+        <SeasonalAccounting {...sectionProps} />
       </FadeIn>
       <FadeIn delay={0.4}>
         <SeasonalMethodology {...sectionProps} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

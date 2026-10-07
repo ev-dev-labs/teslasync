@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { DataProvenanceBadge } from '@/components/data-display';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
@@ -27,7 +27,7 @@ export default function ScienceLabPage() {
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
   const { selected: days, window, pickWindow } = useAnalysisWindow('days', WINDOW_PRESETS, 7);
 
-  const title = t('science.title', 'Science lab');
+  const title = t('science.title', 'Science Lab');
   usePageTitle(title);
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -39,11 +39,11 @@ export default function ScienceLabPage() {
   const scope = { vehicleId: vehicleIdStr, start: window.start, end: window.end };
 
   return (
-    <PageLayout
+    <PageContainer
       title={title}
       subtitle={t('science.subtitle', 'Every claim is a fit: n, uncertainty, firmware epoch, holdout.')}
       copyLink
-      metadataActions={(
+      contextActions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <DataProvenanceBadge provenance="historical" />
         </div>
@@ -74,6 +74,6 @@ export default function ScienceLabPage() {
         <section id="science-tires" className="scroll-mt-24"><TiresPanel window={scope} /></section>
         <section id="science-notebook" className="scroll-mt-24"><NotebookPanel window={scope} /></section>
       </div>
-    </PageLayout>
+    </PageContainer>
   );
 }

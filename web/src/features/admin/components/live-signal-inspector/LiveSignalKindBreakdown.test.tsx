@@ -152,7 +152,7 @@ describe('LiveSignalKindBreakdown — panel chrome', () => {
     ];
     for (const status of statuses) {
       const { unmount } = renderPanel({ status, error: new Error('x') });
-      const heading = screen.getByRole('heading', { name: /Signal kinds/i });
+      const heading = screen.getByRole('heading', { name: /signal kinds/i });
       expect(heading).toBeInTheDocument();
       // The decorative BarChart3 icon must be hidden from the a11y tree.
       expect(heading.querySelector('svg[aria-hidden="true"]')).not.toBeNull();

@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Activity, Plus } from 'lucide-react';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { GlassPanel, Pagination, Select, type SelectOption } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { useAutomations, useAutomationHistoryPage } from '@/api/hooks/useAutomations';
 import type { AutomationHistoryStatus } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useDataState } from '@/hooks/useDataState';
 import { AutomationHistorySummary } from '../components/AutomationHistorySummary';
 import { AutomationHistoryTrend } from '../components/AutomationHistoryTrend';
 import { AutomationHistoryTable } from '../components/AutomationHistoryTable';
@@ -23,7 +22,7 @@ const STATUSES: AutomationHistoryStatus[] = [
 
 export default function AutomationHistoryPage() {
   const { t } = useTranslation();
-  usePageTitle(t('automations.historyPage.title', 'Automation history'));
+  usePageTitle(t('automations.historyPage.title', 'Automation History'));
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'automations.history.range',
   });
@@ -41,8 +40,6 @@ export default function AutomationHistoryPage() {
     since: startInstant, until: endInstantExclusive,
   });
   const automations = useAutomations();
-  const historyState = useDataState({ ...query, data: query.data ?? undefined });
-  const rulesState = useDataState(automations);
   const options = useMemo<SelectOption[]>(() => [
     { value: '', label: t('automations.historyPage.allRules', 'All rules') },
     ...(automations.data ?? []).map((rule) => ({
@@ -74,19 +71,19 @@ export default function AutomationHistoryPage() {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const effectivePage = Math.min(page, totalPages);
   const rows = data?.items ?? [];
-  const isInitialLoading = query.isLoading && !historyState.hasData;
-  const initialError = historyState.fatalError;
+  const isInitialLoading = query.isLoading && !data;
+  const initialError = query.isError && !data;
 
   useEffect(() => {
     if (data && page > totalPages) updateFilter('page', String(totalPages));
   }, [data, page, totalPages]);
 
   return (
-    <PageLayout
-      title={t('automations.historyPage.title', 'Automation history')}
+    <PageContainer
+      title={t('automations.historyPage.title', 'Automation History')}
       subtitle={t('automations.historyPage.subtitle', 'Review every execution and its outcome across the selected period.')}
       copyLink
-      primaryAction={
+      actions={
         <Link to="/automations/new" className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 text-sm text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]">
           <Plus className="h-4 w-4" aria-hidden="true" />
           {t('automations.historyPage.new', 'New automation')}
@@ -94,16 +91,7 @@ export default function AutomationHistoryPage() {
       }
     >
       <FadeIn>
-        <AutomationHistorySummary
-          query={query}
-          scope={t('automations.historyBrief.bounds', '{{start}} inclusive → {{end}} exclusive · rule: {{rule}} · status: {{status}}', {
-            start: startInstant, end: endInstantExclusive,
-            rule: automationId ? options.find((option) => option.value === String(automationId))?.label
-              : t('automations.historyPage.allRules', 'All rules'),
-            status: status ? statusOptions.find((option) => option.value === status)?.label
-              : t('automations.historyPage.allStatuses', 'All statuses'),
-          })}
-        />
+        <AutomationHistorySummary query={query} />
       </FadeIn>
       <FadeIn delay={0.05}>
         <AutomationHistoryTrend query={query} />
@@ -116,27 +104,25 @@ export default function AutomationHistoryPage() {
               value={automationId ? String(automationId) : ''}
               onChange={(event) => updateFilter('automation_id', event.target.value)}
               aria-label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
-              className="min-w-0 w-full flex-1 sm:max-w-72"
+              className="min-w-44 flex-1 sm:max-w-72"
             />
             <Select
               options={statusOptions}
               value={status ?? ''}
               onChange={(event) => updateFilter('status', event.target.value)}
               aria-label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
-              className="min-w-0 w-full flex-1 sm:max-w-60"
+              className="min-w-40 flex-1 sm:max-w-60"
             />
           </div>
-          <StaleRefreshWarning state={rulesState} label={t('automations.historyPage.filterRule', 'Filter executions by rule')} />
-          {rulesState.fatalError && (
-            <QueryError error={rulesState.fatalError} onRetry={() => { void automations.refetch(); }} />
+          {automations.isError && (
+            <QueryError error={automations.error} onRetry={() => { void automations.refetch(); }} />
           )}
-          <StaleRefreshWarning state={historyState} label={t('automations.historyPage.title', 'Automation history')} />
           {isInitialLoading ? (
             <div className="space-y-3" aria-label={t('automations.historyPage.loading', 'Loading executions')}>
               {[1, 2, 3, 4].map((key) => <Skeleton key={key} className="h-12 w-full" />)}
             </div>
           ) : initialError ? (
-            <QueryError error={initialError} onRetry={() => { void query.refetch(); }} />
+            <QueryError error={query.error} onRetry={() => { void query.refetch(); }} />
           ) : rows.length === 0 ? (
             <EmptyState
               icon={<Activity className="h-8 w-8" aria-hidden="true" />}
@@ -154,9 +140,12 @@ export default function AutomationHistoryPage() {
               />
             </>
           )}
+          {query.isError && data && (
+            <QueryError error={query.error} onRetry={() => { void query.refetch(); }} />
+          )}
         </GlassPanel>
       </FadeIn>
       <AutomationExecutionDetail id={selectedId} onClose={() => setSelectedId(null)} />
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -1,10 +1,8 @@
 import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, QueryError } from '@/components/feedback';
 import { HelpTooltip, PinButton } from '@/components/ui';
-import type { DataState } from '@/api/dataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
 import {
   DataFreshness,
   DataFreshnessAuto,
@@ -12,16 +10,8 @@ import {
 } from '@/components/data-display';
 import type { WidgetHelp } from './types';
 
-export interface WidgetShellProps {
+interface WidgetShellProps {
   title?: string;
-  description?: string;
-  /** Localized status text/badge; source trust is represented separately by dataState. */
-  status?: ReactNode;
-  footer?: ReactNode;
-  className?: string;
-  loadingContent?: ReactNode;
-  /** Reuse useDataState(query); retained data is never replaced on refresh failure. */
-  dataState?: DataState<unknown>;
   icon?: ReactNode;
   loading?: boolean;
   error?: string | null;
@@ -62,8 +52,7 @@ export interface WidgetShellProps {
 }
 
 export function WidgetShell({
-  title, description, status, footer, className, loadingContent,
-  dataState, icon, loading, error, children, noPadding, actions,
+  title, icon, loading, error, children, noPadding, actions,
   query,
   updatedAt, isFetching, isStale, isError, onRefresh, help,
   widgetId, dashboardId,
@@ -97,9 +86,12 @@ export function WidgetShell({
     setJustUpdated(false);
   }, [effectiveUpdatedAt]);
 
-  const initialLoading = dataState ? dataState.status === 'initial' : loading;
-  const fatalError = dataState ? dataState.fatalError : error ? new Error(error) : null;
-  const retry = onRefresh ?? dataState?.retry ?? (query ? () => { void query.refetch(); } : undefined);
+  if (loading) return <Skeleton className="h-full rounded-xl" />;
+  if (error) return (
+    <div className="h-full flex items-center justify-center p-4">
+      <QueryError error={new Error(error)} />
+    </div>
+  );
 
   const showFreshness = updatedAt !== undefined || query !== undefined;
   // Compact (dot-only) when widget has no title (typically 1×1 widgets)
@@ -128,36 +120,28 @@ export function WidgetShell({
   return (
     <div
       className={cn(
-        dashboardTokens.shell,
-        'min-h-0 flex-1 transition-shadow duration-slow',
-        justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)] motion-reduce:shadow-none',
-        className,
+        'relative h-full flex flex-col transition-shadow duration-slow',
+        justUpdated && 'shadow-[0_0_12px_rgba(34,197,94,0.15)]',
       )}
-      aria-busy={Boolean(initialLoading || dataState?.isRefreshing)}
-      data-data-state={dataState?.status}
     >
       {title ? (
-        <div className={dashboardTokens.header}>
-          <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start gap-2">
-              {icon && <span aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--text-secondary)] [&>svg]:size-4">{icon}</span>}
-              <h3 className={cn(dashboardTokens.title, 'min-w-0 break-words')}>{title}</h3>
-              {help && (
-                <HelpTooltip
-                  size="xs"
-                  placement="top"
-                  text={help.text}
-                  i18nKey={help.i18nKey}
-                  defaultValue={help.defaultValue}
-                  learnMore={help.learnMore}
-                  ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title })}
-                />
-              )}
-            </div>
-            {description && <p className={dashboardTokens.description}>{description}</p>}
+        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-3 pb-1">
+          <div className="flex items-center gap-1.5">
+            {icon}
+            <h3 className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wider">{title}</h3>
+            {help && (
+              <HelpTooltip
+                size="xs"
+                placement="top"
+                text={help.text}
+                i18nKey={help.i18nKey}
+                defaultValue={help.defaultValue}
+                learnMore={help.learnMore}
+                ariaLabel={t('widget.moreInfoAbout', 'More info about {{title}}', { title })}
+              />
+            )}
           </div>
-          <div className="flex max-w-full flex-wrap items-center gap-2">
-            {status}
+          <div className="flex items-center gap-2">
             {freshnessEl}
             {widgetId && dashboardId && (
               <PinButton
@@ -174,34 +158,20 @@ export function WidgetShell({
         <>
           {/* Overlay freshness indicator for title-less widgets */}
           {freshnessEl && (
-            <div className="absolute top-1.5 right-[var(--dashboard-widget-chrome-inset,0.375rem)] z-[5]">
+            <div className="absolute top-1.5 right-1.5 z-[5]">
               {freshnessEl}
             </div>
           )}
-          {(actions || status || description) && (
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 pl-4 pr-[var(--dashboard-widget-chrome-inset,1rem)] pb-2 pt-3">
-              {description && <p className={cn(dashboardTokens.description, 'mr-auto')}>{description}</p>}
-              {status}
+          {actions && (
+            <div className="flex-shrink-0 flex justify-end px-4 pt-3 pb-1">
               {actions}
             </div>
           )}
         </>
       )}
-      <div className={cn(dashboardTokens.body, !noPadding ? 'px-4 pb-3 overflow-auto' : 'flex flex-col overflow-hidden')}>
-        {initialLoading ? (
-          loadingContent ?? <Skeleton className="h-full min-h-24 rounded-xl" />
-        ) : fatalError ? (
-          <div className="flex h-full items-center justify-center p-4">
-            <QueryError error={fatalError} onRetry={retry ?? undefined} />
-          </div>
-        ) : (
-          <>
-            {dataState && <StaleRefreshWarning state={dataState} className="mb-2" />}
-            {children}
-          </>
-        )}
+      <div className={cn('@container flex-1 min-h-0', !noPadding ? 'px-4 pb-3 overflow-auto' : 'overflow-hidden')}>
+        {children}
       </div>
-      {footer && <div className={dashboardTokens.footer}>{footer}</div>}
     </div>
   );
 }

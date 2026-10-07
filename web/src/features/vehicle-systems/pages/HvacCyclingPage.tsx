@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { Grid, PageLayout } from '@/components/layout';
-import { deriveDataState } from '@/api/dataState';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -33,13 +32,12 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function HvacCyclingPage() {
   const { t, i18n } = useTranslation();
-  usePageTitle(t('hvacCycling.title', 'HVAC cycling'));
+  usePageTitle(t('hvacCycling.title', 'HVAC Cycling'));
 
   const { vehicleId } = useSelectedVehicle();
   const { formatDuration } = useUnits();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const climateQuery = useClimateHistory(vehicleIdStr);
-  const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
   const hasCachedData =
     vehicleId != null && climateQuery.data !== undefined;
   const dataAvailable =
@@ -59,23 +57,28 @@ export default function HvacCyclingPage() {
   const state: HvacCyclingQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading,
-    isPaused: climateSource.isRefreshBlocked,
     isResolved:
       vehicleId != null
       && (
         dataAvailable
         || (!isLoading && climateQuery.isError)
       ),
-    error: vehicleId != null ? climateSource.fatalError : null,
-    refreshError: climateSource.refreshError,
+    error:
+      vehicleId != null && !hasCachedData && climateQuery.isError
+        ? climateQuery.error
+        : null,
+    refreshError:
+      hasCachedData && climateQuery.isError
+        ? climateQuery.error
+        : null,
     onRetry: () => {
       void climateQuery.refetch();
     },
   };
 
   return (
-    <PageLayout
-      title={t('hvacCycling.title', 'HVAC cycling')}
+    <PageContainer
+      title={t('hvacCycling.title', 'HVAC Cycling')}
       subtitle={t(
         'hvacCycling.subtitle',
         'An evidence chain from returned climate rows to gap-qualified intervals, censored runs, and complete-cycle diagnostics',
@@ -163,6 +166,6 @@ export default function HvacCyclingPage() {
       <FadeIn delay={0.36}>
         <HvacCyclingMethodology summary={summary} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -1,7 +1,7 @@
 {
   "commands": {
     "title": "Commands",
-    "pageTitle": "Vehicle command center",
+    "pageTitle": "Vehicle Command Center",
     "subtitle": "Review vehicle readiness, send remote actions, and verify recent outcomes.",
     "viewHistory": "View history",
     "selectVehicle": "Select vehicle",
@@ -19,32 +19,32 @@
     },
     "toggleFavorite": "Toggle favorite",
     "cat": {
-      "quickActions": "Quick actions",
-      "alerts": "Alerts & location",
+      "quickActions": "Quick Actions",
+      "alerts": "Alerts & Location",
       "charging": "Charging",
-      "climate": "Climate & comfort",
-      "climateProtect": "Climate protection",
-      "doors": "Doors & trunk",
+      "climate": "Climate & Comfort",
+      "climateProtect": "Climate Protection",
+      "doors": "Doors & Trunk",
       "drive": "Drive",
       "media": "Media",
       "navigation": "Navigation",
       "schedules": "Schedules",
-      "security": "Security & access",
+      "security": "Security & Access",
       "software": "Software",
       "sunroof": "Sunroof",
       "vehicle": "Vehicle",
       "windows": "Windows"
     },
-    "on": "On",
-    "off": "Off",
+    "on": "ON",
+    "off": "OFF",
     "domain": {
       "aria": "Command domains",
       "access": {
-        "title": "Access & security",
+        "title": "Access & Security",
         "description": "Locks, security modes, openings, and drive authorization."
       },
       "comfort": {
-        "title": "Climate & comfort",
+        "title": "Climate & Comfort",
         "description": "Cabin temperature, seats, steering heat, and protection modes."
       },
       "charging": {
@@ -52,7 +52,7 @@
         "description": "Charge controls, limits, and recurring vehicle schedules."
       },
       "vehicle": {
-        "title": "Vehicle controls",
+        "title": "Vehicle Controls",
         "description": "Location, navigation, software, identity, and media controls."
       }
     },
@@ -147,13 +147,13 @@
       "unknownCommand": "{{command}}",
       "commands": {
         "unlock": "Unlock",
-        "sentry_off": "Sentry off",
-        "valet_off": "Valet off",
-        "guest_mode_off": "Guest Mode off",
-        "climate_off": "Climate off",
-        "bioweapon_off": "Bioweapon off",
-        "climate_keeper_off": "Climate keeper off",
-        "charge_stop": "Stop charging"
+        "sentry_off": "Sentry Off",
+        "valet_off": "Valet Off",
+        "guest_mode_off": "Guest Mode Off",
+        "climate_off": "Climate Off",
+        "bioweapon_off": "Bioweapon Off",
+        "climate_keeper_off": "Climate Keeper Off",
+        "charge_stop": "Stop Charging"
       }
     },
     "fallback": {
@@ -185,24 +185,24 @@
     "alerts": {
       "boombox": "Boombox",
       "findMyCar": "Find my car",
-      "flashLights": "Flash lights",
+      "flashLights": "Flash Lights",
       "horn": "Horn",
-      "locatePing": "Locate ping",
+      "locatePing": "Locate Ping",
       "randomFart": "Random fart"
     },
     "charging": {
       "amperage": "Amperage",
       "charge": "Charge",
-      "chargePort": "Charge port",
+      "chargePort": "Charge Port",
       "close": "Close",
       "dailyMode": "Daily mode",
       "enterAmps": "Enter charging amps (e.g., 16, 32, 48):",
       "enterLimit": "Enter charge limit % (50–100):",
-      "maxRange": "Max range",
+      "maxRange": "Max Range",
       "open": "Open",
       "percent": "Charge %",
-      "setAmps": "Set amps",
-      "setLimit": "Set limit",
+      "setAmps": "Set Amps",
+      "setLimit": "Set Limit",
       "standard": "Standard",
       "tripMode": "Trip mode"
     },
@@ -210,35 +210,35 @@
       "bioweapon": "Bioweapon",
       "campMode": "Camp Mode",
       "climate": "Climate",
-      "climateKeeper": "Climate keeper",
-      "cop": "Overheat protect",
-      "copFan": "Overheat protect",
+      "climateKeeper": "Climate Keeper",
+      "cop": "Overheat Protect",
+      "copFan": "Overheat Protect",
       "copHigh": "High",
       "copHighTemperature": "100°F / 40°C",
       "copLow": "Low",
       "copLowTemperature": "90°F / 30°C",
       "copMedium": "Medium",
       "copMediumTemperature": "95°F / 35°C",
-      "copOff": "Overheat protect",
+      "copOff": "Overheat Protect",
       "copOn": "On (AC)",
-      "copTemp": "COP temp",
+      "copTemp": "COP Temp",
       "default": "Default",
-      "defenseMode": "Defense mode",
+      "defenseMode": "Defense Mode",
       "dogMode": "Dog Mode",
       "driver": "Driver",
-      "driverPassenger": "Driver/passenger",
+      "driverPassenger": "Driver/Passenger",
       "enterTemp": "Enter temperature in °C (e.g., 21):",
       "fanOnly": "Fan only",
       "keepMode": "Keep",
-      "maxPrecondition": "Max precondition",
-      "off": "Off",
+      "maxPrecondition": "Max Precondition",
+      "off": "OFF",
       "override": "Override",
-      "resetPrecondition": "Reset precondition",
-      "seatCool": "Seat cool",
-      "seatHeat": "Seat heat",
-      "setLevel": "Low/Med/high",
-      "setTemps": "Set temps",
-      "steeringHeat": "Steering heat",
+      "resetPrecondition": "Reset Precondition",
+      "seatCool": "Seat Cool",
+      "seatHeat": "Seat Heat",
+      "setLevel": "Low/Med/High",
+      "setTemps": "Set Temps",
+      "steeringHeat": "Steering Heat",
       "toggle": "Toggle"
     },
     "doors": {
@@ -249,7 +249,7 @@
     "drive": {
       "confirmRemoteStart": "This will enable keyless driving for 2 minutes. Continue?",
       "keylessDrive": "Keyless drive",
-      "remoteStart": "Remote start"
+      "remoteStart": "Remote Start"
     },
     "homelink": {
       "garage": "Garage door",
@@ -260,13 +260,13 @@
     },
     "media": {
       "enterVolume": "Enter volume level (0.0 – 11.0):",
-      "nextFav": "Next favorite",
-      "nextTrack": "Next track",
+      "nextFav": "Next Favorite",
+      "nextTrack": "Next Track",
       "playPause": "Play / Pause",
-      "prevFav": "Prev favorite",
-      "prevTrack": "Prev track",
-      "volumeDown": "Volume down",
-      "volumeUp": "Volume up"
+      "prevFav": "Prev Favorite",
+      "prevTrack": "Prev Track",
+      "volumeDown": "Volume Down",
+      "volumeUp": "Volume Up"
     },
     "nav": {
       "byId": "By ID",
@@ -275,27 +275,27 @@
       "enterScId": "Enter Supercharger ID:",
       "latitude": "Latitude",
       "longitude": "Longitude",
-      "sendAddress": "Send address",
+      "sendAddress": "Send Address",
       "sendGPS": "Send GPS",
       "sendGPSTitle": "Enter GPS coordinates",
       "supercharger": "Supercharger",
       "toVehicleNav": "To vehicle nav"
     },
     "schedules": {
-      "addCharge": "Add charge schedule",
-      "addPrecondition": "Add precondition",
+      "addCharge": "Add Charge Schedule",
+      "addPrecondition": "Add Precondition",
       "byId": "By ID",
       "enterScheduleId": "Enter schedule ID to remove:",
       "midnight": "Midnight daily",
       "morning": "7 AM daily",
-      "removeCharge": "Remove schedule",
-      "removePrecondition": "Remove precondition"
+      "removeCharge": "Remove Schedule",
+      "removePrecondition": "Remove Precondition"
     },
     "security": {
       "admin": "Admin",
       "clearPin": "Clear PIN",
-      "clearSpeedPin": "Clear speed PIN",
-      "confirmClearDrivePin": "Clear PIN to drive without authentication?",
+      "clearSpeedPin": "Clear Speed PIN",
+      "confirmClearDrivePin": "Clear PIN to Drive without authentication?",
       "confirmClearPin": "Clear speed limit PIN without authentication?",
       "confirmErase": "This will erase all user data from the vehicle touchscreen. Continue?",
       "enable": "Enable",
@@ -303,11 +303,11 @@
       "enterSpeedLimit": "Enter speed limit (50-90 MPH):",
       "enterSpeedPin": "Enter 4-digit PIN:",
       "enterValetPin": "Enter 4-digit valet PIN:",
-      "eraseData": "Erase data",
+      "eraseData": "Erase Data",
       "guestMode": "Guest Mode",
       "guestOnly": "Guest mode only",
       "lock": "Lock",
-      "pinToDrive": "PIN to drive",
+      "pinToDrive": "PIN to Drive",
       "requiresPin": "Requires PIN",
       "resetPin": "Reset PIN",
       "resetValetPin": "Reset Valet PIN",
@@ -315,17 +315,17 @@
       "setMph": "Set MPH",
       "speedActivate": "Activate",
       "speedDeactivate": "Deactivate",
-      "speedLimit": "Speed limit",
-      "speedLimitMode": "Speed limit",
+      "speedLimit": "Speed Limit",
+      "speedLimitMode": "Speed Limit",
       "valetMode": "Valet Mode",
-      "wakeUp": "Wake up",
+      "wakeUp": "Wake Up",
       "wakeVehicle": "Wake vehicle"
     },
     "software": {
-      "cancelUpdate": "Cancel update",
+      "cancelUpdate": "Cancel Update",
       "enterDelay": "Install in how many minutes? (0 = now, 120 = 2 hours)",
       "installNow": "Install now",
-      "scheduleUpdate": "Schedule update",
+      "scheduleUpdate": "Schedule Update",
       "stopPending": "Stop pending"
     },
     "sunroof": {
@@ -343,8 +343,8 @@
       "rename": "Rename"
     },
     "windows": {
-      "close": "Close windows",
-      "vent": "Vent windows"
+      "close": "Close Windows",
+      "vent": "Vent Windows"
     }
   }
 }

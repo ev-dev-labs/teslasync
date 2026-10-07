@@ -81,7 +81,7 @@ describe('HealthProbesSection', () => {
     mockGetExtendedHealth.mockReturnValue(new Promise(() => {}))
     const { container } = renderSection()
 
-    expect(screen.getByText('Health probes')).toBeInTheDocument()
+    expect(screen.getByText('Health Probes')).toBeInTheDocument()
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2)
     // The probe cards ("/healthz") must not be present until data resolves.
     expect(screen.queryByText(/healthz/)).toBeNull()
@@ -98,7 +98,7 @@ describe('HealthProbesSection', () => {
     expect(screen.getAllByText('connected')).toHaveLength(2)
     expect(screen.getByText('148')).toBeInTheDocument() // goroutines
     expect(screen.getByText('1d 2h 3m')).toBeInTheDocument() // uptime of 93784s
-    expect(screen.getByText('4.20 ms')).toBeInTheDocument() // db latency
+    expect(screen.getByText('4.2 ms')).toBeInTheDocument() // db latency
     expect(screen.getByText('12')).toBeInTheDocument() // pool connections
     // header summary chips
     expect(screen.getByText('Live')).toBeInTheDocument()
@@ -115,10 +115,11 @@ describe('HealthProbesSection', () => {
     expect(screen.getAllByText('degraded')).toHaveLength(2)
     // database status has no value -> defaults to "unknown" (badge + KV row).
     expect(screen.getAllByText('unknown')).toHaveLength(2)
-    // Missing goroutines, uptime, latency and pool count are unknown, not zero.
-    expect(screen.queryByText('0')).toBeNull()
-    expect(screen.queryByText('0m')).toBeNull()
-    expect(screen.getAllByText(EM_DASH)).toHaveLength(4)
+    // goroutines + pool connections both null-coalesce to 0.
+    expect(screen.getAllByText('0')).toHaveLength(2)
+    // uptime of 0s formats to "0m"; unknown latency renders an em dash.
+    expect(screen.getByText('0m')).toBeInTheDocument()
+    expect(screen.getByText(EM_DASH)).toBeInTheDocument()
   })
 
   it('treats a zero latency as a real reading rather than a missing value', async () => {
@@ -132,7 +133,7 @@ describe('HealthProbesSection', () => {
     )
     renderSection()
 
-    expect(await screen.findByText('0.00 ms')).toBeInTheDocument()
+    expect(await screen.findByText('0.0 ms')).toBeInTheDocument()
     // The em-dash placeholder must NOT be used for a genuine 0 ms latency.
     expect(screen.queryByText(EM_DASH)).toBeNull()
   })

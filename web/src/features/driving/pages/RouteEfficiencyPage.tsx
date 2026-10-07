@@ -1,38 +1,33 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Route, Gauge, Activity, Navigation } from 'lucide-react';
+import { Route, Repeat, Gauge, Activity, TrendingUp, Award, Navigation } from 'lucide-react';
 
-import { PageLayout, ChartCard, LayoutCard, Section } from '@/components/layout';
-import { GlassPanel, Pagination, PanelTitle } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Pagination, PanelTitle, SectionTitle } from '@/components/ui';
 
-import { MetricBar } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference';
-import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { MetricCard, MetricBar } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
-  ChartLegend, ChartTooltip,
+  ChartContainer, ChartLegend, ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 
-import { AIRouteEfficiencySuggestions } from '@/components/ai';
+import { AIRouteEfficiencySuggestions } from '@/components/ai/AIRouteEfficiencySuggestions';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
-
+import { fmtInt } from '@/lib/numberFormat';
 import {
   RouteCard, makeUnitDisplay, ROUTE_EFF_COLORS, MAX_COMPARISON_ROUTES,
 } from '../components/route-efficiency';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ROUTES_PAGE_SIZE = 12;
 
 export default function RouteEfficiencyPage() {
-  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('routeEfficiency.title', 'Route Efficiency'));
 
@@ -45,12 +40,9 @@ export default function RouteEfficiencyPage() {
   const [page, setPage] = useUrlNumber('page', 1);
 
   const routeQuery = useRouteEfficiency(vehicleIdStr, startDate, endDate);
-  const { data, refetch } = routeQuery;
-  const routeState = useDataState(routeQuery, { provenance: 'historical' });
-  const isLoading = vehicleIdStr != null && routeState.status === 'initial';
-  const error = vehicleIdStr != null ? routeState.fatalError : null;
+  const { data, isLoading, error, refetch } = routeQuery;
 
-  const routes = vehicleIdStr != null ? data?.routes ?? [] : [];
+  const routes = data?.routes ?? [];
   const hasRoutes = routes.length > 0;
   const totalPages = Math.max(1, Math.ceil(routes.length / ROUTES_PAGE_SIZE));
   const currentPage = Number.isFinite(page)
@@ -73,10 +65,10 @@ export default function RouteEfficiencyPage() {
   // fails, so a transient error must not blow the still-valid routes away —
   // the page keeps rendering them and the header freshness chip (wired via
   // `query={routeQuery}`) reflects the degraded state instead.
-  const isError = error != null;
+  const isError = Boolean(error) && !hasRoutes;
 
   const { unitPrefs } = useUnits();
-  const unit = useMemo(() => makeUnitDisplay(unitPrefs.distance), [unitPrefs.distance, displayPrecision, displayLocale]);
+  const unit = useMemo(() => makeUnitDisplay(unitPrefs.distance), [unitPrefs.distance]);
 
   /* ---- Aggregates (SI Wh/km in, converted at the display boundary) ---- */
   const totalTrips = routes.reduce((sum, r) => sum + (r.tripCount ?? 0), 0);
@@ -87,25 +79,7 @@ export default function RouteEfficiencyPage() {
     : 0;
   const mostDrivenTrips = routes[0]?.tripCount ?? 0;
 
-  const sourceAvailable = vehicleIdStr != null && (routeState.hasData || routeQuery.isSuccess);
-  const summaryMetrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'routes', rawValue: sourceAvailable ? routes.length : null,
-      label: t('routeEfficiency.routes', 'Routes') },
-    { metricId: 'count', occurrenceId: 'trips', rawValue: sourceAvailable ? totalTrips : null,
-      label: t('routeEfficiency.totalTrips', 'Total Trips') },
-    ...([
-      ['best', bestEff, 'routeEfficiency.bestEfficiency', 'Best'],
-      ['average', avgEff, 'routeEfficiency.avgEfficiency', 'Avg'],
-      ['worst', worstEff, 'routeEfficiency.worstEfficiency', 'Worst'],
-    ] as const).map(([id, raw, key, fallback]): StatMetric => ({
-      metricId: 'efficiency', occurrenceId: id, rawValue: hasRoutes ? raw / 1000 : null,
-      label: t(key, fallback),
-      display: { formatter: (rawValue) => ({ value: fmtInt(unit.toEfficiency(rawValue * 1000)), unit: unit.efficiencyUnit }) },
-    })),
-    { metricId: 'count', occurrenceId: 'most-driven', rawValue: hasRoutes ? mostDrivenTrips : null,
-      label: t('routeEfficiency.mostDrivenTrips', 'Most-driven'),
-      context: t('routeEfficiency.trips', 'trips') },
-  ];
+  const effVal = (whPerKm: number) => (hasRoutes ? fmtInt(unit.toEfficiency(whPerKm)) : '—');
 
   /* ---- Comparison chart rows (lowest consumption first) ---- */
   const chartData = useMemo(
@@ -128,26 +102,68 @@ export default function RouteEfficiencyPage() {
   const effUnit = unit.efficiencyUnit;
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('routeEfficiency.title', 'Route Efficiency')}
       subtitle={t('routeEfficiency.subtitle', 'Compare efficiency across your most-driven routes')}
       query={routeQuery}
     >
-      <StaleRefreshWarning state={routeState} label={t('routeEfficiency.title', 'Route Efficiency')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <DrivingSummaryBrief
-          id="route-efficiency-brief"
-          title={t('routeEfficiency.kpisAria', 'Route efficiency summary metrics')}
-          description={t('routeEfficiency.brief.description', 'All returned routes contribute to these totals; average consumption remains the unweighted mean of route averages.')}
-          metrics={summaryMetrics}
-          scope={`${startDate} — ${endDate}`}
-          provenance={t('routeEfficiency.brief.provenance', 'Returned route-efficiency aggregate before pagination; completeness is not declared by the source.')}
-          loading={isLoading}
-          unavailable={!sourceAvailable}
-          retained={routeState.isRefreshBlocked}
-          actions={isError ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
-        />
+        <section
+          aria-label={t('routeEfficiency.kpisAria', 'Route efficiency summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          {isLoading ? (
+            Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={88} />)
+          ) : isError ? (
+            <div className="col-span-full">
+              <QueryError error={error} onRetry={() => refetch()} />
+            </div>
+          ) : (
+            <>
+              <MetricCard
+                label={t('routeEfficiency.routes', 'Routes')}
+                value={fmtInt(routes.length)}
+                icon={<Route className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('routeEfficiency.totalTrips', 'Total Trips')}
+                value={fmtInt(totalTrips)}
+                icon={<Repeat className="h-5 w-5" />}
+                color="blue"
+              />
+              <MetricCard
+                label={t('routeEfficiency.bestEfficiency', 'Best')}
+                value={effVal(bestEff)}
+                subtitle={effUnit}
+                icon={<Gauge className="h-5 w-5" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('routeEfficiency.avgEfficiency', 'Avg')}
+                value={effVal(avgEff)}
+                subtitle={effUnit}
+                icon={<Activity className="h-5 w-5" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('routeEfficiency.worstEfficiency', 'Worst')}
+                value={effVal(worstEff)}
+                subtitle={effUnit}
+                icon={<TrendingUp className="h-5 w-5" />}
+                color="red"
+              />
+              <MetricCard
+                label={t('routeEfficiency.mostDrivenTrips', 'Most-driven')}
+                value={hasRoutes ? fmtInt(mostDrivenTrips) : '—'}
+                subtitle={t('routeEfficiency.trips', 'trips')}
+                icon={<Award className="h-5 w-5" />}
+                color="purple"
+              />
+            </>
+          )}
+        </section>
       </FadeIn>
 
       {/* 2 — AI suggestions (hidden by withAiFeature when ai_mode='off') */}
@@ -167,8 +183,8 @@ export default function RouteEfficiencyPage() {
               <QueryError error={error} onRetry={() => refetch()} />
             </GlassPanel>
           ) : (
-            <div className="min-w-0 xl:col-span-2">
-            <ChartCard
+            <ChartContainer
+              className="xl:col-span-2"
               title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
               ariaLabel={t(
                 'routeEfficiency.comparisonAria',
@@ -183,9 +199,6 @@ export default function RouteEfficiencyPage() {
                 { key: 'worst', label: `${t('routeEfficiency.worst', 'Worst')} ${effUnit}` },
               ]}
               height={340}
-              mobileHeight={260}
-              toolbar
-              exportable
               loading={isLoading}
               empty={!isLoading && chartData.length < 2}
             >
@@ -203,13 +216,14 @@ export default function RouteEfficiencyPage() {
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </ChartCard>
-            </div>
+            </ChartContainer>
           )}
 
-          <LayoutCard title={t('routeEfficiency.metrics', 'Route Metrics')} actions={
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-4 flex items-center gap-2">
               <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          }>
+              {t('routeEfficiency.metrics', 'Route Metrics')}
+            </PanelTitle>
             {isLoading ? (
               <Skeleton height={220} />
             ) : isError ? (
@@ -252,18 +266,19 @@ export default function RouteEfficiencyPage() {
                 />
               </div>
             )}
-          </LayoutCard>
+          </GlassPanel>
         </section>
       </FadeIn>
 
       {/* 4 — Detail band: most-driven route cards */}
       <FadeIn delay={0.2}>
-        <Section id="route-efficiency-most-driven" title={t('routeEfficiency.mostDriven', 'Most-driven routes')}>
-          <div>
+        <section aria-label={t('routeEfficiency.mostDriven', 'Most-driven routes')}>
+          <SectionTitle className="mb-3 flex items-center gap-2">
             <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          </div>
+            {t('routeEfficiency.mostDriven', 'Most-driven routes')}
+          </SectionTitle>
           {isLoading ? (
-            <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]">
+            <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
               {Array.from({ length: 6 }).map((_, i) => (
                 <Skeleton key={i} height={168} />
               ))}
@@ -281,7 +296,7 @@ export default function RouteEfficiencyPage() {
               />
             </GlassPanel>
           ) : (
-            <StaggerContainer className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]">
+            <StaggerContainer className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(20rem,1fr))]">
               {visibleRoutes.map((route) => (
                 <StaggerItem key={`${route.startLocation}-${route.endLocation}`}>
                   <RouteCard route={route} unit={unit} />
@@ -297,8 +312,8 @@ export default function RouteEfficiencyPage() {
               onPageChange={setPage}
             />
           )}
-        </Section>
+        </section>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

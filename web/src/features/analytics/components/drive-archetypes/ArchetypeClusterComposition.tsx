@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ChartContainer,
   ChartTooltip,
   CHART_COLORS,
   ResponsiveContainer,
@@ -14,16 +15,14 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeClusterCompositionProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -34,7 +33,6 @@ export function ArchetypeClusterComposition({
   state,
   display,
 }: ArchetypeClusterCompositionProps) {
-  const { fmtInt, fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -56,8 +54,7 @@ export function ArchetypeClusterComposition({
 
   return (
     <section data-testid="drive-archetypes-composition">
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t('archetypes.composition.title', 'Cluster share and composition')}
         subtitle={t(
           'archetypes.composition.subtitle',
@@ -75,20 +72,20 @@ export function ArchetypeClusterComposition({
         dataColumns={[
           { key: 'cluster', label: t('archetypes.common.cluster', 'Cluster') },
           { key: 'drives', label: t('archetypes.common.drives', 'Drives'), format: (value) => fmtInt(value) },
-          { key: 'share', label: t('archetypes.composition.sharePercent', 'Share (%)'), format: (value) => fmtNumber(value) },
+          { key: 'share', label: t('archetypes.composition.sharePercent', 'Share (%)'), format: (value) => fmtNumber(value, 1) },
           {
             key: 'distance',
             label: t('archetypes.composition.distanceColumn', 'Total distance ({{unit}})', {
               unit: display.distanceUnit,
             }),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'energy',
             label: t('archetypes.composition.energyColumn', 'Total energy ({{unit}})', {
               unit: display.energyUnit,
             }),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
         ]}
       >
@@ -106,10 +103,10 @@ export function ArchetypeClusterComposition({
                 <YAxis
                   domain={[0, 100]}
                   tick={axisTick}
-                  tickFormatter={(value) => `${fmtNumber(value)}%`}
+                  tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
                 />
                 <Tooltip
-                  content={<ChartTooltip valueFormatter={(value) => fmtPercent(value)} />}
+                  content={<ChartTooltip valueFormatter={(value) => fmtPercent(value, 1)} />}
                 />
                 <Bar dataKey="share" name={shareName} radius={[4, 4, 0, 0]}>
                   {rows.map((row, index) => (
@@ -127,7 +124,7 @@ export function ArchetypeClusterComposition({
               >
                 <div className="flex items-start justify-between gap-2">
                   <Text variant="label">{row.cluster}</Text>
-                  <Badge variant="info">{fmtPercent(row.share)}</Badge>
+                  <Badge variant="info">{fmtPercent(row.share, 1)}</Badge>
                 </div>
                 <Text as="p" variant="caption" className="mt-1">
                   {t(
@@ -144,7 +141,7 @@ export function ArchetypeClusterComposition({
             ))}
           </ul>
         </ArchetypeSectionBody>
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

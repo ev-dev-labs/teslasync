@@ -26,11 +26,18 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { ROUTE_REGISTRY, type RouteEntry } from './routeRegistry'
-import catalog from '@/i18n/en.json'
 
 // ── Generator-mirrored helpers ────────────────────────────────────────────
 // Copied byte-for-byte from generate-route-registry.mjs so these tests encode
 // the generator's contract rather than a re-interpretation of it.
+
+/** "BatteryHealth" → "Battery Health", "MQTTInspector" → "MQTT Inspector". */
+function humanize(s: string): string {
+  return s
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .trim()
+}
 
 function lowerFirst(s: string): string {
   return s.charAt(0).toLowerCase() + s.slice(1)
@@ -112,10 +119,11 @@ describe('ROUTE_REGISTRY — structural contract', () => {
 })
 
 describe('ROUTE_REGISTRY — generator invariants (guards hand-edits)', () => {
-  it('derives every label from the authored English catalog without changing route identifiers', () => {
-    const labels: Record<string, string> = catalog.routes
-    const mismatched = ROUTE_REGISTRY.filter((r) => r.label !== labels[lowerFirst(r.name)]).map(
-      (r) => `${r.path}: "${r.label}" !== catalog.routes.${lowerFirst(r.name)}`,
+  it('derives `label` from the SafeRoute `name` via humanize()', () => {
+    // This is the invariant a hand-edit most easily breaks — e.g. relabeling
+    // "/notifications/audit" to "Audit Log" instead of "Notifications Audit".
+    const mismatched = ROUTE_REGISTRY.filter((r) => r.label !== humanize(r.name)).map(
+      (r) => `${r.path}: "${r.label}" !== humanize("${r.name}")="${humanize(r.name)}"`,
     )
     expect(mismatched).toEqual([])
   })
@@ -253,6 +261,6 @@ describe('RouteEntry — exported shape', () => {
       i18nKey: 'routes.example',
     }
     expect(sample.hidden).toBeUndefined()
-    expect(sample.label).toBe('Example')
+    expect(humanize(sample.name)).toBe(sample.label)
   })
 })

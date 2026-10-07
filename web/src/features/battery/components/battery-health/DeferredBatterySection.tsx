@@ -16,7 +16,7 @@ export default function DeferredBatterySection({
   const { ref, inView } = useInView<HTMLDivElement>({ rootMargin: '400px' });
 
   return (
-    <div ref={ref} data-testid={testId} className="min-w-0 w-full">
+    <div ref={ref} data-testid={testId}>
       {inView ? <Suspense fallback={fallback}>{children}</Suspense> : fallback}
     </div>
   );

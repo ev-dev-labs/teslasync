@@ -16,14 +16,13 @@ import {
 } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
 import { chartTokens } from '@/lib/tokens';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
 import type { UtilizationSummary } from '../../lib/utilization';
 import type { UtilizationSectionState } from './types';
 import { useUtilizationDisplay } from './useUtilizationDisplay';
 import { UtilizationSectionBody } from './UtilizationSectionBody';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TimeCostOverviewProps {
   summary: UtilizationSummary;
@@ -34,7 +33,6 @@ export function TimeCostOverview({
   summary,
   state,
 }: TimeCostOverviewProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const {
@@ -75,6 +73,7 @@ export function TimeCostOverview({
           costPerDisplayDistance != null
             ? `${formatCurrency(
                 costPerDisplayDistance,
+                3,
               )} / ${distanceUnit}`
             : '—',
       },
@@ -92,7 +91,7 @@ export function TimeCostOverview({
         label: t('utilization.energy', 'Energy used'),
         value:
           summary.accounting.usableEnergyRows > 0
-            ? formatEnergy(summary.energyWh)
+            ? formatEnergy(summary.energyWh, { precision: 1 })
             : '—',
       },
       {
@@ -106,7 +105,7 @@ export function TimeCostOverview({
                 'utilization.energyRateValue',
                 '{{rate}} / kWh',
                 {
-                  rate: formatCurrency(summary.ratePerKwh),
+                  rate: formatCurrency(summary.ratePerKwh, 3),
                 },
               )
             : '—',
@@ -134,7 +133,7 @@ export function TimeCostOverview({
       formatCurrency,
       formatEnergy,
       summary,
-      t, fmtInt,
+      t,
     ],
   );
 
@@ -153,7 +152,7 @@ export function TimeCostOverview({
             className="h-4 w-4 text-cyan-300"
             aria-hidden="true"
           />
-          {t('utilization.timeSplit', 'Where the hours go')}
+          {t('utilization.timeSplit', 'Where the Hours Go')}
           <HelpTooltip
             size="sm"
             i18nKey="help.utilization.body"
@@ -188,7 +187,7 @@ export function TimeCostOverview({
                 sublabel={t(
                   'utilization.hours',
                   '{{h}} h',
-                  { h: fmtNumber(summary.drivingHours) },
+                  { h: fmtNumber(summary.drivingHours, 1) },
                 )}
               />
               <MetricBar
@@ -202,7 +201,7 @@ export function TimeCostOverview({
                 sublabel={t(
                   'utilization.hours',
                   '{{h}} h',
-                  { h: fmtNumber(noRecordedDriveHours) },
+                  { h: fmtNumber(noRecordedDriveHours, 1) },
                 )}
               />
               <Text variant="bodySm" as="p" className="pt-1">
@@ -214,9 +213,12 @@ export function TimeCostOverview({
                       summary.drivingShare != null
                         ? fmtNumber(
                             summary.drivingShare * 100,
+                            1,
                           )
                         : '—',
-                    dist: formatDistance(summary.distanceM),
+                    dist: formatDistance(summary.distanceM, {
+                      precision: 0,
+                    }),
                   },
                 )}
               </Text>
@@ -237,7 +239,7 @@ export function TimeCostOverview({
             className="h-4 w-4 text-cyan-300"
             aria-hidden="true"
           />
-          {t('utilization.ledger', 'Cost of motion')}
+          {t('utilization.ledger', 'Cost of Motion')}
         </PanelTitle>
         <UtilizationSectionBody state={state} className="min-h-56">
           {summary.accounting.eligibleRows === 0 ? (
@@ -262,7 +264,7 @@ export function TimeCostOverview({
               <Text variant="caption" as="p" className="mt-3">
                 {t(
                   'utilization.costAssumption',
-                  'Energy-only estimate using the settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.',
+                  'Energy-only estimate using the Settings electricity rate. It excludes insurance, depreciation, financing, maintenance, and charging losses.',
                 )}
               </Text>
             </>

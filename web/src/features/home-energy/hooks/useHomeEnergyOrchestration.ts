@@ -13,8 +13,6 @@
 
 import { useMemo, useState } from 'react';
 import type { FreshnessQuery } from '@/components/data-display';
-import { useDataState } from '@/hooks/useDataState';
-import { deriveDataState, type DataState } from '@/api/dataState';
 import { useVehicles, useFleetStates, summariseFleetStates, type FleetStateEntry } from '@/api/hooks/useVehicles';
 import {
   useTeslaEnergySites,
@@ -76,13 +74,12 @@ function horizonSlotsFor(scenario: OrchestrationScenario): number {
 }
 
 export interface HomeEnergyOrchestration {
-  /** First-load state for vehicle metrics; the page keeps independent section shells mounted. */
+  /** `true` while the essential vehicle list is loading (see `PageContainer`'s `loading` prop). */
   isLoading: boolean;
   /** Essential-data error, if any. */
   error: Error | null;
-  /** Every underlying query, for page-level freshness. */
+  /** Every underlying query, for a page-level freshness badge (`PageContainer`'s `query` prop). */
   queries: FreshnessQuery[];
-  sourceStates: ReadonlyArray<{ id: string; state: DataState<unknown> }>;
   vehicles: Vehicle[];
   hasEnergySite: boolean;
   siteName: string | null;
@@ -202,15 +199,6 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
     () => summariseFleetStates(fleetStatesQuery.data ?? []),
     [fleetStatesQuery.data],
   );
-  const vehiclesState = useDataState(vehiclesQuery, { provenance: 'cached' });
-  const sitesState = useDataState(sitesQuery, { provenance: 'cached' });
-  const siteInfoState = useDataState(siteInfoQuery, { provenance: 'cached' });
-  const liveStatusState = useDataState(liveStatusQuery, { provenance: 'live' });
-  const historyState = useDataState(historyQuery, { provenance: 'historical' });
-  const fleetState = deriveDataState(fleetStatesQuery, {
-    provenance: 'live',
-    partial: fleetSummary.failedCount > 0,
-  });
   const fleetFreshness = useMemo(() => ({
     isFetching: fleetStatesQuery.isFetching,
     isError: fleetSummary.failedCount > 0,
@@ -231,19 +219,9 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
   ];
 
   return {
-    isLoading: vehiclesQuery.isLoading && !vehiclesState.hasData,
-    error: vehiclesState.fatalError,
+    isLoading: vehiclesQuery.isLoading,
+    error: (vehiclesQuery.error as Error | null) ?? null,
     queries,
-    sourceStates: [
-      { id: 'vehicles', state: vehiclesState },
-      { id: 'fleet', state: fleetState },
-      { id: 'sites', state: sitesState },
-      ...(siteId != null ? [
-        { id: 'siteInfo', state: siteInfoState },
-        { id: 'liveStatus', state: liveStatusState },
-        { id: 'history', state: historyState },
-      ] : []),
-    ],
     vehicles,
     hasEnergySite: !!primarySite,
     siteName: primarySite?.site_name ?? null,

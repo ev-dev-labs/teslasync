@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Area,
   AreaChart,
+  ChartContainer,
   ChartGradient,
   ChartTooltip,
   CHART_COLORS,
@@ -16,13 +17,11 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface OdometerGrowthChartProps {
   summary: OdometerMilestoneResult;
@@ -35,7 +34,6 @@ export function OdometerGrowthChart({
   state,
   className,
 }: OdometerGrowthChartProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     distanceUnit,
@@ -67,8 +65,8 @@ export function OdometerGrowthChart({
       )}
       data-testid="milestone-growth"
     >
-      <ChartCard
-        size="standard"
+      <ChartContainer
+        className="h-full"
         title={t('milestones.growth.title', 'Observed odometer growth')}
         subtitle={t(
           'milestones.growth.subtitle',
@@ -88,7 +86,7 @@ export function OdometerGrowthChart({
           {
             key: 'odometer',
             label: `${odometerName} (${distanceUnit})`,
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'observedDistance',
@@ -97,7 +95,7 @@ export function OdometerGrowthChart({
               'Observed distance ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'drives',
@@ -143,7 +141,7 @@ export function OdometerGrowthChart({
                 tick={axisTick}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => fmtNumber(value, 0)}
                 width={54}
               />
               <Tooltip
@@ -151,8 +149,8 @@ export function OdometerGrowthChart({
                   <ChartTooltip
                     valueFormatter={(value, name) =>
                       name === odometerName
-                        ? `${fmtNumber(value)} ${distanceUnit}`
-                        : fmtNumber(value)
+                        ? `${fmtNumber(value, 1)} ${distanceUnit}`
+                        : fmtNumber(value, 1)
                     }
                   />
                 }
@@ -170,7 +168,7 @@ export function OdometerGrowthChart({
             </AreaChart>
           </ResponsiveContainer>
         )}
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

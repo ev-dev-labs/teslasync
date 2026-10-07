@@ -56,7 +56,7 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
               </div>
               <Text variant="bodySm" className="shrink-0 tabular-nums">
                 <span className={`font-semibold ${i === 0 ? 'text-emerald-300' : ''}`}>
-                  {formatCurrency(s.avg_per_kwh)}
+                  {formatCurrency(s.avg_per_kwh, 3)}
                 </span>{' '}
                 <Text as="span" variant="caption">/kWh</Text>
               </Text>
@@ -72,7 +72,7 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
           {sites.length > 1 && (
             <Caption className="block tabular-nums">
               {t('tesla_charging.spread', 'Cheapest stop saves {{save}}/kWh vs priciest', {
-                save: formatCurrency((sites[sites.length - 1]?.avg_per_kwh ?? cheapest) - cheapest),
+                save: formatCurrency((sites[sites.length - 1]?.avg_per_kwh ?? cheapest) - cheapest, 3),
               })}
             </Caption>
           )}

@@ -4,7 +4,7 @@ import type { TFunction } from 'i18next';
 
 import { EmptyState } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
-import { fmtPercent } from '@/lib/numberFormat';
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 
 import type {
   CareOpportunity,
@@ -13,7 +13,6 @@ import type {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RankedCareHabitsProps {
   care: CareScore;
@@ -40,7 +39,7 @@ function opportunityDetail(
   t: TFunction,
 ): string {
   const values = {
-    pct: fmtPercent(opportunity.observedShare * 100),
+    pct: fmtPercent(opportunity.observedShare * 100, 0),
     count: opportunity.sampleCount,
     threshold: fullChargePct,
   };
@@ -78,7 +77,6 @@ export function RankedCareHabits({
   state,
   className,
 }: RankedCareHabitsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const hasObservedEvidence = care.riskComponents.some(
     (component) => component.observedShare != null,
@@ -156,6 +154,7 @@ export function RankedCareHabits({
                       {
                         points: fmtNumber(
                           opportunity.penaltyPoints,
+                          1,
                         ),
                       },
                     )}

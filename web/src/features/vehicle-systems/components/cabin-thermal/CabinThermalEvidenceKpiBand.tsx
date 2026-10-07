@@ -12,11 +12,10 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalQueryStatus } from './CabinThermalQueryStatus';
 import type { CabinThermalQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalEvidenceKpiBandProps {
   summary: CabinThermalSummary;
@@ -29,7 +28,6 @@ export function CabinThermalEvidenceKpiBand({
   state,
   formatDuration,
 }: CabinThermalEvidenceKpiBandProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unavailable = !state.vehicleSelected
@@ -104,7 +102,7 @@ export function CabinThermalEvidenceKpiBand({
           <MetricCard
             label={t('cabinThermal.kpis.tau', 'Accepted median τ')}
             value={resolved && summary.tauMin != null
-              ? formatDuration(summary.tauMin * 60)
+              ? formatDuration(summary.tauMin * 60, { precision: 1 })
               : '—'}
             subtitle={resolved
               ? t('cabinThermal.kpis.tauHint', 'withheld without an accepted fit')

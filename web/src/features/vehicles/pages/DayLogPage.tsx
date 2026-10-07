@@ -1,10 +1,9 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
 import { useDayLog } from '@/api/hooks/useDayLog';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDataState } from '@/hooks/useDataState';
@@ -13,7 +12,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { isValidYmd, todayYmd } from '../lib/daylog';
 import { DayLogControls } from '../components/daylog/DayLogControls';
-import { DayLogOperationalSummary } from '../components/operationalbrief-a-m/DayLogOperationalSummary';
+import { DayLogSummary } from '../components/daylog/DayLogSummary';
 import { DayLogTimeline } from '../components/daylog/DayLogTimeline';
 import { DayLogSources } from '../components/daylog/DayLogSources';
 
@@ -43,7 +42,7 @@ export default function DayLogPage() {
 
   // No layers param: the server defaults to the complete history.
   const dayLogQuery = useDayLog({ vehicleId, date, timezone });
-  const state = useDataState(dayLogQuery, { provenance: 'historical' });
+  const state = useDataState(dayLogQuery);
 
   const setDate = useCallback(
     (next: string) => {
@@ -67,30 +66,23 @@ export default function DayLogPage() {
   const fatalError = state.fatalError;
 
   return (
-    <PageLayout
+    <PageContainer
       actionLayout="scope-first"
       title={title}
-      subtitle={t('dayLog.subtitle', 'What happened to this vehicle today')}
-      metadataActions={
-        <Text as="span" variant="caption" className="[overflow-wrap:anywhere]" id="daylog-timezone">
-          {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
-        </Text>
+      subtitle={
+        <>
+          {t('dayLog.subtitle', 'What happened to this vehicle today')}
+          <Text as="span" variant="caption" className="mt-1 block [overflow-wrap:anywhere]" id="daylog-timezone">
+            {t('dayLog.controls.timezoneNote', 'Day boundaries in {{tz}}', { tz: timezone })}
+          </Text>
+        </>
       }
       query={dayLogQuery}
       copyLink
       contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
     >
-      <StaleRefreshWarning state={state} label={title} />
       <FadeIn delay={0.05}>
-        <DayLogOperationalSummary
-          data={data}
-          date={date}
-          timezone={timezone}
-          isLoading={isLoading}
-          error={fatalError}
-          status={state.status}
-          onRetry={retry}
-        />
+        <DayLogSummary summary={data?.summary ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
       </FadeIn>
 
       <FadeIn delay={0.1}>
@@ -108,6 +100,6 @@ export default function DayLogPage() {
       <FadeIn delay={0.15}>
         <DayLogSources sources={data?.sources ?? null} isLoading={isLoading} error={fatalError} onRetry={retry} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

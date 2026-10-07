@@ -1,10 +1,7 @@
 import { type ReactNode } from 'react';
 import { Info } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import type { DataStateSource } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { useDataState } from '@/hooks/useDataState';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 
 interface OwnershipPanelProps {
   title: string;
@@ -14,62 +11,43 @@ interface OwnershipPanelProps {
   emptyMessage?: string;
   children: ReactNode;
   className?: string;
-  source?: DataStateSource<unknown>;
-  sourceEnabled?: boolean;
-  editing?: boolean;
-  preserveSummary?: boolean;
 }
 
-/** Domain adapter: callers retain policy, formatting and editor state. */
+/**
+ * The single section wrapper every ownership page uses. A panel is NEVER
+ * hidden when its data source is empty — it renders an `EmptyState` inside the
+ * same frame so the page keeps a stable shape while data loads or is absent.
+ */
 export function OwnershipPanel({
   title,
   description,
   actions,
   empty = false,
-  emptyMessage,
+  emptyMessage = 'No supported data is available yet.',
   children,
   className,
-  source,
-  sourceEnabled = true,
-  editing = false,
-  preserveSummary = false,
 }: OwnershipPanelProps) {
-  const { t } = useTranslation();
-  const dataState = useDataState(source ?? {});
-  const message = emptyMessage ?? t('ownership.source.empty', 'No supported data is available yet.');
-  const state = !source || !sourceEnabled
-    ? empty ? 'empty' : 'ready'
-    // An unsaved editor does not depend on the register's first successful read.
-    : editing && !dataState.hasData ? 'ready'
-      : dataState.fatalError ? 'error'
-      : !dataState.hasData && source.isLoading ? 'loading'
-        : dataState.status === 'stale' ? 'retained'
-          : empty && !editing ? 'empty' : 'ready';
-  const emptyContent = <>
-    <EmptyState /* no-action: callers own domain prerequisites; source retry is supplied separately. */
-      icon={<Info className="h-6 w-6" aria-hidden="true" />} message={message} />
-    {preserveSummary && children}
-  </>;
-  const content = (
-    <SourceContent
-      state={state}
-      label={title}
-      emptyMessage={message}
-      errorMessage={t('ownership.source.error', 'This source could not be loaded.')}
-      error={dataState.fatalError}
-      errorRecovery={dataState.retry ? { onRetry: dataState.retry } : undefined}
-      emptyContent={emptyContent}
-      loadingContent={preserveSummary ? children : undefined}
-    >
-      {empty && !editing ? emptyContent : children}
-    </SourceContent>
-  );
   return (
-    <LayoutCard title={title} description={description} actions={actions}>
-      <div className={className ?? 'min-w-0 space-y-4'}>
-        {content}
-        {preserveSummary && state === 'error' && children}
+    <GlassPanel className={className ?? 'p-5 md:p-6'}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-1">
+          <PanelTitle>{title}</PanelTitle>
+          {description ? (
+            <Text as="p" variant="bodySm">
+              {description}
+            </Text>
+          ) : null}
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
-    </LayoutCard>
+      {empty ? (
+        <EmptyState /* no-action: shared wrapper reused by every ownership analysis page (charging reconciliation, warranty, tariff, etc.); each caller supplies its own `emptyMessage` describing that page's specific recovery path (or lack of one) — there is no single generic action to wire at this shared layer. */
+          icon={<Info className="h-6 w-6" aria-hidden="true" />}
+          message={emptyMessage}
+        />
+      ) : (
+        children
+      )}
+    </GlassPanel>
   );
 }

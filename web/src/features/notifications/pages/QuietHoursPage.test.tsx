@@ -225,8 +225,6 @@ describe('QuietHoursPage', () => {
     // KPI band derives its totals from the fetched windows.
     const region = await screen.findByRole('region', { name: 'Quiet hours summary' });
     await within(region).findByText('Windows');
-    expect(region.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
-    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(within(region).getByText('3')).toBeInTheDocument(); // total windows
     expect(within(region).getByText('2/3')).toBeInTheDocument(); // enabled/total
     expect(within(region).getByText('Delivering')).toBeInTheDocument(); // none active now

@@ -1,10 +1,10 @@
 import { Clock3, History, Sparkles, TrendingDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { StatStrip } from '@/components/data-display';
+import { MetricCard } from '@/components/data-display';
 import { AlertBanner, EmptyState } from '@/components/feedback';
-import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -32,10 +32,17 @@ export function CarbonRecommendation({
         'Full-history greenest-window recommendation scenario',
       )}
     >
-      <LayoutCard
-        title={t('carbon.recommendation.title', 'Full-history greenest-window scenario')}
-        actions={<Sparkles className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
-      >
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Sparkles
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
+          {t(
+            'carbon.recommendation.title',
+            'Full-history greenest-window scenario',
+          )}
+        </PanelTitle>
         <CarbonSectionBody state={states.recommendation}>
           {recommendation.availability === 'empty' ? (
             <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
@@ -46,43 +53,59 @@ export function CarbonRecommendation({
             />
           ) : (
             <>
-              <StatStrip
-                id="carbon-recommendation-metrics"
-                variant="embedded"
-                period={{
-                  kind: 'alltime',
-                  label: t('carbon.source.recommendationScope', 'Full vehicle history; independent of the selected range'),
-                  provenance: t('carbon.source.recommendation', 'Green-window scenario'),
-                }}
-                metrics={[
-                  {
-                    metricId: 'text', occurrenceId: 'carbon-recommendation-window',
-                    label: t('carbon.recommendation.window', 'Greenest 3-hour window'),
-                    rawValue: windowLabel,
-                    context: <><Clock3 className="h-5 w-5" aria-hidden="true" />{t('carbon.recommendation.windowHint', 'Start inclusive; end exclusive; wraps at midnight')}</>,
-                  },
-                  {
-                    metricId: 'text', occurrenceId: 'carbon-recommendation-current',
-                    label: t('carbon.recommendation.current', 'Observed lifetime average'),
-                    rawValue: display.formatIntensity(recommendation.currentAvgIntensityGPerKwh),
-                    context: <><History className="h-5 w-5" aria-hidden="true" />{t('carbon.recommendation.currentHint', 'Energy-weighted full-history intensity')}</>,
-                  },
-                  {
-                    metricId: 'text', occurrenceId: 'carbon-recommendation-average',
-                    label: t('carbon.recommendation.windowAverage', 'Window average'),
-                    rawValue: display.formatIntensity(recommendation.windowAvgIntensityGPerKwh),
-                    context: <><Sparkles className="h-5 w-5" aria-hidden="true" />{t('carbon.recommendation.modelHint', 'Mean of three static model rows')}</>,
-                  },
-                  {
-                    metricId: 'text', occurrenceId: 'carbon-recommendation-saving',
-                    label: t('carbon.recommendation.reportedSaving', 'Reported potential saving'),
-                    rawValue: display.formatKg(recommendation.reportedPotentialSavingKg),
-                    context: <><TrendingDown className="h-5 w-5" aria-hidden="true" />{t('carbon.recommendation.reportedPct', '{{percentage}} of modeled charging CO₂', {
-                      percentage: display.formatPercent(recommendation.reportedPotentialSavingPct),
-                    })}</>,
-                  },
-                ]}
-              />
+              <Grid cols={{ default: 1, sm: 2, xl: 4 }} gap={3}>
+                <MetricCard
+                  label={t('carbon.recommendation.window', 'Greenest 3-hour window')}
+                  value={windowLabel}
+                  subtitle={t(
+                    'carbon.recommendation.windowHint',
+                    'Start inclusive; end exclusive; wraps at midnight',
+                  )}
+                  icon={<Clock3 className="h-5 w-5" aria-hidden="true" />}
+                  color="green"
+                />
+                <MetricCard
+                  label={t('carbon.recommendation.current', 'Observed lifetime average')}
+                  value={display.formatIntensity(
+                    recommendation.currentAvgIntensityGPerKwh,
+                  )}
+                  subtitle={t(
+                    'carbon.recommendation.currentHint',
+                    'Energy-weighted full-history intensity',
+                  )}
+                  icon={<History className="h-5 w-5" aria-hidden="true" />}
+                  color="amber"
+                />
+                <MetricCard
+                  label={t('carbon.recommendation.windowAverage', 'Window average')}
+                  value={display.formatIntensity(
+                    recommendation.windowAvgIntensityGPerKwh,
+                  )}
+                  subtitle={t(
+                    'carbon.recommendation.modelHint',
+                    'Mean of three static model rows',
+                  )}
+                  icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
+                  color="green"
+                />
+                <MetricCard
+                  label={t('carbon.recommendation.reportedSaving', 'Reported potential saving')}
+                  value={display.formatKg(
+                    recommendation.reportedPotentialSavingKg,
+                  )}
+                  subtitle={t(
+                    'carbon.recommendation.reportedPct',
+                    '{{percentage}} of modeled charging CO₂',
+                    {
+                      percentage: display.formatPercent(
+                        recommendation.reportedPotentialSavingPct,
+                      ),
+                    },
+                  )}
+                  icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
+                  color="green"
+                />
+              </Grid>
               {recommendation.availability === 'invalid' ? (
                 <AlertBanner className="mt-4" variant="warning">
                   {t(
@@ -102,7 +125,7 @@ export function CarbonRecommendation({
             </Text>
           </AlertBanner>
         </CarbonSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

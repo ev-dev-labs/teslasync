@@ -138,7 +138,7 @@ beforeEach(() => {
 })
 
 function typeJwt(value: string) {
-  fireEvent.change(screen.getByLabelText('JWT input'), { target: { value } })
+  fireEvent.change(screen.getByLabelText('Jwt Input'), { target: { value } })
 }
 
 function allPreText(container: HTMLElement): string {
@@ -151,16 +151,16 @@ describe('JwtDecoderTool', () => {
   it('renders the tool shell with an accessible, labelled input and no result panels initially', () => {
     const { container } = render(<JwtDecoderTool />)
 
-    expect(screen.getByText('JWT decoder')).toBeInTheDocument()
-    expect(screen.getByText('JWT decoder desc')).toBeInTheDocument()
+    expect(screen.getByText('Jwt Decoder')).toBeInTheDocument()
+    expect(screen.getByText('Jwt Decoder Desc')).toBeInTheDocument()
 
     // The textarea is programmatically labelled (WCAG 3.3.2), so it is
     // reachable by its accessible name rather than a detached <span>.
-    expect(screen.getByLabelText('JWT input')).toBeInTheDocument()
+    expect(screen.getByLabelText('Jwt Input')).toBeInTheDocument()
 
     // Idle: neither panel, nor an error alert, nor any JSON output.
-    expect(screen.queryByText('JWT header')).not.toBeInTheDocument()
-    expect(screen.queryByText('JWT Payload')).not.toBeInTheDocument()
+    expect(screen.queryByText('Jwt Header')).not.toBeInTheDocument()
+    expect(screen.queryByText('Jwt Payload')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(container.querySelectorAll('pre')).toHaveLength(0)
   })
@@ -170,8 +170,8 @@ describe('JwtDecoderTool', () => {
 
     typeJwt(STD_JWT)
 
-    expect(screen.getByText('JWT header')).toBeInTheDocument()
-    expect(screen.getByText('JWT Payload')).toBeInTheDocument()
+    expect(screen.getByText('Jwt Header')).toBeInTheDocument()
+    expect(screen.getByText('Jwt Payload')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 
     const pre = allPreText(container)
@@ -187,7 +187,7 @@ describe('JwtDecoderTool', () => {
 
     // The pre-fix build would have shown the "Invalid Jwt" alert here.
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.getByText('JWT Payload')).toBeInTheDocument()
+    expect(screen.getByText('Jwt Payload')).toBeInTheDocument()
 
     const pre = allPreText(container)
     expect(pre).toContain('"name": "José 😀"')
@@ -200,8 +200,8 @@ describe('JwtDecoderTool', () => {
     typeJwt('this-is-not-a-jwt')
 
     const alert = screen.getByRole('alert')
-    expect(alert).toHaveTextContent('Invalid JWT')
-    expect(screen.queryByText('JWT header')).not.toBeInTheDocument()
+    expect(alert).toHaveTextContent('Invalid Jwt')
+    expect(screen.queryByText('Jwt Header')).not.toBeInTheDocument()
     expect(container.querySelectorAll('pre')).toHaveLength(0)
   })
 
@@ -210,24 +210,24 @@ describe('JwtDecoderTool', () => {
 
     // valid → panels
     typeJwt(STD_JWT)
-    expect(screen.getByText('JWT Payload')).toBeInTheDocument()
+    expect(screen.getByText('Jwt Payload')).toBeInTheDocument()
 
     // invalid → alert, panels gone
     typeJwt('broken')
     expect(screen.getByRole('alert')).toBeInTheDocument()
-    expect(screen.queryByText('JWT Payload')).not.toBeInTheDocument()
+    expect(screen.queryByText('Jwt Payload')).not.toBeInTheDocument()
 
     // empty → back to idle: no alert, no panels, no output
     typeJwt('')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.queryByText('JWT header')).not.toBeInTheDocument()
+    expect(screen.queryByText('Jwt Header')).not.toBeInTheDocument()
     expect(allPreText(container)).toBe('')
   })
 
   it('reflects typed input in the textarea value', () => {
     render(<JwtDecoderTool />)
 
-    const input = screen.getByLabelText('JWT input') as HTMLTextAreaElement
+    const input = screen.getByLabelText('Jwt Input') as HTMLTextAreaElement
     typeJwt(STD_JWT)
 
     expect(input.value).toBe(STD_JWT)

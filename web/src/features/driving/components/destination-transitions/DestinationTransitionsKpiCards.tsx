@@ -9,7 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import {
   destinationBits,
@@ -21,7 +21,6 @@ import {
   destinationLatestKpiText,
 } from './kpiLabels';
 import type { DestinationTransitionsQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationTransitionsKpiCardsProps {
   model: DestinationTransitionResult;
@@ -34,7 +33,6 @@ export function DestinationTransitionsKpiCards({
   state,
   locale,
 }: DestinationTransitionsKpiCardsProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unresolvedSubtitle = destinationKpiPendingText(t, state);

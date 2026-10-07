@@ -33,7 +33,7 @@ export function SettingField({
       <div className="mb-1.5 flex items-center gap-1">
         <label
           htmlFor={htmlFor}
-          className="block text-xs font-medium tracking-wider text-[var(--text-muted)]"
+          className="block text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]"
         >
           {label}
         </label>

@@ -10,11 +10,12 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
+
+const nominalBatteryCapacityWh = 75000.0
 
 // DrivingCoachHandler analyses driving patterns and produces coaching insights.
 type DrivingCoachHandler struct {
@@ -47,11 +48,11 @@ type coachResponse struct {
 }
 
 type coachPatterns struct {
-	HardAccelPct float64  `json:"hard_accel_pct"`
-	HardBrakePct *float64 `json:"hard_brake_pct"`
-	HighwayPct   float64  `json:"highway_pct"`
-	ShortTripPct float64  `json:"short_trip_pct"`
-	ColdStartPct float64  `json:"cold_start_pct"`
+	HardAccelPct float64 `json:"hard_accel_pct"`
+	HardBrakePct float64 `json:"hard_brake_pct"`
+	HighwayPct   float64 `json:"highway_pct"`
+	ShortTripPct float64 `json:"short_trip_pct"`
+	ColdStartPct float64 `json:"cold_start_pct"`
 }
 
 type coachWeeklyTrend struct {
@@ -95,18 +96,13 @@ type driveAnalysis struct {
 
 // GetCoaching handles GET /analytics/driving-coach?vehicle_id=X&days=30
 func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("api").Start(r.Context(), "api.driving_coach")
-	defer span.End()
-
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		span.RecordError(fmt.Errorf("vehicle_id is required"))
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
-	if err != nil || vehicleID <= 0 {
-		span.RecordError(fmt.Errorf("invalid vehicle_id"))
+	if err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
@@ -116,13 +112,12 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		days = d
 	}
 
+	ctx := r.Context()
 	since := time.Now().AddDate(0, 0, -days)
 
 	drives, err := h.repo.CoachingDrives(ctx, vehicleID, since)
 	if err != nil {
-		span.RecordError(err)
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).
-			Str("trace_id", span.SpanContext().TraceID().String()).Msg("driving-coach: query failed")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("driving-coach: query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get driving data")
 		return
 	}
@@ -141,8 +136,11 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	bestEfficiency := math.MaxFloat64
 	for i := range drives {
 		d := &drives[i]
-		if d.efficiency > 0 && d.efficiency < bestEfficiency {
-			bestEfficiency = d.efficiency
+		if d.distance > 0 && d.socStart > d.socEnd {
+			d.efficiency = (d.socStart - d.socEnd) / 100 * nominalBatteryCapacityWh / d.distance
+			if d.efficiency > 0 && d.efficiency < bestEfficiency {
+				bestEfficiency = d.efficiency
+			}
 		}
 		d.style = classifyDrivingStyle(d.powerMax, d.powerMin, d.speedMax, d.speedAvg, d.hasPowerRange)
 	}
@@ -177,16 +175,13 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	}
 
 	n := float64(len(drives))
-	var hardAccel, hardBrake, brakingObserved, highway, shortTrip, coldStart int
+	var hardAccel, hardBrake, highway, shortTrip, coldStart int
 	for _, d := range drives {
 		if d.powerMax > 100 {
 			hardAccel++
 		}
-		if d.hasPowerRange {
-			brakingObserved++
-			if d.powerMin < -60 {
-				hardBrake++
-			}
+		if d.hasPowerRange && d.powerMin < -60 {
+			hardBrake++
 		}
 		if d.speedAvg > 80 {
 			highway++
@@ -198,15 +193,10 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 			coldStart++
 		}
 	}
-	pct := func(count int) float64 { return float64(count) / n * 100 }
-	var hardBrakePct *float64
-	if brakingObserved > 0 {
-		value := float64(hardBrake) / float64(brakingObserved) * 100
-		hardBrakePct = &value
-	}
+	pct := func(count int) float64 { return math.Round(float64(count)/n*1000) / 10 }
 	patterns := coachPatterns{
 		HardAccelPct: pct(hardAccel),
-		HardBrakePct: hardBrakePct,
+		HardBrakePct: pct(hardBrake),
 		HighwayPct:   pct(highway),
 		ShortTripPct: pct(shortTrip),
 		ColdStartPct: pct(coldStart),
@@ -255,7 +245,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		weeklyTrends = append(weeklyTrends, coachWeeklyTrend{
 			Week:       key,
 			Score:      avgScore,
-			Efficiency: avgEff,
+			Efficiency: math.Round(avgEff*10) / 10,
 			Drives:     wa.drives,
 		})
 	}
@@ -276,15 +266,15 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 			Date:       d.date.Format("2006-01-02"),
 			Score:      d.score,
 			Style:      d.style,
-			Efficiency: d.efficiency,
-			Distance:   d.distance,
+			Efficiency: math.Round(d.efficiency*10) / 10,
+			Distance:   math.Round(d.distance*10) / 10,
 		})
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, coachResponse{
 		OverallScore:        overallScore,
-		EfficiencyWhKm:      avgEfficiency,
-		BestEfficiencyWhKm:  bestEfficiency,
+		EfficiencyWhKm:      math.Round(avgEfficiency*10) / 10,
+		BestEfficiencyWhKm:  math.Round(bestEfficiency*10) / 10,
 		TotalDrivesAnalyzed: len(drives),
 		StyleBreakdown:      styleCounts,
 		Patterns:            patterns,
@@ -356,14 +346,14 @@ func buildDrivingRecommendations(p coachPatterns, avgEff float64) []coachRecomme
 		})
 	}
 
-	if avgEff > 180+1e-9 {
+	if avgEff > 180 {
 		recs = append(recs, coachRecommendation{
 			Category: "efficiency", Impact: "medium",
 			Tip: fmt.Sprintf("Your average efficiency (%.0f Wh/km) is above typical — check tire pressure and reduce HVAC use", avgEff),
 		})
 	}
 
-	if p.HardBrakePct != nil && *p.HardBrakePct > 30 {
+	if p.HardBrakePct > 30 {
 		recs = append(recs, coachRecommendation{
 			Category: "braking", Impact: "medium",
 			Tip: "Increase following distance and anticipate stops to maximize regenerative braking",
@@ -373,7 +363,7 @@ func buildDrivingRecommendations(p coachPatterns, avgEff float64) []coachRecomme
 	if len(recs) == 0 {
 		recs = append(recs, coachRecommendation{
 			Category: "general", Impact: "low",
-			Tip: "Use recorded consumption as a reference; compare trips with similar routes, speeds, and weather.",
+			Tip: "Your driving patterns are excellent — keep up the efficient driving!",
 		})
 	}
 

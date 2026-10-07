@@ -73,7 +73,6 @@ function status(overrides: Partial<OnboardingStatus> = {}): OnboardingStatus {
 let mockStatus: OnboardingStatus = status();
 let mockIsLoading = false;
 let mockIsFetching = false;
-let mockError: Error | null = null;
 
 vi.mock('@/api/hooks/useOnboarding', () => ({
   useOnboardingStatus: () => ({
@@ -81,29 +80,12 @@ vi.mock('@/api/hooks/useOnboarding', () => ({
     isLoading: mockIsLoading,
     isFetching: mockIsFetching,
     refetch: refetchSpy,
-    isError: mockError != null,
-    error: mockError,
   }),
 }));
 
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     formatDateTime: (value: string | null | undefined) => value ?? '—',
-  }),
-}));
-
-vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({
-    settings: {
-      unit_of_length: 'km',
-      unit_of_temp: 'C',
-      unit_of_pressure: 'bar',
-      decimal_precision: 2,
-      locale: 'en-US',
-      currency_symbol: '$',
-    },
-    settingsUnavailable: false,
-    locale: 'en-US',
   }),
 }));
 
@@ -135,7 +117,6 @@ describe('OnboardingPage', () => {
     navigateMock.mockClear();
     mockIsLoading = false;
     mockIsFetching = false;
-    mockError = null;
     mockStatus = status();
     try {
       window.localStorage.removeItem('teslasync:onboarding:skipped:v1');
@@ -257,33 +238,5 @@ describe('OnboardingPage', () => {
     expect(screen.getByText(/keep using TeslaSync and viewing stored history/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue to dashboard/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Skip for now/i })).toBeNull();
-  });
-
-  it('retains setup status, current-step action and every section after a background error', () => {
-    mockStatus = status({ tesla_connected: true, vehicle_count: 0 });
-    mockError = new Error('Refresh unavailable');
-    const { container } = renderPage();
-    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
-    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
-    expect(screen.getByText('Vehicles synced')).toBeInTheDocument();
-    expect(screen.getByText(/What you.ll unlock/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Refresh$/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Connect Tesla account/i })).toBeNull();
-    expect(screen.getByRole('button', { name: /Skip for now/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Check again/i })).toBeInTheDocument();
-  });
-
-  it('migrates only the existing setup summary while preserving profile, checklist and resource controls', () => {
-    const { container } = renderPage();
-    const brief = screen.getByTestId('onboarding-setup-brief');
-    expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
-    expect(screen.getByText('Tailor your workspace')).toBeInTheDocument();
-    expect(screen.getByRole('list', { name: 'Onboarding steps' })).toBeInTheDocument();
-    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Connect Tesla account' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
   });
 });

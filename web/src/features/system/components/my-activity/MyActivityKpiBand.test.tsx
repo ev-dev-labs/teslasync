@@ -10,15 +10,11 @@
 // 'Default' without any i18n setup. The component pulls in no router / query
 // context, so a bare render() is sufficient.
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { MyActivityKpiBand } from './MyActivityKpiBand';
 import type { ActivityKpis } from './myActivityAnalytics';
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
-}));
 
 const EM_DASH = '\u2014'; // `—` shown when there is no last-activity timestamp
 
@@ -62,8 +58,8 @@ describe('MyActivityKpiBand', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
 
     // The band exposes an accessible region name and is not busy when loaded.
-    const region = screen.getByRole('region', { name: /Activity summary/i });
-    expect(region).not.toHaveAttribute('aria-busy', 'true');
+    const region = screen.getByRole('region', { name: /activity summary/i });
+    expect(region).toHaveAttribute('aria-busy', 'false');
     // No loading live region survives into the loaded state.
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -110,26 +106,27 @@ describe('MyActivityKpiBand', () => {
     );
 
     // aria-busy flips true and a polite live region announces the load.
-    const region = screen.getByRole('region', { name: /Activity summary/i });
+    const region = screen.getByRole('region', { name: /activity summary/i });
     expect(region).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByText('Loading source')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/loading/i);
 
     // Exactly CARD_COUNT skeleton placeholders are shown.
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
-    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
 
     // Loading wins over the metric grid — no card labels or values leak through.
-    expect(screen.getByText('Total actions')).toBeInTheDocument();
+    expect(screen.queryByText('Total actions')).toBeNull();
     expect(screen.queryByText('99')).toBeNull();
   });
 
-  it('is null-safe: a missing kpis payload retains unknown readings without throwing', () => {
+  it('is null-safe: a missing kpis payload renders zeros and an em-dash without throwing', () => {
+    const missing = undefined as unknown as ActivityKpis;
+
     expect(() =>
-      render(<MyActivityKpiBand isLoading={false} />),
+      render(<MyActivityKpiBand kpis={missing} isLoading={false} />),
     ).not.toThrow();
 
     // The four numeric KPIs fall back to 0 and the timestamp KPI to an em-dash.
-    expect(screen.queryByText('0')).toBeNull();
-    expect(screen.getAllByText(EM_DASH)).toHaveLength(5);
+    expect(screen.getAllByText('0')).toHaveLength(4);
+    expect(screen.getByText(EM_DASH)).toBeInTheDocument();
   });
 });

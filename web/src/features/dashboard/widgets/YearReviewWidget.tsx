@@ -1,20 +1,23 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Calendar } from 'lucide-react';
-import { useDataState } from '@/hooks/useDataState';
+import {
+  Calendar, Route, Car, Zap, Leaf, TrendingUp, Timer, Star,
+} from 'lucide-react';
+import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useYearReview } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+import { WidgetStatGrid, type StatGridItem } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { isFiniteNumber } from '@/lib/numberFormat';
+
+const MONTH_NAMES = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
 
 // The year-review endpoint emits distances in kilometres and speeds in km/h
 // (server-side derivations of the SI columns). The SI-canonical converters
@@ -24,22 +27,20 @@ const METERS_PER_KM = 1000;
 const KMH_PER_MPS = 3.6; // 1 m/s === 3.6 km/h
 
 export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, locale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
 
   const currentYear = new Date().getFullYear();
-  const query = useYearReview(currentYear, id > 0 ? String(id) : undefined);
   const {
-    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = query;
-  const dataState = useDataState(query, { provenance: 'historical' });
+    data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch, } = useYearReview(currentYear, id > 0 ? String(id) : undefined);
 
   const { unitPrefs } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
+  const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -48,82 +49,74 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   // display unit. Feeding km straight into convertDistanceFromSI (which
   // expects metres) previously under-reported every figure by ~1000×.
   const displayDistance = toDistanceDisplay((data?.total_distance_km ?? 0) * METERS_PER_KM);
+  const displayLongestDrive = toDistanceDisplay((data?.longest_drive?.distance_km ?? 0) * METERS_PER_KM);
+  const displayFastestSpeed = toSpeedDisplay((data?.fastest_speed_kmh ?? 0) / KMH_PER_MPS);
 
   // Find busiest month
   const busiestMonth = useMemo(() => {
     const stats = data?.monthly_stats ?? [];
     if (stats.length === 0) return '—';
     const best = stats.reduce((a, b) => (b.drives > a.drives ? b : a), stats[0]);
-    if (!Number.isInteger(best.month) || best.month < 1 || best.month > 12) return '—';
-    return new Intl.DateTimeFormat(locale, { month: 'short', timeZone: 'UTC' })
-      .format(new Date(Date.UTC(currentYear, best.month - 1, 1)));
-  }, [data?.monthly_stats, locale, currentYear]);
+    return MONTH_NAMES[(best.month - 1) % 12] ?? '—';
+  }, [data?.monthly_stats]);
 
-  const coreStats = useMemo((): StatMetric[] => {
+  const coreStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
     return [
       {
-        metricId: 'distance',
-        label: t('widget.lifetimeStats.totalDistance', 'Total distance'),
-        rawValue: data.total_distance_km == null ? null : data.total_distance_km * METERS_PER_KM,
-        description: t('widget.yearReview.summary.distanceHelp', 'Reported year distance, normalized from kilometres to metres.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+        label: t('widget.yearReview.totalDistance', 'Total Miles'),
+        value: fmtNumber(displayDistance, 0),
+        unit: distanceUnit,
+        icon: <Route className="h-3.5 w-3.5" />,
       },
       {
-        metricId: 'count',
-        label: t('widget.yearReview.totalDrives', 'Total drives'),
-        rawValue: data.total_drives,
-        description: t('widget.yearReview.summary.drivesHelp', 'Reported drive count for this calendar year.'),
+        label: t('widget.yearReview.totalDrives', 'Total Drives'),
+        value: fmtInt(data.total_drives ?? 0),
+        icon: <Car className="h-3.5 w-3.5" />,
       },
       {
-        metricId: 'energy',
-        label: t('widget.yearReview.energyUsed', 'Energy used'),
-        rawValue: data.total_energy_kwh == null ? null : data.total_energy_kwh * 1000,
-        description: t('widget.yearReview.summary.energyHelp', 'Reported year energy, normalized from kWh to Wh; original kWh display retained.'),
-        display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) },
+        label: t('widget.yearReview.energyUsed', 'Energy Used'),
+        value: fmtNumber(data.total_energy_kwh ?? 0, 1),
+        unit: 'kWh',
+        icon: <Zap className="h-3.5 w-3.5" />,
       },
       {
-        metricId: 'mass',
-        label: t('widget.yearReview.co2Saved', 'CO₂ saved'),
-        rawValue: data.co2_offset_kg,
-        description: t('widget.yearReview.summary.carbonHelp', 'Source-reported CO₂ offset for this calendar year, in kilograms.'),
-        display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) },
+        label: t('widget.yearReview.co2Saved', 'CO₂ Saved'),
+        value: fmtNumber(data.co2_offset_kg ?? 0, 0),
+        unit: 'kg',
+        icon: <Leaf className="h-3.5 w-3.5" />,
       },
       {
-        metricId: 'text',
-        label: t('widget.yearReview.busiestMonth', 'Best month'),
-        rawValue: busiestMonth === '—' ? null : busiestMonth,
-        description: t('widget.yearReview.summary.monthHelp', 'Month with the most source-reported drives, using the existing selection rule and localized month name.'),
+        label: t('widget.yearReview.busiestMonth', 'Best Month'),
+        value: busiestMonth,
+        icon: <Star className="h-3.5 w-3.5" />,
       },
       {
-        metricId: 'distance',
-        label: t('widget.yearReview.longestDrive', 'Longest drive'),
-        rawValue: data.longest_drive?.distance_km == null ? null : data.longest_drive.distance_km * METERS_PER_KM,
-        description: t('widget.yearReview.summary.longestHelp', 'Source longest drive in this year, normalized from kilometres to metres.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
+        label: t('widget.yearReview.longestDrive', 'Longest Drive'),
+        value: fmtNumber(displayLongestDrive, 1),
+        unit: distanceUnit,
+        icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, distanceUnit, busiestMonth, t, fmtNumber]);
+  }, [data, displayDistance, displayLongestDrive, distanceUnit, busiestMonth, t]);
 
-  const wideStats = useMemo((): StatMetric[] => {
+  const wideStats = useMemo((): StatGridItem[] => {
     if (!data) return [];
     return [
       {
-        metricId: 'duration',
-        label: t('widget.yearReview.drivingTime', 'Driving time'),
-        rawValue: data.total_driving_minutes == null ? null : data.total_driving_minutes * 60,
-        description: t('widget.yearReview.summary.durationHelp', 'Source driving minutes normalized to seconds; the original hour display is retained.'),
-        display: { formatter: raw => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },
+        label: t('widget.yearReview.drivingTime', 'Driving Time'),
+        value: fmtInt(Math.round((data.total_driving_minutes ?? 0) / 60)),
+        unit: 'h',
+        icon: <Timer className="h-3.5 w-3.5" />,
       },
       {
-        metricId: 'speed',
-        label: t('widget.yearReview.topSpeed', 'Top speed'),
-        rawValue: data.fastest_speed_kmh == null ? null : data.fastest_speed_kmh / KMH_PER_MPS,
-        description: t('widget.yearReview.summary.speedHelp', 'Source peak speed normalized from km/h to m/s; not average speed.'),
-        display: { formatter: raw => ({ value: fmtNumber(convertSpeedFromSI(raw, speedUnit)), unit: speedUnit }) },
+        label: t('widget.yearReview.topSpeed', 'Top Speed'),
+        value: fmtNumber(displayFastestSpeed, 0),
+        unit: speedUnit,
+        icon: <TrendingUp className="h-3.5 w-3.5" />,
       },
     ];
-  }, [data, speedUnit, t, fmtNumber]);
+  }, [data, displayFastestSpeed, speedUnit, t]);
 
   const allStats = useMemo(
     () => (isWide ? [...coreStats, ...wideStats] : coreStats),
@@ -134,8 +127,6 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
-        title={t('widget.yearReview.title', 'Year in review') + ` ${currentYear}`}
-        dataState={data || isLoading || isError ? dataState : undefined}
         loading={isLoading}
         error={error ? String(error) : null}
         updatedAt={dataUpdatedAt}
@@ -145,11 +136,15 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
         onRefresh={() => refetch()}
       >
         {data ? (
-          <WidgetBigNumber
-            value={isFiniteNumber(data.total_distance_km) ? fmtNumber(displayDistance) : null}
-            subtitle={`${distanceUnit} ${t('widget.yearReview.inYear', 'in {year}').replace('{year}', String(currentYear))}`}
-            align="center"
-          />
+          <div className="h-full flex flex-col items-center justify-center gap-0.5 min-h-[44px]">
+            <AnimatedNumber
+              value={displayDistance}
+              className="text-2xl font-bold text-[var(--text-primary)]"
+            />
+            <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+              {distanceUnit} {t('widget.yearReview.inYear', 'in {year}').replace('{year}', String(currentYear))}
+            </span>
+          </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Calendar className="h-5 w-5" />}
@@ -164,8 +159,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
   // Standard / Wide
   return (
     <WidgetShell
-      dataState={data || isLoading || isError ? dataState : undefined}
-      title={t('widget.yearReview.title', 'Year in review') + ` ${currentYear}`}
+      title={t('widget.yearReview.title', 'Year in Review') + ` ${currentYear}`}
       icon={<Calendar className="h-3.5 w-3.5 text-violet-400" />}
       loading={isLoading}
       error={error ? String(error) : null}
@@ -176,15 +170,7 @@ export default function YearReviewWidget({ vehicleId, size }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {data ? (
-        <DashboardSourceBrief
-          metrics={allStats}
-          state={dataState}
-          eyebrow={t('widget.yearReview.summary.eyebrow', 'Calendar-year history')}
-          title={t('widget.yearReview.summary.title', 'Year operating summary')}
-          description={t('widget.yearReview.summary.description', 'Calendar-year totals for the resolved vehicle. The current year may be incomplete; exact source coverage and observation bounds are not supplied.')}
-          scope={t('widget.yearReview.summary.scope', 'Vehicle {{id}} · year {{year}}', { id, year: currentYear })}
-          testId="year-review-operational-brief"
-        />
+        <WidgetStatGrid stats={allStats} cols={isWide ? 4 : 2} />
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Calendar className="h-5 w-5" />}

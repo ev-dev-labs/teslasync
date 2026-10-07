@@ -57,7 +57,7 @@ export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }
 
   const tooltip = t(
     'honesty.tooltip',
-    'Live {{live}} · stale {{stale}} · Guessed {{guessed}} · missing {{missing}} · stream {{stream}}',
+    'Live {{live}} · Stale {{stale}} · Guessed {{guessed}} · Missing {{missing}} · Stream {{stream}}',
     {
       live: counts.live,
       stale: counts.stale,

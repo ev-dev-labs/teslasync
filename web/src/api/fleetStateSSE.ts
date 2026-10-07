@@ -1,4 +1,4 @@
-import type { SignalChangeEvent, VehicleState, VehicleStateReadings } from '@/api/types'
+import type { SignalChangeEvent, VehicleState } from '@/api/types'
 import type {
   FleetStateEntry,
   VerifiedVehicleStateField,
@@ -23,7 +23,7 @@ export type FleetStateSignalPatch =
   | { kind: 'recover' }
 
 type StateMutation =
-  | { kind: 'patched'; state: VehicleStateReadings; field: VerifiedVehicleStateField }
+  | { kind: 'patched'; state: VehicleState; field: VerifiedVehicleStateField }
   | { kind: 'ignored' }
   | { kind: 'recover' }
 
@@ -107,7 +107,7 @@ export function patchFleetStateEntry(
 }
 
 function mutateVehicleState(
-  current: VehicleStateReadings,
+  current: VehicleState,
   event: SignalChangeEvent,
 ): StateMutation {
   const numberValue = finiteNumber(event.value)
@@ -201,7 +201,7 @@ function finiteNumber(value: unknown): number | null {
 }
 
 function changed<K extends VerifiedVehicleStateField>(
-  state: VehicleStateReadings,
+  state: VehicleState,
   field: K,
   value: VehicleState[K],
 ): StateMutation {

@@ -8,15 +8,12 @@ import {
   convertEnergyFromSI,
 } from '@/lib/unitConversion';
 import type { ShareCardDisplay } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function finite(value: number | null | undefined): value is number {
   return value != null && Number.isFinite(value);
 }
 
 export function useShareCardDisplay(): ShareCardDisplay {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t, i18n } = useTranslation();
   const {
     unitPrefs,
@@ -29,13 +26,13 @@ export function useShareCardDisplay(): ShareCardDisplay {
   const locale = unitPrefs.locale || i18n.language || 'en-US';
 
   const formatNumber = useCallback(
-    (value: number | null | undefined, precision = getGlobalPrecision()) =>
+    (value: number | null | undefined, precision = 1) =>
       finite(value)
         ? new Intl.NumberFormat(locale, {
           maximumFractionDigits: precision,
         }).format(value)
         : '—',
-    [locale, displayPrecision, displayLocale],
+    [locale],
   );
   const distanceValue = useCallback(
     (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),
@@ -55,20 +52,20 @@ export function useShareCardDisplay(): ShareCardDisplay {
       const displayDistance = convertDistanceFromSI(1_000, unitPrefs.distance);
       if (!(displayDistance > 0)) return '—';
       return t('shareCard.units.efficiency', '{{value}} Wh/{{unit}}', {
-        value: formatNumber(whPerKm / displayDistance),
+        value: formatNumber(whPerKm / displayDistance, 1),
         unit: unitPrefs.distance,
       });
     },
-    [formatNumber, t, unitPrefs.distance, displayPrecision, displayLocale],
+    [formatNumber, t, unitPrefs.distance],
   );
   const formatPercent = useCallback(
-    (value: number | null | undefined, precision = getGlobalPrecision()) =>
+    (value: number | null | undefined, precision = 1) =>
       finite(value)
         ? t('shareCard.units.percent', '{{value}}%', {
           value: formatNumber(value, precision),
         })
         : '—',
-    [formatNumber, t, displayPrecision, displayLocale],
+    [formatNumber, t],
   );
   const formatMonth = useCallback(
     (month: string) => {

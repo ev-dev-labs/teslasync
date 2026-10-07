@@ -8,9 +8,6 @@ import {
   ConfirmDialog,
   ErrorText,
   PanelTitle,
-  Heading,
-  HelperText,
-  Text,
   Toggle,
   Badge,
   Input,
@@ -20,8 +17,6 @@ import {
 import { ListSkeleton, EmptyState, useToast } from '@/components/feedback'
 import { VisuallyHidden } from '@/components/a11y'
 import { FadeIn } from '@/components/motion'
-import { SourceContent } from '@/components/layout'
-import { deriveDataState } from '@/api/dataState'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import {
@@ -204,9 +199,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const { seedDraft, onSeedConsumed } = props
   const { t } = useTranslation('settings')
   const toast = useToast()
-  const windowsQuery = useQuietHours()
-  const windowsState = deriveDataState(windowsQuery)
-  const { data: rawWindows } = windowsQuery
+  const { data: rawWindows, isLoading } = useQuietHours()
   const save = useSaveQuietHours()
   const remove = useDeleteQuietHours()
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
@@ -382,35 +375,27 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   }
 
   const now = new Date()
-  const emptyWindowsContent = (
-    <EmptyState
-      /* no-action: the primary Add window action remains in the panel header */
-      icon={<Moon className="h-10 w-10" />}
-      message={t('quietHours.empty', 'No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.')}
-    />
-  )
 
   return (
     <FadeIn delay={0.135}>
-      <GlassPanel className="min-w-0 space-y-5 p-4 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+      <GlassPanel className="p-6 space-y-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <IconBox color="purple">
               <Moon className="h-5 w-5" />
             </IconBox>
-            <div className="min-w-0">
-              <Heading level="section">
-                {t('quietHours.title', 'Quiet hours / do-not-disturb')}
-              </Heading>
-              <HelperText>
+            <div>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">
+                {t('quietHours.title', 'Quiet hours / Do-Not-Disturb')}
+              </h2>
+              <p className="text-xs text-[var(--text-muted)]">
                 {t('quietHours.subtitle', 'Defer non-critical notifications during sleep, meetings, or other time-of-day windows.')}
-              </HelperText>
+              </p>
             </div>
           </div>
           {!draft && (
             <Button
               variant="primary"
-              wrapLabel
               size="sm"
               icon={<Plus className="h-4 w-4" />}
               onClick={startCreate}
@@ -421,48 +406,43 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
           )}
         </div>
 
-        <SourceContent
-          state={windowsState.fatalError ? 'error' : windowsState.status === 'initial' ? 'loading' : windowsState.status === 'stale' ? 'retained' : windows.length === 0 && !draft ? 'empty' : 'ready'}
-          label={t('quietHours.title', 'Quiet hours / do-not-disturb')}
-          emptyMessage={t('quietHours.empty', 'No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.')}
-          errorMessage={t('quietHours.unavailable', 'Quiet-hours windows unavailable.')}
-          error={windowsState.fatalError}
-          errorRecovery={{ onRetry: () => void windowsQuery.refetch() }}
-          loadingContent={
-            <ListSkeleton
-              rows={2}
-              label={t('quietHours.loading', 'Loading quiet-hours Windows…')}
-              testId="quiet-hours-loading"
-            />
-          }
-          emptyContent={emptyWindowsContent}
-        >
-        {windows.length === 0 && !draft ? emptyWindowsContent : (
-          <ul className="min-w-0 space-y-3" data-testid="quiet-hours-list">
+        {isLoading ? (
+          <ListSkeleton
+            rows={2}
+            label={t('quietHours.loading', 'Loading quiet-hours windows…')}
+            testId="quiet-hours-loading"
+          />
+        ) : windows.length === 0 && !draft ? (
+          <EmptyState
+            /* no-action: empty inbox state — primary CTA already lives in the panel header */
+            icon={<Moon className="h-10 w-10" />}
+            message={t('quietHours.empty', 'No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.')}
+          />
+        ) : (
+          <ul className="space-y-3" data-testid="quiet-hours-list">
             {windows.map((w) => {
               const nextLabel = nextWindowChangeLabel(w, now)
               return (
                 <li
                   key={w.id}
-                  className="min-w-0 space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+                  className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4 space-y-2"
                   data-testid={`quiet-hours-row-${w.id}`}
                 >
                   <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <div className="flex min-w-0 flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <Badge variant={w.enabled ? 'success' : 'neutral'}>
                         {w.enabled ? t('quietHours.enabled', 'Enabled') : t('quietHours.disabled', 'Disabled')}
                       </Badge>
-                      <Text as="span" size="sm" weight="medium" color="primary" className="min-w-0 break-words [overflow-wrap:anywhere]">
+                      <span className="text-sm font-medium text-[var(--text-primary)]">
                         {summarizeWindow(w)}
-                      </Text>
+                      </span>
                       {nextLabel && (
-                        <Text as="span" variant="caption" className="min-w-0 break-words">{nextLabel}</Text>
+                        <span className="text-xs text-[var(--text-muted)]">{nextLabel}</span>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="secondary"
-                        wrapLabel
                         size="sm"
                         icon={<Pencil className="h-3.5 w-3.5" />}
                         onClick={() => startEdit(w)}
@@ -471,7 +451,6 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                       </Button>
                       <Button
                         variant="danger"
-                        wrapLabel
                         size="sm"
                         icon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => void removeWindow(w)}
@@ -485,46 +464,42 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                     {WEEKDAYS.map(({ bit, key, fallback }) => {
                       const on = (w.weekdays & bit) !== 0
                       return (
-                        <Text
-                          as="span"
-                          size="xs"
+                        <span
                           key={bit}
                           className={
                             on
-                              ? 'inline-flex items-center rounded-md bg-purple-300/10 px-2 py-0.5 text-purple-300 ring-1 ring-purple-300/30 forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]'
-                              : 'inline-flex items-center rounded-md px-2 py-0.5 text-[var(--text-muted)] ring-1 ring-[var(--border-subtle)]'
+                              ? 'inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-300/10 text-purple-300 ring-1 ring-purple-300/30'
+                              : 'inline-flex items-center px-2 py-0.5 rounded-md text-xs text-[var(--text-muted)] ring-1 ring-[var(--border-subtle)]'
                           }
-                          weight={on ? 'medium' : undefined}
                         >
                           {t(key, fallback)}
-                        </Text>
+                        </span>
                       )
                     })}
                   </div>
                   {w.bypass_severities.length > 0 && (
-                    <Text as="div" variant="caption">
+                    <div className="text-xs text-[var(--text-muted)]">
                       {t('quietHours.bypassLabel', 'Always allow:')}{' '}
                       {w.bypass_severities.map((s) => (
-                        <Badge key={s} variant="warning" className="ms-1">
+                        <Badge key={s} variant="warning" className="ml-1">
                           {s}
                         </Badge>
                       ))}
-                    </Text>
+                    </div>
                   )}
                 </li>
               )
             })}
           </ul>
         )}
-        </SourceContent>
 
         {draft && (
           <form
             onSubmit={submit}
-            className="min-w-0 space-y-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+            className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.03] p-4 space-y-4"
             data-testid="quiet-hours-form"
           >
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <PanelTitle>
                 {editingId
                   ? t('quietHours.form.editTitle', 'Edit window')
@@ -583,9 +558,9 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             <fieldset
               aria-describedby={validationField === 'weekdays' ? 'quiet-hours-weekdays-error' : undefined}
             >
-              <Text as="legend" variant="caption" className="mb-2">
+              <legend className="mb-2 text-xs text-[var(--text-muted)]">
                 {t('quietHours.form.weekdays', 'Weekdays')}
-              </Text>
+              </legend>
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAYS.map(({ bit, key, fallback }) => {
                   const on = (draft.weekdays & bit) !== 0
@@ -596,8 +571,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                       onClick={() => toggleWeekday(bit)}
                       variant={on ? 'primary' : 'outline'}
                       size="sm"
-                      wrapLabel
-                      className="min-h-11 min-w-11"
+                      className="h-8"
                       aria-pressed={on}
                       data-testid={`qh-weekday-${bit}`}
                     >
@@ -614,9 +588,9 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             </fieldset>
 
             <fieldset>
-              <Text as="legend" variant="caption" className="mb-2">
+              <legend className="mb-2 text-xs text-[var(--text-muted)]">
                 {t('quietHours.form.bypass', 'Always allow these severities through')}
-              </Text>
+              </legend>
               <div className="flex flex-wrap gap-1.5">
                 {SEVERITY_CHOICES.map(({ value, labelKey, fallback }) => {
                   const on = draft.bypass_severities.includes(value)
@@ -627,8 +601,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                       onClick={() => toggleSeverity(value)}
                       variant={on ? 'primary' : 'outline'}
                       size="sm"
-                      wrapLabel
-                      className="min-h-11 min-w-11"
+                      className="h-8"
                       aria-pressed={on}
                       data-testid={`qh-severity-${value}`}
                     >
@@ -654,11 +627,10 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               </VisuallyHidden>
             )}
 
-            <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
               <Button
                 variant="secondary"
                 size="sm"
-                wrapLabel
                 icon={<X className="h-4 w-4" />}
                 type="button"
                 onClick={requestClose}
@@ -669,7 +641,6 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               <Button
                 variant="primary"
                 size="sm"
-                wrapLabel
                 icon={<Check className="h-4 w-4" />}
                 type="submit"
                 loading={save.isPending}

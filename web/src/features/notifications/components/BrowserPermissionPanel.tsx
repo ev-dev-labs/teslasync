@@ -55,7 +55,7 @@ export function BrowserPermissionPanel({
             <Bell className="h-5 w-5" aria-hidden="true" />
           </IconBox>
           <div className="min-w-0">
-            <PanelTitle>{t('browserNotifications.title', 'Browser notifications')}</PanelTitle>
+            <PanelTitle>{t('browserNotifications.title', 'Browser Notifications')}</PanelTitle>
             <Text variant="caption" as="p">
               {t(
                 'browserNotifications.subtitle',
@@ -77,12 +77,11 @@ export function BrowserPermissionPanel({
             <div className="flex flex-wrap items-center gap-3">
               {permission === 'default' && (
                 <Button
-                  wrapLabel
                   variant="primary"
                   icon={<Bell className="h-4 w-4" aria-hidden="true" />}
                   onClick={handleEnable}
                 >
-                  {t('browserNotifications.enable', 'Enable browser notifications')}
+                  {t('browserNotifications.enable', 'Enable Browser Notifications')}
                 </Button>
               )}
               {permission === 'default' && permissionError && (
@@ -104,7 +103,7 @@ export function BrowserPermissionPanel({
             </div>
 
             {permission === 'granted' && (
-              <div className="space-y-3 border-t border-[var(--border-subtle)] pt-4">
+              <div className="space-y-3 border-t border-white/[0.06] pt-4">
                 <Label>{t('browserNotifications.events', 'Notify me about')}</Label>
                 <Toggle
                   label={t('browserNotifications.alerts', 'Alerts')}

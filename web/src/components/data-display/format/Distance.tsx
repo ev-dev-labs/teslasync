@@ -1,5 +1,5 @@
 import { useUnits } from '@/hooks/useUnits';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 interface DistanceProps {
@@ -14,10 +14,9 @@ interface DistanceProps {
 
 /**
  * Distance renderer that respects the user's metric/imperial preference.
- * The title shows the caller's source unit at the requested display precision.
+ * Always exposes the raw caller-supplied value via the `title` attribute.
  */
 export function Distance({ miles, km, precision, className }: DistanceProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
@@ -26,10 +25,10 @@ export function Distance({ miles, km, precision, className }: DistanceProps) {
   let title: string | undefined;
   if (miles != null && Number.isFinite(miles)) {
     sourceMeters = miles * 1609.344;
-    title = `${fmtNumber(miles, precision)} mi`;
+    title = `${miles.toFixed(2)} mi`;
   } else if (km != null && Number.isFinite(km)) {
     sourceMeters = km * 1000;
-    title = `${fmtNumber(km, precision)} km`;
+    title = `${km.toFixed(2)} km`;
   }
 
   if (sourceMeters == null) {

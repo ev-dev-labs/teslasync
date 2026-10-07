@@ -7,14 +7,12 @@ import {
 
 import { useTransportAgreement } from '@/api/hooks/useSignals';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { TransportAgreementFieldList } from './TransportAgreementFieldList';
 import { TransportAgreementMetrics } from './TransportAgreementMetrics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useDataState } from '@/hooks/useDataState';
 
 /**
  * Widest window the agreement endpoint accepts, mirroring
@@ -53,7 +51,6 @@ export function TransportAgreementPanel({
   to,
   enabled,
 }: TransportAgreementPanelProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const windowHours = transportAgreementWindowHours(from, to);
   // The submitted history range is immutable — it is NOT narrowed to fit the
@@ -62,7 +59,6 @@ export function TransportAgreementPanel({
   const exceedsWindowLimit =
     enabled && windowHours != null && windowHours > TRANSPORT_AGREEMENT_MAX_WINDOW_HOURS;
   const query = useTransportAgreement(vehicleId, { from, to }, enabled && !exceedsWindowLimit);
-  const agreementState = useDataState(query, { provenance: 'historical' });
   const data = query.data;
   const fields = data?.fields ?? [];
   const measured = data?.status === 'measured' && data.agreement_pct != null;
@@ -70,17 +66,17 @@ export function TransportAgreementPanel({
   const requestedDays = windowHours == null ? 0 : Math.ceil(windowHours / 24);
 
   return (
-    <FadeIn delay={0.12} className="min-w-0 max-w-full">
+    <FadeIn delay={0.12}>
       <GlassPanel
-        className="min-w-0 max-w-full space-y-4 p-4 sm:p-5"
+        className="space-y-4 p-4 sm:p-5"
         role="region"
-        aria-label={t('signalTransportAgreement.title', 'HTTP / MQTT agreement')}
+        aria-label={t('signalTransportAgreement.title', 'HTTP / MQTT Agreement')}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
-              <GitCompareArrows className="h-4 w-4 shrink-0 text-cyan-600 dark:text-cyan-300" aria-hidden="true" />
-              {t('signalTransportAgreement.title', 'HTTP / MQTT agreement')}
+          <div className="space-y-1">
+            <PanelTitle className="flex items-center gap-2">
+              <GitCompareArrows className="h-4 w-4 text-cyan-600 dark:text-cyan-300" aria-hidden="true" />
+              {t('signalTransportAgreement.title', 'HTTP / MQTT Agreement')}
             </PanelTitle>
             <Text as="p" variant="bodySm" color="muted">
               {t(
@@ -100,13 +96,6 @@ export function TransportAgreementPanel({
             ) : null}
           </div>
         </div>
-
-        {enabled && !exceedsWindowLimit && (
-          <StaleRefreshWarning
-            state={agreementState}
-            label={t('signalTransportAgreement.resource', 'transport agreement evidence')}
-          />
-        )}
 
         {!enabled ? (
           <EmptyState /* no-action: the parent query controls are the recovery surface for this read-only audit. */
@@ -135,15 +124,15 @@ export function TransportAgreementPanel({
             )}
             className="py-8"
           />
-        ) : query.isLoading && !agreementState.hasData ? (
+        ) : query.isLoading ? (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             {[0, 1, 2, 3].map((item) => (
               <Skeleton key={item} className="h-28 rounded-xl" />
             ))}
           </div>
-        ) : agreementState.fatalError ? (
+        ) : query.error ? (
           <QueryError
-            error={agreementState.fatalError}
+            error={query.error}
             onRetry={() => void query.refetch()}
             resourceName={t('signalTransportAgreement.resource', 'transport agreement evidence')}
             compact
@@ -159,8 +148,7 @@ export function TransportAgreementPanel({
           />
         ) : (
           <>
-            <TransportAgreementMetrics data={data}
-              retained={agreementState.isRefreshing || agreementState.status === 'stale' || agreementState.refreshError != null} />
+            <TransportAgreementMetrics data={data} />
             <TransportAgreementFieldList fields={fields} />
           </>
         )}

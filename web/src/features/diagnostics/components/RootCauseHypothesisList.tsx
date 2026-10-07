@@ -1,11 +1,9 @@
-import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListOrdered, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption, Badge, type BadgeProps, HelpTooltip } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { EvidenceRelation, RankedHypothesis } from '../lib/rootCauseIntelligence';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const RELATION_VARIANT: Record<EvidenceRelation, BadgeProps['variant']> = {
   leads: 'warning',
@@ -23,7 +21,6 @@ export interface RootCauseHypothesisListProps {
   hypotheses: RankedHypothesis[];
   hasChosenSignal: boolean;
   focalShiftFound: boolean;
-  focalHistoryAvailable?: boolean;
   isLoading: boolean;
   isError: boolean;
   error?: unknown;
@@ -41,30 +38,25 @@ export function RootCauseHypothesisList({
   hypotheses,
   hasChosenSignal,
   focalShiftFound,
-  focalHistoryAvailable = true,
   isLoading,
   isError,
   error,
   onRetry,
   className,
 }: RootCauseHypothesisListProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const titleId = useId();
 
   const emptyMessage = !hasChosenSignal
     ? t('rootCauseIntelligence.hypotheses.pickOne', 'Choose a signal above to generate ranked hypotheses.')
-    : !focalHistoryAvailable
-      ? t('rootCauseIntelligence.timeline.notEnough', 'Not enough history yet for this signal and window.')
-      : !focalShiftFound
-        ? t('rootCauseIntelligence.hypotheses.noFocalShift', 'No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.')
-        : t('rootCauseIntelligence.hypotheses.noneCorroborate', 'This signal shows a shift, but no other analyzed signal showed a comparable, well-timed shift.');
+    : !focalShiftFound
+      ? t('rootCauseIntelligence.hypotheses.noFocalShift', 'No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.')
+      : t('rootCauseIntelligence.hypotheses.noneCorroborate', 'This signal shows a shift, but no other analyzed signal showed a comparable, well-timed shift.');
 
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
-      <PanelTitle aria-labelledby={titleId} className="mb-3 flex items-center gap-2">
+      <PanelTitle className="mb-3 flex items-center gap-2">
         <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        <span id={titleId}>{t('rootCauseIntelligence.hypotheses.title', 'Ranked hypotheses')}</span>
+        {t('rootCauseIntelligence.hypotheses.title', 'Ranked Hypotheses')}
         <HelpTooltip
           size="sm"
           i18nKey="help.rootCauseIntelligence.hypotheses"
@@ -99,15 +91,15 @@ export function RootCauseHypothesisList({
                 </Badge>
                 <span className="inline-flex items-center gap-1">
                   {directionIcon(h.shift.direction)}
-                  <Caption>{fmtNumber(h.shift.before.median)} → {fmtNumber(h.shift.after.median)}</Caption>
+                  <Caption>{fmtNumber(h.shift.before.median, 2)} → {fmtNumber(h.shift.after.median, 2)}</Caption>
                 </span>
               </div>
               <Text variant="body">{h.rationale}</Text>
               <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                <Caption>{t('rootCauseIntelligence.hypotheses.score', 'Rank score {{n}}', { n: fmtNumber(h.score) })}</Caption>
-                <Caption>{t('rootCauseIntelligence.hypotheses.effect', 'Effect size {{n}}', { n: fmtNumber(h.shift.effectSize) })}</Caption>
+                <Caption>{t('rootCauseIntelligence.hypotheses.score', 'Rank score {{n}}', { n: fmtNumber(h.score, 2) })}</Caption>
+                <Caption>{t('rootCauseIntelligence.hypotheses.effect', 'Effect size {{n}}', { n: fmtNumber(h.shift.effectSize, 2) })}</Caption>
                 <Caption>{t('rootCauseIntelligence.hypotheses.samples', '{{n}} samples', { n: h.sampleCount })}</Caption>
-                <Caption>{t('rootCauseIntelligence.hypotheses.lag', 'Lag {{n}} min', { n: fmtNumber(Math.abs(h.lagMs) / 60_000) })}</Caption>
+                <Caption>{t('rootCauseIntelligence.hypotheses.lag', 'Lag {{n}} min', { n: fmtNumber(Math.abs(h.lagMs) / 60_000, 1) })}</Caption>
               </div>
             </li>
           ))}

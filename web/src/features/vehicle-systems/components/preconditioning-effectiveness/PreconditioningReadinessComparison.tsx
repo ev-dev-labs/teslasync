@@ -1,11 +1,11 @@
-import { LayoutCard } from '@/components/layout';
+import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { preconditioningRegimeLabel } from './labels';
@@ -54,7 +54,14 @@ export function PreconditioningReadinessComparison({
 
   return (
     <section data-testid="preconditioning-readiness-comparison">
-      <LayoutCard title={t('preconditioningEffectiveness.readiness.title', 'Departure-readiness comparison')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Gauge className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t(
+            'preconditioningEffectiveness.readiness.title',
+            'Departure-readiness comparison',
+          )}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.readiness.subtitle',
@@ -67,7 +74,7 @@ export function PreconditioningReadinessComparison({
           requirement="comparison"
           skeletonHeight={330}
         >
-          <EmbeddedChart toolbar exportable size="standard"
+          <ChartContainer
             title={t(
               'preconditioningEffectiveness.readiness.plotTitle',
               'Median departure gap by observational group',
@@ -110,14 +117,14 @@ export function PreconditioningReadinessComparison({
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </EmbeddedChart>
+          </ChartContainer>
           <PreconditioningComparisonCards
             comparisons={comparisons}
             metric="readiness"
             formatDelta={formatDelta}
           />
         </PreconditioningSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

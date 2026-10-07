@@ -15,10 +15,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { ShieldCheck, ShieldAlert, ShieldX, ExternalLink } from 'lucide-react'
-import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/cn'
-import { typography } from '@/lib/tokens'
+import { GlassPanel, Badge } from '@/components/ui'
 
 interface TeslaAuthCardProps {
   /** Whether the auth check itself is currently authenticated. */
@@ -51,52 +48,47 @@ const TONE: Record<Severity, { bar: string; icon: string; Icon: typeof ShieldChe
 }
 
 export function TeslaAuthCard({ authenticated, expiresAt, now }: TeslaAuthCardProps) {
-  const { t } = useTranslation()
   const sev = useMemo(() => severityFor(authenticated, expiresAt, now), [authenticated, expiresAt, now])
   const tone = TONE[sev]
   const { Icon } = tone
 
   const detail = useMemo(() => {
-    if (sev === 'disconnected') return t('systemStatus.authDetail.disconnected', 'No Tesla account is currently connected.')
-    if (!expiresAt) return t('systemStatus.authDetail.expiryUnknown', 'Token expiry unknown — re-authenticate to refresh.')
+    if (sev === 'disconnected') return 'No Tesla account is currently connected.'
+    if (!expiresAt) return 'Token expiry unknown — re-authenticate to refresh.'
     const exp = Date.parse(expiresAt)
-    if (!Number.isFinite(exp)) return t('systemStatus.authDetail.expiryInvalid', 'Token expiry unparseable.')
+    if (!Number.isFinite(exp)) return 'Token expiry unparseable.'
     const ms = exp - now
     if (ms < 0) {
       const ago = Math.floor(-ms / (24 * 60 * 60 * 1000))
-      return ago === 0
-        ? t('systemStatus.authDetail.expiredToday', 'Expired today — re-authenticate to resume Fleet API calls.')
-        : t('systemStatus.authDetail.expiredDays', 'Expired {{days}}d ago — re-authenticate to resume Fleet API calls.', { days: ago })
+      return `Expired ${ago === 0 ? 'today' : `${ago}d ago`} — re-authenticate to resume Fleet API calls.`
     }
     const days = Math.floor(ms / (24 * 60 * 60 * 1000))
-    if (days === 0) return t('systemStatus.authDetail.expiresToday', 'Token expires later today.')
-    if (days === 1) return t('systemStatus.authDetail.expiresTomorrow', 'Token expires in 1 day.')
-    return t('systemStatus.authDetail.expiresDays', 'Token expires in {{days}} days.', { days })
-  }, [sev, expiresAt, now, t])
+    if (days === 0) return 'Token expires later today.'
+    if (days === 1) return 'Token expires in 1 day.'
+    return `Token expires in ${days} days.`
+  }, [sev, expiresAt, now])
 
   return (
     <GlassPanel className="overflow-hidden" aria-live="polite">
       <div className={`h-1 w-full ${tone.bar}`} aria-hidden />
-      <div className="flex flex-wrap items-start gap-3 p-5">
+      <div className="flex items-start gap-3 p-5">
         <div className={`shrink-0 ${tone.icon}`}>
           <Icon className="h-6 w-6" aria-hidden />
         </div>
-        <div className="min-w-0 flex-1 basis-40">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <PanelTitle>{t('systemStatus.pipeline.teslaAccount', 'Tesla account')}</PanelTitle>
-            <Badge variant={tone.badge}>{t(`systemStatus.authLabels.${sev}`, tone.label)}</Badge>
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Tesla account</h3>
+            <Badge variant={tone.badge}>{tone.label}</Badge>
           </div>
-          <Text as="p" variant="bodySm" className="mt-1">{detail}</Text>
+          <p className="text-sm text-[var(--text-secondary)] mt-1">{detail}</p>
         </div>
-        <div className="min-w-0 max-w-full">
+        <div className="shrink-0">
           <Link
             to="/tesla-account"
-            className={cn('inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-cyan-300 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20', typography.size.xs, typography.weight.medium)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]"
           >
-            {sev === 'expired' || sev === 'disconnected'
-              ? t('systemStatus.reauthenticate', 'Re-authenticate')
-              : t('systemStatus.manage', 'Manage')}
-            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {sev === 'expired' || sev === 'disconnected' ? 'Re-authenticate' : 'Manage'}
+            <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>

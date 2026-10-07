@@ -16,12 +16,11 @@ import { FadeIn } from '@/components/motion/FadeIn'
 import { MetricCard } from '@/components/data-display/MetricCard'
 import { useUnits } from '@/hooks/useUnits'
 import { cleanNil } from '@/lib/cleanNil'
-import { isFiniteNumber } from '@/lib/numberFormat'
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat'
 import { formatTime } from '@/lib/dateFormat'
 import { parseSettingEnum } from '@/lib/parseSettingEnum'
 import type { VehicleState, Position, VehicleConfigSnapshot, UserPreferenceSnapshot } from '@/api/types'
 import { convertSpeedFromSI } from '@/lib/unitConversion'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleChartsProps {
   state: VehicleState
@@ -36,7 +35,6 @@ export function VehicleCharts({
   vehicleConfigData,
   userPrefData,
 }: VehicleChartsProps) {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
   const speedUnit = unitPrefs.speed
@@ -67,7 +65,7 @@ export function VehicleCharts({
           speed: isFiniteNumber(p.speed_mph) ? toSpeedDisplay(p.speed_mph) : null,
         }))
         .reverse(),
-    [positions, toSpeedDisplay, displayPrecision, displayLocale],
+    [positions, toSpeedDisplay],
   )
 
   const hasSpeedData = useMemo(() => speedSeries.some((d) => d.speed != null), [speedSeries])
@@ -123,7 +121,7 @@ export function VehicleCharts({
           <GlassPanel className="p-5">
             <h3 className="section-title mb-4 flex items-center gap-2">
               <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
-              {t('common.vehicleConfig', 'Vehicle configuration')}
+              {t('common.vehicleConfig', 'Vehicle Configuration')}
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[
@@ -134,9 +132,9 @@ export function VehicleCharts({
                 { label: t('vehicles.detail.config.wheels', 'Wheels'), value: cleanNil(vehicleConfigData.wheel_type) },
                 { label: t('vehicles.detail.config.firmware', 'Firmware'), value: cleanNil(vehicleConfigData.version) },
                 { label: t('vehicles.detail.config.name', 'Name'), value: cleanNil(vehicleConfigData.vehicle_name) },
-                { label: t('vehicles.detail.config.chargePort', 'Charge port'), value: cleanNil(vehicleConfigData.charge_port) },
+                { label: t('vehicles.detail.config.chargePort', 'Charge Port'), value: cleanNil(vehicleConfigData.charge_port) },
                 {
-                  label: t('vehicles.detail.config.rearHeaters', 'Rear heaters'),
+                  label: t('vehicles.detail.config.rearHeaters', 'Rear Heaters'),
                   value: cleanNil(vehicleConfigData.rear_seat_heaters),
                 },
                 {
@@ -147,10 +145,10 @@ export function VehicleCharts({
                   label: t('vehicles.detail.config.sunroof', 'Sunroof'),
                   value:
                     cleanNil(vehicleConfigData.sunroof_installed) ||
-                    t('vehicles.detail.config.notInstalled', 'Not installed'),
+                    t('vehicles.detail.config.notInstalled', 'Not Installed'),
                 },
                 {
-                  label: t('vehicles.detail.europeVehicle', 'Europe vehicle'),
+                  label: t('vehicles.detail.europeVehicle', 'Europe Vehicle'),
                   value:
                     vehicleConfigData.europe_vehicle != null
                       ? vehicleConfigData.europe_vehicle
@@ -159,7 +157,7 @@ export function VehicleCharts({
                       : '—',
                 },
                 {
-                  label: t('vehicles.detail.rhd', 'Right-hand drive'),
+                  label: t('vehicles.detail.rhd', 'Right-Hand Drive'),
                   value:
                     vehicleConfigData.right_hand_drive != null
                       ? vehicleConfigData.right_hand_drive
@@ -168,7 +166,7 @@ export function VehicleCharts({
                       : '—',
                 },
                 {
-                  label: t('vehicles.detail.config.remoteStart', 'Remote start'),
+                  label: t('vehicles.detail.config.remoteStart', 'Remote Start'),
                   value:
                     vehicleConfigData.remote_start_enabled != null
                       ? vehicleConfigData.remote_start_enabled
@@ -177,7 +175,7 @@ export function VehicleCharts({
                       : '—',
                 },
                 {
-                  label: t('vehicles.detail.config.offroadLightbar', 'Offroad lightbar'),
+                  label: t('vehicles.detail.config.offroadLightbar', 'Offroad Lightbar'),
                   value:
                     vehicleConfigData.offroad_lightbar_present != null
                       ? vehicleConfigData.offroad_lightbar_present
@@ -186,20 +184,20 @@ export function VehicleCharts({
                       : '—',
                 },
                 {
-                  label: t('vehicles.detail.config.swUpdate', 'SW update'),
+                  label: t('vehicles.detail.config.swUpdate', 'SW Update'),
                   value:
                     cleanNil(vehicleConfigData.software_update_version) ||
                     t('vehicles.detail.config.none', 'None'),
                 },
                 {
-                  label: t('vehicles.detail.config.swDownload', 'SW download'),
+                  label: t('vehicles.detail.config.swDownload', 'SW Download'),
                   value:
                     vehicleConfigData.software_update_download_pct != null
                       ? `${vehicleConfigData.software_update_download_pct}%`
                       : '—',
                 },
                 {
-                  label: t('vehicles.detail.config.swInstall', 'SW install'),
+                  label: t('vehicles.detail.config.swInstall', 'SW Install'),
                   value:
                     vehicleConfigData.software_update_install_pct != null
                       ? `${vehicleConfigData.software_update_install_pct}%`
@@ -219,12 +217,12 @@ export function VehicleCharts({
           <GlassPanel className="p-5">
             <h3 className="section-title mb-4 flex items-center gap-2">
               <Settings className="h-4 w-4 text-amber-300" aria-hidden="true" />
-              {t('common.carPreferences', 'Car display preferences')}
+              {t('common.carPreferences', 'Car Display Preferences')}
             </h3>
             <p className="text-2xs text-[var(--text-muted)] mb-3">
               {t(
                 'vehicles.detail.prefs.intro',
-                "These are your vehicle's display settings — you can sync your app to match them from the settings page.",
+                "These are your vehicle's display settings — you can sync your app to match them from the Settings page.",
               )}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -241,18 +239,18 @@ export function VehicleCharts({
                   ),
                 },
                 {
-                  label: t('vehicles.detail.prefs.chargeUnit', 'Charge unit'),
+                  label: t('vehicles.detail.prefs.chargeUnit', 'Charge Unit'),
                   value: parseSettingEnum(userPrefData.setting_charge_unit, 'charge'),
                 },
                 {
-                  label: t('vehicles.detail.prefs.tirePressure', 'Tire pressure'),
+                  label: t('vehicles.detail.prefs.tirePressure', 'Tire Pressure'),
                   value: parseSettingEnum(
                     userPrefData.setting_tire_pressure_unit,
                     'pressure',
                   ),
                 },
                 {
-                  label: t('vehicles.detail.prefs.time24h', '24h time'),
+                  label: t('vehicles.detail.prefs.time24h', '24h Time'),
                   value:
                     userPrefData.setting_24hr_time != null
                       ? userPrefData.setting_24hr_time
@@ -273,13 +271,13 @@ export function VehicleCharts({
         <GlassPanel className="p-6 h-full">
           <h3 className="section-title mb-4 flex items-center gap-2">
             <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('common.speedHistory', 'Speed history')}
+            {t('common.speedHistory', 'Speed History')}
           </h3>
           {hasSpeedData ? (
             <div className="h-64">
               {/* chart-a11y:no-table live telemetry speed series — variable-length continuous signal, not tabular */}
               <EmbeddedChart
-                title={t('common.speedHistory', 'Speed history')}
+                title={t('common.speedHistory', 'Speed History')}
                 ariaLabel={t('vehicles.detail.speedHistoryAria', 'Vehicle speed history area chart')}
                 fluid
               >

@@ -1,20 +1,21 @@
-import { Database, RouteOff } from 'lucide-react';
+import { BookOpen, Database, RouteOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid, LayoutCard } from '@/components/layout';
+import { Grid } from '@/components/layout';
 import {
   Badge,
+  GlassPanel,
   MetricValue,
+  PanelTitle,
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
+import { fmtInt } from '@/lib/numberFormat';
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const COVERAGE_COLUMNS = { default: 1, sm: 3 } as const;
 
@@ -27,7 +28,6 @@ export function MilestoneMethodology({
   summary,
   state,
 }: MilestoneMethodologyProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { accounting, method } = summary;
   const { distanceUnit, formatDateMs } = useOdometerMilestoneDisplay();
@@ -54,10 +54,14 @@ export function MilestoneMethodology({
       )}
       data-testid="milestone-method"
     >
-      <LayoutCard title={t(
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t(
             'milestones.method.title',
             'Coverage, calibration & methodology',
-          )}>
+          )}
+        </PanelTitle>
         <MilestoneSectionBody state={state}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <Text variant="caption">{coverage}</Text>
@@ -213,7 +217,7 @@ export function MilestoneMethodology({
             </Text>
           </div>
         </MilestoneSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

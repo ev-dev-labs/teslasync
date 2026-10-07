@@ -62,7 +62,7 @@ describe('SolarChargeAdviceStrip', () => {
   it('renders the charge-now badge with surplus copy', () => {
     render(<SolarChargeAdviceStrip siteId={7} />);
     expect(screen.getByText('Charge now on solar')).toBeTruthy();
-    expect(screen.getByText('3.00 kW surplus · ~12A solar-matched')).toBeTruthy();
+    expect(screen.getByText('3.0 kW surplus · ~12A solar-matched')).toBeTruthy();
   });
 
   it('renders the wait verdict overnight', () => {

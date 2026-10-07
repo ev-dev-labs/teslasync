@@ -83,13 +83,13 @@ describe('SummaryStats — temperature suffix', () => {
 
   it('renders "49.0°C" not "49.0°°C" for °C preference', () => {
     const { container } = renderStats(baseStats, (v) => v, '°C')
-    expect(screen.getByText('49.00°C')).toBeInTheDocument()
+    expect(screen.getByText('49.0°C')).toBeInTheDocument()
     expect(container.textContent).not.toMatch(/°°/)
   })
 
   it('renders "120.2°F" not "120.2°°F" for °F preference', () => {
     const { container } = renderStats(baseStats, (c) => (c * 9) / 5 + 32, '°F')
-    expect(screen.getByText('120.20°F')).toBeInTheDocument()
+    expect(screen.getByText('120.2°F')).toBeInTheDocument()
     expect(container.textContent).not.toMatch(/°°/)
   })
 

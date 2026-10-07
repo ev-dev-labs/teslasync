@@ -4,9 +4,8 @@ import { PiggyBank } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useFormatting } from '@/hooks/useFormatting';
-
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import type { TripCostComparison } from '@/types/driving';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TripCostCardProps {
   comparison?: TripCostComparison | null;
@@ -14,7 +13,6 @@ interface TripCostCardProps {
 
 /** Door-to-door $ readout: EV charging cost vs the gasoline equivalent. */
 export function TripCostCard({ comparison }: TripCostCardProps) {
-  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -54,10 +52,10 @@ export function TripCostCard({ comparison }: TripCostCardProps) {
           </div>
           <Caption className="block tabular-nums">
             {t('tripPlanner.cost.detail', '{{gallons}} gal avoided · {{pct}} cheaper · @ ${{price}}/gal, {{mpg}} mpg', {
-              gallons: fmtNumber(comparison.gas_gallons),
-              pct: fmtPercent(comparison.savings_pct),
-              price: fmtNumber(comparison.gas_price_per_gallon),
-              mpg: fmtNumber(comparison.gas_mpg),
+              gallons: fmtNumber(comparison.gas_gallons, 1),
+              pct: fmtPercent(comparison.savings_pct, 0),
+              price: fmtNumber(comparison.gas_price_per_gallon, 2),
+              mpg: fmtNumber(comparison.gas_mpg, 0),
             })}
           </Caption>
         </div>

@@ -1,19 +1,18 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Route, Zap,
+  Route, MapPin, Zap, DollarSign, Gauge, BatteryCharging,
   Calendar, Clock, Download,
 } from 'lucide-react';
-import { PageLayout, ChartCard, LayoutCard, CardGrid } from '@/components/layout';
-import { deriveDataState } from '@/api/dataState';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, PanelTitle, Pagination, Caption, Badge, Button, Text, MetricLabel,
 } from '@/components/ui';
 import {
-  MetricBar, InlineMetric, SavedViewMenu, DataFreshnessAuto,
+  MetricCard, MetricBar, InlineMetric, SavedViewMenu, DataFreshnessAuto,
 } from '@/components/data-display';
 import {
-  ChartTooltip, ChartGradient,
+  ChartContainer, ChartTooltip, ChartGradient,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   axisTickSm, chartGrid, chartAnimation, CHART_COLORS,
 } from '@/components/charts';
@@ -31,14 +30,9 @@ import { useUrlBatch, useUrlNumber } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import type { Trip } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import type { DataState } from '@/api/dataState';
-import { TripOperationalBrief } from '../components/operationalbrief-all/TripOperationalBrief';
 
 /* ─── Constants & helpers ─────────────────────────────────── */
 
@@ -47,6 +41,7 @@ import { TripOperationalBrief } from '../components/operationalbrief-all/TripOpe
 // Same precedent as FleetComparePage.whPerKmToDisplay.
 const KM_PER_MILE = 1.609344;
 
+const KPI_BAND = 'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6';
 const CARD_GRID = 'grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4';
 const DISTANCE_COLOR = CHART_COLORS[0];
 const ENERGY_COLOR = CHART_COLORS[1];
@@ -110,11 +105,7 @@ export default function TripListPage() {
     start: startDate,
     end: endDate,
   });
-  const { data: trips, refetch } = tripsQuery;
-  const source = deriveDataState(tripsQuery, { provenance: 'historical' });
-  const isLoading = tripsQuery.isLoading && !source.hasData;
-  const isError = source.fatalError !== null;
-  const error = source.fatalError;
+  const { data: trips, isLoading, isError, error, refetch } = tripsQuery;
 
   const allTrips = trips ?? [];
 
@@ -131,14 +122,13 @@ export default function TripListPage() {
   const sectionState: SectionStateProps = { trips: allTrips, isLoading, isError, error, onRetry };
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('trips.title', 'Trips')}
       subtitle={t('trips.subtitle', 'Multi-drive trip reports with distance and cost tracking')}
       loading={isLoading && allTrips.length === 0}
-      metadataActions={<DataFreshnessAuto query={tripsQuery} />}
-      dataSources={[{ id: 'trips', label: t('trips.title', 'Trips'), query: tripsQuery }]}
-      overflowActions={
+      actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
+          <DataFreshnessAuto query={tripsQuery} />
           <SavedViewMenu
             route="/trips"
             currentQuery={savedView.currentQuery}
@@ -151,7 +141,7 @@ export default function TripListPage() {
         {/* 1 — KPI band: full-width responsive metric grid */}
         <FadeIn>
           <section aria-label={t('trips.stats.aria', 'Trip summary metrics')}>
-            <TripStatsBand trips={allTrips} source={source} startDate={startDate} endDate={endDate} vehicleId={vehicleId} />
+            <TripStatsBand trips={allTrips} isLoading={isLoading} />
           </section>
         </FadeIn>
 
@@ -169,7 +159,7 @@ export default function TripListPage() {
         {/* 3 — Detail band: full-width responsive grid of trip cards */}
         <FadeIn delay={0.2}>
           <section aria-label={t('trips.list.aria', 'All trips')}>
-            <div className="mb-3 flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div className="mb-3 flex items-center justify-between gap-3">
               <PanelTitle>{t('trips.list.heading', 'All Trips')}</PanelTitle>
               {allTrips.length > 0 && (
                 <Caption>{t('trips.list.count', '{{count}} trips', { count: allTrips.length })}</Caption>
@@ -194,12 +184,11 @@ export default function TripListPage() {
                 />
               </GlassPanel>
             ) : (
-              <CardGrid
-                label={t('trips.list.aria', 'All trips')}
-                items={allTrips.map(trip => ({
-                  id: String(trip.id), size: 'third', content: <TripCard trip={trip} />,
-                }))}
-              />
+              <div className={CARD_GRID}>
+                {allTrips.map((trip) => (
+                  <TripCard key={trip.id} trip={trip} />
+                ))}
+              </div>
             )}
           </section>
         </FadeIn>
@@ -219,7 +208,7 @@ export default function TripListPage() {
           </FadeIn>
         )}
       </PullToRefresh>
-    </PageLayout>
+    </PageContainer>
   );
 }
 
@@ -227,10 +216,7 @@ export default function TripListPage() {
 
 /** Full-width KPI band. Aggregates are computed null-safe from SI fields and
  *  formatted at the display boundary via `useUnits` / `useFormatting`. */
-function TripStatsBand({ trips, source, startDate, endDate, vehicleId }: {
-  trips: Trip[]; source: DataState<Trip[]>; startDate: string; endDate: string; vehicleId: number | null;
-}) {
-  const { fmtInt } = useNumberFormatting();
+function TripStatsBand({ trips, isLoading }: { trips: Trip[]; isLoading: boolean }) {
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -247,53 +233,72 @@ function TripStatsBand({ trips, source, startDate, endDate, vehicleId }: {
     const avgDistDisplay = tripCount > 0 ? totalDistDisplay / tripCount : 0;
     return {
       totalEnergyWh, totalCost, totalDrives, totalCharges,
-      tripCount, totalDistM, totalDistDisplay, avgDistDisplay,
+      tripCount, totalDistDisplay, avgDistDisplay,
     };
   }, [trips, distancePref]);
 
-  const hasData = source.hasData;
-  const scope = t('trips.brief.list.scope', 'Loaded page only · {{start}} – {{end}} · vehicle {{vehicle}}', {
-    start: startDate, end: endDate, vehicle: vehicleId ?? t('trips.brief.allVehicles', 'All vehicles'),
-  });
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'distance', occurrenceId: 'distance', rawValue: hasData ? stats.totalDistM : null,
-      label: t('trips.stats.distance', 'Total Distance'), description: scope,
-      display: { formatter: raw => ({ value: fmtInt(convertDistanceFromSI(raw, distancePref)), unit: distancePref }) },
-      context: hasData ? t('trips.stats.tripCount', '{{count}} trips', { count: stats.tripCount }) : undefined },
-    { metricId: 'energy', occurrenceId: 'energy', rawValue: hasData ? stats.totalEnergyWh : null,
-      label: t('trips.stats.energy', 'Energy Used'), description: scope,
-      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
-      context: hasData ? t('trips.stats.driveCount', '{{count}} drives', { count: stats.totalDrives }) : undefined },
-    { metricId: 'currency', occurrenceId: 'cost', rawValue: hasData ? stats.totalCost : null,
-      label: t('trips.stats.cost', 'Total Cost'), description: scope,
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
-      context: !hasData ? undefined : stats.totalDistDisplay > 0
+  if (isLoading) {
+    return (
+      <div className={KPI_BAND}>
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-[86px] rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className={KPI_BAND}>
+      <MetricCard
+        label={t('trips.stats.distance', 'Total Distance')}
+        value={`${fmtInt(stats.totalDistDisplay)} ${distancePref}`}
+        icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
+        color="cyan"
+        subtitle={t('trips.stats.tripCount', '{{count}} trips', { count: stats.tripCount })}
+      />
+      <MetricCard
+        label={t('trips.stats.energy', 'Energy Used')}
+        value={formatEnergy(stats.totalEnergyWh)}
+        icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+        color="amber"
+        subtitle={t('trips.stats.driveCount', '{{count}} drives', { count: stats.totalDrives })}
+      />
+      <MetricCard
+        label={t('trips.stats.cost', 'Total Cost')}
+        value={formatCurrency(stats.totalCost)}
+        icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
+        color="green"
+        subtitle={
+          stats.totalDistDisplay > 0
             ? t('trips.stats.costPer', '{{cost}}/100{{unit}}', {
                 cost: formatCurrency((stats.totalCost / stats.totalDistDisplay) * 100),
                 unit: distancePref,
               })
-            : formatCurrency(0) },
-    { metricId: 'count', occurrenceId: 'trips', rawValue: hasData ? stats.tripCount : null,
-      label: t('trips.stats.total', 'Total Trips'), description: scope,
-      display: { formatter: raw => ({ value: String(raw), unit: '' }) },
-      context: hasData ? t('trips.stats.totalDrives', '{{count}} total drives', { count: stats.totalDrives }) : undefined },
-    { metricId: 'distance', occurrenceId: 'average-distance',
-      rawValue: hasData ? (stats.tripCount > 0 ? stats.totalDistM / stats.tripCount : 0) : null,
-      label: t('trips.stats.avgPerTrip', 'Avg / Trip'), description: scope,
-      display: { formatter: () => ({ value: fmtInt(stats.avgDistDisplay), unit: distancePref }) },
-      context: t('trips.stats.avgPerTripSub', 'distance per trip') },
-    { metricId: 'count', occurrenceId: 'charges', rawValue: hasData ? stats.totalCharges : null,
-      label: t('trips.stats.charges', 'Total Charges'), description: scope,
-      display: { formatter: raw => ({ value: String(raw), unit: '' }) },
-      context: hasData ? t('trips.stats.chargeSessions', '{{count}} charge sessions', { count: stats.totalCharges }) : undefined },
-  ];
-  const operationalMetrics = useOperationalMetrics(metrics);
-  return (
-    <TripOperationalBrief source={source} metrics={operationalMetrics} scope={scope}
-      eyebrow={t('trips.brief.list.eyebrow', 'Trip reports')}
-      title={t('trips.brief.list.title', 'Loaded trip summary')}
-      description={t('trips.brief.list.description', 'Distance, energy and recorded cost for the trips on this page; not fleet-wide or full-range totals.')}
-      provenance={t('trips.brief.list.provenance', 'Stored trip records returned by the selected vehicle, date window and pagination.')} />
+            : formatCurrency(0)
+        }
+      />
+      <MetricCard
+        label={t('trips.stats.total', 'Total Trips')}
+        value={`${stats.tripCount}`}
+        icon={<Route className="h-4 w-4" aria-hidden="true" />}
+        color="purple"
+        subtitle={t('trips.stats.totalDrives', '{{count}} total drives', { count: stats.totalDrives })}
+      />
+      <MetricCard
+        label={t('trips.stats.avgPerTrip', 'Avg / Trip')}
+        value={`${fmtInt(stats.avgDistDisplay)} ${distancePref}`}
+        icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+        color="blue"
+        subtitle={t('trips.stats.avgPerTripSub', 'distance per trip')}
+      />
+      <MetricCard
+        label={t('trips.stats.charges', 'Total Charges')}
+        value={`${stats.totalCharges}`}
+        icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
+        color="red"
+        subtitle={t('trips.stats.chargeSessions', '{{count}} charge sessions', { count: stats.totalCharges })}
+      />
+    </div>
   );
 }
 
@@ -342,8 +347,7 @@ function TopTripsChart({ trips, isLoading, isError, error, onRetry, className }:
   const canExport = trips.length > 0;
 
   return (
-    <div className={className}>
-    <ChartCard
+    <ChartContainer
       title={t('trips.chart.title', 'Top Trips by Distance')}
       ariaLabel={t('trips.chart.aria', 'Top trips ranked by distance horizontal bar chart')}
       data={chartData}
@@ -352,18 +356,17 @@ function TopTripsChart({ trips, isLoading, isError, error, onRetry, className }:
         { key: 'distance', label: `${t('trips.chart.distance', 'Distance')} (${distancePref})` },
       ]}
       height={280}
-      size="standard"
-      exportable
+      className={className}
       loading={isLoading}
       empty={!isLoading && !isError && chartData.length === 0}
       action={
         <div className="flex gap-2">
-          <Button wrapLabel variant="ghost" size="sm" onClick={handleExportCSV} disabled={!canExport}>
-            <Download className="me-1 h-3.5 w-3.5" aria-hidden="true" />
+          <Button variant="ghost" size="sm" onClick={handleExportCSV} disabled={!canExport}>
+            <Download className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
             {t('trips.export.csv', 'CSV')}
           </Button>
-          <Button wrapLabel variant="ghost" size="sm" onClick={handleExportJSON} disabled={!canExport}>
-            <Download className="me-1 h-3.5 w-3.5" aria-hidden="true" />
+          <Button variant="ghost" size="sm" onClick={handleExportJSON} disabled={!canExport}>
+            <Download className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
             {t('trips.export.json', 'JSON')}
           </Button>
         </div>
@@ -392,8 +395,7 @@ function TopTripsChart({ trips, isLoading, isError, error, onRetry, className }:
           </BarChart>
         </ResponsiveContainer>
       )}
-    </ChartCard>
-    </div>
+    </ChartContainer>
   );
 }
 
@@ -415,7 +417,11 @@ function TripEnergyPanel({ trips, isLoading, isError, error, onRetry }: SectionS
   }, [trips]);
 
   return (
-    <LayoutCard title={t('trips.energy.title', 'Top Trips by Energy')}>
+    <GlassPanel className="p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
+        {t('trips.energy.title', 'Top Trips by Energy')}
+      </PanelTitle>
       {isLoading ? (
         <Skeleton height={220} />
       ) : isError ? (
@@ -440,7 +446,7 @@ function TripEnergyPanel({ trips, isLoading, isError, error, onRetry }: SectionS
           ))}
         </div>
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }
 
@@ -449,7 +455,6 @@ function TripEnergyPanel({ trips, isLoading, isError, error, onRetry }: SectionS
 /** A single trip rendered as a bento grid cell — header, meta badges, and a
  *  distance / energy / cost stat footer. */
 function TripCard({ trip }: { trip: Trip }) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -467,19 +472,19 @@ function TripCard({ trip }: { trip: Trip }) {
   const efficiencyUnit = distancePref === 'mi' ? 'Wh/mi' : 'Wh/km';
 
   return (
-    <LayoutCard
-      title={trip.name ?? `${t('trips.row.trip', 'Trip')} #${trip.id}`}
-      size="third"
-      actions={
+    <GlassPanel className="flex h-full flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-500/10 ring-1 ring-cyan-500/20"
         >
           <Route className="h-5 w-5 text-cyan-300" />
         </span>
-      }
-    >
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="min-w-0 flex-1">
+          <Text as="p" size="sm" weight="semibold" color="primary" className="truncate">
+            {trip.name ?? `${t('trips.row.trip', 'Trip')} #${trip.id}`}
+          </Text>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
             <InlineMetric icon={<Calendar />} value={formatDate(trip.start_date)} />
             <InlineMetric
               icon={<Clock />}
@@ -490,6 +495,8 @@ function TripCard({ trip }: { trip: Trip }) {
               )}
             />
           </div>
+        </div>
+      </div>
 
       <div className="flex flex-wrap gap-2">
         <Badge variant="info" size="sm">
@@ -505,16 +512,16 @@ function TripCard({ trip }: { trip: Trip }) {
       <div className="mt-auto grid grid-cols-3 gap-2 border-t border-[var(--border-subtle)] pt-3">
         <div className="min-w-0">
           <MetricLabel>{t('trips.card.distance', 'Distance')}</MetricLabel>
-          <Text as="p" size="sm" weight="semibold" color="primary" className="mt-0.5 break-words tabular-nums [overflow-wrap:anywhere]">
+          <Text as="p" size="sm" weight="semibold" color="primary" className="mt-0.5 truncate tabular-nums">
             {fmtInt(distanceDisplay)} {distancePref}
           </Text>
         </div>
         <div className="min-w-0">
           <MetricLabel>{t('trips.card.energy', 'Energy')}</MetricLabel>
-          <Text as="p" size="sm" weight="semibold" className="mt-0.5 break-words tabular-nums text-amber-300 [overflow-wrap:anywhere]">
+          <Text as="p" size="sm" weight="semibold" className="mt-0.5 truncate tabular-nums text-amber-300">
             {formatEnergy(energyWh)}
           </Text>
-          <Caption className="block break-words [overflow-wrap:anywhere]">
+          <Caption className="block truncate">
             {distanceM > 0
               ? `${fmtInt(efficiencyDisplay)} ${efficiencyUnit}`
               : `0 ${efficiencyUnit}`}
@@ -522,11 +529,11 @@ function TripCard({ trip }: { trip: Trip }) {
         </div>
         <div className="min-w-0">
           <MetricLabel>{t('trips.card.cost', 'Cost')}</MetricLabel>
-          <Text as="p" size="sm" weight="semibold" className="mt-0.5 break-words tabular-nums text-emerald-300 [overflow-wrap:anywhere]">
+          <Text as="p" size="sm" weight="semibold" className="mt-0.5 truncate tabular-nums text-emerald-300">
             {cost > 0 ? formatCurrency(cost) : '—'}
           </Text>
         </div>
       </div>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

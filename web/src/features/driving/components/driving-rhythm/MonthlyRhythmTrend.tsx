@@ -5,12 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { ChartContainer } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import { MonthlyRhythmPlot } from './MonthlyRhythmPlot';
 import type { DrivingRhythmSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function formatMonth(month: string, locale?: string): string {
   const match = /^(\d{4})-(\d{2})$/.exec(month);
@@ -37,7 +36,6 @@ export function MonthlyRhythmTrend({
   summary,
   state,
 }: MonthlyRhythmTrendProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatDistance } = useUnits();
   const drivesName = t('rhythm.monthly.drives', 'Valid drives');
@@ -55,6 +53,7 @@ export function MonthlyRhythmTrend({
         activeSlots: month.activeSlots,
         distance: formatDistance(
           month.measuredDistanceDrives > 0 ? month.distanceM : null,
+          { precision: 1 },
         ),
       })),
     [formatDistance, summary.monthly, unitPrefs.locale],
@@ -99,7 +98,7 @@ export function MonthlyRhythmTrend({
             key: 'predictability',
             label: scoreName,
             format: (value) =>
-              typeof value === 'number' ? fmtNumber(value) : '—',
+              typeof value === 'number' ? fmtNumber(value, 0) : '—',
           },
           {
             key: 'activeDays',

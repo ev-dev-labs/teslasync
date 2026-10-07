@@ -5,11 +5,10 @@ import {
   Badge, GlassPanel, HelpTooltip, MetricLabel, MetricValue, PanelTitle, Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { TargetSummary } from '../../lib/efficiencyTarget';
 import { EfficiencyTargetSectionBody } from './EfficiencyTargetSectionBody';
 import type { EfficiencyTargetSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TargetMethodologyProps {
   summary: TargetSummary;
@@ -21,7 +20,6 @@ interface TargetMethodologyProps {
 export function TargetMethodology(
   { summary, historyLimit, state, className }: TargetMethodologyProps,
 ) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = [
     {

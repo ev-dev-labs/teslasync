@@ -1,13 +1,18 @@
+import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
+import {
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingThresholdGateMatrixProps {
   summary: HvacCyclingSummary;
@@ -41,13 +46,16 @@ export function HvacCyclingThresholdGateMatrix({
   state,
   formatDuration,
 }: HvacCyclingThresholdGateMatrixProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const threshold = summary.thresholds;
 
   return (
     <section data-testid="hvac-cycling-thresholds">
-      <LayoutCard title={t('hvacCycling.thresholds.title', 'Threshold and gate matrix')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('hvacCycling.thresholds.title', 'Threshold and gate matrix')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.thresholds.subtitle',
@@ -59,7 +67,7 @@ export function HvacCyclingThresholdGateMatrix({
             <Gate
               label={t('hvacCycling.thresholds.maxGap', 'Maximum observed gap')}
               value={t('hvacCycling.thresholds.atMost', '≤ {{value}}', {
-                value: formatDuration(threshold.maxGapS),
+                value: formatDuration(threshold.maxGapS, { precision: 1 }),
               })}
               affected={summary.intervals.longGapExclusions}
             />
@@ -68,6 +76,7 @@ export function HvacCyclingThresholdGateMatrix({
               value={t('hvacCycling.thresholds.atMost', '≤ {{value}}', {
                 value: formatDuration(
                   threshold.shortCycleThresholdS,
+                  { precision: 1 },
                 ),
               })}
               affected={summary.shortCompleteOnRunCount}
@@ -104,7 +113,7 @@ export function HvacCyclingThresholdGateMatrix({
             />
           </Grid>
         </HvacCyclingSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

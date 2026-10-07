@@ -1,7 +1,6 @@
 package drives
 
 import (
-	"context"
 	"math"
 	"net/http"
 	"strconv"
@@ -16,15 +15,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-type drivingStatsReader interface {
-	GetStats(context.Context, int64) (drivedb.DrivingStats, error)
-}
-
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
 	db                *database.DB
 	driveRepo         *drivedb.DriveRepo
-	statsRepo         drivingStatsReader
 	posRepo           *positiondb.PositionRepo
 	signalLogReader   *signaldb.SignalLogReader
 	live              signal.LiveStateReader
@@ -38,11 +32,9 @@ type DriveHandler struct {
 // reader used by the live-drive enrichment path; pass nil only in tests that
 // do not exercise the live path.
 func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler {
-	driveRepo := drivedb.NewDriveRepo(db)
 	return &DriveHandler{
 		db:              db,
-		driveRepo:       driveRepo,
-		statsRepo:       driveRepo,
+		driveRepo:       drivedb.NewDriveRepo(db),
 		posRepo:         positiondb.NewPositionRepo(db),
 		signalLogReader: signaldb.NewSignalLogReader(db),
 		live:            live,

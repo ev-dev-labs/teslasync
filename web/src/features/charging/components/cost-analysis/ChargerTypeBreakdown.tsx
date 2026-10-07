@@ -6,10 +6,9 @@ import {
   ChartTooltip, PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   EmbeddedChart,
 } from '@/components/charts';
-
+import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { CostSection } from './CostSection';
 import type { ChargerTypeData } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargerTypeBreakdownProps {
   data: ChargerTypeData[];
@@ -25,7 +24,6 @@ const FALLBACK_COLOR = 'var(--text-muted)';
 export function ChargerTypeBreakdown({
   data, totalCost, isLoading, error, onRetry,
 }: ChargerTypeBreakdownProps) {
-  const { fmtInt, fmtWithUnit, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -123,7 +121,7 @@ export function ChargerTypeBreakdown({
                     {entry.name ?? '—'}
                   </Text>
                   <Caption>
-                    {formatCurrency(cost)} · {fmtInt(entry.sessions)}{' '}
+                    {formatCurrency(cost, 2)} · {fmtInt(entry.sessions)}{' '}
                     {t('costAnalysis.chargerType.sessions', 'sessions')}
                   </Caption>
                 </div>
@@ -137,13 +135,13 @@ export function ChargerTypeBreakdown({
                   />
                 </div>
                 <div className="flex justify-between">
-                  <Text size="2xs" color="muted">{fmtWithUnit(energy, 'kWh')}</Text>
+                  <Text size="2xs" color="muted">{fmtWithUnit(energy, 'kWh', 1)}</Text>
                   <Text size="2xs" color="muted">
                     {energy > 0
-                      ? `${formatCurrency(cost / energy)}/kWh`
+                      ? `${formatCurrency(cost / energy, 3)}/kWh`
                       : '—'}
                   </Text>
-                  <Text size="2xs" color="muted">{fmtNumber(pct)}%</Text>
+                  <Text size="2xs" color="muted">{fmtNumber(pct, 1)}%</Text>
                 </div>
               </div>
             );

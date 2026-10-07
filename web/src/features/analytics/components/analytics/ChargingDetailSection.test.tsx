@@ -169,10 +169,10 @@ function renderSection(query: FleetAnalyticsQuery) {
 }
 
 const PANEL_TITLES = [
-  'Charger brands',
-  'Cost by charger type',
-  'Cost analysis',
-  'Monthly charging trend',
+  'Charger Brands',
+  'Cost by Charger Type',
+  'Cost Analysis',
+  'Monthly Charging Trend',
 ];
 
 describe('ChargingDetailSection — populated', () => {
@@ -215,7 +215,7 @@ describe('ChargingDetailSection — populated', () => {
   it('formats the four cost MetricCards through formatCurrency (2dp, $)', () => {
     renderSection(makeQuery({ data: FULL }));
 
-    expect(screen.getByText('Min cost')).toBeInTheDocument();
+    expect(screen.getByText('Min Cost')).toBeInTheDocument();
     expect(screen.getByText('$1.50')).toBeInTheDocument();
     expect(screen.getByText('$12.40')).toBeInTheDocument();
     expect(screen.getByText('$9.75')).toBeInTheDocument();
@@ -225,7 +225,7 @@ describe('ChargingDetailSection — populated', () => {
   it('mounts the monthly-trend chart body (not the empty placeholder) when trend rows exist', () => {
     renderSection(makeQuery({ data: FULL }));
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Monthly charging trend' }),
+      screen.getByRole('heading', { level: 3, name: 'Monthly Charging Trend' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('No monthly data')).toBeNull();
   });

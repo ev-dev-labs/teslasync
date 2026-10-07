@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -17,13 +18,11 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { OdometerMilestoneResult } from '../../lib/odometerMilestones';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyDistanceChartProps {
   summary: OdometerMilestoneResult;
@@ -36,7 +35,6 @@ export function MonthlyDistanceChart({
   state,
   className,
 }: MonthlyDistanceChartProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { distanceUnit, formatMonth, toDisplayDistance } =
     useOdometerMilestoneDisplay();
@@ -66,8 +64,8 @@ export function MonthlyDistanceChart({
       )}
       data-testid="milestone-monthly"
     >
-      <ChartCard
-        size="standard"
+      <ChartContainer
+        className="h-full"
         title={t(
           'milestones.monthly.title',
           'Monthly distance & drive frequency',
@@ -91,7 +89,7 @@ export function MonthlyDistanceChart({
           {
             key: 'distance',
             label: `${distanceName} (${distanceUnit})`,
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'drives',
@@ -105,7 +103,7 @@ export function MonthlyDistanceChart({
               'Ending odometer ({{unit}})',
               { unit: distanceUnit },
             ),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
         ]}
       >
@@ -142,7 +140,7 @@ export function MonthlyDistanceChart({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value) => fmtNumber(value)}
+                  tickFormatter={(value) => fmtNumber(value, 0)}
                 />
                 <YAxis
                   yAxisId="drives"
@@ -158,7 +156,7 @@ export function MonthlyDistanceChart({
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === distanceName
-                          ? `${fmtNumber(value)} ${distanceUnit}`
+                          ? `${fmtNumber(value, 1)} ${distanceUnit}`
                           : t(
                               'milestones.monthly.driveValue',
                               '{{count}} drives',
@@ -195,7 +193,7 @@ export function MonthlyDistanceChart({
             </ResponsiveContainer>
           )
         }
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

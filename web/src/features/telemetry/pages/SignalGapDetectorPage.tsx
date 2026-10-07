@@ -15,13 +15,12 @@
 import { useTranslation } from 'react-i18next';
 import { Info, RefreshCw } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { Button } from '@/components/ui';
 
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import { SignalCatalogPanel } from '../components/SignalCatalogPanel';
@@ -32,7 +31,7 @@ import { useSignalGapAnalysis } from '../hooks/useSignalGapAnalysis';
 
 export default function SignalGapDetectorPage() {
   const { t } = useTranslation();
-  usePageTitle(t('signalGap.title', 'Signal gaps'));
+  usePageTitle(t('signalGap.title', 'Signal Gaps'));
 
   const { vehicleId } = useSelectedVehicle();
   const vid = vehicleId != null && vehicleId > 0 ? vehicleId : 0;
@@ -40,7 +39,6 @@ export default function SignalGapDetectorPage() {
 
   const analysis = useSignalGapAnalysis(vid);
   const { query, buckets, freshnessPct } = analysis;
-  const sourceState = useDataState(query, { provenance: 'live' });
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -56,10 +54,10 @@ export default function SignalGapDetectorPage() {
   );
 
   return (
-    <PageLayout
-      title={t('signalGap.title', 'Signal gaps')}
+    <PageContainer
+      title={t('signalGap.title', 'Signal Gaps')}
       subtitle={t('signalGap.subtitle', 'Identify signals that have stopped arriving or have gaps')}
-      secondaryActions={actions}
+      actions={actions}
       query={hasVehicle ? query : undefined}
     >
       {!hasVehicle && (
@@ -69,10 +67,7 @@ export default function SignalGapDetectorPage() {
       )}
 
       {/* 1 — KPI band: full-width staleness summary */}
-      <SignalGapKpis buckets={buckets} freshnessPct={freshnessPct} hasVehicle={hasVehicle}
-        unavailable={sourceState.fatalError != null || (query.isLoading && !sourceState.hasData)}
-        loading={hasVehicle && query.isLoading && !sourceState.hasData}
-        retained={sourceState.hasData && (sourceState.isRefreshing || sourceState.status === 'stale' || sourceState.refreshError != null)} />
+      <SignalGapKpis buckets={buckets} freshnessPct={freshnessPct} hasVehicle={hasVehicle} />
 
       {/* 2 — Hero bento: distribution chart + freshness gauge */}
       <FadeIn delay={0.1}>
@@ -80,7 +75,7 @@ export default function SignalGapDetectorPage() {
           aria-label={t('signalGap.healthSection', 'Signal health')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
-          <div className="min-w-0 max-w-full xl:col-span-2">
+          <div className="xl:col-span-2">
             <SignalGapHealthPanel analysis={analysis} hasVehicle={hasVehicle} />
           </div>
           <SignalGapFreshnessPanel analysis={analysis} hasVehicle={hasVehicle} />
@@ -92,9 +87,9 @@ export default function SignalGapDetectorPage() {
         <SignalCatalogPanel
           vehicleId={vid}
           showSummary={false}
-          title={t('signalGap.catalogTitle', 'Signal catalog')}
+          title={t('signalGap.catalogTitle', 'Signal Catalog')}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

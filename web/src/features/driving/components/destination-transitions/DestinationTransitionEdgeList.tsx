@@ -2,13 +2,12 @@ import { ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { DestinationEdge } from '../../lib/destinationTransitions';
 import {
   destinationEvidenceBandLabel,
   destinationPercent,
 } from './labels';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationTransitionEdgeListProps {
   edges: DestinationEdge[];
@@ -21,7 +20,6 @@ export function DestinationTransitionEdgeList({
   locale,
   mode,
 }: DestinationTransitionEdgeListProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -70,7 +68,7 @@ export function DestinationTransitionEdgeList({
                       {
                         bits: fmtNumber(
                           edge.empiricalInformationBits,
-                          undefined,
+                          2,
                           locale,
                         ),
                         count: edge.count,

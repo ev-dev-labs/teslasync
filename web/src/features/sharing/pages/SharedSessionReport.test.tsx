@@ -62,13 +62,6 @@ describe('SharedSessionReport', () => {
     expect(screen.getByText('45.0 kWh')).toBeInTheDocument();
     expect(screen.getByText('20% → 80%')).toBeInTheDocument();
     expect(screen.getByText('250.0 kW')).toBeInTheDocument();
-    const title = screen.getByRole('heading', { level: 1, name: 'Baker Supercharger Stop' });
-    expect(title).toHaveAttribute('tabindex', '-1');
-    expect(title).toHaveAttribute('data-route-focus-target', 'true');
-    expect(title.closest('header')).toHaveAttribute('data-role', 'page-header');
-    expect(title.closest('header')).toHaveClass('border-0', 'rounded-none');
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByText('Baker, CA').closest('[data-action-group="context"]')).not.toBeNull();
   });
 
   it('renders the vehicle badge and cost when present', () => {
@@ -79,7 +72,7 @@ describe('SharedSessionReport', () => {
 
   it('renders the charge curve chart when points exist', () => {
     render(<SharedSessionReport data={sessionData} />);
-    expect(screen.getAllByRole('heading', { name: 'Charge curve' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1);
+    expect(screen.getByText('Charge Curve')).toBeInTheDocument();
   });
 
   it('shows the no-curve fallback when the curve was not shared', () => {
@@ -91,7 +84,7 @@ describe('SharedSessionReport', () => {
     expect(
       screen.getByText('The charge curve was not included in this share.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Charge curve')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge Curve')).not.toBeInTheDocument();
     expect(screen.queryByText('Cost')).not.toBeInTheDocument();
   });
 
@@ -112,50 +105,9 @@ describe('SharedSessionReport', () => {
       />,
     );
     expect(screen.queryByText('Tesla Model 3')).not.toBeInTheDocument();
-    expect(screen.queryByText('Energy added')).not.toBeInTheDocument();
+    expect(screen.queryByText('Energy Added')).not.toBeInTheDocument();
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
     // Duration always renders.
     expect(screen.getByText('Duration')).toBeInTheDocument();
-  });
-
-  it('renders actual shared zero readings and zero cost, then removes fields the owner no longer includes', () => {
-    const zeroData: SharedSessionData = {
-      ...sessionData,
-      session: {
-        ...sessionData.session,
-        energy_added_wh: 0,
-        peak_power_w: 0,
-        start_soc_pct: 0,
-        end_soc_pct: 0,
-        cost: 0,
-        curve: null,
-      },
-    };
-    const snapshot = structuredClone(zeroData);
-    Object.freeze(zeroData.session);
-    const view = render(<SharedSessionReport data={zeroData} />);
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
-    expect(screen.getByText('0% → 0%')).toBeInTheDocument();
-    expect(screen.getByText('USD 0.00')).toBeInTheDocument();
-    expect(screen.queryByText('Efficiency')).not.toBeInTheDocument();
-    expect(screen.getByText('The charge curve was not included in this share.')).toBeInTheDocument();
-
-    view.rerender(<SharedSessionReport data={{
-      ...zeroData,
-      vehicle: null,
-      session: {
-        ...zeroData.session, energy_added_wh: null, peak_power_w: null,
-        start_soc_pct: null, end_soc_pct: null, cost: null, place: '',
-      },
-    }} />);
-    for (const label of ['Energy added', 'Peak power', 'Battery', 'Cost']) {
-      expect(screen.queryByText(label)).not.toBeInTheDocument();
-    }
-    expect(screen.queryByText('Baker, CA')).not.toBeInTheDocument();
-    expect(screen.queryByText('Tesla Model 3')).not.toBeInTheDocument();
-    expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('Baker Supercharger Stop')).toBeInTheDocument();
-    expect(zeroData).toEqual(snapshot);
   });
 });

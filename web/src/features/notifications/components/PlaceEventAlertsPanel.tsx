@@ -17,8 +17,6 @@ export function PlaceEventAlertsPanel() {
     {
       key: 'place',
       header: t('notifications.alertStudio.placeEvents.place', 'Place'),
-      filterValue: place => place.id,
-      filterValueLabel: (_value, place) => place.name,
       render: place => (
         <div>
           <Text variant="body">{place.name}</Text>
@@ -33,9 +31,6 @@ export function PlaceEventAlertsPanel() {
     {
       key: 'entry',
       header: t('notifications.alertStudio.placeEvents.entry', 'On entry'),
-      filterValue: place => place.alert_on_entry ?? null,
-      filterValueLabel: (_value, place) => place.alert_on_entry == null ? '—' : place.alert_on_entry
-        ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
       render: place => (
         <Toggle
           label={t('notifications.alertStudio.placeEvents.entryFor', 'Alert on entry: {{name}}', { name: place.name })}
@@ -49,9 +44,6 @@ export function PlaceEventAlertsPanel() {
     {
       key: 'exit',
       header: t('notifications.alertStudio.placeEvents.exit', 'On exit'),
-      filterValue: place => place.alert_on_exit ?? null,
-      filterValueLabel: (_value, place) => place.alert_on_exit == null ? '—' : place.alert_on_exit
-        ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
       render: place => (
         <Toggle
           label={t('notifications.alertStudio.placeEvents.exitFor', 'Alert on exit: {{name}}', { name: place.name })}
@@ -94,7 +86,6 @@ export function PlaceEventAlertsPanel() {
           caption={t('notifications.alertStudio.placeEvents.title', 'Place arrival and departure alerts')}
           columns={columns}
           data={places}
-          enableValueFilters
           keyExtractor={place => place.id}
           mobileColumns={['place', 'entry', 'exit']}
           pagination

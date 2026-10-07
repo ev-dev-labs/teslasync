@@ -3,12 +3,10 @@ import type {
 } from '@/api/types';
 import { Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { unknownLabel, useT } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ThermalPanel({ ledger }: { ledger: PhysicsLedger }) {
-  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const { formatTemperature } = useUnits();
   const th = ledger.thermal;
@@ -63,7 +61,7 @@ export function ThermalPanel({ ledger }: { ledger: PhysicsLedger }) {
       )}
       <Caption>
         {t('physicsLedger.thermal.heatVsPower', 'Heat vs power correlation')}:{' '}
-        {th.heat_vs_power_r != null ? fmtNumber(th.heat_vs_power_r) : unknownLabel(t)}
+        {th.heat_vs_power_r != null ? fmtNumber(th.heat_vs_power_r, 2) : unknownLabel(t)}
       </Caption>
     </GlassPanel>
   );

@@ -12,13 +12,12 @@ import {
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import { DrivingRhythmSectionBody } from './DrivingRhythmSectionBody';
 import type { DrivingRhythmSectionState } from './types';
 import { useRhythmDayLabel } from './useRhythmDayLabel';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface StrongestSlotsProps {
   summary: DrivingRhythm;
@@ -31,7 +30,6 @@ export function StrongestSlots({
   state,
   className,
 }: StrongestSlotsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const dayLabel = useRhythmDayLabel();
@@ -99,11 +97,12 @@ export function StrongestSlots({
                       'rhythm.slots.evidence',
                       '{{share}}% of valid starts · {{distance}} logged across {{measured}} measured drives',
                       {
-                        share: fmtNumber(slot.share * 100),
+                        share: fmtNumber(slot.share * 100, 1),
                         distance: formatDistance(
                           slot.measuredDistanceDrives > 0
                             ? slot.distanceM
                             : null,
+                          { precision: 1 },
                         ),
                         measured: slot.measuredDistanceDrives,
                       },

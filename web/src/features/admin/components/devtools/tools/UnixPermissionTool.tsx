@@ -56,13 +56,13 @@ export function UnixPermissionTool() {
     <ToolCard
       icon={Lock}
       color="green"
-      title={t('devtools.utils.unixPerm', 'Unix permissions')}
+      title={t('devtools.utils.unixPerm', 'Unix Permissions')}
       description={t('devtools.utils.unixPermDesc', 'Convert an octal permission (e.g. 755) to rwx symbolic notation.')}
     >
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input
-            label={t('devtools.utils.unixPermOctal', 'Octal permission')}
+            label={t('devtools.utils.unixPermOctal', 'Octal Permission')}
             placeholder="755"
             inputMode="numeric"
             value={octal}

@@ -379,22 +379,6 @@
       }
     },
     "admin": {
-      "operationalBrief": {
-        "retained": "Retained evidence",
-        "snapshot": "Source snapshot",
-        "unmeasured": "Not measured",
-        "periodUnknown": "Observation time and complete analysis bounds are not supplied by this source."
-      },
-      "diagnostics": {
-        "brief": {
-          "selectVehicle": "No vehicle selected",
-          "retained": "Retained measurements",
-          "loading": "Loading measurements",
-          "failed": "Read failed",
-          "loaded": "Source loaded",
-          "missing": "No measurements supplied"
-        }
-      },
       "apiKey": {
         "create": {
           "success": "API key created",

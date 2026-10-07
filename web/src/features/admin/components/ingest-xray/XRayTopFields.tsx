@@ -14,9 +14,8 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { CHART_COLORS } from '@/components/charts';
-import { safeNumber } from '@/lib/numberFormat';
+import { fmtInt, safeNumber } from '@/lib/numberFormat';
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface XRayTopFieldsProps {
   rows: IngestXRayFieldStat[];
@@ -34,7 +33,6 @@ export function XRayTopFields({
   onRetry,
   limit = 8,
 }: XRayTopFieldsProps) {
-  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Sort by sample volume desc and take the loudest N. Hardened against a
@@ -54,7 +52,7 @@ export function XRayTopFields({
       1,
     );
     return { top: ranked, max: peak };
-  }, [rows, limit, displayPrecision, displayLocale]);
+  }, [rows, limit]);
 
   return (
     <GlassPanel className="p-4 sm:p-5">

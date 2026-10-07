@@ -345,53 +345,20 @@ describe('useVehicleState', () => {
     expect(s?.state).toBe('online');
     expect(s?.software_version).toBe('2024.44.1');
     expect(s?.is_locked).toBe(false);
-    expect(s?.rated_range).toBeNull();
-    expect(s?.ideal_range).toBe(500);
+    // rated_range is absent → it falls back to ideal_range.
+    expect(s?.rated_range).toBe(500);
   });
 
-  it('preserves unknown measurements and flags when the pair is sparse', async () => {
+  it('defaults is_locked to true and numeric fields to 0 when the pair is sparse', async () => {
     requestMock.mockResolvedValueOnce({ vehicle: { id: 3 }, position: {} });
     const { result } = renderH(() => useVehicleState(3));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     const s = result.current.data?.state;
-    expect(s?.is_locked).toBeNull();
-    expect(s?.speed).toBeNull();
-    expect(s?.software_version).toBeNull();
-    expect(s?.state).toBeNull();
-    for (const field of [
-      'latitude', 'longitude', 'power', 'battery_level', 'rated_range',
-      'ideal_range', 'odometer', 'inside_temp', 'outside_temp', 'is_climate_on',
-      'is_charging', 'charger_power', 'charge_rate', 'time_to_full_charge', 'sentry_mode',
-    ] as const) {
-      expect(s?.[field], field).toBeNull();
-    }
-  });
-
-  it('retains real zero and false readings from a stale partial pair', async () => {
-    const observedAt = new Date(Date.now() - TELEMETRY_STALE_AFTER_MS - 1_000).toISOString();
-    requestMock.mockResolvedValueOnce({
-      vehicle: { id: 3, state: 'asleep', is_locked: false },
-      position: {
-        latitude: 0, longitude: 0, speed: 0, power: 0, battery_level: 0,
-        rated_range: 0, ideal_range: 25_000, odometer: 0,
-        inside_temp: 0, outside_temp: 0, is_climate_on: false,
-      },
-      is_charging: false, sentry_mode: false, charger_power: 0,
-      charge_rate: 0, time_to_full_charge: 0,
-      observed_at: observedAt, freshness: 'stale', live: false,
-    });
-    const { result } = renderH(() => useVehicleState(3));
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data?.freshness).toBe('stale');
-    expect(result.current.data?.verifiedFields).toEqual([]);
-    expect(result.current.data?.state).toMatchObject({
-      state: 'asleep', latitude: 0, longitude: 0, speed: 0, power: 0,
-      battery_level: 0, rated_range: 0, ideal_range: 25_000,
-      inside_temp: 0, outside_temp: 0, is_climate_on: false,
-      is_charging: false, is_locked: false, sentry_mode: false,
-      charger_power: 0, charge_rate: 0, time_to_full_charge: 0,
-    });
-    expect(deriveTrustedVehicleStatus(result.current.data?.state, result.current.data)).toBeNull();
+    // Fail-safe default: an unknown lock state is reported as locked.
+    expect(s?.is_locked).toBe(true);
+    expect(s?.speed).toBe(0);
+    expect(s?.software_version).toBe('');
+    expect(s?.state).toBe('offline');
   });
 
   it('does NOT throw on an empty (JSON null) body — resolves to an empty live-less state', async () => {

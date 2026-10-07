@@ -1,16 +1,15 @@
-import { CalendarRange } from 'lucide-react';
+import { CalendarRange, Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
-import { Grid, LayoutCard } from '@/components/layout';
-import { Badge, Table, Text } from '@/components/ui';
-
+import { Grid } from '@/components/layout';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type { OdometerMilestoneResult, PaceScenario } from '../../lib/odometerMilestones';
 import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SCENARIO_COLUMNS = { default: 1, lg: 3 } as const;
 
@@ -23,7 +22,6 @@ export function PaceForecastScenarios({
   summary,
   state,
 }: PaceForecastScenariosProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateMs, formatDistanceKm } =
     useOdometerMilestoneDisplay();
@@ -49,12 +47,17 @@ export function PaceForecastScenarios({
       )}
       data-testid="milestone-scenarios"
     >
-      <LayoutCard title={t('milestones.scenarios.title', 'Pace & forecast scenarios')}
-        description={t(
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Gauge className="h-4 w-4 text-purple-300" aria-hidden="true" />
+          {t('milestones.scenarios.title', 'Pace & forecast scenarios')}
+        </PanelTitle>
+        <Text variant="caption" className="mb-4 block">
+          {t(
             'milestones.scenarios.subtitle',
             'Each projection divides eligible distance by its actual observed span through this page’s frozen as-of time.',
           )}
-      >
+        </Text>
         <MilestoneSectionBody state={state}>
           {summary.accounting.eligibleRows === 0 ? (
             <EmptyState
@@ -90,8 +93,7 @@ export function PaceForecastScenarios({
                           )}
                     </Badge>
                   </div>
-                  <Table className="mt-4" aria-label={titleOf(scenario)}>
-                    <tbody>
+                  <dl className="mt-4 space-y-2">
                     {[
                       {
                         key: 'samples',
@@ -119,6 +121,7 @@ export function PaceForecastScenarios({
                                 {
                                   days: fmtNumber(
                                     scenario.observedDays,
+                                    1,
                                   ),
                                 },
                               )
@@ -130,7 +133,7 @@ export function PaceForecastScenarios({
                           'milestones.scenarios.distance',
                           'Eligible distance',
                         ),
-                        value: formatDistanceKm(scenario.distanceKm),
+                        value: formatDistanceKm(scenario.distanceKm, 1),
                       },
                       {
                         key: 'pace',
@@ -142,6 +145,7 @@ export function PaceForecastScenarios({
                           scenario.paceKmPerDay != null
                             ? formatDistanceKm(
                                 scenario.paceKmPerDay,
+                                1,
                               )
                             : '—',
                       },
@@ -164,14 +168,15 @@ export function PaceForecastScenarios({
                               : '—',
                       },
                     ].map((item) => (
-                      <tr
+                      <div
                         key={item.key}
+                        className="flex items-baseline justify-between gap-3"
                       >
-                        <th scope="row"><Text variant="caption">
+                        <Text as="dt" variant="caption">
                           {item.label}
-                        </Text></th>
-                        <td className="text-right">
+                        </Text>
                         <Text
+                          as="dd"
                           size="xs"
                           weight="medium"
                           color="secondary"
@@ -179,11 +184,9 @@ export function PaceForecastScenarios({
                         >
                           {item.value}
                         </Text>
-                        </td>
-                      </tr>
+                      </div>
                     ))}
-                    </tbody>
-                  </Table>
+                  </dl>
                 </article>
               ))}
             </Grid>
@@ -195,7 +198,7 @@ export function PaceForecastScenarios({
             )}
           </Text>
         </MilestoneSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

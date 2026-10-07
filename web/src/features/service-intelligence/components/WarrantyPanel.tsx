@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck } from 'lucide-react';
-import { Badge, Text, Caption } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle, Badge, Text, Caption } from '@/components/ui';
 import type { WarrantyOutlook } from '@/api/hooks/useServiceIntelligence';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { PanelState } from './PanelState';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface WarrantyPanelProps {
   selected: boolean;
@@ -38,12 +36,14 @@ function statusLabel(status: string, t: (k: string, d: string) => string): strin
 }
 
 export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: WarrantyPanelProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
-    <LayoutCard title={t('serviceIntelligence.warranty.title', 'Warranty countdown')}
-      actions={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+    <GlassPanel className="p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('serviceIntelligence.warranty.title', 'Warranty countdown')}
+      </PanelTitle>
       <PanelState
         selected={selected}
         loading={loading}
@@ -76,7 +76,7 @@ export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: Wa
                     <>
                       {' · '}
                       {t('serviceIntelligence.warranty.kmLeft', '{{km}} km left', {
-                        km: fmtNumber(Math.max(c.km_remaining, 0)),
+                        km: fmtNumber(Math.max(c.km_remaining, 0), 0),
                       })}
                     </>
                   )}
@@ -92,6 +92,6 @@ export function WarrantyPanel({ selected, loading, error, outlook, onRetry }: Wa
           )}
         </div>
       </PanelState>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

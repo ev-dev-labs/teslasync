@@ -334,7 +334,7 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		recs = append(recs, optimizerRec{
 			Type:     "schedule",
 			Priority: prio,
-			Title:    "Compare charging costs by start hour",
+			Title:    "Shift home charging to off-peak hours",
 			Detail: fmt.Sprintf(
 				"%.0f%% of sessions start during peak rates. Scheduling after 11 PM could save ~$%.0f/month.",
 				ca.SessionsDuringPeakPct, ca.PotentialMonthlySavings,
@@ -393,8 +393,8 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		recs = append(recs, optimizerRec{
 			Type:     "cost",
 			Priority: "medium",
-			Title:    "Compare costs at your charging locations",
-			Detail:   fmt.Sprintf("Your most-used recorded location accounts for %.0f%% of sessions. Location clusters do not confirm home charging; compare recorded costs before changing locations.", sched.HomeChargingPct),
+			Title:    "Increase home charging ratio",
+			Detail:   fmt.Sprintf("Only %.0f%% of sessions are at home. Home charging is typically 50-70%% cheaper than public charging.", sched.HomeChargingPct),
 		})
 	}
 

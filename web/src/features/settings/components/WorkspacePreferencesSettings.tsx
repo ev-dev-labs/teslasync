@@ -36,7 +36,7 @@ const LANDING_PAGE_LABELS: Record<
   },
   '/action-center': {
     key: 'productPreferences.landing.options.actionCenter',
-    fallback: 'Action center',
+    fallback: 'Action Center',
   },
   '/vehicles': {
     key: 'productPreferences.landing.options.vehicles',
@@ -206,7 +206,6 @@ export function WorkspacePreferencesSettings() {
         <Button
           type="button"
           variant="ghost"
-          wrapLabel
           size="sm"
           onClick={handleReset}
           icon={<RotateCcw className="h-4 w-4" aria-hidden />}

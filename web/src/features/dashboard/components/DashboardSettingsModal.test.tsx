@@ -91,10 +91,10 @@ describe('DashboardSettingsModal', () => {
 
   it('renders a labelled dialog with every section and the current name when open', () => {
     renderModal();
-    expect(screen.getByRole('dialog', { name: 'Dashboard settings' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Dashboard Settings' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Identity' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Vehicle filter' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Auto-refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle Filter' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Auto-Refresh' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Display' })).toBeInTheDocument();
     expect((screen.getByRole('textbox') as HTMLInputElement).value).toBe('My Dashboard');
   });
@@ -121,18 +121,18 @@ describe('DashboardSettingsModal', () => {
 
   it('exposes a labelled vehicle-filter select listing all vehicles plus an all option', () => {
     renderModal();
-    const select = screen.getByRole('combobox', { name: 'Vehicle filter' });
+    const select = screen.getByRole('combobox', { name: 'Vehicle Filter' });
     const labels = within(select)
       .getAllByRole('option')
       .map((o) => o.textContent);
-    expect(labels).toContain('All vehicles');
+    expect(labels).toContain('All Vehicles');
     expect(labels).toContain('Car One');
     expect(labels).toContain('Car Two');
   });
 
   it('exposes a labelled auto-refresh select defaulting to the per-widget option', () => {
     renderModal();
-    const refresh = screen.getByRole('combobox', { name: 'Auto-refresh' }) as HTMLSelectElement;
+    const refresh = screen.getByRole('combobox', { name: 'Auto-Refresh' }) as HTMLSelectElement;
     expect(refresh.value).toBe('0');
     const labels = within(refresh)
       .getAllByRole('option')
@@ -144,7 +144,7 @@ describe('DashboardSettingsModal', () => {
     const { onRename, onUpdate, onChangeIcon, onClose } = renderModal();
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Renamed' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Auto-refresh' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Auto-Refresh' }), {
       target: { value: '30' },
     });
     fireEvent.click(screen.getByRole('switch', { name: 'Show widget borders' }));
@@ -186,7 +186,7 @@ describe('DashboardSettingsModal', () => {
 
   it('applies the selected vehicle filter on save', () => {
     const { onUpdate } = renderModal();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle filter' }), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle Filter' }), {
       target: { value: '2' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -220,7 +220,7 @@ describe('DashboardSettingsModal', () => {
     renderModal({ dashboard: makeDashboard({ settings: legacyPartial }) });
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    const refresh = screen.getByRole('combobox', { name: 'Auto-refresh' }) as HTMLSelectElement;
+    const refresh = screen.getByRole('combobox', { name: 'Auto-Refresh' }) as HTMLSelectElement;
     expect(refresh.value).toBe('0');
     expect(screen.getByRole('switch', { name: 'Show widget borders' })).toHaveAttribute(
       'aria-checked',

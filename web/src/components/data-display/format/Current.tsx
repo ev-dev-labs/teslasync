@@ -1,4 +1,4 @@
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface CurrentProps {
   amps?: number | null;
@@ -8,12 +8,11 @@ interface CurrentProps {
 
 /** Current (amperage) renderer with locale-aware number formatting. */
 export function Current({ amps, precision, className }: CurrentProps) {
-  const { fmtNumber } = useNumberFormatting();
   if (amps == null || !Number.isFinite(amps)) {
     return <span className={className}>—</span>;
   }
   return (
-    <span className={className} title={`${fmtNumber(amps, precision)} A`}>
+    <span className={className} title={`${amps.toFixed(3)} A`}>
       {fmtNumber(amps, precision)} A
     </span>
   );

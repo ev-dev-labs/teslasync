@@ -3,15 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { FileText } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { deriveDataState } from '@/api/dataState';
 import { useVehicles, useVehicleSpecs, useVehicleOptions, useVehicleConfigLatest } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
-import { WidgetDetailCard, WidgetStatGrid, type DetailEntry } from './shared';
+import { WidgetDetailCard, type DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 
 export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { data: vehicles } = useVehicles();
   const numericId = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const stringId = numericId > 0 ? String(numericId) : undefined;
 
@@ -48,11 +47,11 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     refetch: refetchConfig,
   } = useVehicleConfigLatest(numericId, 60_000);
 
-  const isLoading = (vehiclesLoading && !numericId) || specsLoading || optionsLoading || configLoading;
+  const isLoading = specsLoading || optionsLoading || configLoading;
   const isFetching = specsFetching || optionsFetching || configFetching;
   const isStale = specsStale || optionsStale || configStale;
   const isError = specsError || optionsError || configError;
-  const queryError = specsErrorObj ?? optionsErrorObj ?? configErrorObj ?? (!numericId ? vehiclesError : null) ?? null;
+  const queryError = specsErrorObj ?? optionsErrorObj ?? configErrorObj ?? null;
   const updatedAt = Math.max(specsUpdatedAt ?? 0, optionsUpdatedAt ?? 0, configUpdatedAt ?? 0);
 
   const specs = specsEnvelope?.data ?? null;
@@ -80,7 +79,7 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     // Paint color
     const paint = asString(specs?.exterior_color) ?? asString(configData?.exterior_color);
     items.push({
-      label: t('widget.specs.paint', 'Paint color'),
+      label: t('widget.specs.paint', 'Paint Color'),
       value: paint ?? '—',
     });
 
@@ -101,14 +100,14 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     // Aux battery from specs (not on config snapshot type)
     const auxBattery = asString(specs?.aux_battery_type);
     items.push({
-      label: t('widget.specs.auxBattery', 'Aux battery'),
+      label: t('widget.specs.auxBattery', 'Aux Battery'),
       value: auxBattery ?? '—',
     });
 
     // Car version from config
     const carVersion = asString(configData?.version) ?? asString(specs?.car_version);
     items.push({
-      label: t('widget.specs.carVersion', 'Car version'),
+      label: t('widget.specs.carVersion', 'Car Version'),
       value: carVersion ?? '—',
       mono: true,
     });
@@ -137,21 +136,12 @@ export default function VehicleSpecsWidget({ vehicleId, size }: WidgetProps) {
     refetchOptions();
     refetchConfig();
   }, [refetchSpecs, refetchOptions, refetchConfig]);
-  const dataState = deriveDataState({
-    data: hasAnyData ? { specs, options, configData } : isLoading || queryError || isError ? undefined : null,
-    error: queryError,
-    isError,
-    isFetching,
-    dataUpdatedAt: updatedAt,
-    refetch: handleRefresh,
-  });
 
   return (
     <WidgetShell
-      title={t('widget.vehicleSpecs', 'Vehicle specs')}
+      title={isCompact ? undefined : t('widget.vehicleSpecs', 'Vehicle Specs')}
       icon={isCompact ? undefined : <FileText className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      dataState={dataState}
       error={queryError && !hasAnyData ? String(queryError) : null}
       updatedAt={updatedAt}
       isFetching={isFetching}
@@ -196,10 +186,15 @@ function CompactView({
   const trim = asString(specs?.trim_badging) ?? asString(specs?.trim) ?? asString(configData?.trim) ?? '—';
 
   return (
-    <WidgetStatGrid compact stats={[
-      { label: t('widget.specs.model', 'Model'), value: model },
-      { label: t('widget.specs.trim', 'Trim'), value: trim },
-    ]} />
+    <div className="h-full flex flex-col items-center justify-center gap-1.5 px-2">
+      <FileText className="h-5 w-5 text-neon-cyan" />
+      <span className="text-sm font-bold text-[var(--text-primary)] truncate max-w-full text-center">
+        {model}
+      </span>
+      <span className="text-xs text-[var(--text-secondary)] truncate max-w-full text-center">
+        {t('widget.specs.trim', 'Trim')}: {trim}
+      </span>
+    </div>
   );
 }
 

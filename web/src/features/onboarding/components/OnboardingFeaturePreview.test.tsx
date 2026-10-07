@@ -18,22 +18,22 @@ vi.mock('react-i18next', () => ({
 const FEATURES = [
   {
     key: 'onboarding.tracking',
-    title: 'Real-time tracking',
+    title: 'Real-time Tracking',
     desc: 'Follow location, speed, and state live on the map.',
   },
   {
     key: 'onboarding.drives',
-    title: 'Drive history',
+    title: 'Drive History',
     desc: 'Every trip logged with route, efficiency, and stats.',
   },
   {
     key: 'onboarding.charging',
-    title: 'Charge analytics',
+    title: 'Charge Analytics',
     desc: 'Track sessions, costs, and battery health over time.',
   },
   {
     key: 'onboarding.control',
-    title: 'Vehicle control',
+    title: 'Vehicle Control',
     desc: 'Climate, charging, and locks — all from one place.',
   },
 ] as const;
@@ -61,10 +61,10 @@ describe('OnboardingFeaturePreview', () => {
     const headings = screen.getAllByRole('heading', { level: 3 });
     expect(headings).toHaveLength(4);
     expect(headings.map((h) => h.textContent)).toEqual([
-      'Real-time tracking',
-      'Drive history',
-      'Charge analytics',
-      'Vehicle control',
+      'Real-time Tracking',
+      'Drive History',
+      'Charge Analytics',
+      'Vehicle Control',
     ]);
   });
 

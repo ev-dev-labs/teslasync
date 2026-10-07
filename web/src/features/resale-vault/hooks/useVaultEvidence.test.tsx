@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useVaultEvidence } from './useVaultEvidence';
@@ -72,32 +72,5 @@ describe('useVaultEvidence', () => {
       { wrapper: makeWrapper() },
     );
     expect(result.current.evidence.vehicle_identity).toBeNull();
-  });
-
-  it('keeps normalized evidence and identifies only the affected retained source after refresh failure', async () => {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const wrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={client}>{children}</QueryClientProvider>
-    );
-    const { result } = renderHook(
-      () => useVaultEvidence('1', { vinDisclosure: 'excluded', exactTimestamps: false }),
-      { wrapper },
-    );
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.evidence.battery?.capacity_wh).toBeCloseTo(74000);
-
-    requestMock.mockImplementation((path: string) =>
-      path.includes('/battery-passport')
-        ? Promise.reject(new Error('battery refresh failed'))
-        : Promise.resolve(routeResponse(path)),
-    );
-    await act(async () => { await client.invalidateQueries(); });
-    await waitFor(() => expect(result.current.sources.find((source) => source.id === 'battery')?.state.status).toBe('stale'));
-
-    expect(result.current.evidence.battery?.capacity_wh).toBeCloseTo(74000);
-    expect(result.current.evidence.vehicle_identity?.vin_full).toBeNull();
-    expect(result.current.sources.find((source) => source.id === 'vehicle')?.state.status).toBe('ok');
-    expect(result.current.hasPartialErrors).toBe(true);
-    expect(result.current.sources).toHaveLength(11);
   });
 });

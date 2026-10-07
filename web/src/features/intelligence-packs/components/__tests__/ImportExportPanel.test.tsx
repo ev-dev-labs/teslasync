@@ -51,8 +51,8 @@ describe('ImportExportPanel', () => {
     expect(screen.getByRole('button', { name: /^Export$/i })).toBeInTheDocument();
   });
 
-  it('shows an empty-export message with nothing installed', async () => {
+  it('shows an empty-export message with nothing installed', () => {
     renderWithProviders(<ImportExportPanel />);
-    expect(await screen.findByText(/No installed packs to export yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No installed packs to export yet/i)).toBeInTheDocument();
   });
 });

@@ -53,7 +53,7 @@ function typePattern(value: string) {
 }
 
 function typeTestString(value: string) {
-  fireEvent.change(screen.getByLabelText('Test string'), { target: { value } })
+  fireEvent.change(screen.getByLabelText('Test String'), { target: { value } })
 }
 
 function selectFlags(value: string) {
@@ -73,13 +73,13 @@ describe('RegexTesterTool', () => {
   it('renders the tool chrome and three labelled, accessible controls', () => {
     render(<RegexTesterTool />)
 
-    expect(screen.getByText('Regex tester')).toBeInTheDocument()
-    expect(screen.getByText('Regex tester desc')).toBeInTheDocument()
+    expect(screen.getByText('Regex Tester')).toBeInTheDocument()
+    expect(screen.getByText('Regex Tester Desc')).toBeInTheDocument()
 
     // Every control is wired to a real <label>, so it is reachable by name.
     expect(screen.getByLabelText('Pattern')).toBeInTheDocument()
     expect(screen.getByLabelText('Flags')).toBeInTheDocument()
-    expect(screen.getByLabelText('Test string')).toBeInTheDocument()
+    expect(screen.getByLabelText('Test String')).toBeInTheDocument()
 
     // The flags select defaults to global.
     expect(screen.getByLabelText('Flags')).toHaveValue('g')
@@ -115,8 +115,8 @@ describe('RegexTesterTool', () => {
     // Matched substrings and their positions.
     expect(screen.getByText('12')).toBeInTheDocument()
     expect(screen.getByText('345')).toBeInTheDocument()
-    expect(screen.getByText('At index 1')).toBeInTheDocument()
-    expect(screen.getByText('At index 4')).toBeInTheDocument()
+    expect(screen.getByText('At Index 1')).toBeInTheDocument()
+    expect(screen.getByText('At Index 4')).toBeInTheDocument()
     // Rows are badge-numbered 1..n.
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
@@ -131,14 +131,14 @@ describe('RegexTesterTool', () => {
 
     // Default 'g' is case-sensitive: only the lowercase 'a' at index 1 matches.
     expect(countBadge()).toHaveTextContent('1 Matches')
-    expect(screen.getByText('At index 1')).toBeInTheDocument()
-    expect(screen.queryByText('At index 0')).toBeNull()
+    expect(screen.getByText('At Index 1')).toBeInTheDocument()
+    expect(screen.queryByText('At Index 0')).toBeNull()
 
     // 'gi' folds case and now matches all three characters.
     selectFlags('gi')
     expect(countBadge()).toHaveTextContent('3 Matches')
-    expect(screen.getByText('At index 0')).toBeInTheDocument()
-    expect(screen.getByText('At index 2')).toBeInTheDocument()
+    expect(screen.getByText('At Index 0')).toBeInTheDocument()
+    expect(screen.getByText('At Index 2')).toBeInTheDocument()
   })
 
   it('returns only the first match when the global flag is absent', () => {
@@ -149,7 +149,7 @@ describe('RegexTesterTool', () => {
     typeTestString('banana')
 
     expect(countBadge()).toHaveTextContent('1 Matches')
-    expect(screen.getByText('At index 1')).toBeInTheDocument()
+    expect(screen.getByText('At Index 1')).toBeInTheDocument()
     // Non-global must NOT surface the later 'a' occurrences.
     expect(screen.queryByText('At Index 3')).toBeNull()
     expect(screen.queryByText('At Index 5')).toBeNull()

@@ -20,13 +20,10 @@ import {
   BOOL_FIELD_KEYS,
   SIGNAL_FIELD_OPTIONS,
   buildSignalFieldOptions,
-  unitKindForSignal,
-  unitKindForSignalDescriptor,
   type SignalField,
   type SignalFieldType,
   type SignalFieldOption,
 } from './signals';
-import { inputPreferences } from '@/test/inputPreferences';
 
 /** i18n stub echoing the developer fallback (mirrors charging-list/helpers.test.ts). */
 const echoT = ((_key: string, fallback?: string) => fallback ?? _key) as unknown as TFunction;
@@ -38,7 +35,7 @@ const EXPECTED_FIELDS = [
   { key: 'battery_level', label: 'Battery Level', labelKey: 'automations.builder.signals.batteryLevel', type: 'numeric', unit: '%' },
   { key: 'inside_temp', label: 'Inside Temperature', labelKey: 'automations.builder.signals.insideTemp', type: 'numeric', unit: '°C' },
   { key: 'outside_temp', label: 'Outside Temperature', labelKey: 'automations.builder.signals.outsideTemp', type: 'numeric', unit: '°C' },
-  { key: 'speed', label: 'Speed', labelKey: 'automations.builder.signals.speed', type: 'numeric', unit: 'm/s' },
+  { key: 'speed', label: 'Speed', labelKey: 'automations.builder.signals.speed', type: 'numeric', unit: 'mph' },
   { key: 'is_locked', label: 'Is Locked', labelKey: 'automations.builder.signals.isLocked', type: 'boolean' },
   { key: 'is_charging', label: 'Is Charging', labelKey: 'automations.builder.signals.isCharging', type: 'boolean' },
   { key: 'is_climate_on', label: 'Climate On', labelKey: 'automations.builder.signals.isClimateOn', type: 'boolean' },
@@ -184,21 +181,6 @@ describe('SIGNAL_FIELD_OPTIONS', () => {
 // ── buildSignalFieldOptions (locale-aware) ────────────────────────────────────
 
 describe('buildSignalFieldOptions', () => {
-  it('uses preferred units in translated labels without changing canonical signal keys', () => {
-    const imperial = inputPreferences({ unit_of_length: 'mi', unit_of_temp: 'F' });
-    const options = buildSignalFieldOptions(echoT, imperial);
-    expect(options.find(option => option.value === 'speed')?.label).toBe('Speed (mph)');
-    expect(options.find(option => option.value === 'inside_temp')?.label).toBe('Inside Temperature (°F)');
-    expect(options.find(option => option.value === 'battery_level')?.label).toBe('Battery Level (%)');
-    expect(options.find(option => option.value === 'state')?.label).toBe('Vehicle State');
-    expect(buildSignalFieldOptions(echoT, inputPreferences()).find(option => option.value === 'speed')?.label).toBe('Speed (km/h)');
-    expect(SIGNAL_FIELDS.find(field => field.key === 'speed')?.unit).toBe('m/s');
-    expect(unitKindForSignal('speed')).toBe('speed');
-    expect(unitKindForSignal('outside_temp')).toBe('temperature');
-    expect(unitKindForSignal('unknown')).toBe('number');
-    expect(unitKindForSignalDescriptor('pressure')).toBe('pressure');
-    expect(unitKindForSignalDescriptor(undefined)).toBe('number');
-  });
   it('falls back to the English label when the translator echoes the fallback', () => {
     expect(buildSignalFieldOptions(echoT)).toEqual(SIGNAL_FIELD_OPTIONS);
   });

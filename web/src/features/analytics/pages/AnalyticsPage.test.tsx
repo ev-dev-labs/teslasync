@@ -100,10 +100,6 @@ vi.mock('../components/analytics', () => {
     ),
   };
 });
-vi.mock('../components/operationalbrief-a-m/FleetOverviewBrief', async () => {
-  const { HeroGauges } = await import('../components/analytics');
-  return { FleetOverviewBrief: HeroGauges };
-});
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it. Guarded
 // polyfill keeps the render deterministic.
@@ -183,7 +179,7 @@ describe('AnalyticsPage', () => {
     renderPage();
 
     // Page chrome from PageContainer.
-    expect(screen.getByRole('heading', { level: 1, name: 'Fleet analytics' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Fleet Analytics' })).toBeInTheDocument();
     expect(
       screen.getByText('Comprehensive fleet performance insights'),
     ).toBeInTheDocument();
@@ -200,7 +196,7 @@ describe('AnalyticsPage', () => {
     expect(screen.queryByTestId('tab-battery')).not.toBeInTheDocument();
 
     // usePageTitle side-effect.
-    expect(document.title).toContain('Fleet analytics');
+    expect(document.title).toContain('Fleet Analytics');
   });
 
   it('threads the pending query state to the hero band and the active tab', () => {

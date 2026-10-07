@@ -132,7 +132,7 @@ describe('FeatureConfigTable — rendering', () => {
     renderTable();
 
     // Panel heading (i18n default).
-    expect(screen.getByRole('heading', { name: 'Feature flags' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Feature Flags' })).toBeInTheDocument();
     // "Showing N of M" caption reflects the full, unfiltered set.
     expect(screen.getByText('Showing 4 of 4')).toBeInTheDocument();
 
@@ -256,7 +256,7 @@ describe('FeatureConfigTable — loading / error / empty / null-safety', () => {
     renderTable({ entries: [], isLoading: true });
 
     // Heading stays mounted; the body is the table skeleton placeholder.
-    expect(screen.getByRole('heading', { name: 'Feature flags' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Feature Flags' })).toBeInTheDocument();
     expect(screen.getByTestId('table-skeleton')).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
   });

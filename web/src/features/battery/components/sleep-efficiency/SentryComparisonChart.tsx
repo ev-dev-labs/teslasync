@@ -18,10 +18,9 @@ import {
   type ChartDataRow,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SentryDatum extends ChartDataRow {
   mode: string;
@@ -35,7 +34,6 @@ export function SentryComparisonChart({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const data = useMemo<SentryDatum[]>(
     () =>
@@ -89,7 +87,7 @@ export function SentryComparisonChart({
         format: (value) => (value == null ? '—' : fmtNumber(value)),
       },
     ],
-    [t, fmtInt, fmtNumber],
+    [t],
   );
 
   return (

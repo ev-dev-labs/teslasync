@@ -142,11 +142,11 @@ describe('CostHeatmap — tooltips', () => {
 
     // Mon 09:00: 4 sessions @ $0.300/kWh (formatCurrency → $ + 3dp).
     expect(cells[cellIndex(1, 9)].getAttribute('title')).toBe(
-      'Mon 9:00 — 4 sessions, $0.30/kWh',
+      'Mon 9:00 — 4 sessions, $0.300/kWh',
     );
     // Wed 14:00: the quarter-cost slot.
     expect(cells[cellIndex(3, 14)].getAttribute('title')).toBe(
-      'Wed 14:00 — 1 sessions, $0.15/kWh',
+      'Wed 14:00 — 1 sessions, $0.150/kWh',
     );
   });
 
@@ -253,7 +253,7 @@ describe('CostHeatmap — dirty-data hardening', () => {
 
     // Valid sessions but NaN cost → cost 0 → "$0.000", intensity 0, no NaN colour.
     const costCell = heatCells(container)[cellIndex(2, 10)];
-    expect(costCell.getAttribute('title')).toBe('Tue 10:00 — 3 sessions, $0.00/kWh');
+    expect(costCell.getAttribute('title')).toBe('Tue 10:00 — 3 sessions, $0.000/kWh');
     expect(norm(costCell.style.backgroundColor)).toBe(
       norm(heatFill(0, Math.min(0.9, 0.15 + 3 * 0.12))),
     );

@@ -185,15 +185,6 @@ describe('VehicleHeader — VIN', () => {
 })
 
 describe('VehicleHeader — back link a11y', () => {
-  it('fits shared header slots without a second title card', () => {
-    const { container } = renderHeader()
-    expect(container.firstElementChild).toHaveClass('min-w-0')
-    expect(container.firstElementChild).not.toHaveClass('p-6')
-    expect(screen.queryByRole('heading')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Back' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Wake up' })).toBeInTheDocument()
-  })
-
   it('exposes a labelled back link to the vehicles list', () => {
     renderHeader()
     const link = screen.getByRole('link', { name: 'Back' })
@@ -212,22 +203,22 @@ describe('VehicleHeader — back link a11y', () => {
 describe('VehicleHeader — wake button', () => {
   it('renders the wake control and fires onWake once when clicked', () => {
     const { onWake } = renderHeader({ waking: false })
-    const btn = screen.getByRole('button', { name: 'Wake up' })
+    const btn = screen.getByRole('button', { name: 'Wake Up' })
     expect(btn).not.toBeDisabled()
     fireEvent.click(btn)
     expect(onWake).toHaveBeenCalledTimes(1)
-    expect(tSpy).toHaveBeenCalledWith('common.wakeUp', 'Wake up')
+    expect(tSpy).toHaveBeenCalledWith('common.wakeUp', 'Wake Up')
   })
 
   it('hides the decorative power icon from assistive tech', () => {
     renderHeader({ waking: false })
-    const icon = screen.getByRole('button', { name: 'Wake up' }).querySelector('svg')
+    const icon = screen.getByRole('button', { name: 'Wake Up' }).querySelector('svg')
     expect(icon).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('disables the button and marks it busy while waking', () => {
     renderHeader({ waking: true })
-    const btn = screen.getByRole('button', { name: 'Wake up' })
+    const btn = screen.getByRole('button', { name: 'Wake Up' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
   })

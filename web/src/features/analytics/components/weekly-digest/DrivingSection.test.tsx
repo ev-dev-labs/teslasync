@@ -201,10 +201,10 @@ describe('DrivingSection — structure & always-on regions', () => {
   it('always renders the chart caption and all four mini-stat labels, even with no data', () => {
     renderSection(makeMetrics(), { dailyDistanceData: [] });
 
-    expect(screen.getByText('Daily distance (km)')).toBeInTheDocument();
-    expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Total driving time')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency change')).toBeInTheDocument();
+    expect(screen.getByText('Daily Distance (km)')).toBeInTheDocument();
+    expect(screen.getByText('Avg Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Total Driving Time')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency Change')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
   });
 });
@@ -230,17 +230,17 @@ describe('DrivingSection — populated', () => {
     ).toBeNull();
 
     // MiniStats: efficiency, h/m split, pctChange (sign preserved), fmtInt count.
-    expect(screen.getByText('152.40 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('2.50 h')).toBeInTheDocument();
-    expect(screen.getByText('-20.00%')).toBeInTheDocument();
+    expect(screen.getByText('152.4 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('2.5 h')).toBeInTheDocument();
+    expect(screen.getByText('-20.0%')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
 
     // Top-drive card: badge, formatted date, and each unit-suffixed metric.
-    expect(screen.getByText('Top drive')).toBeInTheDocument();
+    expect(screen.getByText('Top Drive')).toBeInTheDocument();
     expect(screen.getByText(formatDate('2026-04-04T12:00:00Z'))).toBeInTheDocument();
-    expect(screen.getByText('120.60 km')).toBeInTheDocument();
-    expect(screen.getByText('1.45 h')).toBeInTheDocument();
-    expect(screen.getByText('158.20 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('120.6 km')).toBeInTheDocument();
+    expect(screen.getByText('1.5 h')).toBeInTheDocument();
+    expect(screen.getByText('158.2 Wh/km')).toBeInTheDocument();
   });
 
   it('shows a green TrendingDown glyph when efficiency improved (lower Wh/km than last week)', () => {
@@ -250,7 +250,7 @@ describe('DrivingSection — populated', () => {
     );
 
     // pctChange((150−200)/200) = −25 → "-25.0%".
-    expect(screen.getByText('-25.00%')).toBeInTheDocument();
+    expect(screen.getByText('-25.0%')).toBeInTheDocument();
     // Improved → emerald down-trend glyph, never the rose up-trend one.
     expect(container.querySelector('.text-emerald-300')).not.toBeNull();
     expect(container.querySelector('.text-rose-300')).toBeNull();
@@ -262,7 +262,7 @@ describe('DrivingSection — populated', () => {
     );
 
     // pctChange((220−200)/200) = +10 → "10.0%".
-    expect(screen.getByText('10.00%')).toBeInTheDocument();
+    expect(screen.getByText('10.0%')).toBeInTheDocument();
     expect(container.querySelector('.text-rose-300')).not.toBeNull();
     expect(container.querySelector('.text-emerald-300')).toBeNull();
   });
@@ -270,7 +270,7 @@ describe('DrivingSection — populated', () => {
   it('renders an em-dash for efficiency change when there is no prior-week baseline', () => {
     renderSection(makeMetrics({ avgEfficiencyWhPerM: 0.175, prevAvgEfficiencyWhPerM: 0 }));
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0.00%')).toBeNull();
+    expect(screen.queryByText('0.0%')).toBeNull();
   });
 
   it('groups a large drive count through fmtInt (locale thousands separator)', () => {
@@ -335,8 +335,8 @@ describe('DrivingSection — loading', () => {
 
     // Only the chart area is gated — the title + stat shells remain visible.
     expect(title()).toBeInTheDocument();
-    expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
-    expect(screen.getByText('152.40 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('Avg Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('152.4 Wh/km')).toBeInTheDocument();
   });
 
   it('gives loading precedence over an error (skeleton wins, no QueryError)', () => {
@@ -378,8 +378,8 @@ describe('DrivingSection — error + retry', () => {
 
     expect(title()).toBeInTheDocument();
     // Never a blank panel: the stat shells still render beneath the error.
-    expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
-    expect(screen.getByText('152.40 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('Avg Efficiency')).toBeInTheDocument();
+    expect(screen.getByText('152.4 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -388,7 +388,7 @@ describe('DrivingSection — top-drive card', () => {
     renderSection(makeMetrics({ topDrive: undefined }));
 
     expect(screen.getByText('No top drive is available for this week yet.')).toBeInTheDocument();
-    expect(screen.queryByText('Top drive')).toBeNull();
+    expect(screen.queryByText('Top Drive')).toBeNull();
   });
 
   it('renders each top-drive field with its unit label when a drive is present', () => {
@@ -402,12 +402,12 @@ describe('DrivingSection — top-drive card', () => {
       }),
     );
 
-    expect(screen.getByText('Top drive')).toBeInTheDocument();
+    expect(screen.getByText('Top Drive')).toBeInTheDocument();
     expect(screen.getByText('Date')).toBeInTheDocument();
     expect(screen.getByText('Duration')).toBeInTheDocument();
-    expect(screen.getByText('88.40 km')).toBeInTheDocument();
-    expect(screen.getByText('1.02 h')).toBeInTheDocument();
-    expect(screen.getByText('141.70 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('88.4 km')).toBeInTheDocument();
+    expect(screen.getByText('1.0 h')).toBeInTheDocument();
+    expect(screen.getByText('141.7 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -422,8 +422,8 @@ describe('DrivingSection — null safety', () => {
 
     renderSection(sparse, { dailyDistanceData: ZERO_CHART_DATA });
 
-    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('0.00 h')).toBeInTheDocument();
+    expect(screen.getByText('0.0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.0 h')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
     // prevAvgEfficiency ?? 0 = 0 → efficiency change collapses to "—".
     expect(screen.getByText('—')).toBeInTheDocument();
@@ -439,9 +439,9 @@ describe('DrivingSection — null safety', () => {
 
     renderSection(makeMetrics({ topDrive: drive, avgEfficiencyWhPerM: 0.2 }));
 
-    expect(screen.getByText('0.00 km')).toBeInTheDocument();
-    expect(screen.getAllByText('0.00 h')).toHaveLength(2);
-    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.0 km')).toBeInTheDocument();
+    expect(screen.getAllByText('0.0 h')).toHaveLength(2);
+    expect(screen.getByText('0.0 Wh/km')).toBeInTheDocument();
     // formatDate(undefined) → "—" placeholder, never "Invalid Date".
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Invalid Date')).toBeNull();

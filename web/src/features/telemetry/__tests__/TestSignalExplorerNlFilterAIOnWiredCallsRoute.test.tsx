@@ -53,7 +53,7 @@ import { useSettings } from '@/hooks/useSettings';
 import {
   AISignalExplorerNlFilter,
   type SignalFilterDraft,
-} from '@/components/ai';
+} from '@/components/ai/AISignalExplorerNlFilter';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;
 

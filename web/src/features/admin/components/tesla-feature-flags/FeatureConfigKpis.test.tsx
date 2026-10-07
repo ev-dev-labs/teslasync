@@ -29,7 +29,7 @@ type KpisProps = ComponentProps<typeof FeatureConfigKpis>;
 const SUMMARY: FeatureFlagSummary = { total: 4, enabled: 2, disabled: 2, enabledRate: 50 };
 const ZEROED: FeatureFlagSummary = { total: 0, enabled: 0, disabled: 0, enabledRate: 0 };
 
-const ALL_LABELS = ['Total features', 'Enabled', 'Disabled', 'Enabled rate'];
+const ALL_LABELS = ['Total Features', 'Enabled', 'Disabled', 'Enabled Rate'];
 /** The em-dash (U+2014) the band renders for an unknown value under error. */
 const EM_DASH = '—';
 
@@ -64,7 +64,7 @@ describe('FeatureConfigKpis — loading', () => {
     // not shift the layout.
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
     // The real MetricCards (and their labels) must not render yet.
-    expect(screen.queryByText('Total features')).toBeNull();
+    expect(screen.queryByText('Total Features')).toBeNull();
   });
 
   it('gives loading precedence over error — a skeleton, never em-dashes', () => {
@@ -75,7 +75,7 @@ describe('FeatureConfigKpis — loading', () => {
     ).toBeInTheDocument();
     // isLoading short-circuits before the error branch is considered.
     expect(screen.queryByText(EM_DASH)).toBeNull();
-    expect(screen.queryByText('Total features')).toBeNull();
+    expect(screen.queryByText('Total Features')).toBeNull();
   });
 });
 
@@ -86,10 +86,10 @@ describe('FeatureConfigKpis — resolved', () => {
     for (const label of ALL_LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
-    expect(metricValue('Total features')).toBe('4');
+    expect(metricValue('Total Features')).toBe('4');
     expect(metricValue('Enabled')).toBe('2');
     expect(metricValue('Disabled')).toBe('2');
-    expect(metricValue('Enabled rate')).toBe('50.00%');
+    expect(metricValue('Enabled Rate')).toBe('50%');
     // Truthful data → no fabricated em-dash placeholders.
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
@@ -99,20 +99,20 @@ describe('FeatureConfigKpis — resolved', () => {
       summary: { total: 12345, enabled: 10000, disabled: 2345, enabledRate: 81 },
     });
 
-    expect(metricValue('Total features')).toBe('12,345');
+    expect(metricValue('Total Features')).toBe('12,345');
     expect(metricValue('Enabled')).toBe('10,000');
     expect(metricValue('Disabled')).toBe('2,345');
     // fmtPercent(..., 0) drops the decimals → "81%", not "81.00%".
-    expect(metricValue('Enabled rate')).toBe('81.00%');
+    expect(metricValue('Enabled Rate')).toBe('81%');
   });
 
   it('renders honest zeros for a genuinely empty (but successful) summary', () => {
     renderKpis({ summary: ZEROED });
 
-    expect(metricValue('Total features')).toBe('0');
+    expect(metricValue('Total Features')).toBe('0');
     expect(metricValue('Enabled')).toBe('0');
     expect(metricValue('Disabled')).toBe('0');
-    expect(metricValue('Enabled rate')).toBe('0.00%');
+    expect(metricValue('Enabled Rate')).toBe('0%');
     // A known-empty payload is a real 0, distinct from the error em-dash.
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
@@ -120,8 +120,8 @@ describe('FeatureConfigKpis — resolved', () => {
   it('treats a falsy error (null) as no error and shows the data', () => {
     renderKpis({ summary: SUMMARY, error: null });
 
-    expect(metricValue('Total features')).toBe('4');
-    expect(metricValue('Enabled rate')).toBe('50.00%');
+    expect(metricValue('Total Features')).toBe('4');
+    expect(metricValue('Enabled Rate')).toBe('50%');
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
 });
@@ -138,7 +138,7 @@ describe('FeatureConfigKpis — error', () => {
     expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
     // ...and the real values (and any fabricated 0) are suppressed.
     expect(screen.queryByText('4')).toBeNull();
-    expect(screen.queryByText('50.00%')).toBeNull();
+    expect(screen.queryByText('50%')).toBeNull();
     expect(screen.queryByText('0')).toBeNull();
   });
 });
@@ -148,9 +148,9 @@ describe('FeatureConfigKpis — null-safety & a11y', () => {
     // A misbehaving caller hands over no summary at all.
     renderKpis({ summary: undefined as unknown as FeatureFlagSummary });
 
-    expect(metricValue('Total features')).toBe('0');
+    expect(metricValue('Total Features')).toBe('0');
     expect(metricValue('Enabled')).toBe('0');
-    expect(metricValue('Enabled rate')).toBe('0.00%');
+    expect(metricValue('Enabled Rate')).toBe('0%');
     expect(screen.queryByText(EM_DASH)).toBeNull();
   });
 

@@ -264,7 +264,7 @@ describe('HelpPage', () => {
       screen.getByRole('heading', { name: 'Ask the help assistant' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByPlaceholderText(/How do I enable Energy cost forecasting/i),
+      screen.getByPlaceholderText(/How do I enable energy cost forecasting/i),
     ).toBeInTheDocument();
 
     // Coexistence: the baseline links are still present, proving the AI

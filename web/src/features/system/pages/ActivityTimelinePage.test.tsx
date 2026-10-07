@@ -57,10 +57,6 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => {} }));
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
-}));
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: h.vehicleId, vehicles: h.vehicles }),
@@ -72,7 +68,6 @@ vi.mock('@/lib/timezone', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    unitPrefs: { distance: 'km', speed: 'km/h', temperature: 'C', pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', precision: 2, locale: 'en-US' },
     formatDuration: (value: number) => `${(value / 3600).toFixed(1)} h`,
     formatEnergy: (value: number) => `${(value / 1000).toFixed(1)} kWh`,
   }),
@@ -319,42 +314,10 @@ describe('ActivityTimelinePage', () => {
     expect(screen.getByText(/exports include only the loaded page/i)).toBeInTheDocument();
   });
 
-  it('does not present unknown totals or an available export when the initial request fails', () => {
-    h.useActivityMock.mockReturnValue(mockQueryResult({ isError: true, error: new Error('failed'), data: undefined }));
+  it('does not present stale totals or an available export when the request fails', () => {
+    h.useActivityMock.mockReturnValue(mockQueryResult({ isError: true, error: new Error('failed') }));
     renderPage();
     expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range—');
     expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
-  });
-
-  it('retains loaded totals, records and raw-SI exports when a background refresh fails', () => {
-    const item = makeItem({ duration_s: 120, energy_added_wh: 2500 });
-    h.useActivityMock.mockReturnValue(mockQueryResult({
-      isError: true,
-      error: new Error('refresh failed'),
-      data: { items: [item], total: 75, limit: 50, offset: 0, generated_at: '' },
-    }));
-    renderPage();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range75');
-    expect(screen.getByText('0.0 h · 2.5 kWh · 12 min')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /0\.0 h · 2\.5 kWh · 12 min/ })).toHaveAttribute('href', '/drives/1');
-    expect(screen.getByText('Completed')).toBeInTheDocument();
-    expect(screen.getByText('Source: Driving history')).toBeInTheDocument();
-    expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
-    expect(screen.getByRole('button', { name: /older/i })).toBeEnabled();
-    fireEvent.click(screen.getByTestId('activity-export-csv'));
-    expect(h.downloadCsv).toHaveBeenCalledWith(
-      'activity-2026-01-01-2026-01-31-page-1',
-      [item],
-      expect.arrayContaining([
-        expect.objectContaining({ key: 'duration_s' }),
-        expect.objectContaining({ key: 'energy_added_wh' }),
-      ]),
-    );
-    fireEvent.click(screen.getByTestId('activity-export-json'));
-    expect(h.downloadJson).toHaveBeenCalledWith(
-      'activity-2026-01-01-2026-01-31-page-1',
-      [item],
-    );
   });
 });

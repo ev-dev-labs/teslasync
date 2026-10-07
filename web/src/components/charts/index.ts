@@ -32,7 +32,6 @@ export {
   type DownsampledChartRows,
 } from './chartSampling';
 export { useChartPointBudget } from './useChartPointBudget';
-export { useMeasuredAxisWidth, measureAxisLabelWidth } from './useMeasuredAxisWidth';
 export { projectSmallMultipleSeries } from './SmallMultiplesChart';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';

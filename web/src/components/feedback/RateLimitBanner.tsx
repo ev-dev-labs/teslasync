@@ -25,8 +25,12 @@ import { Button } from '../ui/Button'
  * own when the Retry-After window elapses; until then, queued queries
  * are calmly fast-failed instead of hammering the upstream.
  *
- * Mounted inside Layout's content column, below the workspace header,
- * so a visible notice cannot consume the report's horizontal space.
+ * Mounting note — placed in <Layout> alongside the other status
+ * banners (NewVersionBanner, OfflineBanner, TeslaReauthBanner). Stack
+ * order from top to bottom is: rate-limit (most transient) → tesla-
+ * reauth (user action required) → reload-prompt (version update). Each
+ * banner is ≤ 48 px tall so the stack stays under 144 px even when all
+ * three fire simultaneously.
  *
  * Out of scope:
  *   • Per-resource rate-limit policies (banner is global per scope).
@@ -116,7 +120,7 @@ export function RateLimitBanner() {
       aria-live="polite"
       data-testid="rate-limit-banner"
       data-kind={state.kind}
-      className="sticky top-0 z-50 flex shrink-0 items-center gap-3 border-b border-amber-300/30 bg-amber-300/[0.08] px-4 py-2.5 backdrop-blur-md"
+      className="sticky top-0 z-50 flex items-center gap-3 border-b border-amber-300/30 bg-amber-300/[0.08] px-4 py-2.5 backdrop-blur-md"
     >
       <div className="rounded-lg bg-amber-300/15 p-1.5 shrink-0">
         <Icon className="h-4 w-4 text-amber-300" aria-hidden />
@@ -139,17 +143,15 @@ export function RateLimitBanner() {
         >
           {t('ratelimit.retry', 'Retry now')}
         </Button>
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="sm"
           onClick={handleDismiss}
           aria-label={t('common.dismiss', 'Dismiss')}
           data-testid="rate-limit-banner-dismiss"
           className="rounded-lg p-1.5 text-[var(--text-secondary)] transition-colors hover:bg-white/[0.06] hover:text-[var(--text-primary)]"
         >
           <X className="h-4 w-4" aria-hidden />
-        </Button>
+        </button>
       </div>
     </div>
   )

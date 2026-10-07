@@ -142,7 +142,6 @@ describe('Modal — size presets', () => {
     ['md', 'sm:max-w-lg'],
     ['lg', 'sm:max-w-2xl'],
     ['full', 'sm:max-w-[min(96vw,1100px)]'],
-    ['fullscreen', 'max-w-none'],
   ];
 
   it.each(cases)('size="%s" applies the %s width class', (size, cls) => {
@@ -161,22 +160,6 @@ describe('Modal — size presets', () => {
       </Modal>,
     );
     expect(getDialog().className).toContain('sm:max-w-lg');
-  });
-
-  it('keeps fullscreen content in a viewport-height portal without the ordinary dialog cap', () => {
-    const { container } = render(
-      <Modal open onClose={vi.fn()} ariaLabel="Fullscreen widget" size="fullscreen">
-        <button data-autofocus>Exit fullscreen</button>
-        <div>Measured content</div>
-      </Modal>,
-    );
-    const dialog = screen.getByRole('dialog', { name: 'Fullscreen widget' });
-    expect(container).not.toContainElement(dialog);
-    expect(document.body).toContainElement(dialog);
-    expect(dialog).toHaveClass('h-[100dvh]', 'max-h-[100dvh]', 'max-w-none');
-    expect(dialog).not.toHaveClass('sm:max-h-[90vh]');
-    expect(dialog.querySelector('[data-modal-scroll-body]')).toHaveClass('flex', 'min-h-0', 'overflow-hidden');
-    expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toHaveFocus();
   });
 });
 
@@ -244,55 +227,6 @@ describe('Modal — close affordances', () => {
     fireEvent.keyDown(getDialog(), { key: 'Escape' });
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
-  });
-
-  it('Escape still closes after a successful form replaces its focused control', () => {
-    const onClose = vi.fn();
-    const { rerender } = render(
-      <Modal open onClose={onClose} title="Share">
-        <button key="generate" type="button">Generate link</button>
-      </Modal>,
-    );
-    screen.getByRole('button', { name: 'Generate link' }).focus();
-    rerender(
-      <Modal open onClose={onClose} title="Share">
-        <button key="copy" type="button">Copy link</button>
-      </Modal>,
-    );
-    expect(document.activeElement).toBe(document.body);
-    fireEvent.keyDown(document.body, { key: 'Escape' });
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it.each([false, true])('recovers the Tab trap after replacing focused content (reverse=%s)', (reverse) => {
-    const { rerender } = render(
-      <Modal open onClose={vi.fn()} title="Share">
-        <button key="generate" type="button">Generate link</button>
-      </Modal>,
-    );
-    screen.getByRole('button', { name: 'Generate link' }).focus();
-    rerender(
-      <Modal open onClose={vi.fn()} title="Share">
-        <button key="copy" type="button">Copy link</button>
-      </Modal>,
-    );
-    expect(document.activeElement).toBe(document.body);
-    fireEvent.keyDown(document.body, { key: 'Tab', shiftKey: reverse });
-    expect(screen.getByRole('button', { name: reverse ? 'Copy link' : 'Close' })).toHaveFocus();
-  });
-
-  it('lost-focus Escape closes only the topmost dialog', () => {
-    const parentClose = vi.fn();
-    const childClose = vi.fn();
-    render(
-      <>
-        <Modal open onClose={parentClose} title="Parent">Parent content</Modal>
-        <Modal open onClose={childClose} title="Child">Child content</Modal>
-      </>,
-    );
-    fireEvent.keyDown(document.body, { key: 'Escape' });
-    expect(childClose).toHaveBeenCalledTimes(1);
-    expect(parentClose).not.toHaveBeenCalled();
   });
 });
 

@@ -28,11 +28,6 @@ import type { ReactNode } from 'react';
 import type { WidgetProps } from './types';
 import QuickNavWidget from './QuickNavWidget';
 
-it.each([1, 2, 3])('identifies quick navigation at %i columns', (cols) => {
-  renderWidget({ size: { cols, rows: 2 } });
-  expect(screen.getByRole('heading', { name: 'Quick navigation' })).toBeInTheDocument();
-});
-
 // ── i18n stub: record every call + return the provided fallback string. ──
 const tSpy = vi.hoisted(() =>
   vi.fn((key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key)),
@@ -60,15 +55,13 @@ function newClient() {
 }
 
 function renderWidget(props: Partial<WidgetProps> = {}) {
-  const view = render(
+  return render(
     <MemoryRouter>
       <QueryClientProvider client={newClient()}>
         <QuickNavWidget size={{ cols: 4, rows: 2 }} {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Quick navigation');
-  return view;
 }
 
 /** Mounts the widget at "/" alongside stub destination routes for click tests. */
@@ -175,16 +168,16 @@ describe('QuickNavWidget — i18n wiring (no hardcoded English)', () => {
 });
 
 describe('QuickNavWidget — shell + prop-agnostic contract', () => {
-  it('mounts the grid in a scrollable shared body so cramped modes retain all links', () => {
+  it('mounts the grid in a noPadding shell (clipped, never a scroll wrapper)', () => {
     renderWidget();
     const wrapper = screen.getByRole('navigation').parentElement;
-    expect(wrapper?.className).toContain('overflow-auto');
-    expect(wrapper?.className).toContain('@container');
+    expect(wrapper?.className).toContain('overflow-hidden');
+    expect(wrapper?.className).not.toContain('overflow-auto');
   });
 
-  it('identifies the shortcut grid with an accessible heading', () => {
+  it('renders no title header — the shortcut grid is self-describing', () => {
     renderWidget();
-    expect(screen.getByRole('heading', { name: 'Quick navigation' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 
   it('renders the identical shortcut set even in a cramped 1×1 slot', () => {
@@ -203,13 +196,5 @@ describe('QuickNavWidget — shell + prop-agnostic contract', () => {
 
     expect(hrefsA).toEqual(['/drives', '/charging', '/analytics', '/battery']);
     expect(hrefsB).toEqual(hrefsA);
-  });
-
-  it.each([1, 2, 4])('uses shared responsive hierarchy without nested cards at %i columns', (cols) => {
-    const { container } = renderWidget({ size: { cols, rows: 2 } });
-    expect(screen.getAllByRole('link')).toHaveLength(4);
-    expect(screen.getByRole('navigation').className).toContain('@xs:grid-cols-2');
-    expect(container.querySelector('[style]')).toBeNull();
-    expect(screen.getByRole('link', { name: /drives/i }).className).toContain('focus-visible:ring-2');
   });
 });

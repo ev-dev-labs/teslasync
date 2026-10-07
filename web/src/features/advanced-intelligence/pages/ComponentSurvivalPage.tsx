@@ -6,20 +6,18 @@ import { CHART_COLORS } from '@/components/charts';
 import { MetricBar, StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { EvidencePanel, InsightPanel } from '../components';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 12;
 
 export default function ComponentSurvivalPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -27,15 +25,17 @@ export default function ComponentSurvivalPage() {
   const query = useComponentSurvival(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
   const representative = items[0] ?? null;
-  usePageTitle(t('advancedIntelligence.survival.title', 'Component survival'));
+  usePageTitle(t('advancedIntelligence.survival.title', 'Component Survival'));
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.survival.title', 'Component survival')}
+    <PageContainer
+      title={t('advancedIntelligence.survival.title', 'Component Survival')}
       subtitle={t(
         'advancedIntelligence.survival.subtitle',
         'Review probabilistic service horizons, competing risks, and intervention sensitivity.',
       )}
+      loading={vehicleId != null && query.isLoading}
+      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="info"
@@ -50,7 +50,6 @@ export default function ComponentSurvivalPage() {
 
       <FadeIn>
         <InsightPanel
-          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.survival.cards.title', 'Component survival cards')}
           empty={items.length === 0}
           emptyMessage={vehicleId == null
@@ -73,7 +72,7 @@ export default function ComponentSurvivalPage() {
                   <StatCard
                     label={t('advancedIntelligence.survival.probability', 'Survival probability')}
                     value={item.survival_probability_pct != null
-                      ? `${fmtNumber(item.survival_probability_pct)}%` : null}
+                      ? `${fmtNumber(item.survival_probability_pct, 1)}%` : null}
                   />
                   <StatCard
                     label={t('advancedIntelligence.survival.p10', 'P10 horizon')}
@@ -100,7 +99,7 @@ export default function ComponentSurvivalPage() {
                         value={risk.probability_pct}
                         max={100}
                         color={CHART_COLORS[0]}
-                        sublabel={`${fmtNumber(risk.probability_pct)}%`}
+                        sublabel={`${fmtNumber(risk.probability_pct, 1)}%`}
                       />
                     ) : (
                       <div key={risk.risk} className="flex items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2">
@@ -124,7 +123,7 @@ export default function ComponentSurvivalPage() {
                   </Text>
                   <Text as="p" variant="bodySm">
                     {item.intervention_sensitivity.intervention}: {fmtNumber(
-                      item.intervention_sensitivity.assumed_hazard_delta_pct,
+                      item.intervention_sensitivity.assumed_hazard_delta_pct, 1,
                     )}% · {t('advancedIntelligence.survival.adjustedP50', 'adjusted P50 {{value}}', {
                       value: units.formatDuration(item.intervention_sensitivity.adjusted_p50_s),
                     })}
@@ -155,6 +154,6 @@ export default function ComponentSurvivalPage() {
           ]}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

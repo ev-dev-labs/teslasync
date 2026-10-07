@@ -1,9 +1,9 @@
-import { LayoutCard } from '@/components/layout';
+import { BadgeCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartTooltip,
   Legend,
   ResponsiveContainer,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
@@ -35,7 +35,7 @@ export function CabinThermalFitQuality({
   const points = summary.events.map((event, index) => ({
     event: index + 1,
     quality: Math.round(event.r2 * 1_000) / 10,
-    tau: formatDuration(event.tauMin * 60),
+    tau: formatDuration(event.tauMin * 60, { precision: 1 }),
     direction: event.cooling
       ? t('cabinThermal.direction.cooling', 'Cooling')
       : t('cabinThermal.direction.warming', 'Warming'),
@@ -46,7 +46,11 @@ export function CabinThermalFitQuality({
 
   return (
     <section data-testid="cabin-thermal-fit-quality">
-      <LayoutCard title={t('cabinThermal.fit.title', 'Accepted-fit quality')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <BadgeCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('cabinThermal.fit.title', 'Accepted-fit quality')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'cabinThermal.fit.subtitle',
@@ -54,7 +58,7 @@ export function CabinThermalFitQuality({
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="accepted">
-          <EmbeddedChart toolbar exportable size="standard"
+          <ChartContainer
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('cabinThermal.fit.plotTitle', 'R² by accepted event')}
             ariaLabel={t(
@@ -81,9 +85,9 @@ export function CabinThermalFitQuality({
                 <Scatter name={t('cabinThermal.direction.warming', 'Warming')} data={warming} fill={chartTokens.series[3]} />
               </ScatterChart>
             </ResponsiveContainer>
-          </EmbeddedChart>
+          </ChartContainer>
         </CabinThermalSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

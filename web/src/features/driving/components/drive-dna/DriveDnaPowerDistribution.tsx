@@ -7,7 +7,7 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { convertPowerFromSI } from '@/lib/unitConversion';
 
 import {
@@ -18,7 +18,6 @@ import {
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import { DriveDnaDistributionBarPlot } from './DriveDnaDistributionBarPlot';
 import type { DriveDnaSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveDnaPowerDistributionProps {
   model: DriveDnaModel;
@@ -31,7 +30,6 @@ export function DriveDnaPowerDistribution({
   state,
   units,
 }: DriveDnaPowerDistributionProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const label = (id: PowerStateId): string => {
     switch (id) {
@@ -74,7 +72,7 @@ export function DriveDnaPowerDistribution({
           'driveDna.powerStates.subtitle',
           'Counts use a ±{{threshold}} {{unit}} coast band and are not duration or time shares.',
           {
-            threshold: fmtNumber(threshold),
+            threshold: fmtNumber(threshold, 1),
             unit: units.unitPrefs.power,
           },
         )}
@@ -104,7 +102,7 @@ export function DriveDnaPowerDistribution({
             ),
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value)}%`
+                ? `${fmtNumber(value, 1)}%`
                 : '—',
           },
         ]}

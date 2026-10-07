@@ -10,7 +10,7 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type {
   ArrivalReliabilityResult,
   ReliabilityWindow,
@@ -25,7 +25,6 @@ import type {
   ArrivalReliabilityQueryState,
   DurationFormatter,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityWindowComparisonsProps {
   analysis: ArrivalReliabilityResult;
@@ -51,7 +50,6 @@ export function ArrivalReliabilityWindowComparisons({
   timeZone,
   formatDuration,
 }: ArrivalReliabilityWindowComparisonsProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const ranked = analysis.supportedWindows;
   const displayed =
@@ -160,11 +158,15 @@ export function ArrivalReliabilityWindowComparisons({
                   />
                   <WindowMetric
                     label={t('arrivalReliability.windows.p50', 'Observed p50')}
-                    value={formatDuration(window.p50DurationS)}
+                    value={formatDuration(window.p50DurationS, {
+                      precision: 1,
+                    })}
                   />
                   <WindowMetric
                     label={t('arrivalReliability.windows.p90', 'Observed p90')}
-                    value={formatDuration(window.p90DurationS)}
+                    value={formatDuration(window.p90DurationS, {
+                      precision: 1,
+                    })}
                   />
                 </div>
                 <Text as="p" variant="caption" className="mt-3">
@@ -175,6 +177,7 @@ export function ArrivalReliabilityWindowComparisons({
                       count: window.samples,
                       allowance: formatDuration(
                         window.allowanceThresholdS,
+                        { precision: 1 },
                       ),
                     },
                   )}

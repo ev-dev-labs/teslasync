@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Gauge } from 'lucide-react';
+import { Battery, Gauge, LockKeyhole, Thermometer } from 'lucide-react';
 import {
   Badge,
   Caption,
@@ -7,16 +7,17 @@ import {
   Heading,
   StatusPill,
 } from '@/components/ui';
-import { TimeStamp } from '@/components/data-display';
-import { EmptyState, QueryError } from '@/components/feedback';
-import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
+import { MetricTile, TimeStamp } from '@/components/data-display';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
-import type { VehicleStateReadings } from '@/api/types';
+import type { VehicleState } from '@/api/types';
+import { useUnits } from '@/hooks/useUnits';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { Vehicle } from '../../commands';
 
 interface CommandCenterHeroProps {
   vehicle: Vehicle;
-  state: VehicleStateReadings | null;
+  state: VehicleState | null;
   stateTrust: Parameters<typeof deriveTrustedVehicleStatus>[1];
   loading: boolean;
   error: unknown;
@@ -40,6 +41,7 @@ export function CommandCenterHero({
   onRetry,
 }: CommandCenterHeroProps) {
   const { t } = useTranslation();
+  const { unitPrefs } = useUnits();
   const name =
     vehicle.display_name?.trim() ||
     vehicle.vin ||
@@ -49,13 +51,21 @@ export function CommandCenterHero({
   const status = verifiedStatus ?? rawStatus;
   const knownStatus = t(
     `commands.status.${status}`,
-    status.replace(/_/g, ' ').replace(/^\w/, (value) => value.toUpperCase()),
+    status.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
   );
   const statusLabel = verifiedStatus
     ? knownStatus
     : t('commands.hero.lastKnownStatus', 'Last known: {{status}}', { status: knownStatus });
 
   const battery = state?.battery_level != null ? state.battery_level : null;
+  const range =
+    state?.rated_range != null
+      ? convertDistanceFromSI(state.rated_range, unitPrefs.distance)
+      : null;
+  const cabinTemperature =
+    state?.inside_temp != null
+      ? convertTempFromSI(state.inside_temp, unitPrefs.temperature)
+      : null;
   const lockState =
     state?.is_locked == null
       ? null
@@ -79,7 +89,7 @@ export function CommandCenterHero({
               {t('commands.hero.selectedVehicle', 'Selected vehicle')}
             </Badge>
             <div>
-              <Heading level="section" as="h2" className="truncate">
+              <Heading level="page" as="h2" className="truncate">
                 {name}
               </Heading>
               <Caption className="mt-1 block break-all">
@@ -103,32 +113,55 @@ export function CommandCenterHero({
           </div>
         </div>
 
-        <SystemSummaryBrief
-          title={t('commands.hero.vehicleState', 'Vehicle state')}
-          description={t('commands.hero.briefDescription', 'Battery, estimated range, cabin temperature, and access state from the selected vehicle readings.')}
-          scope={name}
-          freshness={stateTrust?.observedAt != null ? <TimeStamp value={stateTrust.observedAt} format="relative" /> : t('commands.hero.noSignalTime', 'No verified signal time')}
-          available={state != null} loading={loading && !state} retained={!!error && state != null}
-          statusLabel={statusLabel}
-          metrics={[
-            { metricId: 'percent', occurrenceId: 'battery', rawValue: battery, label: t('commands.hero.battery', 'Battery') },
-            { metricId: 'distance', occurrenceId: 'range', rawValue: state?.rated_range, label: t('commands.hero.range', 'Estimated range'), display: { precision: 0 } },
-            { metricId: 'temperature', occurrenceId: 'cabin', rawValue: state?.inside_temp, label: t('commands.hero.cabin', 'Cabin'), display: { precision: 0 } },
-          ]}
-          textMetrics={[{ key: 'access', value: lockState ?? '—', valueState: lockState == null ? 'missing' : 'value',
-            label: t('commands.hero.access', 'Access state'), detail: <>{t('commands.hero.vehicleState', 'Vehicle state')} · {
-              stateTrust?.observedAt != null
-                ? <>{t('commands.hero.lastSignal', 'Last signal')}: <TimeStamp value={stateTrust.observedAt} format="relative" /></>
-                : t('commands.hero.noSignalTime', 'No verified signal time')
-            }</> }]}
-        />
         {error ? (
           <QueryError
             error={error}
             onRetry={onRetry}
             resourceName={t('commands.hero.vehicleState', 'Vehicle state')}
           />
-        ) : !loading && !state ? (
+        ) : loading ? (
+          <div
+            role="status"
+            aria-label={t('commands.hero.loadingState', 'Loading vehicle state')}
+            className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+          >
+            {[1, 2, 3, 4].map((item) => (
+              <Skeleton key={item} height={82} className="rounded-xl" />
+            ))}
+          </div>
+        ) : state ? (
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricTile
+              value={battery}
+              unit="%"
+              label={t('commands.hero.battery', 'Battery')}
+              accentClass="text-cyan-300"
+              sublabel={<Battery className="mx-auto h-3.5 w-3.5" aria-hidden="true" />}
+            />
+            <MetricTile
+              value={range}
+              decimals={0}
+              unit={unitPrefs.distance}
+              label={t('commands.hero.range', 'Estimated range')}
+              accentClass="text-emerald-300"
+              sublabel={<Gauge className="mx-auto h-3.5 w-3.5" aria-hidden="true" />}
+            />
+            <MetricTile
+              value={cabinTemperature}
+              decimals={0}
+              unit={unitPrefs.temperature}
+              label={t('commands.hero.cabin', 'Cabin')}
+              accentClass="text-amber-300"
+              sublabel={<Thermometer className="mx-auto h-3.5 w-3.5" aria-hidden="true" />}
+            />
+            <MetricTile
+              value={lockState}
+              label={t('commands.hero.access', 'Access state')}
+              accentClass="text-purple-300"
+              sublabel={<LockKeyhole className="mx-auto h-3.5 w-3.5" aria-hidden="true" />}
+            />
+          </div>
+        ) : (
           <EmptyState /* no-action: live vehicle state and permissions determine availability in this panel */
             icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
             title={t('commands.hero.noTelemetryTitle', 'Live state unavailable')}
@@ -138,7 +171,7 @@ export function CommandCenterHero({
             )}
             className="py-6"
           />
-        ) : null}
+        )}
       </div>
     </GlassPanel>
   );

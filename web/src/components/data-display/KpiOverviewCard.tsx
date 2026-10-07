@@ -56,8 +56,6 @@ export interface KpiOverviewCardProps {
    * with a min-tile-width sized for ~6 tiles per row on desktop.
    */
   gridClassName?: string;
-  /** Reduced whitespace for dense overviews; metrics opt into compact typography separately. */
-  compact?: boolean;
   className?: string;
   /** Test hook on the outer panel. */
   testId?: string;
@@ -71,24 +69,21 @@ export function KpiOverviewCard({
   secondary,
   footer,
   gridClassName,
-  compact = false,
   className,
   testId,
   id,
 }: KpiOverviewCardProps) {
   return (
     <GlassPanel
-      className={cn(compact ? 'space-y-3 p-3 sm:p-4' : 'space-y-4 p-4 sm:p-5', className)}
+      className={cn('p-4 sm:p-5 space-y-4', className)}
       data-testid={testId}
       id={id}
     >
-      <ComparisonHeader {...header} compact={compact} />
+      <ComparisonHeader {...header} />
 
       <div
         className={cn(
-          compact
-            ? 'grid gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]'
-            : 'grid gap-3 sm:gap-4',
+          'grid gap-3 sm:gap-4',
           gridClassName ??
             'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
         )}

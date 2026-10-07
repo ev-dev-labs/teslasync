@@ -1,47 +1,11 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
-import { ChartTooltip, ChartTooltipBase } from './ChartTooltip'
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { render, screen } from '@testing-library/react'
+import { ChartTooltipBase } from './ChartTooltip'
 
 // useSettings → fmtNumber locale resolution path is exercised by the existing
 // Format.test.tsx; here we only assert the tooltip's wiring & label heuristics.
 
 describe('ChartTooltipBase', () => {
-  it('refreshes memoized mounted tooltip values while retaining clocks, strings, counts and missing data', () => {
-    setGlobalLocale('en-US')
-    setGlobalPrecision(2)
-    function CountTooltip() {
-      const { fmtInt } = useNumberFormatting()
-      return <ChartTooltip active payload={[{ name: 'count', value: 1234 }]} valueFormatter={(value) => fmtInt(value)} />
-    }
-    render(
-      <>
-        <ChartTooltip active label="14:25" payload={[
-          { name: 'reading', value: 12.3456, unit: 'V' },
-          { name: 'formatted', value: '03:04' },
-          { name: 'missing', value: null },
-        ]} />
-        <ChartTooltip active precision={1} payload={[{ name: 'override', value: 2.3456 }]} />
-        <CountTooltip />
-      </>,
-    )
-    expect(screen.getByText('12.35')).toBeInTheDocument()
-    act(() => setGlobalPrecision(3))
-    expect(screen.getByText('12.346')).toBeInTheDocument()
-    expect(screen.getByText('1,234')).toBeInTheDocument()
-    expect(screen.getByText('2.3')).toBeInTheDocument()
-    expect(screen.getByText('14:25')).toBeInTheDocument()
-    expect(screen.getByText('03:04')).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
-    act(() => setGlobalLocale('de-DE'))
-    expect(screen.getByText('12,346')).toBeInTheDocument()
-    expect(screen.getByText('1.234')).toBeInTheDocument()
-    act(() => {
-      setGlobalPrecision(2)
-      setGlobalLocale('en-US')
-    })
-  })
   afterEach(() => {
     vi.restoreAllMocks()
   })

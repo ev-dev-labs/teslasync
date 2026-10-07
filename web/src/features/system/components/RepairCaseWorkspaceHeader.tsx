@@ -1,8 +1,7 @@
 import { Activity, Radar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { RepairCaseStats as RepairCaseStatsData } from '@/api/hooks/useRepairCaseStats';
-import { QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { QueryError } from '@/components/feedback';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { RepairCaseStats } from './RepairCaseStats';
@@ -31,13 +30,6 @@ export function RepairCaseWorkspaceHeader({
   onRetryStatistics,
 }: RepairCaseWorkspaceHeaderProps) {
   const { t } = useTranslation();
-  const statisticsState = useDataState({
-    data: statistics,
-    error: statisticsError,
-    isLoading: statisticsLoading,
-    isFetching: statisticsBusy,
-    refetch: onRetryStatistics,
-  });
 
   return (
     <GlassPanel className="relative overflow-hidden p-0">
@@ -56,15 +48,11 @@ export function RepairCaseWorkspaceHeader({
                 {t('dataRepair.cases.workspaceTitle', 'Integrity command center')}
               </PanelTitle>
               <Badge
-                variant={statisticsState.fatalError ? 'danger' : statisticsState.refreshError ? 'warning' : !statisticsState.hasData ? 'neutral' : statisticsBusy ? 'info' : 'success'}
+                variant={statisticsError ? 'danger' : statisticsBusy ? 'info' : 'success'}
                 dot
               >
-                {statisticsLoading
-                  ? t('common.loading', 'Loading')
-                  : !statisticsState.hasData
+                {statisticsError
                   ? t('dataRepair.cases.metricsUnavailable', 'Metrics unavailable')
-                  : statisticsState.refreshError
-                    ? t('dataRepair.cases.metricsRetained', 'Retained metrics')
                   : statisticsBusy
                     ? t('dataRepair.cases.refreshing', 'Refreshing')
                     : t('dataRepair.cases.monitoring', 'Monitoring')}
@@ -77,9 +65,7 @@ export function RepairCaseWorkspaceHeader({
               )}
             </Text>
             <Text as="p" variant="caption" className="mt-2">
-              {!statisticsState.hasData
-                ? '—'
-                : statistics?.last_scan_at
+              {statistics?.last_scan_at
                 ? t('dataRepair.cases.lastScan', 'Last scan: {{time}}', {
                     time: formatDateTime(statistics.last_scan_at),
                   })
@@ -99,18 +85,17 @@ export function RepairCaseWorkspaceHeader({
           {t('dataRepair.cases.scanNow', 'Run integrity scan')}
         </Button>
       </div>
-      <StaleRefreshWarning state={statisticsState} label={t('dataRepair.cases.metricsResource', 'Repair case metrics')} className="px-4 sm:px-5" />
-      {statisticsState.fatalError ? (
+      {statisticsError ? (
         <div className="border-t border-[var(--border-subtle)] p-4 sm:p-5">
           <QueryError
-            error={statisticsState.fatalError}
+            error={statisticsError}
             resourceName={t('dataRepair.cases.metricsResource', 'Repair case metrics')}
             onRetry={onRetryStatistics}
           />
         </div>
-      ) : null}
-      <RepairCaseStats statistics={statistics} loading={statisticsLoading}
-        retained={statisticsState.hasData && !!statisticsState.refreshError} />
+      ) : (
+        <RepairCaseStats statistics={statistics} loading={statisticsLoading} />
+      )}
     </GlassPanel>
   );
 }

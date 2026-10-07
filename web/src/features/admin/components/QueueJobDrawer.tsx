@@ -18,10 +18,9 @@ import { AlertTriangle } from 'lucide-react'
 import { Drawer } from '@/components/ui'
 import { Text, Caption } from '@/components/ui/Typography'
 import { ListSkeleton } from '@/components/feedback'
-import { formatDateTime } from '@/lib/dateFormat'
+import { formatDateTime, formatDurationMsLong } from '@/lib/dateFormat'
 import { useQueueJobs } from '@/api/hooks/useSystemQueues'
 import type { QueueJobView } from '@/api/types'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STATUS_TONE: Record<string, string> = {
   // notification
@@ -77,7 +76,6 @@ interface QueueJobRowProps {
 }
 
 function QueueJobRow({ job }: QueueJobRowProps) {
-  const { formatDurationMsLong } = useNumberFormatting();
   const { t } = useTranslation()
 
   const durationMs = computeDurationMs(job)

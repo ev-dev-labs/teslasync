@@ -26,7 +26,7 @@
  */
 import { type ComponentProps } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@/i18n';
 
 import { neonColorMap } from '@/lib/tokens';
@@ -100,19 +100,22 @@ function renderKpis(overrides: Partial<Props> = {}) {
 }
 
 /**
- * Read the actual OperationalBrief value through its semantic markers.
+ * Read the value MetricCard renders for a label. MetricCard tags its label
+ * and value nodes with `data-role="metric-label"` / `data-role="metric-value"`
+ * inside a `[data-role="metric-card"]` root, so we scope by that stable
+ * semantic contract instead of coupling to utility classes or DOM order.
  */
 function metricCard(label: string): HTMLElement {
-  return screen.getByText(label).closest('[data-operational-metric]') as HTMLElement;
+  return screen.getByText(label).closest('[data-role="metric-card"]') as HTMLElement;
 }
 
 function metricValue(label: string): string {
-  return metricCard(label).querySelector('[data-operational-value]')?.textContent ?? '';
+  return metricCard(label).querySelector('[data-role="metric-value"]')?.textContent ?? '';
 }
 
-/** Preserve the original active/total caption within the rich metric detail. */
+/** The subtitle node (if any) is tagged `data-role="metric-subtitle"`; null when absent. */
 function metricSubtitle(label: string): string | null {
-  return metricCard(label).textContent?.match(/\d+ of \d+ on/)?.[0] ?? null;
+  return metricCard(label).querySelector('[data-role="metric-subtitle"]')?.textContent ?? null;
 }
 
 /** className of the div wrapping a card's icon glyph — carries the neon text hue. */
@@ -264,22 +267,8 @@ describe('BrowserNotificationsKpis — accessibility & structure', () => {
     const { container } = renderKpis();
 
     // One decorative icon per card, each hidden from the accessibility tree.
-    expect(container.querySelectorAll('[data-operational-metric] svg[aria-hidden="true"]')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-operational-metric] svg:not([aria-hidden="true"])')).toHaveLength(0);
-  });
-
-  it('reviews all configuration fractions and independent browser/settings provenance in the actual drawer', () => {
-    renderKpis({ pushPrefs: { alerts: true, exportStatus: false } });
-    const brief = screen.getByTestId('browser-notifications-brief');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(metricCard(LABEL_PUSH)).toHaveAttribute('data-value-state', 'value');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(drawer).toHaveTextContent('1/2');
-    expect(drawer).toHaveTextContent('1 of 2 on');
-    expect(drawer).toHaveTextContent('2 of 2 on');
-    expect(drawer).toHaveTextContent(`0 of ${TOTAL_CHANNELS} on`);
-    expect(drawer).toHaveTextContent('configuration counts, not delivery success rates');
+    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(4);
+    expect(container.querySelectorAll('svg:not([aria-hidden="true"])')).toHaveLength(0);
   });
 });
 

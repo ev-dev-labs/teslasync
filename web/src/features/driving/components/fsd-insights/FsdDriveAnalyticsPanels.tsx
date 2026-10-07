@@ -30,7 +30,7 @@ import { MetricCard } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import { defaultExportFilename, downloadJSON, downloadRowsAsCSV } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type {
   DriveFsdInsight,
   FsdAttributionConfidence,
@@ -45,7 +45,6 @@ import { FsdCommuteExperimentPanel } from './FsdCommuteExperimentPanel';
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
 import { useClientPagination } from './useClientPagination';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FsdDriveAnalyticsPanelsProps {
   insights: FsdInsights | undefined;
@@ -78,7 +77,6 @@ function ConfidenceBadge({ value }: { value: FsdAttributionConfidence }) {
 }
 
 function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const comparison = insights?.drive_analytics?.comparison;
@@ -101,7 +99,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
             label={t('fsd.comparison.distance', 'Reported FSD distance')}
             value={insights?.totals.fsd_distance_m == null
               ? '-'
-              : formatDistance(insights.totals.fsd_distance_m)}
+              : formatDistance(insights.totals.fsd_distance_m, { precision: 1 })}
             subtitle={comparison?.fsd_distance_change_m == null
               ? t(
                   'fsd.comparison.noDistanceBaseline',
@@ -110,6 +108,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
               : t('fsd.comparison.distanceDelta', '{{delta}} vs previous', {
                   delta: `${comparison.fsd_distance_change_m >= 0 ? '+' : ''}${formatDistance(
                     comparison.fsd_distance_change_m,
+                    { precision: 1 },
                   )}`,
                 })}
             color="cyan"
@@ -118,7 +117,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
             label={t('fsd.comparison.share', 'Share of observed driving')}
             value={insights?.totals.fsd_share_pct == null
               ? '-'
-              : `${fmtNumber(insights.totals.fsd_share_pct)}%`}
+              : `${fmtNumber(insights.totals.fsd_share_pct, 1)}%`}
             subtitle={comparison?.fsd_share_change_pct_points == null
               ? t(
                   'fsd.comparison.noShareBaseline',
@@ -127,6 +126,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
               : t('fsd.comparison.shareDelta', '{{delta}} percentage points', {
                   delta: `${comparison.fsd_share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(
                     comparison.fsd_share_change_pct_points,
+                    1,
                   )}`,
                 })}
             color="purple"
@@ -135,7 +135,7 @@ function ComparisonPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
             label={t('fsd.comparison.previous', 'Previous FSD distance')}
             value={comparison?.previous_fsd_distance_m == null
               ? '-'
-              : formatDistance(comparison.previous_fsd_distance_m)}
+              : formatDistance(comparison.previous_fsd_distance_m, { precision: 1 })}
             subtitle={comparison
               ? `${comparison.previous_period.start_date} - ${comparison.previous_period.end_date}`
               : t('fsd.comparison.notLoaded', 'Previous period not loaded')}
@@ -204,7 +204,7 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
               <Text as="div" size="lg" weight="semibold" className="mt-2 tabular-nums">
                 {bucket.value == null
                   ? t('fsd.notMeasured', 'Not measured')
-                  : formatDistance(bucket.value)}
+                  : formatDistance(bucket.value, { precision: 1 })}
               </Text>
             </div>
           ))}
@@ -215,7 +215,7 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
             <Text as="div" size="lg" weight="semibold" className="mt-2 tabular-nums">
               {breakdown?.unknown_drive_distance_m == null
                 ? t('fsd.notMeasured', 'Not measured')
-                : formatDistance(breakdown.unknown_drive_distance_m)}
+                : formatDistance(breakdown.unknown_drive_distance_m, { precision: 1 })}
             </Text>
           </div>
         </div>
@@ -240,8 +240,8 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
                   ) : null}
                   <Text as="span" color="muted">
                     {t('fsd.resets.changed', 'Counter moved from {{previous}} to {{current}}.', {
-                      previous: formatDistance(event.previous_value_m),
-                      current: formatDistance(event.current_value_m),
+                      previous: formatDistance(event.previous_value_m, { precision: 1 }),
+                      current: formatDistance(event.current_value_m, { precision: 1 }),
                     })}
                   </Text>
                   {event.affected_drive_ids.map((driveID) => (
@@ -307,7 +307,6 @@ export function contributingDriveExportRows(drives: readonly DriveFsdInsight[]) 
 }
 
 function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const rows = useMemo(
@@ -334,8 +333,6 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
   const columns = useMemo<Column<DriveFsdInsight>[]>(() => [
     {
       key: 'started_at',
-      filterValue: (row) => row.started_at ?? null,
-      filterValueLabel: (_, row) => formatDateTime(row.started_at),
       header: t('fsd.drives.date', 'Drive'),
       render: (row) => (
         <div>
@@ -352,26 +349,20 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
     },
     {
       key: 'fsd_distance_m',
-      align: 'right',
-      filterValue: (row) => row.fsd_distance_m ?? null,
-      filterValueLabel: (_, row) => `${row.confidence === 'high' ? '' : '~'}${formatDistance(row.fsd_distance_m)}`,
       header: t('fsd.drives.distance', 'Reported FSD'),
       render: (row) => (
         <span className="tabular-nums">
           {row.confidence === 'high' ? '' : '~'}
-          {formatDistance(row.fsd_distance_m)}
+          {formatDistance(row.fsd_distance_m, { precision: 1 })}
         </span>
       ),
     },
     {
       key: 'fsd_share_pct',
-      align: 'right',
-      filterValue: (row) => row.fsd_share_pct ?? null,
-      filterValueLabel: (_, row) => row.fsd_share_pct == null ? '-' : `${row.confidence === 'high' ? '' : '~'}${fmtNumber(row.fsd_share_pct)}%`,
       header: t('fsd.drives.share', 'Drive share'),
       render: (row) => row.fsd_share_pct == null
         ? '-'
-        : `${row.confidence === 'high' ? '' : '~'}${fmtNumber(row.fsd_share_pct)}%`,
+        : `${row.confidence === 'high' ? '' : '~'}${fmtNumber(row.fsd_share_pct, 1)}%`,
     },
     {
       key: 'confidence',
@@ -380,7 +371,6 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
     },
     {
       key: 'firmware_version',
-      filterValue: (row) => row.firmware_version ?? null,
       header: t('fsd.drives.firmware', 'Firmware'),
       render: (row) => row.firmware_version ?? '-',
     },
@@ -393,10 +383,10 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
         </Link>
       ),
     },
-  ], [formatDistance, t, fmtNumber]);
+  ], [formatDistance, t]);
 
   return (
-    <GlassPanel className="min-w-0 p-4 sm:p-5" data-testid="fsd-contributing-drives">
+    <GlassPanel className="p-4 sm:p-5" data-testid="fsd-contributing-drives">
       <PanelTitle className="mb-1 flex items-center gap-2">
         <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('fsd.drives.title', 'Contributing drives')}
@@ -435,7 +425,6 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
         {rows.length > 0 ? (
           <DataTable
             tableId="fsd-contributing-drives"
-            enableValueFilters
             name="FsdContributingDrives"
             columns={columns}
             data={rows}
@@ -463,7 +452,6 @@ function GroupTable({
   tableId: string;
   rows: GroupedFsdInsight[];
 }) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const columns = useMemo<Column<GroupedFsdInsight>[]>(() => [
@@ -474,29 +462,26 @@ function GroupTable({
     },
     {
       key: 'drive_count',
-      align: 'right',
       header: t('fsd.groups.drives', 'Drives'),
       render: (row) => <span className="tabular-nums">{row.drive_count}</span>,
     },
     {
       key: 'fsd_distance_m',
       header: t('fsd.groups.distance', 'FSD distance'),
-      align: 'right',
       render: (row) => (
-        <span className="tabular-nums">{formatDistance(row.fsd_distance_m)}</span>
+        <span className="tabular-nums">{formatDistance(row.fsd_distance_m, { precision: 1 })}</span>
       ),
     },
     {
       key: 'fsd_share_pct',
       header: t('fsd.groups.share', 'Share'),
-      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
-          {row.fsd_share_pct == null ? '-' : `${fmtNumber(row.fsd_share_pct)}%`}
+          {row.fsd_share_pct == null ? '-' : `${fmtNumber(row.fsd_share_pct, 1)}%`}
         </span>
       ),
     },
-  ], [formatDistance, t, fmtNumber]);
+  ], [formatDistance, t]);
 
   return (
     <div>
@@ -559,7 +544,6 @@ function ComparisonGroupsPanel({ insights, state }: FsdDriveAnalyticsPanelsProps
 }
 
 function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const spotlight = insights?.drive_analytics?.firmware_spotlight;
   const rows = spotlight?.routes ?? [];
@@ -574,23 +558,23 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
       header: t('fsd.firmwareSpotlight.before', 'Before'),
       render: (row) => row.before_fsd_share_pct == null
         ? '-'
-        : `${fmtNumber(row.before_fsd_share_pct)}% · ${row.before_drive_count}`,
+        : `${fmtNumber(row.before_fsd_share_pct, 1)}% · ${row.before_drive_count}`,
     },
     {
       key: 'after_fsd_share_pct',
       header: t('fsd.firmwareSpotlight.after', 'After'),
       render: (row) => row.after_fsd_share_pct == null
         ? '-'
-        : `${fmtNumber(row.after_fsd_share_pct)}% · ${row.after_drive_count}`,
+        : `${fmtNumber(row.after_fsd_share_pct, 1)}% · ${row.after_drive_count}`,
     },
     {
       key: 'share_change_pct_points',
       header: t('fsd.firmwareSpotlight.change', 'Share change'),
       render: (row) => row.share_change_pct_points == null
         ? '-'
-        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points)} pts`,
+        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points, 1)} pts`,
     },
-  ], [t, fmtNumber]);
+  ], [t]);
 
   const hasFirmwarePair = Boolean(spotlight?.from_version && spotlight?.to_version);
 
@@ -644,7 +628,6 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
 }
 
 function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const rows = insights?.drive_analytics?.route_efficiency ?? [];
@@ -661,6 +644,7 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
       header: t('fsd.efficiency.heavy', 'FSD-heavy'),
       render: (row) => `${row.fsd_heavy_drive_count} / ${fmtNumber(
         row.fsd_heavy_efficiency_wh_per_km * efficiencyMultiplier,
+        0,
       )} ${efficiencyUnit}`,
     },
     {
@@ -668,14 +652,15 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
       header: t('fsd.efficiency.low', 'Low-FSD'),
       render: (row) => `${row.low_fsd_drive_count} / ${fmtNumber(
         row.low_fsd_efficiency_wh_per_km * efficiencyMultiplier,
+        0,
       )} ${efficiencyUnit}`,
     },
     {
       key: 'difference_pct',
       header: t('fsd.efficiency.difference', 'Difference'),
-      render: (row) => `${row.difference_pct >= 0 ? '+' : ''}${fmtNumber(row.difference_pct)}%`,
+      render: (row) => `${row.difference_pct >= 0 ? '+' : ''}${fmtNumber(row.difference_pct, 1)}%`,
     },
-  ], [efficiencyMultiplier, efficiencyUnit, t, fmtNumber]);
+  ], [efficiencyMultiplier, efficiencyUnit, t]);
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-route-efficiency">
@@ -716,7 +701,6 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
 }
 
 function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = insights?.drive_analytics?.commute_identities ?? [];
   const columns: Column<FsdCommuteIdentity>[] = useMemo(() => [
@@ -735,28 +719,28 @@ function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps)
       header: t('fsd.commute.thisMonth', 'This month'),
       render: (row) => row.this_month.fsd_share_pct == null
         ? t('fsd.commute.unknown', 'Unknown')
-        : `${fmtNumber(row.this_month.fsd_share_pct)}%`,
+        : `${fmtNumber(row.this_month.fsd_share_pct, 1)}%`,
     },
     {
       key: 'last_month',
       header: t('fsd.commute.lastMonth', 'Last month'),
       render: (row) => row.last_month.fsd_share_pct == null
         ? t('fsd.commute.unknown', 'Unknown')
-        : `${fmtNumber(row.last_month.fsd_share_pct)}%`,
+        : `${fmtNumber(row.last_month.fsd_share_pct, 1)}%`,
     },
     {
       key: 'share_change_pct_points',
       header: t('fsd.commute.change', 'Change'),
       render: (row) => row.share_change_pct_points == null
         ? '—'
-        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points)} pt`,
+        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points, 1)} pt`,
     },
     {
       key: 'unknown_days',
       header: t('fsd.commute.unknownDays', 'Unknown days'),
       render: (row) => String(row.this_month.unknown_days),
     },
-  ], [t, fmtNumber]);
+  ], [t]);
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-commute-identity">

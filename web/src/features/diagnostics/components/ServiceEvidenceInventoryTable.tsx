@@ -3,12 +3,9 @@ import { ClipboardList } from 'lucide-react';
 import { GlassPanel, PanelTitle, Badge, Caption, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import type { ServiceEvidencePackSignalEvidence } from '../lib/serviceEvidencePack';
-import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
-import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
 
 export interface ServiceEvidenceInventoryTableProps {
   signalEvidence: ServiceEvidencePackSignalEvidence[];
-  sources?: readonly SignalEvidenceBundleSource[];
   hasChosenSignal: boolean;
   isLoading: boolean;
   isError: boolean;
@@ -22,12 +19,10 @@ export interface ServiceEvidenceInventoryTableProps {
  * focal signal plus its bounded related-candidate set, each flagged with
  * whether it actually corroborated a ranked hypothesis. This is the same
  * `signalEvidence` array embedded verbatim in the exported pack's core
- * document. Source-local trust may withhold an unresolved display count,
- * but never rewrites that core document or the existing export pipeline.
+ * document — the table is a preview of exactly what will ship.
  */
 export function ServiceEvidenceInventoryTable({
   signalEvidence,
-  sources,
   hasChosenSignal,
   isLoading,
   isError,
@@ -63,7 +58,7 @@ export function ServiceEvidenceInventoryTable({
     {
       key: 'sampleCount',
       header: t('serviceEvidencePack.inventory.col.samples', 'Samples'),
-      render: (row) => <span className="tabular-nums">{hasSignalHistory(sources, row.signal) ? row.sampleCount : '—'}</span>,
+      render: (row) => <span className="tabular-nums">{row.sampleCount}</span>,
       align: 'right',
     },
     {
@@ -71,11 +66,9 @@ export function ServiceEvidenceInventoryTable({
       header: t('serviceEvidencePack.inventory.col.evidence', 'Corroborating'),
       render: (row) => (
         <Badge variant={row.hasEvidence ? 'success' : 'neutral'}>
-          {!hasSignalHistory(sources, row.signal)
-            ? t('common.unknown', 'Unknown')
-            : row.hasEvidence
-              ? t('serviceEvidencePack.inventory.evidenceYes', 'Yes')
-              : t('serviceEvidencePack.inventory.evidenceNo', 'No')}
+          {row.hasEvidence
+            ? t('serviceEvidencePack.inventory.evidenceYes', 'Yes')
+            : t('serviceEvidencePack.inventory.evidenceNo', 'No')}
         </Badge>
       ),
     },
@@ -85,7 +78,7 @@ export function ServiceEvidenceInventoryTable({
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ClipboardList className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceEvidencePack.inventory.title', 'Evidence inventory')}
+        {t('serviceEvidencePack.inventory.title', 'Evidence Inventory')}
       </PanelTitle>
       {isError ? (
         <QueryError error={error} onRetry={onRetry} />

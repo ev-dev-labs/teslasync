@@ -5,15 +5,15 @@ import { useTranslation } from 'react-i18next';
 import {
   Badge,
   DataTable,
+  GlassPanel,
+  PanelTitle,
   Text,
   type Column,
 } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
-
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportProvenanceMatrixProps {
   analysis: BatteryPassportAnalysis;
@@ -31,7 +31,6 @@ export function BatteryPassportProvenanceMatrix({
   analysis,
   state,
 }: BatteryPassportProvenanceMatrixProps) {
-  const { fmtInt, fmtScientificNumber, fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const passport = state.passport;
   const facts = analysis.hashFacts;
@@ -50,7 +49,7 @@ export function BatteryPassportProvenanceMatrix({
           'vehicle_id',
         ),
         value: facts.vehicleId != null
-          ? fmtInt(facts.vehicleId)
+          ? fmtNumber(facts.vehicleId, 0)
           : '—',
         source: t(
           'batteryPassport.provenance.vehicleIdSource',
@@ -73,7 +72,7 @@ export function BatteryPassportProvenanceMatrix({
       {
         field: t('batteryPassport.provenance.soh', 'soh_pct'),
         value: facts.sohPct != null
-          ? fmtScientificNumber(facts.sohPct, 4)
+          ? fmtNumber(facts.sohPct, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.sohSource',
@@ -87,7 +86,7 @@ export function BatteryPassportProvenanceMatrix({
           'capacity_kwh',
         ),
         value: facts.capacityKwh != null
-          ? fmtScientificNumber(facts.capacityKwh, 4)
+          ? fmtNumber(facts.capacityKwh, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.capacitySource',
@@ -101,7 +100,7 @@ export function BatteryPassportProvenanceMatrix({
           'equivalent_full_cycles',
         ),
         value: facts.equivalentFullCycles != null
-          ? fmtScientificNumber(facts.equivalentFullCycles, 4)
+          ? fmtNumber(facts.equivalentFullCycles, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.efcSource',
@@ -115,7 +114,7 @@ export function BatteryPassportProvenanceMatrix({
           'fast_charge_ratio',
         ),
         value: facts.fastChargeRatio != null
-          ? fmtScientificNumber(facts.fastChargeRatio, 4)
+          ? fmtNumber(facts.fastChargeRatio, 4)
           : '—',
         source: t(
           'batteryPassport.provenance.fastRatioSource',
@@ -153,7 +152,7 @@ export function BatteryPassportProvenanceMatrix({
           'original_capacity_kwh',
         ),
         value: analysis.metrics.originalCapacityKwh != null
-          ? fmtNumber(analysis.metrics.originalCapacityKwh)
+          ? fmtNumber(analysis.metrics.originalCapacityKwh, 1)
           : '—',
         source: t(
           'batteryPassport.provenance.originalCapacitySource',
@@ -167,7 +166,7 @@ export function BatteryPassportProvenanceMatrix({
           'avg_charge_limit_pct',
         ),
         value: analysis.metrics.avgChargeLimitPct != null
-          ? fmtPercent(analysis.metrics.avgChargeLimitPct)
+          ? fmtPercent(analysis.metrics.avgChargeLimitPct, 1)
           : '—',
         source: t(
           'batteryPassport.provenance.avgLimitSource',
@@ -180,7 +179,7 @@ export function BatteryPassportProvenanceMatrix({
           'batteryPassport.provenance.thermal',
           'thermal_exposure',
         ),
-        value: thermal != null ? fmtPercent(thermal) : '—',
+        value: thermal != null ? fmtPercent(thermal, 1) : '—',
         source: t(
           'batteryPassport.provenance.thermalSource',
           'Three ambient-temperature drive shares; value shown is their exact sum.',
@@ -241,7 +240,7 @@ export function BatteryPassportProvenanceMatrix({
       recommendationCount,
       t,
       thermal,
-      trendCount, fmtNumber, fmtPercent, fmtInt, fmtScientificNumber,
+      trendCount,
     ],
   );
   const columns = useMemo<Column<ProvenanceRow>[]>(
@@ -316,19 +315,26 @@ export function BatteryPassportProvenanceMatrix({
 
   return (
     <section data-testid="battery-passport-provenance-matrix">
-      <LayoutCard title={t(
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Fingerprint
+            className="h-4 w-4 text-cyan-300"
+            aria-hidden="true"
+          />
+          {t(
             'batteryPassport.provenance.title',
             'Provenance core-facts matrix',
-          )} description={t(
+          )}
+        </PanelTitle>
+        <Text as="p" variant="caption" className="mb-4">
+          {t(
             'batteryPassport.provenance.subtitle',
             'Exactly seven facts enter the tsbp-v1 canonical string. Display and analysis fields outside that list are not protected by this digest.',
-          )} actions={<Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )}
+        </Text>
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-provenance"
-            resizable={false}
-            columnReorder={false}
-            columnVisibility={false}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.field}
@@ -340,7 +346,7 @@ export function BatteryPassportProvenanceMatrix({
             )}
           />
         </BatteryPassportSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

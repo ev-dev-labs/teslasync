@@ -13,7 +13,6 @@ import {
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
 import type { OperationalNarrative } from '@/types/operationalNarrative'
-import type { MetricRaw } from '@/lib/metric-reference'
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails'
 
 export type OperationalTone =
@@ -27,10 +26,8 @@ export interface OperationalBriefMetric {
   key: string
   label: string
   value: ReactNode
-  detail: ReactNode
+  detail: string
   tone?: OperationalTone
-  rawValue?: MetricRaw
-  valueState?: 'value' | 'missing' | 'invalid'
 }
 
 export interface OperationalAttention {
@@ -56,16 +53,13 @@ export interface OperationalBriefProps {
   className?: string
   testId?: string
   metricColumns?: 2 | 3 | 4
-  /** Dense layout for pages where the evidence grid follows a compact page header. */
-  compact?: boolean
-  loading?: boolean
 }
 
 const TONE_TEXT: Record<OperationalTone, string> = {
-  success: 'text-emerald-700 dark:text-emerald-300',
-  info: 'text-sky-700 dark:text-sky-300',
-  warning: 'text-amber-800 dark:text-amber-300',
-  danger: 'text-rose-700 dark:text-rose-300',
+  success: 'text-emerald-300',
+  info: 'text-cyan-300',
+  warning: 'text-amber-300',
+  danger: 'text-rose-300',
   neutral: 'text-[var(--text-primary)]',
 }
 
@@ -91,8 +85,6 @@ export function OperationalBrief({
   className,
   testId,
   metricColumns = 4,
-  compact = false,
-  loading = false,
 }: OperationalBriefProps) {
   const { t } = useTranslation()
   const titleId = useId()
@@ -115,23 +107,23 @@ export function OperationalBrief({
 
   return (
     <>
-      <section aria-labelledby={titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
+      <section aria-labelledby={titleId} data-testid={testId}>
         <GlassPanel
           className={cn(
             'overflow-hidden border-[var(--border-default)] bg-[var(--surface-1)] shadow-e1',
             className,
           )}
         >
-          <div className={cn('border-s-2 border-[var(--theme-primary)]', compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
-            <div className={cn('flex flex-col xl:flex-row xl:justify-between', compact ? 'gap-2 xl:items-start' : 'gap-4 xl:items-start')}>
-              <div className={cn('min-w-0', compact ? 'flex-1' : 'max-w-3xl')}>
-                <div className={cn('flex flex-wrap items-center gap-2', !compact && 'mb-2')}>
+          <div className="border-s-2 border-[var(--theme-primary)] p-4 sm:p-5">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div className="min-w-0 max-w-3xl">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Text
                     as="span"
                     size="2xs"
                     weight="semibold"
                     color="muted"
-                    className="tracking-[0.12em]"
+                    className="uppercase tracking-[0.12em]"
                   >
                     {eyebrow}
                   </Text>
@@ -141,13 +133,13 @@ export function OperationalBrief({
                   {scope}
                   {freshness}
                 </div>
-                <PanelTitle id={titleId} className={compact ? 'mt-1 text-base' : undefined}>{title}</PanelTitle>
-                <Text as="p" variant="bodySm" className={cn('mt-1', compact ? 'basis-full text-xs leading-snug' : 'max-w-2xl')}>
+                <PanelTitle id={titleId}>{title}</PanelTitle>
+                <Text as="p" variant="bodySm" className="mt-1 max-w-2xl">
                   {description}
                 </Text>
               </div>
 
-              <div className={cn('flex flex-wrap items-center gap-2', compact && 'shrink-0 xl:flex-nowrap')}>
+              <div className="flex flex-wrap items-center gap-2">
                 {actions}
                 <Button
                   type="button"
@@ -164,33 +156,26 @@ export function OperationalBrief({
             <div
               role="list"
               className={cn(
-                compact ? 'mt-2 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2' : 'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
-                compact ? 'md:grid-cols-3 min-[1920px]:grid-cols-6' : METRIC_COLUMNS[metricColumns],
+                'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
+                METRIC_COLUMNS[metricColumns],
               )}
             >
               {metrics.map((metric) => (
                 <div
                   key={metric.key}
                   role="listitem"
-                  data-operational-metric={metric.key}
-                  data-value-state={metric.valueState}
-                  className={cn('min-w-0 bg-[var(--surface-2)]', compact ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4')}
+                  className="min-w-0 bg-[var(--surface-2)] p-3 sm:p-4"
                 >
-                  <div className={cn(compact && 'flex items-baseline justify-between gap-3')}>
-                    <MetricLabel className={compact ? 'min-w-0 text-xs' : undefined}>{metric.label}</MetricLabel>
-                    <MetricValue
-                      data-operational-value={loading ? undefined : true}
-                      className={cn(
-                        compact ? 'min-w-0 break-words text-base sm:text-lg' : 'mt-1 break-words text-xl sm:text-2xl',
-                        TONE_TEXT[metric.tone ?? 'neutral'],
-                      )}
-                    >
-                      {loading ? (
-                        <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
-                      ) : metric.value}
-                    </MetricValue>
-                  </div>
-                  <Text as="div" size="2xs" color="muted" className="mt-1">
+                  <MetricLabel>{metric.label}</MetricLabel>
+                  <MetricValue
+                    className={cn(
+                      'mt-1 truncate text-xl sm:text-2xl',
+                      TONE_TEXT[metric.tone ?? 'neutral'],
+                    )}
+                  >
+                    {metric.value}
+                  </MetricValue>
+                  <Text as="p" size="2xs" color="muted" className="mt-1 line-clamp-2">
                     {metric.detail}
                   </Text>
                 </div>
@@ -198,7 +183,7 @@ export function OperationalBrief({
             </div>
 
             {primaryAttention && (
-              <div className={cn('flex flex-col rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] sm:flex-row sm:items-center', compact ? 'mt-2 gap-2 p-2.5' : 'mt-4 gap-3 p-3')}>
+              <div className="mt-4 flex flex-col gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-center">
                 <Icons.alertCircle
                   className={cn(
                     'h-4 w-4 shrink-0',
@@ -254,15 +239,12 @@ export function OperationalBrief({
                     as="span"
                     size="sm"
                     weight="bold"
-                    aria-busy={loading || undefined}
                     className={cn('tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
                   >
-                    {loading ? (
-                      <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
-                    ) : metric.value}
+                    {metric.value}
                   </Text>
                 </div>
-                <Text as="div" size="xs" color="muted" className="mt-1">
+                <Text as="p" size="xs" color="muted" className="mt-1">
                   {metric.detail}
                 </Text>
               </div>

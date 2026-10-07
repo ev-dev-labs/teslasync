@@ -1,5 +1,4 @@
 import { type ReactNode, useId } from 'react'
-import { HelperText, PanelTitle } from '@/components/ui/Typography'
 import { cn } from '@/lib/cn'
 
 export interface FormSectionProps {
@@ -15,7 +14,7 @@ export interface FormSectionProps {
   className?: string
 }
 
-/** Accessible group for form controls with consistent spacing. */
+/** Labeled fieldset for grouping form controls with consistent spacing. */
 export function FormSection({ title, description, children, className }: FormSectionProps) {
   const headingId = useId()
   const descriptionId = useId()
@@ -26,14 +25,14 @@ export function FormSection({ title, description, children, className }: FormSec
       role="group"
       aria-labelledby={headingId}
       aria-describedby={hasDescription ? descriptionId : undefined}
-      className={cn('glass-panel min-w-0 p-5 sm:p-6 space-y-4', className)}
+      className={cn('glass-panel p-5 sm:p-6 space-y-4', className)}
     >
       <div>
-        <PanelTitle id={headingId} className="section-title break-words">{title}</PanelTitle>
+        <h3 id={headingId} className="section-title">{title}</h3>
         {hasDescription && (
-          <HelperText id={descriptionId} className="mt-1 break-words">
+          <p id={descriptionId} className="mt-1 text-xs text-[var(--text-muted)]">
             {description}
-          </HelperText>
+          </p>
         )}
       </div>
       <div className="space-y-4">

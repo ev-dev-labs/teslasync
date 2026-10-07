@@ -8,14 +8,16 @@ import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, Button as UiButton, Badge, Text, Caption, Tooltip } from '@/components/ui';
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { SourceContent } from '@/components/layout';
-import { PillFilterBar, SearchInput } from '@/components/forms';
-import { useDataState } from '@/hooks/useDataState';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { QueryError } from '@/components/feedback/QueryError';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { StaggerContainer } from '@/components/motion/StaggerContainer';
+import { StaggerItem } from '@/components/motion/StaggerItem';
+import { SearchInput } from '@/components/forms';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
 import { Icons } from '@/lib/icons';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { AutomationPreset } from '@/api/types';
 import type { AutomationTriggerKind } from '@/types/automations';
 
@@ -51,9 +53,9 @@ const iconMap: Record<string, ElementType> = {
 
 const triggerLabels: Record<AutomationTriggerKind, { key: string; fallback: string }> = {
   trigger_schedule: { key: 'automations.builder.triggerSchedule', fallback: 'Schedule' },
-  trigger_event: { key: 'automations.builder.triggerEvent', fallback: 'Vehicle event' },
+  trigger_event: { key: 'automations.builder.triggerEvent', fallback: 'Vehicle Event' },
   trigger_geofence: { key: 'automations.builder.triggerGeofence', fallback: 'Geofence' },
-  trigger_signal: { key: 'automations.builder.triggerSignal', fallback: 'Signal threshold' },
+  trigger_signal: { key: 'automations.builder.triggerSignal', fallback: 'Signal Threshold' },
 };
 
 function PresetCard({
@@ -83,7 +85,7 @@ function PresetCard({
           <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
-          <Text as="h3" variant="bodySm" weight="semibold" color="primary" className="break-words">
+          <Text as="h3" size="sm" weight="semibold" color="primary" className="truncate">
             {preset.name}
           </Text>
           <Text as="p" variant="bodySm" className="mt-0.5">
@@ -113,12 +115,11 @@ function PresetCard({
         </Tooltip>
       </div>
 
-      <Text as="p" variant="bodySm" className="break-words">
+      <Text as="p" variant="bodySm" className="leading-relaxed line-clamp-2">
         {preset.description}
       </Text>
 
       <UiButton
-        wrapLabel
         size="sm"
         variant="secondary"
         onClick={handleInstall}
@@ -164,9 +165,7 @@ export function PresetGallery({
   actionsDisabledReason,
 }: PresetGalleryProps) {
   const { t } = useTranslation();
-  const query = useAutomationPresets(category);
-  const { data, isLoading, refetch } = query;
-  const source = useDataState(query);
+  const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
   const [activeCategory, setActiveCategory] = useState(category ?? 'all');
   const [search, setSearch] = useState('');
 
@@ -198,30 +197,36 @@ export function PresetGallery({
     return items;
   }, [categories, presetList, t]);
 
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <PresetCardSkeleton key={i} />
+        ))}
+      </div>
+    );
+  }
+
+  if (isError && presetList.length === 0) {
+    return (
+      <QueryError
+        error={error}
+        onRetry={() => refetch()}
+        resourceName={t('automations.presets.resource', 'Automation presets')}
+      />
+    );
+  }
+
+  if (presetList.length === 0) {
+    return (
+      <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        icon={<Icons.clock className="h-8 w-8" />}
+        message={t('automations.presets.empty', 'No preset templates available')}
+      />
+    );
+  }
+
   return (
-    <SourceContent
-      state={isLoading && !source.hasData ? 'loading'
-        : source.fatalError ? 'error'
-          : source.refreshError || source.isRefreshBlocked ? 'retained'
-            : presetList.length === 0 ? 'empty' : 'ready'}
-      label={t('automations.presets.resource', 'Automation presets')}
-      emptyMessage={t('automations.presets.empty', 'No preset templates available')}
-      errorMessage={t('automations.presets.resource', 'Automation presets')}
-      error={source.fatalError}
-      errorRecovery={{ onRetry: () => { void refetch(); } }}
-      loadingContent={
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <PresetCardSkeleton key={i} />)}
-        </div>
-      }
-      emptyContent={
-        <EmptyState
-          icon={<Icons.clock className="h-8 w-8" />}
-          message={t('automations.presets.empty', 'No preset templates available')}
-          action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void refetch(); } }}
-        />
-      }
-    >
     <div className="space-y-6">
       {!category && (
         <SearchInput
@@ -233,15 +238,25 @@ export function PresetGallery({
         />
       )}
       {!category && pills.length > 1 && (
-        <PillFilterBar
-          items={pills}
-          activeKey={activeCategory}
-          onChange={setActiveCategory}
-          semanticMode="filters"
-          scrollable={false}
-          ariaLabel={t('automations.presets.filterAria', 'Filter presets by category')}
-          className="flex-wrap"
-        />
+        <div
+          role="group"
+          aria-label={t('automations.presets.filterAria', 'Filter presets by category')}
+          className="flex flex-wrap gap-2"
+        >
+          {pills.map((item) => (
+            <UiButton
+              key={item.key}
+              type="button"
+              size="sm"
+              variant={activeCategory === item.key ? 'primary' : 'ghost'}
+              aria-pressed={activeCategory === item.key}
+              onClick={() => setActiveCategory(item.key)}
+              className="min-h-9 rounded-shape-lg border border-[var(--border-default)] px-3"
+            >
+              {item.label} ({fmtInt(item.count)})
+            </UiButton>
+          ))}
+        </div>
       )}
       {!category && (
         <Caption role="status" className="block">
@@ -251,12 +266,7 @@ export function PresetGallery({
           })}
         </Caption>
       )}
-      {presetList.length === 0 ? (
-        <EmptyState
-          icon={<Icons.clock className="h-8 w-8" />}
-          message={t('automations.presets.empty', 'No preset templates available')}
-        />
-      ) : filteredPresets.length === 0 ? (
+      {filteredPresets.length === 0 ? (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.clock className="h-8 w-8" />}
           message={t('automations.presets.emptyCategory', 'No templates match your filters')}
@@ -277,6 +287,5 @@ export function PresetGallery({
         </FadeIn>
       )}
     </div>
-    </SourceContent>
   );
 }

@@ -148,7 +148,7 @@ describe('sessionLabel', () => {
   it('composes a "date — label — energy kWh" string', () => {
     const label = sessionLabel(makeSession({ charger_type: 'Tesla', total_energy_added_wh: 42_500 }));
     expect(label).toContain('Supercharger');
-    expect(label).toContain('42.50 kWh');
+    expect(label).toContain('42.5 kWh');
     // Two em-dash separators between the three segments.
     expect(label.split(' — ')).toHaveLength(3);
   });

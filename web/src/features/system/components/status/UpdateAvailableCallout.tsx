@@ -40,7 +40,7 @@ export function UpdateAvailableCallout({ current, latest, checkedAt }: UpdateAva
           <p className="text-xs text-[var(--text-secondary)] mt-0.5">
             {current ? `You're running v${current}. ` : ''}Review the release notes before upgrading your deployment.
             {checkedAt && (
-              <span className="text-[var(--text-muted)]">  · last checked {formatDateTime(checkedAt)}</span>
+              <span className="text-[var(--text-muted)]"> · Last checked {formatDateTime(checkedAt)}</span>
             )}
           </p>
         </div>

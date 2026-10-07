@@ -5,7 +5,7 @@ import { MetricCard } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import {
   COLD_GAP_HOURS,
@@ -13,7 +13,6 @@ import {
 } from '../../lib/coldStart';
 import type { ColdStartSectionState } from './types';
 import { useColdStartDisplay } from './useColdStartDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, xl: 4 } as const;
 
@@ -30,14 +29,13 @@ export function ColdStartKpis({
   error,
   onRetry,
 }: ColdStartKpisProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEfficiency, formatEnergy } = useColdStartDisplay();
   const shareLabel =
     summary.penaltyShare != null
       ? t('coldStart.penaltyVsWarm', '{{sign}}{{pct}}% vs warm starts', {
           sign: summary.penaltyShare > 0 ? '+' : summary.penaltyShare < 0 ? '−' : '',
-          pct: fmtNumber(Math.abs(summary.penaltyShare) * 100),
+          pct: fmtNumber(Math.abs(summary.penaltyShare) * 100, 0),
         })
       : undefined;
 
@@ -66,7 +64,7 @@ export function ColdStartKpis({
             />
             <MetricCard
               label={t('coldStart.totalEnergy', 'Extra Energy')}
-              value={formatEnergy(summary.totalPenaltyWh)}
+              value={formatEnergy(summary.totalPenaltyWh, { precision: 1 })}
               subtitle={penaltyCostLabel ?? undefined}
               icon={<TrendingUp className="h-5 w-5" aria-hidden="true" />}
               color="amber"
@@ -75,7 +73,7 @@ export function ColdStartKpis({
               label={t('coldStart.coldShare', 'Cold Starts')}
               value={
                 summary.coldShare != null
-                  ? `${fmtNumber(summary.coldShare * 100)}%`
+                  ? `${fmtNumber(summary.coldShare * 100, 0)}%`
                   : '—'
               }
               subtitle={t('coldStart.gapDef', 'parked {{h}}h or more', {

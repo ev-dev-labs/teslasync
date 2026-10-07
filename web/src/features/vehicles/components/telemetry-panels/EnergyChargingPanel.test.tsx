@@ -87,9 +87,9 @@ describe('EnergyChargingPanel — SI unit conversion', () => {
   it('renders voltage, current, battery level, and converts charge rate to km/h', () => {
     render(<EnergyChargingPanel chargingTelemetry={makeTelemetry()} />)
 
-    expect(screen.getByText('Charger voltage')).toBeInTheDocument()
+    expect(screen.getByText('Charger Voltage')).toBeInTheDocument()
     expect(screen.getByText('240.00')).toBeInTheDocument()
-    expect(screen.getByText('Charger current')).toBeInTheDocument()
+    expect(screen.getByText('Charger Current')).toBeInTheDocument()
     expect(screen.getByText('32.00')).toBeInTheDocument()
     expect(screen.getByText('82.00%')).toBeInTheDocument()
     // 36000 m/h ÷ 3600 = 10 m/s → 36.00 km/h.
@@ -155,8 +155,8 @@ describe('EnergyChargingPanel — empty states', () => {
     render(<EnergyChargingPanel chargingTelemetry={undefined} />)
 
     expect(screen.getByText('No charging telemetry available')).toBeInTheDocument()
-    expect(screen.queryByText('Charger power')).toBeNull()
-    expect(screen.queryByText('Battery level')).toBeNull()
+    expect(screen.queryByText('Charger Power')).toBeNull()
+    expect(screen.queryByText('Battery Level')).toBeNull()
   })
 })
 
@@ -164,8 +164,8 @@ describe('EnergyChargingPanel — heading', () => {
   it('renders the localized panel heading as a real heading element', () => {
     render(<EnergyChargingPanel chargingTelemetry={makeTelemetry()} />)
 
-    const heading = screen.getByRole('heading', { name: /Energy & charging/i })
+    const heading = screen.getByRole('heading', { name: /Energy & Charging/i })
     expect(heading).toBeInTheDocument()
-    expect(screen.getByText('Charger power')).toBeInTheDocument()
+    expect(screen.getByText('Charger Power')).toBeInTheDocument()
   })
 })

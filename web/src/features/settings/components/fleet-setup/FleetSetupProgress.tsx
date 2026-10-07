@@ -111,12 +111,12 @@ export function FleetSetupProgress({
   const doneCount = steps.filter((s) => s.done).length
 
   return (
-    <GlassPanel className="h-full min-w-0 space-y-4 p-4 sm:p-5">
-      <div className="flex min-w-0 items-center gap-3">
+    <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
+      <div className="flex items-center gap-3">
         <IconBox color="green">
           <ListChecks className="h-5 w-5" aria-hidden="true" />
         </IconBox>
-        <div className="min-w-0 break-words [overflow-wrap:anywhere]">
+        <div>
           <PanelTitle>{t('fleetSetup.progress.title', 'Setup progress')}</PanelTitle>
           <HelperText>
             {t('fleetSetup.progress.subtitle', '{{done}} / {{total}} complete', {

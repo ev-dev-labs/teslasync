@@ -42,16 +42,6 @@
  * dashboard tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-
-it('rejects non-finite and out-of-range GPS records before density clustering', () => {
-  expect(clusterPositions([
-    { latitude: NaN, longitude: 10 },
-    { latitude: 91, longitude: 10 },
-    { latitude: 30, longitude: Infinity },
-    { latitude: 30, longitude: 181 },
-    { latitude: 51.48, longitude: 0 },
-  ], 500)).toEqual([{ lat: 51.48, lon: 0, count: 1, intensity: 1 }]);
-});
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -126,7 +116,6 @@ vi.mock('react-i18next', async () => {
 // Inert leaflet barrel — capture props, never touch canvas/leaflet. The real
 // WidgetMapView (from ./shared) renders through these mocks.
 vi.mock('@/components/maps', () => ({
-  MapInvalidator: () => null,
   MapContainer: ({
     children,
     center,
@@ -178,11 +167,6 @@ import PositionHeatmapWidget, {
   intensityColor,
   type ClusterPoint,
 } from './PositionHeatmapWidget';
-
-it.each([1, 2, 3])('identifies the position heatmap at %i columns', (cols) => {
-  renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Position heatmap' })).toBeInTheDocument();
-});
 import type { WidgetSize } from './types';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
@@ -225,13 +209,11 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
 }
 
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }, vehicleId?: number) {
-  const view = render(
+  return render(
     <MemoryRouter>
       <PositionHeatmapWidget size={size} vehicleId={vehicleId} />
     </MemoryRouter>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Position heatmap');
-  return view;
 }
 
 const radii = () => captured.markers.map((m) => m.radius);
@@ -330,7 +312,7 @@ describe('PositionHeatmapWidget — standard layout', () => {
   it('renders the titled shell, one marker per cluster, and centres on the centroid', () => {
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Position heatmap')).toBeInTheDocument();
+    expect(screen.getByText('Position Heatmap')).toBeInTheDocument();
 
     const clusters = clusterPositions(POSITIONS, 500);
     expect(screen.getAllByTestId('marker')).toHaveLength(clusters.length);
@@ -383,10 +365,10 @@ describe('PositionHeatmapWidget — wide layout', () => {
 /* ── Component — compact layout ───────────────────────────────────── */
 
 describe('PositionHeatmapWidget — compact layout', () => {
-  it('identifies the static coarser-grid map without adding the standard badge', () => {
+  it('drops the title + badge and renders a static, coarser-grid map', () => {
     renderWidget({ cols: 1, rows: 2 });
 
-    expect(screen.getByRole('heading', { name: 'Position heatmap' })).toBeInTheDocument();
+    expect(screen.queryByText('Position Heatmap')).not.toBeInTheDocument();
     expect(screen.queryByText(/\bpositions\b/)).not.toBeInTheDocument();
 
     expect(screen.getAllByTestId('marker')).toHaveLength(2);
@@ -406,7 +388,7 @@ describe('PositionHeatmapWidget — data states', () => {
     const { container } = renderWidget();
 
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
-    expect(screen.queryByText('Position heatmap')).toBeInTheDocument();
+    expect(screen.queryByText('Position Heatmap')).not.toBeInTheDocument();
     expect(screen.queryByTestId('marker')).not.toBeInTheDocument();
     expect(captured.map).toBeNull();
   });
@@ -448,7 +430,7 @@ describe('PositionHeatmapWidget — data states', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The misleading empty state / titled shell must NOT appear on error.
     expect(screen.queryByText('No position data')).not.toBeInTheDocument();
-    expect(screen.queryByText('Position heatmap')).toBeInTheDocument();
+    expect(screen.queryByText('Position Heatmap')).not.toBeInTheDocument();
     expect(screen.queryByTestId('marker')).not.toBeInTheDocument();
   });
 

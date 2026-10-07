@@ -8,7 +8,7 @@ import {
   MetricLabel,
   MetricValue,
 } from '@/components/ui';
-
+import { fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 
 import type {
@@ -17,7 +17,6 @@ import type {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalSocEvidenceProps {
   care: CareScore;
@@ -44,7 +43,6 @@ export function ArrivalSocEvidence({
   state,
   className,
 }: ArrivalSocEvidenceProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -81,7 +79,7 @@ export function ArrivalSocEvidence({
         <div className="rounded-xl bg-[var(--surface-2)] p-4">
           <MetricValue>
             {care.medianArrivalSocPct != null
-              ? fmtPercent(care.medianArrivalSocPct)
+              ? fmtPercent(care.medianArrivalSocPct, 0)
               : '—'}
           </MetricValue>
           <MetricLabel>
@@ -103,7 +101,7 @@ export function ArrivalSocEvidence({
                 {
                   pct:
                     bucket.share != null
-                      ? fmtPercent(bucket.share * 100)
+                      ? fmtPercent(bucket.share * 100, 0)
                       : '—',
                   count: bucket.count,
                 },

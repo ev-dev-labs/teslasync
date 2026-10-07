@@ -76,7 +76,7 @@ describe('AchievementUnlockedToast', () => {
     // toast body — assert presence rather than uniqueness.
     expect(screen.getAllByText('First Drive').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Complete your first drive').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Achievement unlocked')).toBeInTheDocument()
+    expect(screen.getByText('Achievement Unlocked')).toBeInTheDocument()
   })
 
   it('exposes a "View" affordance and a dismiss button', () => {

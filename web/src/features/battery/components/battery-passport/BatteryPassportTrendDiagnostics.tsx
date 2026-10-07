@@ -13,9 +13,8 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
-
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { fmtNumber } from '@/lib/numberFormat';
 import type {
   BatteryPassportAnalysis,
   BatteryPassportFitStatus,
@@ -23,7 +22,6 @@ import type {
 } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportTrendDiagnosticsProps {
   analysis: BatteryPassportAnalysis;
@@ -85,7 +83,6 @@ export function BatteryPassportTrendDiagnostics({
   analysis,
   state,
 }: BatteryPassportTrendDiagnosticsProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const diagnostics = analysis.trend.diagnostics;
   const accounting = analysis.trend.accounting;
@@ -136,13 +133,23 @@ export function BatteryPassportTrendDiagnostics({
 
   return (
     <section data-testid="battery-passport-trend-diagnostics">
-      <LayoutCard title={t(
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Activity
+            className="h-4 w-4 text-cyan-300"
+            aria-hidden="true"
+          />
+          {t(
             'batteryPassport.diagnostics.title',
             'Trend diagnostics and exact accounting',
-          )} description={t(
+          )}
+        </PanelTitle>
+        <Text as="p" variant="caption" className="mb-4">
+          {t(
             'batteryPassport.diagnostics.subtitle',
             'Coverage, UTC cadence, recency to the frozen page clock, variability, quantiles, and gated linear description.',
-          )} actions={<Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )}
+        </Text>
         <BatteryPassportSectionBody state={state}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
@@ -150,7 +157,7 @@ export function BatteryPassportTrendDiagnostics({
                 'batteryPassport.diagnostics.points',
                 'Analyzed points',
               )}
-              value={fmtInt(diagnostics.pointCount)}
+              value={fmtNumber(diagnostics.pointCount, 0)}
               subtitle={t(
                 'batteryPassport.diagnostics.returned',
                 '{{count}} returned before checks',
@@ -168,7 +175,7 @@ export function BatteryPassportTrendDiagnostics({
                 ? t(
                     'batteryPassport.values.days',
                     '{{value}} days',
-                    { value: fmtNumber(diagnostics.spanDays) },
+                    { value: fmtNumber(diagnostics.spanDays, 0) },
                   )
                 : '—'}
               subtitle={t(
@@ -187,7 +194,7 @@ export function BatteryPassportTrendDiagnostics({
                 ? t(
                     'batteryPassport.values.days',
                     '{{value}} days',
-                    { value: fmtNumber(diagnostics.daysSinceLatest) },
+                    { value: fmtNumber(diagnostics.daysSinceLatest, 0) },
                   )
                 : '—'}
               subtitle={t(
@@ -209,6 +216,7 @@ export function BatteryPassportTrendDiagnostics({
                     {
                       value: fmtNumber(
                         diagnostics.medianCadenceDays,
+                        1,
                       ),
                     },
                   )
@@ -232,6 +240,7 @@ export function BatteryPassportTrendDiagnostics({
                     {
                       value: fmtNumber(
                         diagnostics.startToEndChangePctPoints,
+                        2,
                       ),
                     },
                   )
@@ -256,11 +265,12 @@ export function BatteryPassportTrendDiagnostics({
                       'batteryPassport.diagnostics.quantileValue',
                       '{{p10}} / {{median}} / {{p90}}%',
                       {
-                        p10: fmtNumber(diagnostics.p10SohPct),
+                        p10: fmtNumber(diagnostics.p10SohPct, 1),
                         median: fmtNumber(
                           diagnostics.medianSohPct,
+                          1,
                         ),
-                        p90: fmtNumber(diagnostics.p90SohPct),
+                        p90: fmtNumber(diagnostics.p90SohPct, 1),
                       },
                     )
                   : '—'
@@ -284,6 +294,7 @@ export function BatteryPassportTrendDiagnostics({
                     {
                       value: fmtNumber(
                         diagnostics.standardDeviationPctPoints,
+                        2,
                       ),
                     },
                   )
@@ -304,7 +315,7 @@ export function BatteryPassportTrendDiagnostics({
                 ? t(
                     'batteryPassport.diagnostics.annualValue',
                     '{{value}} pp/year',
-                    { value: fmtNumber(annualized) },
+                    { value: fmtNumber(annualized, 2) },
                   )
                 : '—'}
               subtitle={fitLabel(diagnostics.fit.status, t)}
@@ -346,8 +357,9 @@ export function BatteryPassportTrendDiagnostics({
                   variant="bodySm"
                   className="font-mono tabular-nums"
                 >
-                  {fmtInt(
+                  {fmtNumber(
                     accounting.categories[category.key],
+                    0,
                   )}
                 </Text>
               </div>
@@ -377,7 +389,7 @@ export function BatteryPassportTrendDiagnostics({
             </AlertBanner>
           ) : null}
         </BatteryPassportSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

@@ -6,28 +6,12 @@
  * Recharts SVG that would otherwise be opaque to them.
  */
 
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
 import { EmbeddedChart } from '../EmbeddedChart';
-import { ChartCard } from '@/components/layout/layout-reference/ChartCard';
-
-let previousPreferences: ReturnType<typeof getFormatterPreferences>;
-
-beforeEach(() => {
-  previousPreferences = getFormatterPreferences();
-  setGlobalPrecision(2);
-  setGlobalLocale('en-US');
-});
-
-afterEach(() => {
-  cleanup();
-  setGlobalPrecision(previousPreferences.precision);
-  setGlobalLocale(previousPreferences.locale);
-});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -76,83 +60,6 @@ function renderChart(ui: React.ReactNode) {
 }
 
 describe('ChartContainer accessibility contract', () => {
-  it('keeps exactly one host heading and stable figure/table descriptions with an embedded toolbar opt-in', () => {
-    const description = 'Complete specialist chart description with source gaps.';
-    const { container } = renderChart(
-      <ChartCard title="Specialist source title" ariaLabel="Specialist source measurements"
-        ariaDescription={description} toolbar
-        action={<span data-testid="original-toolbar-action">Original toolbar detail</span>}
-        height={460} mobileHeight={300}
-        data={[{ reading: 0 }, { reading: null }]}
-        dataColumns={[{ key: 'reading', label: 'Original source reading' }]}>
-        <div data-testid="original-chart-tree">Original specialist plotted tree</div>
-      </ChartCard>,
-    );
-    expect(screen.getAllByRole('heading', { name: 'Specialist source title' })).toHaveLength(1);
-    const figure = screen.getByRole('figure', { name: 'Specialist source title' });
-    expect(figure).toHaveAccessibleDescription(/Complete specialist chart description with source gaps\./);
-    const titleId = figure.getAttribute('aria-labelledby');
-    expect(titleId ? document.getElementById(titleId)?.textContent : null).toBe('Specialist source title');
-    expect(figure.querySelector('[data-chart-toolbar]'))
-      .toContainElement(screen.getByTestId('original-toolbar-action'));
-    expect(figure).not.toHaveClass('rounded-panel', 'shadow-panel', 'p-5');
-    expect(container.querySelectorAll('[data-card]')).toHaveLength(1);
-    const viewport = screen.getByRole('img', { name: 'Specialist source measurements' });
-    expect(viewport).toContainElement(screen.getByTestId('original-chart-tree'));
-    expect(viewport).not.toContainElement(screen.getByTestId('original-toolbar-action'));
-    expect(viewport).toHaveStyle({
-      '--chart-height-desktop': '460px', '--chart-height-mobile': '300px',
-    });
-    const table = screen.getByRole('table', { name: 'Specialist source title — data table' });
-    expect(within(table).getByRole('cell', { name: '0' })).toBeInTheDocument();
-    expect(within(table).getByRole('cell', { name: '—' })).toBeInTheDocument();
-  });
-
-  it('retains figure descriptions and measured table cells through the shared card adapter', () => {
-    const description = 'One recorded energy measurement in the selected source window.';
-    renderChart(
-      <ChartCard title="Recorded energy" ariaLabel="Recorded energy in the selected source window"
-        ariaDescription={description}
-        data={[{ date: '2026-10-05', energy: '0.85 kWh' }]}
-        dataColumns={[{ key: 'date', label: 'Date' }, { key: 'energy', label: 'Measured energy' }]}>
-        <span>Original plotted content</span>
-      </ChartCard>,
-    );
-    expect(screen.getByRole('figure', { name: 'Recorded energy' }))
-      .toHaveAccessibleDescription(/One recorded energy measurement in the selected source window\./);
-    expect(screen.getByRole('img', {
-      name: 'Recorded energy in the selected source window',
-    })).toBeInTheDocument();
-    expect(screen.getByRole('table', { name: 'Recorded energy — data table' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Measured energy' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: '0.85 kWh' })).toBeInTheDocument();
-    expect(screen.getByText('Original plotted content')).toBeInTheDocument();
-  });
-
-  it('reactively formats typed numeric table cells while preserving IDs, counts, strings and unknowns', () => {
-    setGlobalPrecision(2);
-    setGlobalLocale('en-US');
-    renderChart(
-      <ChartContainer title="Typed values" ariaLabel="Typed values"
-        data={[{ reading: 42, count: 1234, id: 987654, clock: '03:04', missing: null }]}
-        dataColumns={[
-          { key: 'reading', label: 'reading', kind: 'measurement' },
-          { key: 'count', label: 'count', kind: 'count' },
-          { key: 'id', label: 'id' },
-          { key: 'clock', label: 'clock' },
-          { key: 'missing', label: 'missing', kind: 'measurement' },
-        ]}
-      ><div>chart</div></ChartContainer>,
-    );
-    const table = screen.getByRole('table');
-    expect(within(table).getByText('42.00')).toBeInTheDocument();
-    act(() => setGlobalPrecision(3));
-    expect(within(table).getByText('42.000')).toBeInTheDocument();
-    expect(within(table).getByText('1,234')).toBeInTheDocument();
-    expect(within(table).getByText('987654')).toBeInTheDocument();
-    expect(within(table).getByText('03:04')).toBeInTheDocument();
-    expect(within(table).getByText('—')).toBeInTheDocument();
-  });
   it('keeps semantics without nested panel chrome in embedded mode', () => {
     renderChart(
       <EmbeddedChart
@@ -267,11 +174,6 @@ describe('ChartContainer accessibility contract', () => {
     // The table lives inside the figcaption — query by role.
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
-    expect(table).toHaveAccessibleName('Daily kWh — data table');
-    expect(table.closest('figcaption')).toHaveAttribute(
-      'id',
-      screen.getByRole('figure', { name: 'Daily kWh' }).getAttribute('aria-describedby'),
-    );
 
     // Two column headers in document order.
     const headers = within(table).getAllByRole('columnheader');
@@ -452,18 +354,17 @@ describe('ChartContainer accessibility contract', () => {
       '[contain:layout_size]',
     );
     expect(chart).not.toHaveClass('h-full');
-    expect(chart).not.toHaveClass('[&>.recharts-responsive-container]:flex-1');
   });
 
-  it.each([false, true])('fills the fluid plot inside a bounded=%s host without changing fallback heights', bounded => {
+  it('keeps fluid embedded sizing bounded by the shared fallback height', () => {
     renderChart(
-      <div className={bounded ? 'h-72' : 'flex flex-col'}>
+      <div className="h-72">
         <EmbeddedChart
           title="Fluid widget"
           ariaLabel="Fluid embedded chart"
           fluid
         >
-          <div className="recharts-responsive-container h-full" data-testid="responsive-plot">chart</div>
+          <div>chart</div>
         </EmbeddedChart>
       </div>,
     );
@@ -474,10 +375,6 @@ describe('ChartContainer accessibility contract', () => {
     expect(figure).toHaveAttribute('data-chart-fluid', 'true');
     expect(figure).toHaveClass('h-full', 'min-h-0', 'max-h-full');
     expect(chart).toHaveClass(
-      'flex',
-      'flex-col',
-      '[&>.recharts-responsive-container]:flex-1',
-      '[&>.recharts-responsive-container]:min-h-0',
       'h-full',
       'min-h-[var(--chart-height-mobile)]',
       'sm:min-h-[var(--chart-height-desktop)]',
@@ -488,7 +385,6 @@ describe('ChartContainer accessibility contract', () => {
       '--chart-height-mobile': '200px',
       '--chart-height-desktop': '240px',
     });
-    expect(screen.getByTestId('responsive-plot').parentElement).toBe(chart);
   });
 
   it('renders contextual empty copy without exposing an empty chart image', () => {

@@ -15,38 +15,11 @@ and `/settings#appearance` continue to work. Switching categories preserves
 unsaved form edits and does not save automatically. Each section retains its own
 save or instant-apply behavior.
 
-**Decimal precision** in Units, language & costs controls measurement, currency
-and percentage displays across pages, tables, widgets and chart tooltips.
-Changing the saved preference updates mounted displays without reloading data.
-Counts, identifiers and clock durations remain integers or clock-formatted;
-scientific diagnostics may retain a minimum number of decimals to avoid hiding
-meaningful detail, while honoring a higher selected precision. This preference
-changes presentation only, not stored SI values, calculations or filter limits.
-
-Numeric alert and automation editors use preferred units and locale-aware
-decimals when the signal's dimension is available. Thresholds are converted
-back to the API's canonical units without rounding; computed metrics retain
-their existing wire-unit contract. Percentage-change thresholds use percentages,
-not the metric's measurement unit. Numeric membership lists use semicolons in
-the editor so decimal commas remain unambiguous. Currency preferences change
-presentation, not exchange rates. Focusing and leaving an unchanged rounded
-field does not replace its precise stored value.
-
-Quantity and currency inputs share the same decimal parser. Native digits and
-minus signs round-trip correctly, and grouping must match the selected locale
-(including Indian grouping and French space separators). Malformed separators
-such as `1,2` in an English locale are rejected rather than silently saved as
-`12`. Strict parsing accepts only ungrouped ASCII decimal/scientific notation.
-
 **Fonts & readability** at `/settings#typography` offers a searchable UI and
 monospace font library, live font samples, and a text field for trying your own
 copy. Font selection, reading presets, scale, line height, letter spacing, and
 heading weight apply across the app immediately. Selected fonts are persisted
 with the rest of the settings and restored before the first page paint.
-The adaptive typography token layer updates root CSS custom properties rather
-than injecting an inline stylesheet, so it remains compatible with the deployed
-Content Security Policy. Reset restores prior token values without clearing
-unrelated font or theme preferences.
 
 Reset controls live in **Reset & recovery**, separate from everyday preferences.
 The overview retains the current-preference summary, export link, guided-tour

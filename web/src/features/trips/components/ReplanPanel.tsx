@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Icons } from '@/lib/icons';
 import {
   useReplanAssessment,
   useRequestReplan,
@@ -8,9 +9,7 @@ import {
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { Badge, Button, Text } from '@/components/ui';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { ErrorDisplay, ListSkeleton } from '@/components/feedback';
-import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
+import { ListSkeleton, QueryError } from '@/components/feedback';
 import { StopScoreTable } from './StopScoreTable';
 import { safeArray } from '@/lib/safeArray';
 
@@ -60,11 +59,13 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
   const result = replan.data ?? null;
 
   return (
-    <LayoutCard
-      title={t('journey.replan.title', 'Replan')}
-      actions={
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Text as="p" variant="label" className="flex items-center gap-2">
+          <Icons.refresh className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('journey.replan.title', 'Replan')}
+        </Text>
         <Button
-          wrapLabel
           variant="secondary"
           size="sm"
           loading={replan.isPending}
@@ -73,19 +74,17 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
         >
           {t('journey.replan.rescore', 'Rescore from here')}
         </Button>
-      }
-    >
-      <SourceContent
-        state={assessState.fatalError ? 'error' : assessQuery.isLoading && !assessState.hasData
-          ? 'loading' : assessState.status === 'stale' ? 'retained' : assessment == null ? 'empty' : 'ready'}
-        label={t('journey.replan.title', 'Replan')}
-        emptyMessage={t('journey.replan.empty', 'No deviation reading yet.')}
-        errorMessage={t('journey.replan.loadFailed', 'The route assessment could not be loaded.')}
-        error={assessState.fatalError}
-        errorRecovery={{ onRetry: assessState.retry ?? undefined }}
-        loadingContent={<ListSkeleton label={t('journey.replan.loading', 'Measuring deviation…')} />}
-      >
-      {assessment != null ? (
+      </div>
+
+      {assessQuery.isLoading ? (
+        <ListSkeleton label={t('journey.replan.loading', 'Measuring deviation…')} />
+      ) : assessState.fatalError ? (
+        <QueryError error={assessState.fatalError} onRetry={() => assessState.retry?.()} />
+      ) : assessment == null ? (
+        <Text as="p" size="sm" color="secondary">
+          {t('journey.replan.empty', 'No deviation reading yet.')}
+        </Text>
+      ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={verdictVariant(assessment.deviation.verdict)}>
@@ -102,21 +101,23 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
               </Text>
             ) : null}
           </div>
-          <JourneyEvidenceList evidence={replanEvidence} />
+          {replanEvidence.length > 0 ? (
+            <ul className="space-y-1">
+              {replanEvidence.map((line) => (
+                <Text as="li" key={line} size="xs" color="muted">
+                  · {line}
+                </Text>
+              ))}
+            </ul>
+          ) : null}
         </div>
-      ) : (
-        <Text as="p" variant="bodySm">{t('journey.replan.empty', 'No deviation reading yet.')}</Text>
       )}
-      </SourceContent>
 
-      {replan.error ? (
-        <ErrorDisplay compact error={replan.error} message={t('journey.replan.rescoreFailed', 'Stops could not be rescored. Try rescoring again.')} />
-      ) : null}
-      {replan.isPending && !result ? (
+      {replan.isPending ? (
         <ListSkeleton label={t('journey.replan.scoring', 'Rescoring stops…')} />
       ) : result ? (
         <div className="space-y-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <Badge variant="success">
               {t('journey.scoring.winner', '{{site}} wins', { site: result.winner })}
             </Badge>
@@ -127,6 +128,6 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
           <StopScoreTable stops={safeArray(result.stops)} tableId="journey-replan-scores" />
         </div>
       ) : null}
-    </LayoutCard>
+    </div>
   );
 }

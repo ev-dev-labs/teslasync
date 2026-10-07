@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { TransportAgreementResponse } from '@/api/types';
 import { useTransportAgreement } from '@/api/hooks/useSignals';
-import './operationalbrief-all/metricPreferencesTestSetup';
 import { TransportAgreementPanel, transportAgreementWindowHours } from './TransportAgreementPanel';
 
 vi.mock('react-i18next', () => ({
@@ -77,8 +76,8 @@ describe('TransportAgreementPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
-    expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: 'HTTP / MQTT Agreement' })).toBeInTheDocument();
+    expect(screen.getAllByText('99.5%').length).toBeGreaterThan(0);
     expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
     expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
     expect(screen.getByText('Producer time only; receipt fallbacks excluded')).toBeInTheDocument();
@@ -112,7 +111,7 @@ describe('TransportAgreementPanel', () => {
 
     expect(screen.getByText('Not enough overlapping evidence')).toBeInTheDocument();
     expect(screen.getAllByText('N/A').length).toBeGreaterThan(0);
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
   });
 
   it('waits for the explicit signal query', () => {
@@ -123,41 +122,6 @@ describe('TransportAgreementPanel', () => {
         'Run a signal query to audit HTTP and MQTT evidence for the same time window.',
       ),
     ).toBeInTheDocument();
-  });
-
-  it('preserves measured producer evidence after refresh failure and retries the same submitted bounds', () => {
-    const refetch = vi.fn();
-    mockUseTransportAgreement.mockReturnValue({
-      data: response(),
-      error: new Error('refresh failed'),
-      isLoading: false,
-      refetch,
-    } as unknown as ReturnType<typeof useTransportAgreement>);
-    render(<TransportAgreementPanel vehicleId={7} from="2026-08-27T00:00:00Z" to="2026-08-28T00:00:00Z" enabled />);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('VehicleSpeed')).toBeInTheDocument();
-    expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
-    expect(screen.getAllByText('99.50%').length).toBeGreaterThan(0);
-    expect(screen.getByText('Producer time only; receipt fallbacks excluded')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-    expect(mockUseTransportAgreement.mock.calls.at(-1)).toEqual([
-      7, { from: '2026-08-27T00:00:00Z', to: '2026-08-28T00:00:00Z' }, true,
-    ]);
-  });
-
-  it('keeps complete long signal evidence names readable without changing pair or disagreement counts', () => {
-    const field = 'NormalizedProducerTelemetrySignal'.repeat(5);
-    const data = response();
-    data.fields = [{ ...data.fields[0], field }];
-    mockUseTransportAgreement.mockReturnValue({
-      data, error: null, isLoading: false, refetch: vi.fn(),
-    } as unknown as ReturnType<typeof useTransportAgreement>);
-    render(<TransportAgreementPanel vehicleId={7} from="2026-08-27T00:00:00Z" to="2026-08-28T00:00:00Z" enabled />);
-    expect(screen.getByText(field)).toHaveClass('[overflow-wrap:anywhere]');
-    expect(screen.getByText(field)).not.toHaveClass('truncate');
-    expect(screen.getByText('200 pairs / 201 HTTP / 201 MQTT')).toBeInTheDocument();
-    expect(screen.getByText('Disagreements: 1')).toBeInTheDocument();
   });
 });
 
@@ -190,7 +154,7 @@ describe('TransportAgreementPanel seven-day limit', () => {
 
     // Measured evidence from a previous render must not leak into the limit state.
     expect(screen.queryByText('VehicleSpeed')).toBeNull();
-    expect(screen.queryAllByText('99.50%')).toHaveLength(0);
+    expect(screen.queryAllByText('99.5%')).toHaveLength(0);
   });
 
   it('still queries at exactly the 168-hour boundary', () => {
@@ -253,7 +217,7 @@ describe('TransportAgreementPanel seven-day limit', () => {
     );
 
     expect(screen.queryByText('Agreement is limited to seven days')).toBeNull();
-    expect(screen.getByRole('region', { name: 'HTTP / MQTT agreement' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'HTTP / MQTT Agreement' })).toBeInTheDocument();
   });
 });
 

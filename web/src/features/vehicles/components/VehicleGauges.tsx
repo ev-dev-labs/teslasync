@@ -7,10 +7,9 @@ import { LinearGauge } from '@/components/charts/LinearGauge'
 import { MetricBar } from '@/components/data-display/MetricBar'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion'
-
+import { fmtNumber } from '@/lib/numberFormat'
 import { batteryColor } from '@/lib/colors'
 import type { Vehicle, VehicleState } from '@/api/types'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Color constants matching original production palette */
 const COLOR = {
@@ -47,7 +46,6 @@ interface VehicleGaugesProps {
 }
 
 export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs, formatDistance } = useUnits()
 
@@ -162,14 +160,14 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                 value={batteryLevel}
                 max={100}
                 color={batteryColor(batteryLevel)}
-                label={t('common.batteryLevel', 'Battery level')}
-                sublabel={`${fmtNumber(batteryLevel)}%`}
+                label={t('common.batteryLevel', 'Battery Level')}
+                sublabel={`${fmtNumber(batteryLevel, 0)}%`}
               />
               <MetricBar
                 value={rangeDisplay}
                 max={rangeMax}
                 color={COLOR.CYAN}
-                label={t('common.estimatedRange', 'Estimated range')}
+                label={t('common.estimatedRange', 'Estimated Range')}
                 sublabel={formatDistance(ratedRange)}
               />
               {state.is_charging && (
@@ -177,7 +175,7 @@ export function VehicleGauges({ vehicle, state }: VehicleGaugesProps) {
                   value={chargeRateDisplay}
                   max={chargeRateMax}
                   color="#10b981"
-                  label={t('common.chargeRate', 'Charge rate')}
+                  label={t('common.chargeRate', 'Charge Rate')}
                   sublabel={`${formatDistance(chargeRate)}/h`}
                 />
               )}

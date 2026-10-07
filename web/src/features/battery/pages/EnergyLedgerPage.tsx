@@ -2,16 +2,15 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BatteryWarning, Bug, Scale, Sigma } from 'lucide-react';
 
-import { PageLayout, LayoutCard, ChartCard, SourceContent } from '@/components/layout';
-import { Text, Badge, HelpTooltip } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
 
-import { type StatMetric } from '@/components/data-display';
-import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
-import { Skeleton, EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartTooltip, ChartLegend,
+  ChartContainer, ChartTooltip, ChartLegend,
   ComposedChart, Bar, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from '@/components/charts';
@@ -22,7 +21,6 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { useDataState } from '@/hooks/useDataState';
 import { chartTokens } from '@/lib/tokens';
 
 import { buildEnergyLedger } from '../lib/energyLedger';
@@ -38,8 +36,6 @@ export default function EnergyLedgerPage() {
 
   const sessionsQuery = useChargingSessions(vehicleIdStr);
   const drivesQuery = useDrives(vehicleIdStr);
-  const sessionsState = useDataState(sessionsQuery, { provenance: 'historical' });
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const dataSources = useMemo(
     () => [
       {
@@ -87,51 +83,21 @@ export default function EnergyLedgerPage() {
     return <NoVehicleSelected pageTitle={t('energyLedger.title', 'Energy Ledger')} />;
   }
 
-  const sessionsHaveData = sessionsState.hasData;
-  const drivesHaveData = drivesState.hasData;
+  const sessionsHaveData = sessionsQuery.data !== undefined;
+  const drivesHaveData = drivesQuery.data !== undefined;
   const isLoading =
     (!sessionsHaveData && sessionsQuery.isLoading)
     || (!drivesHaveData && drivesQuery.isLoading);
   const isError =
-    sessionsState.fatalError != null || drivesState.fatalError != null;
-  const error = sessionsState.fatalError ?? drivesState.fatalError;
-  const summaryReady = !isLoading && !isError;
-  const summaryMetrics: StatMetric[] = [
-    {
-      metricId: 'percent', occurrenceId: 'ledger-closure',
-      label: t('energyLedger.closure', 'Books Closure'),
-      rawValue: summaryReady ? summary.closureRate * 100 : null,
-      display: { formatter: raw => ({ value: `${Math.round(raw)}%`, unit: '' }) },
-      context: summaryReady ? <><Scale className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.closureRate >= 0.9 ? 'success' : summary.closureRate >= 0.75 ? 'warning' : 'danger'}>{t('energyLedger.closureHint', 'of charged energy accounted for')}</Badge></> : undefined,
-      description: t('help.energyLedger.closure', 'Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.'),
-    },
-    {
-      metricId: 'percent', occurrenceId: 'ledger-driving',
-      label: t('energyLedger.driving', 'Reached the Wheels'),
-      rawValue: summaryReady ? summary.drivingShare * 100 : null,
-      display: { formatter: raw => ({ value: `${Math.round(raw)}%`, unit: '' }) },
-      context: summaryReady ? <><Sigma className="h-5 w-5" aria-hidden="true" />{formatEnergy(summary.totalDrivenWh)}</> : undefined,
-    },
-    {
-      metricId: 'rate', occurrenceId: 'ledger-vampire',
-      label: t('energyLedger.vampire', 'Vampire Drain'),
-      rawValue: summaryReady ? summary.vampireWhPerDay : null,
-      display: { formatter: raw => ({ value: `${Math.round(raw)} Wh/day`, unit: '' }) },
-      context: summaryReady ? <><BatteryWarning className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.vampireWhPerDay > 1000 ? 'danger' : 'neutral'}>{t('energyLedger.standbyPower', 'about {{p}} while parked', { p: formatPower(summary.meanStandbyPowerW) })}</Badge></> : undefined,
-    },
-    {
-      metricId: 'energy', occurrenceId: 'ledger-residual',
-      label: t('energyLedger.unexplained', 'Unexplained'),
-      rawValue: summaryReady ? Math.abs(summary.totalResidualWh) : null,
-      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
-      context: summaryReady ? <><Bug className="h-5 w-5" aria-hidden="true" />{summary.packCapacityWh != null
-        ? t('energyLedger.derivedPack', 'derived pack {{v}}', { v: formatEnergy(summary.packCapacityWh) })
-        : t('energyLedger.noPack', 'pack size not yet derivable')}</> : undefined,
-    },
-  ];
+    (sessionsQuery.isError && !sessionsHaveData)
+    || (drivesQuery.isError && !drivesHaveData);
+  const error =
+    sessionsQuery.isError && !sessionsHaveData
+      ? sessionsQuery.error
+      : drivesQuery.error;
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('energyLedger.title', 'Energy Ledger')}
       subtitle={t(
         'energyLedger.subtitle',
@@ -140,30 +106,80 @@ export default function EnergyLedgerPage() {
       query={[sessionsQuery, drivesQuery]}
       dataSources={dataSources}
     >
-      <StaleRefreshWarning state={sessionsState} label={t('dataSources.labels.chargingHistory', 'Charging history')} />
-      <StaleRefreshWarning state={drivesState} label={t('dataSources.labels.driveHistory', 'Drive history')} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section>
-        <BatteryEvidenceBrief title={t('energyLedger.kpis', 'Energy ledger metrics')}
-          metrics={summaryMetrics} loading={isLoading}
-          retained={sessionsState.status === 'stale' || drivesState.status === 'stale'}
-          period={{ kind: 'unknown', label: t('energyLedger.chart', 'Monthly Balance'),
-            reason: t('energyLedger.summaryScope', 'Months reconstructed from returned charging and drive history; exact complete-history bounds are not supplied.') }} />
-        {isError && <SourceContent state="error" label={t('energyLedger.kpis', 'Energy ledger metrics')}
-          error={error} errorMessage={t('energyLedger.sourceError', 'Energy ledger evidence is unavailable.')}
-          emptyMessage={t('energyLedger.noMonths', 'No complete month has been recorded yet.')}
-          errorRecovery={{ onRetry: () => {
-            if (sessionsState.fatalError) void sessionsQuery.refetch();
-            if (drivesState.fatalError) void drivesQuery.refetch();
-          } }}>{null}</SourceContent>}
+        <section
+          aria-label={t('energyLedger.kpis', 'Energy ledger metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+        >
+          {isError ? (
+            <GlassPanel className="col-span-full p-4 sm:p-5">
+              <QueryError
+                error={error}
+                onRetry={() => {
+                  void sessionsQuery.refetch();
+                  void drivesQuery.refetch();
+                }}
+              />
+            </GlassPanel>
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height={96} className="rounded-xl" />
+            ))
+          ) : (
+            <>
+              <MetricCard
+                label={t('energyLedger.closure', 'Books Closure')}
+                value={`${Math.round(summary.closureRate * 100)}%`}
+                subtitle={t('energyLedger.closureHint', 'of charged energy accounted for')}
+                icon={<Scale className="h-5 w-5" />}
+                color={
+                  summary.closureRate >= 0.9 ? 'green' : summary.closureRate >= 0.75 ? 'amber' : 'red'
+                }
+                help={{
+                  i18nKey: 'help.energyLedger.closure',
+                  defaultValue:
+                    'Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.',
+                }}
+              />
+              <MetricCard
+                label={t('energyLedger.driving', 'Reached the Wheels')}
+                value={`${Math.round(summary.drivingShare * 100)}%`}
+                subtitle={formatEnergy(summary.totalDrivenWh, { precision: 0 })}
+                icon={<Sigma className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('energyLedger.vampire', 'Vampire Drain')}
+                value={`${Math.round(summary.vampireWhPerDay)} Wh/day`}
+                subtitle={t('energyLedger.standbyPower', 'about {{p}} while parked', {
+                  p: formatPower(summary.meanStandbyPowerW, { precision: 0 }),
+                })}
+                icon={<BatteryWarning className="h-5 w-5" />}
+                color={summary.vampireWhPerDay > 1000 ? 'red' : 'purple'}
+              />
+              <MetricCard
+                label={t('energyLedger.unexplained', 'Unexplained')}
+                value={formatEnergy(Math.abs(summary.totalResidualWh), { precision: 0 })}
+                subtitle={
+                  summary.packCapacityWh != null
+                    ? t('energyLedger.derivedPack', 'derived pack {{v}}', {
+                        v: formatEnergy(summary.packCapacityWh, { precision: 0 }),
+                      })
+                    : t('energyLedger.noPack', 'pack size not yet derivable')
+                }
+                icon={<Bug className="h-5 w-5" />}
+                color="blue"
+              />
+            </>
+          )}
         </section>
       </FadeIn>
 
       {/* 2 — Monthly ledger */}
       <FadeIn delay={0.1}>
         {!isLoading && !isError && summary.months.length === 0 ? (
-          <LayoutCard title={t('energyLedger.chart', 'Monthly Balance')}>
+          <GlassPanel className="p-4 sm:p-5">
             <EmptyState /* no-action: the ledger fills in as charge sessions and drives are recorded. */
               icon={<Scale className="h-8 w-8" />}
               message={t(
@@ -171,9 +187,9 @@ export default function EnergyLedgerPage() {
                 'Nothing to balance yet. The ledger needs both charge sessions and drives in the same month.',
               )}
             />
-          </LayoutCard>
+          </GlassPanel>
         ) : (
-          <ChartCard toolbar exportable size="standard"
+          <ChartContainer
             title={t('energyLedger.chart', 'Monthly Balance')}
             subtitle={t(
               'energyLedger.chartHint',
@@ -238,20 +254,23 @@ export default function EnergyLedgerPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </ChartCard>
+          </ChartContainer>
         )}
       </FadeIn>
 
       {/* 3 — Month detail */}
       <FadeIn delay={0.2}>
-        <LayoutCard title={t('energyLedger.detail', 'Month by Month')} actions={
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Sigma className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('energyLedger.detail', 'Month by Month')}
             <HelpTooltip
               size="sm"
               i18nKey="help.energyLedger.detail"
               defaultValue="Standby loss cannot be measured directly, so it is reconstructed from state of charge: the drop between parking and the next event, converted to energy using a pack capacity derived from your own wide charge sessions rather than a spec-sheet figure. Gaps longer than a fortnight are treated as data outages instead of extraordinary vampire drain."
               ariaLabel={t('help.energyLedger.iconLabel', 'More info about the ledger method')}
             />
-          }>
+          </PanelTitle>
           {isLoading ? (
             <Skeleton height={180} />
           ) : summary.months.length === 0 ? (
@@ -293,7 +312,7 @@ export default function EnergyLedgerPage() {
                     </Text>
                     <Text variant="bodySm">
                       {t('energyLedger.chargedValue', '{{e}} · {{n}} sessions', {
-                        e: formatEnergy(m.chargedWh),
+                        e: formatEnergy(m.chargedWh, { precision: 0 }),
                         n: m.chargeSessions,
                       })}
                     </Text>
@@ -302,8 +321,8 @@ export default function EnergyLedgerPage() {
                     </Text>
                     <Text variant="bodySm">
                       {t('energyLedger.drivenValue', '{{e}} · {{d}}', {
-                        e: formatEnergy(m.drivenWh),
-                        d: formatDistance(m.distanceM),
+                        e: formatEnergy(m.drivenWh, { precision: 0 }),
+                        d: formatDistance(m.distanceM, { precision: 0 }),
                       })}
                     </Text>
                     <Text variant="caption">
@@ -311,7 +330,7 @@ export default function EnergyLedgerPage() {
                     </Text>
                     <Text variant="bodySm">
                       {t('energyLedger.standbyValue', '{{e}} over {{h}} h', {
-                        e: formatEnergy(m.standbyWh),
+                        e: formatEnergy(m.standbyWh, { precision: 0 }),
                         h: Math.round(m.idleHours),
                       })}
                     </Text>
@@ -319,15 +338,17 @@ export default function EnergyLedgerPage() {
                       {t('energyLedger.residual', 'Residual')}
                     </Text>
                     <Text variant="bodySm">
-                      {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh))}`}
+                      {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh), {
+                        precision: 0,
+                      })}`}
                     </Text>
                   </div>
                 </li>
               ))}
             </ul>
           )}
-        </LayoutCard>
+        </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

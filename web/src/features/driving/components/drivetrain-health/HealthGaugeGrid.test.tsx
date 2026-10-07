@@ -156,7 +156,7 @@ describe('HealthGaugeGrid — populated', () => {
     render(<HealthGaugeGrid {...makeProps()} />)
 
     // Gauge renders the integer score (88) and its caption.
-    expect(screen.getByText('88.00')).toBeInTheDocument()
+    expect(screen.getByText('88')).toBeInTheDocument()
     expect(screen.getByText('Overall drivetrain condition rating')).toBeInTheDocument()
     // Panel titles are always present regardless of data state.
     expect(screen.getByText('Motor Details')).toBeInTheDocument()
@@ -185,10 +185,10 @@ describe('HealthGaugeGrid — populated', () => {
     expect(screen.getByText('Total Drives')).toBeInTheDocument()
     expect(screen.getByText('42')).toBeInTheDocument()
     // 8000 m → 8 km
-    expect(screen.getByText('8.00 km')).toBeInTheDocument()
+    expect(screen.getByText('8 km')).toBeInTheDocument()
     // 10 m/s → 36.0 km/h, 25 m/s → 90.0 km/h
-    expect(screen.getByText('36.00 km/h')).toBeInTheDocument()
-    expect(screen.getByText('90.00 km/h')).toBeInTheDocument()
+    expect(screen.getByText('36.0 km/h')).toBeInTheDocument()
+    expect(screen.getByText('90.0 km/h')).toBeInTheDocument()
   })
 
   it('re-labels and re-scales drive stats when the preference is imperial', () => {
@@ -203,12 +203,12 @@ describe('HealthGaugeGrid — populated', () => {
     )
 
     // 3218.688 m → 2 mi (exact: 2 × 1609.344).
-    expect(screen.getByText('2.00 mi')).toBeInTheDocument()
+    expect(screen.getByText('2 mi')).toBeInTheDocument()
     // Both speed rows now carry the mph suffix.
     const mphCells = screen.getAllByText((content) => content.includes('mph'))
     expect(mphCells).toHaveLength(2)
     // The km suffix must be gone from the speed rows.
-    expect(screen.queryByText('36.00 km/h')).toBeNull()
+    expect(screen.queryByText('36.0 km/h')).toBeNull()
   })
 })
 

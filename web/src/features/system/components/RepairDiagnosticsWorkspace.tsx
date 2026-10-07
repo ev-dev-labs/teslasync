@@ -5,10 +5,8 @@ import {
   useRepairSuggestions,
   useStaleSessions,
 } from '@/api/hooks/useDataRepair';
-import { AIDataRepairSuggestions } from '@/components/ai';
+import { AIDataRepairSuggestions } from '@/components/ai/AIDataRepairSuggestions';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
 import { RepairDiagnosisOverview } from './RepairDiagnosisOverview';
 import { RepairManualWorklists } from './RepairManualWorklists';
 import { RepairSuggestionWorklists } from './RepairSuggestionWorklists';
@@ -29,8 +27,6 @@ export function RepairDiagnosticsWorkspace({
     vehicleId != null ? { vehicle_id: vehicleId } : undefined,
   );
   const staleQuery = useStaleSessions();
-  const suggestionsState = useDataState(suggestionsQuery);
-  const staleState = useDataState(staleQuery);
   const driveSuggestions = suggestionsQuery.data?.drive_suggestions ?? [];
   const chargingSuggestions = suggestionsQuery.data?.charging_suggestions ?? [];
   const totalSuggestions = driveSuggestions.length + chargingSuggestions.length;
@@ -101,33 +97,30 @@ export function RepairDiagnosticsWorkspace({
       </GlassPanel>
 
       <RepairDiagnosisOverview
-        totalSuggestions={suggestionsState.hasData ? totalSuggestions : null}
-        driveSuggestions={suggestionsState.hasData ? driveSuggestions.length : null}
-        chargingSuggestions={suggestionsState.hasData ? chargingSuggestions.length : null}
-        blocked={suggestionsState.hasData ? blockedCount : null}
+        totalSuggestions={totalSuggestions}
+        driveSuggestions={driveSuggestions.length}
+        chargingSuggestions={chargingSuggestions.length}
+        blocked={blockedCount}
         truncated={suggestionsQuery.data?.truncated ?? false}
-        loading={suggestionsQuery.isLoading && !suggestionsState.hasData}
-        retained={suggestionsState.hasData && suggestionsQuery.isError}
+        loading={suggestionsQuery.isLoading}
       />
       <AIDataRepairSuggestions vehicleId={vehicleId} />
-      <StaleRefreshWarning state={suggestionsState} label={t('dataRepair.kpi.suggestions', 'Suggested repairs')} />
       <RepairSuggestionWorklists
         driveSuggestions={driveSuggestions}
         chargingSuggestions={chargingSuggestions}
-        isLoading={suggestionsQuery.isLoading && !suggestionsState.hasData}
-        isError={!!suggestionsState.fatalError}
-        error={suggestionsState.fatalError}
+        isLoading={suggestionsQuery.isLoading}
+        isError={suggestionsQuery.isError}
+        error={suggestionsQuery.error}
         onRetry={() => { void suggestionsQuery.refetch(); }}
         canWrite={canWrite}
         writeBlockReason={writeBlockReason}
       />
-      <StaleRefreshWarning state={staleState} label={t('dataRepair.worklist', 'Repair worklist')} />
       <RepairManualWorklists
         staleCharging={staleCharging}
         staleDrives={staleDrives}
-        isLoading={staleQuery.isLoading && !staleState.hasData}
-        isError={!!staleState.fatalError}
-        error={staleState.fatalError}
+        isLoading={staleQuery.isLoading}
+        isError={staleQuery.isError}
+        error={staleQuery.error}
         onRetry={() => { void staleQuery.refetch(); }}
         canWrite={canWrite}
         writeBlockReason={writeBlockReason}

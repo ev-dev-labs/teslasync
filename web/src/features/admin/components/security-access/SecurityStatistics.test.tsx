@@ -76,35 +76,35 @@ function metricValue(label: string): string {
 }
 
 const ALL_LABELS = [
-  'Lock/unlock events',
-  'Sentry uptime',
-  'Door open events',
-  'Window open events',
-  'HomeLink detections',
-  'Guest mode usage',
-  'Total events',
+  'Lock/Unlock Events',
+  'Sentry Uptime',
+  'Door Open Events',
+  'Window Open Events',
+  'HomeLink Detections',
+  'Guest Mode Usage',
+  'Total Events',
 ];
 
 describe('SecurityStatistics — data', () => {
   it('renders the panel title and all seven metrics with their derived values', () => {
     renderStats({ securityStats: makeStats(), sentryUptime: 87.6 });
 
-    expect(screen.getByText('Security statistics')).toBeInTheDocument();
+    expect(screen.getByText('Security Statistics')).toBeInTheDocument();
 
-    expect(metricValue('Lock/unlock events')).toBe('3');
-    expect(metricValue('Sentry uptime')).toBe('88%'); // fmtInt rounds 87.6
-    expect(metricValue('Door open events')).toBe('5');
-    expect(metricValue('Window open events')).toBe('2');
-    expect(metricValue('HomeLink detections')).toBe('4');
-    expect(metricValue('Guest mode usage')).toBe('1');
-    expect(metricValue('Total events')).toBe('12');
+    expect(metricValue('Lock/Unlock Events')).toBe('3');
+    expect(metricValue('Sentry Uptime')).toBe('88%'); // fmtInt rounds 87.6
+    expect(metricValue('Door Open Events')).toBe('5');
+    expect(metricValue('Window Open Events')).toBe('2');
+    expect(metricValue('HomeLink Detections')).toBe('4');
+    expect(metricValue('Guest Mode Usage')).toBe('1');
+    expect(metricValue('Total Events')).toBe('12');
   });
 
   it('exposes the metric cluster as a labelled group for assistive tech', () => {
     renderStats();
 
     const group = screen.getByRole('group', {
-      name: /Security statistics metrics/i,
+      name: /security statistics metrics/i,
     });
     expect(group).toBeInTheDocument();
     // All seven metric labels live inside that one group.
@@ -123,7 +123,7 @@ describe('SecurityStatistics — data', () => {
     [100, '100%'],
   ])('formats sentryUptime %p as the rounded percentage %p', (uptime, shown) => {
     renderStats({ sentryUptime: uptime });
-    expect(metricValue('Sentry uptime')).toBe(shown);
+    expect(metricValue('Sentry Uptime')).toBe(shown);
   });
 });
 
@@ -137,12 +137,12 @@ describe('SecurityStatistics — null-safety', () => {
     });
 
     expect(
-      screen.getByRole('group', { name: /Security statistics metrics/i }),
+      screen.getByRole('group', { name: /security statistics metrics/i }),
     ).toBeInTheDocument();
-    expect(metricValue('Lock/unlock events')).toBe('0');
-    expect(metricValue('Door open events')).toBe('0');
-    expect(metricValue('Total events')).toBe('0');
-    expect(metricValue('Sentry uptime')).toBe('0%');
+    expect(metricValue('Lock/Unlock Events')).toBe('0');
+    expect(metricValue('Door Open Events')).toBe('0');
+    expect(metricValue('Total Events')).toBe('0');
+    expect(metricValue('Sentry Uptime')).toBe('0%');
   });
 });
 
@@ -154,7 +154,7 @@ describe('SecurityStatistics — loading', () => {
     });
 
     // Title still anchors the panel while loading.
-    expect(screen.getByText('Security statistics')).toBeInTheDocument();
+    expect(screen.getByText('Security Statistics')).toBeInTheDocument();
 
     const skeletonGrid = container.querySelector('[aria-hidden="true"]');
     expect(skeletonGrid).not.toBeNull();
@@ -162,7 +162,7 @@ describe('SecurityStatistics — loading', () => {
 
     // Neither the metrics nor the empty state may render yet.
     expect(screen.queryByRole('group')).toBeNull();
-    expect(screen.queryByText('Lock/unlock events')).toBeNull();
+    expect(screen.queryByText('Lock/Unlock Events')).toBeNull();
     expect(screen.queryByText('No security events are available in this history window.')).toBeNull();
   });
 
@@ -173,7 +173,7 @@ describe('SecurityStatistics — loading', () => {
     });
 
     expect(container.querySelectorAll('.animate-pulse').length).toBe(7);
-    expect(screen.queryByText('Lock/unlock events')).toBeNull();
+    expect(screen.queryByText('Lock/Unlock Events')).toBeNull();
   });
 });
 
@@ -226,7 +226,7 @@ describe('SecurityStatistics — empty', () => {
     renderStats({ securityStats: null, isLoading: false, error: null });
 
     // Panel title + empty status region both present.
-    expect(screen.getByText('Security statistics')).toBeInTheDocument();
+    expect(screen.getByText('Security Statistics')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(
       screen.getByText('No security events are available in this history window.'),

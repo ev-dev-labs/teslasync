@@ -129,7 +129,7 @@ export function LayoutSwitcher({
 
   const handleSaveAs = useCallback(() => {
     setOpen(false);
-    const suggestion = active ? `${active.name} (Copy)` : t('layout.newLayoutDefault', 'New layout');
+    const suggestion = active ? `${active.name} (Copy)` : t('layout.newLayoutDefault', 'New Layout');
     const name = window.prompt(
       t('layout.saveAsPrompt', 'Name for the new layout:'),
       suggestion,
@@ -236,7 +236,7 @@ export function LayoutSwitcher({
           'hover:border-[var(--border-strong)] hover:bg-white/[0.06]',
         )}
       >
-        <span className="text-xs tracking-wider text-[var(--text-muted)]">
+        <span className="text-xs uppercase tracking-wider text-[var(--text-muted)]">
           {t('layout.label', 'Layout')}
         </span>
         <span className="max-w-[10rem] truncate">{activeName}</span>

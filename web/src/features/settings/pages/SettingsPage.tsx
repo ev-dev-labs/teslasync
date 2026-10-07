@@ -16,13 +16,11 @@ import {
 
 import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
-import { PageLayout } from '@/components/layout'
+import { PageContainer } from '@/components/layout'
 import { Button, SectionTitle, Text } from '@/components/ui'
-import type { StatMetric } from '@/components/data-display'
-import { SettingsSummaryBrief } from '../components/operationalbrief-all/SettingsSummaryBrief'
+import { StatCard } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
-import { DataStateNotice, EditConflictBanner, QueryError } from '@/components/feedback'
-import { deriveDataState } from '@/api/dataState'
+import { EditConflictBanner } from '@/components/feedback'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useEditLease } from '@/hooks/useEditLease'
@@ -42,7 +40,6 @@ import { ResetSection } from '../components/ResetSection'
 import { ServerSection } from '../components/ServerSection'
 import { SettingsNavigation, type SettingsSection } from '../components/SettingsNavigation'
 import { SANS_LABELS } from '../components/fontChoices'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // The Tesla integration redirect cluster (Tesla Account, Feature Flags,
 // Region & API, Active Orders, Gas Price Auto-Poll), the Fleet API link
@@ -64,28 +61,24 @@ const LANGUAGE_LABELS: Record<string, string> = {
 interface OverviewCard {
   icon: ReactNode
   label: string
-  value: string | number | null | undefined
+  value: string
   sublabel?: string
-  metricId?: StatMetric['metricId']
-  display?: StatMetric['display']
 }
 
 /**
  * Coalesce a unit string to an em-dash when it is null, undefined, or blank.
  * The KPI band must never render an empty value cell — an absent/blank unit
  * shows "—" exactly like the loading / no-settings placeholder instead of a
- * visually empty summary value.
+ * visually empty StatCard.
  */
 function orDash(value: string | null | undefined): string {
   return value && value.trim() !== '' ? value : '—'
 }
 
 export default function SettingsPage() {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('settings')
   usePageTitle(t('title', 'Settings'))
   const settingsQuery = useSettings()
-  const settingsState = deriveDataState(settingsQuery)
   const { data: settings, isLoading } = settingsQuery
   const { prefs: fontPrefs } = useFont()
   const toast = useToast()
@@ -187,9 +180,7 @@ export default function SettingsPage() {
       {
         icon: <Zap className="h-5 w-5" aria-hidden="true" />,
         label: t('overview.energyCost', 'Energy cost'),
-        value: settings?.base_cost_per_kwh,
-        metricId: 'rate',
-        display: { formatter: raw => ({ value: `${currencySymbol}${fmtNumber(raw)}`, unit: '' }) },
+        value: settings ? `${currencySymbol}${(settings.base_cost_per_kwh ?? 0).toFixed(2)}` : '—',
         sublabel: t('overview.perKwh', 'per kWh'),
       },
       {
@@ -199,25 +190,15 @@ export default function SettingsPage() {
         sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
       },
     ]
-  }, [settings, fontPrefs, t, displayPrecision, displayLocale, fmtNumber])
-  const overviewMetrics: readonly StatMetric[] = overviewCards.map((card, index) => ({
-    metricId: card.metricId ?? 'text',
-    occurrenceId: `settings-preference-${index}`,
-    label: card.label,
-    rawValue: card.value === '—' ? null : card.value,
-    display: card.display,
-    context: <>{card.icon}{card.sublabel}</>,
-  }))
+  }, [settings, fontPrefs, t])
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('title', 'Settings')}
       subtitle={t('settings.organization.subtitle', 'Find a category, adjust your preferences, and keep TeslaSync working your way.')}
-      contextActions={<SettingsSearch className="w-full sm:w-72" />}
+      actions={<SettingsSearch className="w-full sm:w-72" />}
       query={settingsQuery}
     >
-      {settingsState.fatalError && <QueryError error={settingsState.fatalError} onRetry={() => void settingsQuery.refetch()} />}
-      {settingsState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       <EditConflictBanner
         resourceKey={settingsLeaseKey}
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
@@ -237,14 +218,19 @@ export default function SettingsPage() {
               <FadeIn>
                 <section
                   aria-label={t('overview.aria', 'Current preferences overview')}
+                  className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3"
                 >
-                  <SettingsSummaryBrief title={t('overview.brief.title', 'Preferences at a glance')}
-                    description={t('overview.brief.description', 'Current measurement, language, currency, comparison-cost and typography preferences. These are configuration choices, not vehicle measurements.')}
-                    source={t('overview.brief.source', 'Saved settings and browser font preferences')}
-                    scope={t('overview.brief.scope', 'Latest saved configuration · browser typography has an independent local source')}
-                    metrics={overviewMetrics} loading={isLoading && !settings}
-                    unavailable={!settings && !isLoading} retained={settingsState.status === 'stale'}
-                    testId="settings-preferences-summary" />
+                  {overviewCards.map((card) => (
+                    <StatCard
+                      key={card.label}
+                      className="min-w-0 [overflow-wrap:anywhere]"
+                      label={card.label}
+                      value={card.value}
+                      sublabel={card.sublabel}
+                      icon={card.icon}
+                      loading={isLoading}
+                    />
+                  ))}
                 </section>
               </FadeIn>
 
@@ -256,7 +242,7 @@ export default function SettingsPage() {
                       href="/data-export"
                       iconColor="green"
                       icon={<Download className="h-5 w-5" aria-hidden="true" />}
-                      title={t('export.title', 'Data export')}
+                      title={t('export.title', 'Data Export')}
                       description={t(
                         'export.subtitle',
                         'Export drives, charging, analytics, or full backup as CSV/JSON',
@@ -266,19 +252,19 @@ export default function SettingsPage() {
                       dataTour="settings-tour"
                       iconColor="cyan"
                       icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
-                      title={t('tour.title', 'Onboarding tour')}
+                      title={t('tour.title', 'Onboarding Tour')}
                       description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
                       action={
-                        <Button variant="ghost" wrapLabel className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
+                        <Button variant="ghost" className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
                           <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('tour.restart', 'Open tour launcher')}
+                          {t('tour.restart', 'Open Tour Launcher')}
                         </Button>
                       }
                     />
                     <SettingsActionCard
                       iconColor="cyan"
                       icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-                      title={t('checklist.settings.title', 'Setup checklist')}
+                      title={t('checklist.settings.title', 'Setup Checklist')}
                       description={t(
                         'checklist.settings.description',
                         'Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.',
@@ -286,7 +272,6 @@ export default function SettingsPage() {
                       action={
                         <Button
                           variant="ghost"
-                          wrapLabel
                           className="h-auto min-h-11 w-full whitespace-normal"
                           onClick={() => {
                             restartChecklist()
@@ -299,7 +284,7 @@ export default function SettingsPage() {
                           }}
                         >
                           <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
-                          {t('checklist.settings.restart', 'Restart checklist')}
+                          {t('checklist.settings.restart', 'Restart Checklist')}
                         </Button>
                       }
                     />
@@ -320,6 +305,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </div>
-    </PageLayout>
+    </PageContainer>
   )
 }

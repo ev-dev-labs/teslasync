@@ -129,7 +129,7 @@ export function PackCapacityFitDiagnostics({
             )}
             value={
               resolved
-                ? formatEnergy(fit.annualChangeWh)
+                ? formatEnergy(fit.annualChangeWh, { precision: 1 })
                 : '—'
             }
             subtitle={

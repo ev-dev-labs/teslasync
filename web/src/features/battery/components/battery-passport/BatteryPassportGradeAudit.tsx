@@ -10,13 +10,11 @@ import { useTranslation } from 'react-i18next';
 
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
-
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { BatteryPassportAnalysis } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportGradeAuditProps {
   analysis: BatteryPassportAnalysis;
@@ -27,19 +25,25 @@ export function BatteryPassportGradeAudit({
   analysis,
   state,
 }: BatteryPassportGradeAuditProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const grade = analysis.grade;
 
   return (
     <section data-testid="battery-passport-grade-audit">
-      <LayoutCard title={t(
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Award className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t(
             'batteryPassport.gradeAudit.title',
             'Grade and scoring reconstruction',
-          )} description={t(
+          )}
+        </PanelTitle>
+        <Text as="p" variant="caption" className="mb-4">
+          {t(
             'batteryPassport.gradeAudit.subtitle',
             'Transparent frontend reconstruction of the documented server rule; not an independent calibration or hash-bound fact.',
-          )} actions={<Award className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )}
+        </Text>
         <BatteryPassportSectionBody state={state}>
           <div className="mb-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
             <Text as="code" mono variant="bodySm" className="break-words">
@@ -56,7 +60,7 @@ export function BatteryPassportGradeAudit({
                 'Clamped SoH term',
               )}
               value={grade.clampedSohPct != null
-                ? fmtNumber(grade.clampedSohPct)
+                ? fmtNumber(grade.clampedSohPct, 2)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.baseHint',
@@ -71,7 +75,7 @@ export function BatteryPassportGradeAudit({
                 'Fast-share deduction',
               )}
               value={grade.fastChargePenalty != null
-                ? fmtNumber(grade.fastChargePenalty)
+                ? fmtNumber(grade.fastChargePenalty, 2)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.fastPenaltyHint',
@@ -86,7 +90,7 @@ export function BatteryPassportGradeAudit({
                 'EFC deduction',
               )}
               value={grade.cyclePenalty != null
-                ? fmtNumber(grade.cyclePenalty)
+                ? fmtNumber(grade.cyclePenalty, 2)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.cyclePenaltyHint',
@@ -101,7 +105,7 @@ export function BatteryPassportGradeAudit({
                 'Reconstructed score',
               )}
               value={grade.score != null
-                ? fmtNumber(grade.score)
+                ? fmtNumber(grade.score, 2)
                 : '—'}
               subtitle={t(
                 'batteryPassport.gradeAudit.bands',
@@ -179,7 +183,7 @@ export function BatteryPassportGradeAudit({
             </AlertBanner>
           ) : null}
         </BatteryPassportSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

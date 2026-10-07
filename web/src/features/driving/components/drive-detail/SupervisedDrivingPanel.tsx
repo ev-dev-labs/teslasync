@@ -2,14 +2,13 @@ import { AlertTriangle, Clock3, ExternalLink, Gauge, Route, ShieldCheck } from '
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
+import { Badge, GlassPanel, Text } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
-import { Skeleton } from '@/components/feedback';
+import { Skeleton } from '@/components/feedback/Skeleton';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveFsdInsight, FsdAttributionConfidence } from '@/types/fsd';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SupervisedDrivingPanelProps {
   insight: DriveFsdInsight | undefined;
@@ -34,14 +33,12 @@ export function SupervisedDrivingPanel({
   error,
   isOngoing = false,
 }: SupervisedDrivingPanelProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
 
   if (isLoading) {
     return (
       <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle>{t('driveDetail.fsd.title', 'Supervised driving')}</PanelTitle>
         <Skeleton className="h-28" />
       </GlassPanel>
     );
@@ -49,7 +46,7 @@ export function SupervisedDrivingPanel({
 
   if (error) {
     return (
-      <GlassPanel className="p-4 sm:p-5"><AlertBanner
+      <AlertBanner
         variant="warning"
         title={t('driveDetail.fsd.loadFailed', 'Supervised-driving evidence could not be loaded')}
       >
@@ -57,7 +54,7 @@ export function SupervisedDrivingPanel({
           'driveDetail.fsd.loadFailedBody',
           'The rest of this drive remains available. Retry the page to load the cumulative-counter evidence.',
         )}
-      </AlertBanner></GlassPanel>
+      </AlertBanner>
     );
   }
 
@@ -98,15 +95,15 @@ export function SupervisedDrivingPanel({
           <div className="flex flex-col items-end gap-1">
             <Link
               to="/fsd"
-              className="inline-flex items-center gap-1 text-xs font-medium text-[var(--theme-primary)] underline-offset-4 hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200"
             >
-              {t('driveDetail.fsd.openInsights', 'Open FSD insights')}
+              {t('driveDetail.fsd.openInsights', 'Open FSD Insights')}
               <ExternalLink className="h-3 w-3" aria-hidden="true" />
             </Link>
             {insight?.firmware_version ? (
               <Link
                 to="/fsd#fsd-firmware-spotlight"
-                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--theme-primary)] underline-offset-4 hover:underline"
+                className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200"
               >
                 {t('driveDetail.fsd.afterFirmware', 'After firmware {{version}}', {
                   version: insight.firmware_version,
@@ -116,41 +113,44 @@ export function SupervisedDrivingPanel({
           </div>
         </div>
 
-        <Table variant="embedded" aria-label={t('driveDetail.fsd.title', 'Supervised driving')}>
-          <tbody><tr>
-            <th scope="row">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+            <Text as="div" size="xs" color="muted" className="flex items-center gap-1.5">
               <Route className="h-3.5 w-3.5" aria-hidden="true" />
               {t('driveDetail.fsd.distance', 'Reported distance')}
-            </th>
-            <td className="tabular-nums">
+            </Text>
+            <Text as="div" size="lg" weight="semibold" className="mt-1 tabular-nums">
               {insight?.fsd_distance_m == null
                 ? '—'
                 : `${confidence === 'high' ? '' : '~'}${formatDistance(
                     insight.fsd_distance_m,
+                    { precision: 1 },
                   )}`}
-            </td>
-          </tr><tr>
-            <th scope="row">
+            </Text>
+          </div>
+          <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+            <Text as="div" size="xs" color="muted" className="flex items-center gap-1.5">
               <Gauge className="h-3.5 w-3.5" aria-hidden="true" />
               {t('driveDetail.fsd.share', 'Share of drive')}
-            </th>
-            <td className="tabular-nums">
+            </Text>
+            <Text as="div" size="lg" weight="semibold" className="mt-1 tabular-nums">
               {insight?.fsd_share_pct == null
                 ? '—'
-                : `${confidence === 'high' ? '' : '~'}${fmtNumber(insight.fsd_share_pct)}%`}
-            </td>
-          </tr><tr>
-            <th scope="row">
+                : `${confidence === 'high' ? '' : '~'}${fmtNumber(insight.fsd_share_pct, 1)}%`}
+            </Text>
+          </div>
+          <div className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+            <Text as="div" size="xs" color="muted" className="flex items-center gap-1.5">
               <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
               {t('driveDetail.fsd.evidenceWindow', 'Evidence window')}
-            </th>
-            <td>
+            </Text>
+            <Text as="div" size="sm" weight="medium" className="mt-1">
               {firstEvidence && lastEvidence
                 ? `${formatDateTime(firstEvidence)} - ${formatDateTime(lastEvidence)}`
                 : t('driveDetail.fsd.noPositiveEvidence', 'No positive counter increase')}
-            </td>
-          </tr></tbody>
-        </Table>
+            </Text>
+          </div>
+        </div>
 
         {insight?.reset_affected && (
           <AlertBanner

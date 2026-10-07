@@ -101,12 +101,6 @@ vi.mock('@/components/feedback', () => ({
       </button>
     </div>
   ),
-  StaleRefreshWarning: ({ state }: { state: { refreshError?: Error | null; retry?: (() => void) | null } }) => state.refreshError ? (
-    <div data-testid="retained-notice">
-      {state.refreshError.message}
-      <button type="button" onClick={() => state.retry?.()}>Recover refresh</button>
-    </div>
-  ) : null,
 }));
  
 
@@ -115,7 +109,6 @@ import type { SignalGapAnalysis } from '../hooks/useSignalGapAnalysis';
 import { GAP_BUCKET_COLORS, type GapBuckets } from '../signalGapUtils';
 
 type QueryOverrides = Partial<{
-  data: unknown;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -165,20 +158,11 @@ function expectNoBody() {
 // ── Header (always present) ───────────────────────────────────────────────────
 
 describe('SignalGapHealthPanel — header', () => {
-  it('keeps all bucket segments through a retained refresh error and exposes recovery', () => {
-    const refetch = vi.fn();
-    renderPanel({ query: { data: {}, isError: true, error: new Error('refresh failed'), refetch } });
-    expect(screen.queryByTestId('query-error')).toBeNull();
-    expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-count', '4');
-    expect(screen.getByRole('img', { name: /across 10 signals/ })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Recover refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
   it('always renders the distribution title in a level-3 heading with a decorative glyph', () => {
     const { container } = renderPanel({ hasVehicle: false });
 
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Signal health distribution' }),
+      screen.getByRole('heading', { level: 3, name: 'Signal Health Distribution' }),
     ).toBeInTheDocument();
     // The header Activity glyph is decorative so a screen reader announces the
     // title, not the icon.
@@ -298,7 +282,7 @@ describe('SignalGapHealthPanel — distribution strip', () => {
     renderPanel({ buckets: POPULATED_BUCKETS });
 
     // `never` is 0 here — it must not paint a strip segment...
-    expect(screen.queryByTitle(/^Never received:/)).toBeNull();
+    expect(screen.queryByTitle(/^Never Received:/)).toBeNull();
   });
 });
 
@@ -310,7 +294,7 @@ describe('SignalGapHealthPanel — distribution legend', () => {
     expect(screen.getByText('Active (<30s)')).toBeInTheDocument();
     expect(screen.getByText('Aging (<5min)')).toBeInTheDocument();
     expect(screen.getByText('Stale (>5min)')).toBeInTheDocument();
-    expect(screen.getByText('Never received')).toBeInTheDocument();
+    expect(screen.getByText('Never Received')).toBeInTheDocument();
 
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument();

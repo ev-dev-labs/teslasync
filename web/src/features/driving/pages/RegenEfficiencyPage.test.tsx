@@ -352,10 +352,7 @@ describe('RegenEfficiencyPage', () => {
     ]) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
-    const loadingBrief = screen.getByTestId('regen-selected-window-summary');
-    expect(loadingBrief).toHaveAttribute('aria-busy', 'true');
-    expect(loadingBrief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(loadingBrief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.getAllByText('Loading…').length).toBeGreaterThanOrEqual(6);
     expect(
       screen.queryByText('Below the 1,000-row request cap'),
     ).not.toBeInTheDocument();
@@ -395,7 +392,7 @@ describe('RegenEfficiencyPage', () => {
     renderPage();
 
     expect(screen.getByText('50000 energy')).toBeInTheDocument();
-    expect(within(screen.getByTestId('regen-overview')).getByRole('heading', { name: 'Complete aggregate' })).toBeInTheDocument();
+    expect(screen.getByText('Complete aggregate')).toBeInTheDocument();
     expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '25');
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
     expect(
@@ -507,11 +504,7 @@ describe('RegenEfficiencyPage', () => {
 
     renderPage();
 
-    const returnedRows = screen.getByText('Detailed rows returned').closest('[data-operational-metric]');
-    expect(returnedRows).not.toBeNull();
-    expect(within(returnedRows as HTMLElement).getByText('1,000-row cap reached')).toBeInTheDocument();
-    expect(within(returnedRows as HTMLElement).getByText('1,000', { selector: '[data-operational-value]' })).toBeInTheDocument();
-    expect(returnedRows).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByText('1,000-row cap reached')).toBeInTheDocument();
     expect(
       screen.getAllByText('Detailed history cap reached').length,
     ).toBeGreaterThanOrEqual(6);
@@ -639,7 +632,7 @@ describe('RegenEfficiencyPage', () => {
 
     const shareCard = screen
       .getByText('Aggregate recovery share')
-      .closest('[data-operational-metric]');
+      .closest('[data-role="metric-card"]');
     expect(shareCard).not.toBeNull();
     expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();

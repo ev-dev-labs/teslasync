@@ -42,15 +42,9 @@ import type {
   AlertMessagePreset,
   AlertMessagePreviewRequest,
   AlertMessagePreviewResponse,
-  AppSettings,
 } from '@/api/types';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
-
-const displaySettings = vi.hoisted(() => ({ current: { decimal_precision: 2, locale: 'en-US' } as Partial<AppSettings> }));
-vi.mock('./useSettings', () => ({
-  useSettings: () => ({ data: displaySettings.current }),
-}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const qc = new QueryClient({
@@ -81,71 +75,6 @@ const samplePlaceholder: AlertMessagePlaceholder = {
 
 beforeEach(() => {
   mockedRequest.mockReset();
-  displaySettings.current = { decimal_precision: 2, locale: 'en-US' };
-});
-
-describe('message helper preference refresh', () => {
-  it('refetches timestamp examples after persisted time format and timezone changes', async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const stableWrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
-    );
-    displaySettings.current = { locale: 'en-US', time_format_default: 'relative', tz_display_default: 'utc' };
-    mockedRequest.mockResolvedValue([{ ...samplePlaceholder, key: 'NowDisplay', example: 'just now' }]);
-    const { result, rerender } = renderHook(() => useAlertMessagePlaceholders({ kind: 'place' }), { wrapper: stableWrapper });
-    await waitFor(() => expect(result.current.data?.[0].example).toBe('just now'));
-    displaySettings.current = { locale: 'en-US', time_format_default: 'absolute', tz_display_default: 'utc' };
-    mockedRequest.mockResolvedValue([{ ...samplePlaceholder, key: 'NowDisplay', example: 'Nov 1, 2026, 09:30 AM' }]);
-    rerender();
-    await waitFor(() => expect(result.current.data?.[0].example).toBe('Nov 1, 2026, 09:30 AM'));
-    displaySettings.current = { locale: 'en-US', time_format_default: 'absolute', tz_display_default: 'user', timezone_user: 'America/Los_Angeles' };
-    mockedRequest.mockResolvedValue([{ ...samplePlaceholder, key: 'NowDisplay', example: 'Nov 1, 2026, 01:30 AM' }]);
-    rerender();
-    await waitFor(() => expect(result.current.data?.[0].example).toBe('Nov 1, 2026, 01:30 AM'));
-    expect(mockedRequest).toHaveBeenCalledTimes(3);
-    expect(mockedRequest.mock.calls[2][0]).toBe('/alerts/message-placeholders?kind=place');
-    qc.clear();
-  });
-
-  it('refetches authoritative examples after precision/locale changes without sending display overrides', async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const stableWrapper = ({ children }: { children: ReactNode }) => (
-      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
-    );
-    mockedRequest.mockResolvedValue([{ ...samplePlaceholder, example: '1,234.50' }]);
-    const { result, rerender } = renderHook(() => useAlertMessagePlaceholders({ kind: 'signal', signal_name: 'Soc' }), { wrapper: stableWrapper });
-    await waitFor(() => expect(result.current.data?.[0].example).toBe('1,234.50'));
-    mockedRequest.mockResolvedValue([{ ...samplePlaceholder, example: '1.234,5000' }]);
-    displaySettings.current = { decimal_precision: 4, locale: 'de-DE' };
-    rerender();
-    await waitFor(() => expect(result.current.data?.[0].example).toBe('1.234,5000'));
-    expect(mockedRequest).toHaveBeenCalledTimes(2);
-    expect(mockedRequest.mock.calls[1][0]).toBe('/alerts/message-placeholders?kind=signal&signal_name=Soc');
-    qc.clear();
-  });
-
-  it('supplies signal/metric context to preset example rendering', async () => {
-    mockedRequest.mockResolvedValue([samplePreset]);
-    renderHook(() => useAlertMessagePresets('signal', { signal_name: 'VehicleSpeed', op: '>' }), { wrapper });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(mockedRequest.mock.calls[0][0]).toBe('/alerts/message-presets?kind=signal&signal_name=VehicleSpeed&op=%3E');
-  });
-
-  it('supplies and refreshes selected vehicle timezone for helper examples', async () => {
-    mockedRequest.mockResolvedValue([samplePlaceholder]);
-    const { rerender } = renderHook(({ zone }) => useAlertMessagePlaceholders({ kind: 'place', vehicle_timezone: zone }), {
-      wrapper, initialProps: { zone: 'America/Los_Angeles' },
-    });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(mockedRequest.mock.calls[0][0]).toBe('/alerts/message-placeholders?kind=place&vehicle_timezone=America%2FLos_Angeles');
-    rerender({ zone: 'Asia/Kolkata' });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
-    expect(mockedRequest.mock.calls[1][0]).toBe('/alerts/message-placeholders?kind=place&vehicle_timezone=Asia%2FKolkata');
-    mockedRequest.mockResolvedValue([samplePreset]);
-    renderHook(() => useAlertMessagePresets('place', { vehicle_timezone: 'America/Los_Angeles' }), { wrapper });
-    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3));
-    expect(mockedRequest.mock.calls[2][0]).toBe('/alerts/message-presets?kind=place&vehicle_timezone=America%2FLos_Angeles');
-  });
 });
 
 afterEach(() => {

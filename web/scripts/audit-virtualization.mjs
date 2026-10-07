@@ -49,7 +49,6 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
 
 const ROOT = path.resolve(process.cwd(), 'src');
 
@@ -59,7 +58,7 @@ const ROOT = path.resolve(process.cwd(), 'src');
 // given prompt (READ-only — modifications still go through the normal
 // allowlist gate).
 const HOT_TABLE_PAGES = [
-  'features/admin/components/structural-closure/live-logs/LiveLogsStream.tsx',
+  'features/admin/pages/LiveLogsPage.tsx',
   'features/charging/pages/TeslaChargingSessionsPage.tsx',
   'features/charging/pages/TeslaChargingHistoryPage.tsx',
   'features/admin/pages/RedisSignalViewerPage.tsx',
@@ -72,17 +71,19 @@ const HOT_TABLE_PAGES = [
 // that starts rendering a long list is caught even though nobody touched this
 // array, and an entry that has since migrated must be pruned.
 const ACKNOWLEDGED_LONG_LIST_SURFACES = [
+  'features/admin/pages/ApiLogsPage.tsx',
   'features/advanced-intelligence/pages/BehavioralSentinelPage.tsx',
   'features/advanced-intelligence/pages/CausalExperimentationPage.tsx',
   'features/advanced-intelligence/pages/ComponentSurvivalPage.tsx',
   'features/advanced-intelligence/pages/FederatedLearningStudioPage.tsx',
   'features/advanced-intelligence/pages/FirmwareCanaryPage.tsx',
   'features/advanced-intelligence/pages/RoadHazardMeshPage.tsx',
-  // Both charging renderers paginate variable-height cards. The page's mobile
-  // DateGroupedList delegates iteration, so a .map-only scan missed it.
+  // Row renderer behind ChargingListPage — the page is a shell, this is what
+  // maps sessions into DOM. (The page itself is NOT listed: its only chained
+  // `.map` is the `narrativeEvidence` data transform at ChargingListPage.tsx,
+  // which builds objects and renders nothing.)
   'features/charging/components/charging-list/SessionListSection.tsx',
-  'features/charging/pages/ChargingListPage.tsx',
-  'features/driving/components/drives-orchestrator/DrivesMobileEvidence.tsx',
+  'features/driving/pages/DrivesListPage.tsx',
   // Route cards vary in height and render only the selected 12-card page.
   'features/driving/pages/RouteEfficiencyPage.tsx',
   'features/maps/pages/LocationsPage.tsx',
@@ -424,15 +425,6 @@ export function mapCallbackReturnsJsx(source, openParenIndex) {
  * container, through any chain depth.
  */
 export function rendersMappedList(source) {
-  // DateGroupedList owns iteration; parse tags so examples/comments don't count.
-  if (/<DateGroupedList\b/.test(source)) {
-    const file = ts.createSourceFile('surface.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-    const rendersGroupedList = (node) =>
-      ((ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node))
-        && node.tagName.getText(file) === 'DateGroupedList')
-      || ts.forEachChild(node, rendersGroupedList);
-    if (rendersGroupedList(file)) return true;
-  }
   const re = /\.\s*map\s*\(/g;
   let match;
   while ((match = re.exec(source)) !== null) {

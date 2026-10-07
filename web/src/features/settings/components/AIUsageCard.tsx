@@ -18,9 +18,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
-import { Badge, Button, GlassPanel, PanelTitle, Caption } from '@/components/ui'
-import type { StatMetric } from '@/components/data-display'
-import { SettingsSummaryBrief } from './operationalbrief-all/SettingsSummaryBrief'
+import { Badge, Button, GlassPanel, PanelTitle, Caption, Text } from '@/components/ui'
 import { useAiUsageToday } from '@/api/hooks/useAiUsage'
 import { useDataState } from '@/hooks/useDataState'
 import { useFormatting } from '@/hooks/useFormatting'
@@ -39,25 +37,19 @@ export function AIUsageCard({ enabled = true }: { enabled?: boolean }) {
   const query = useAiUsageToday({ enabled })
   const state = useDataState(query, { provenance: 'historical' })
   const data = enabled ? state.data : undefined
+  const tokensIn = formatCount(data?.input_tokens)
+  const tokensOut = formatCount(data?.output_tokens)
   const costMicroCents = data?.cost_micro_cents
-  const amount = typeof costMicroCents === 'number'
+  const amount = typeof costMicroCents === 'number' && Number.isFinite(costMicroCents)
     ? costMicroCents / 1_000_000
     : null
+  const cost = amount === null
+    ? PLACEHOLDER
+    : formatCurrency(amount, amount > 0 && amount < 0.01 ? 6 : 2)
   const loading = enabled && state.status === 'initial'
   const errors = data?.error_count === 1
     ? t('ai.settings.usage.errorOne', '1 error')
     : t('ai.settings.usage.errorMany', '{{total}} errors', { total: formatCount(data?.error_count) })
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'helix-input-tokens', rawValue: data?.input_tokens,
-      label: t('ai.settings.usage.tokensIn', 'Tokens in'),
-      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-    { metricId: 'count', occurrenceId: 'helix-output-tokens', rawValue: data?.output_tokens,
-      label: t('ai.settings.usage.tokensOut', 'Tokens out'),
-      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-    { metricId: 'currency', occurrenceId: 'helix-estimated-cost', rawValue: amount,
-      label: t('ai.settings.usage.cost', 'Estimated cost'),
-      display: { formatter: raw => ({ value: formatCurrency(raw, raw > 0 && raw < 0.01 ? 6 : 2), unit: '' }) } },
-  ]
 
   return (
     <GlassPanel
@@ -71,12 +63,23 @@ export function AIUsageCard({ enabled = true }: { enabled?: boolean }) {
           {t('ai.settings.usage.utc', 'Today · UTC')}
         </Badge>
       </div>
-      <SettingsSummaryBrief title={t('ai.settings.usage.brief.title', 'Audited usage totals')}
-        description={t('ai.settings.usage.brief.description', 'Input tokens, output tokens and estimated cost from the existing daily usage audit. Small non-zero costs retain six-decimal precision.')}
-        source={t('ai.settings.usage.brief.source', 'Helix daily usage audit')}
-        scope={t('ai.settings.usage.utc', 'Today · UTC')}
-        metrics={metrics} loading={loading} unavailable={!data}
-        retained={enabled && state.status === 'stale'} testId="helix-usage-summary" />
+      <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
+        <UsageCell
+          label={t('ai.settings.usage.tokensIn', 'Tokens in')}
+          value={tokensIn}
+          isLoading={loading}
+        />
+        <UsageCell
+          label={t('ai.settings.usage.tokensOut', 'Tokens out')}
+          value={tokensOut}
+          isLoading={loading}
+        />
+        <UsageCell
+          label={t('ai.settings.usage.cost', 'Estimated cost')}
+          value={cost}
+          isLoading={loading}
+        />
+      </div>
       {!enabled ? (
         <Caption className="block">
           {t('ai.settings.usage.off', 'Helix is off. Enable it and make a call to see usage.')}
@@ -112,5 +115,30 @@ export function AIUsageCard({ enabled = true }: { enabled?: boolean }) {
         </Caption>
       ) : null}
     </GlassPanel>
+  )
+}
+
+function UsageCell({
+  label,
+  value,
+  isLoading,
+}: {
+  label: string
+  value: string
+  isLoading: boolean
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+      <Caption>{label}</Caption>
+      <Text
+        as="span"
+        variant="bodySm"
+        className="break-words font-semibold tabular-nums"
+        data-testid="ai-usage-value"
+        aria-busy={isLoading || undefined}
+      >
+        {value}
+      </Text>
+    </div>
   )
 }

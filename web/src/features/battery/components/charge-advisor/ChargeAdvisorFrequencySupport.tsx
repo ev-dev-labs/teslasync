@@ -2,14 +2,12 @@ import { Activity, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargeAdvisorFrequencySupport({ analysis, state }: ChargeAdvisorComponentProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const support = analysis.evidence.support;
   const gate = analysis.evidenceGatePassed;
@@ -43,7 +41,7 @@ export function ChargeAdvisorFrequencySupport({ analysis, state }: ChargeAdvisor
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text variant="caption">{t('chargeAdvisor.support.score', 'Support score')}</Text>
-          <Text className="mt-1 text-xl font-semibold text-cyan-300">{fmtPercent(support.score * 100)}</Text>
+          <Text className="mt-1 text-xl font-semibold text-cyan-300">{fmtPercent(support.score * 100, 0)}</Text>
           <Badge className="mt-2" variant={support.band === 'strong' ? 'success' : support.band === 'moderate' ? 'info' : 'warning'}>
             {t(
               `chargeAdvisor.support.band.${support.band}`,

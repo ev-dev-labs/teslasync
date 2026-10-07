@@ -72,7 +72,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
   const shares = existingShares ?? [];
 
   return (
-    <Modal open={open} onClose={handleClose} title={t('share.title', 'Share drive')}>
+    <Modal open={open} onClose={handleClose} title={t('share.title', 'Share Drive')}>
       <div className="space-y-6">
         {/* Create new share */}
         {!shareUrl ? (
@@ -84,7 +84,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={t('share.titlePlaceholder', 'Optional title (e.g., "SF to LA road trip")')}
+              placeholder={t('share.titlePlaceholder', 'Optional title (e.g., "SF to LA Road Trip")')}
               aria-label={t('share.titleLabel', 'Share title')}
             />
 
@@ -108,7 +108,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
 
             <Button onClick={handleCreate} loading={createShare.isPending} className="w-full">
               <Link className="h-4 w-4 mr-2" />
-              {t('share.generate', 'Generate link')}
+              {t('share.generate', 'Generate Link')}
             </Button>
           </div>
         ) : (
@@ -124,7 +124,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
                 variant="primary"
                 size="md"
                 withToast
-                label={t('share.copy', 'Copy link')}
+                label={t('share.copy', 'Copy Link')}
                 className="flex-1"
               />
               <Button
@@ -145,7 +145,7 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
             empty / list states so the section is never a blank void. */}
         <div className="space-y-2 border-t border-[var(--border-subtle)] pt-4">
           <h3 className="text-sm font-medium text-[var(--text-secondary)]">
-            {t('share.existing', 'Active share links')}
+            {t('share.existing', 'Active Share Links')}
           </h3>
           {sharesLoading ? (
             <ListSkeleton

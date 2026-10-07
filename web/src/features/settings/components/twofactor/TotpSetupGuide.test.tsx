@@ -160,9 +160,8 @@ describe('TotpSetupGuide', () => {
 
     // The four ordinal badges are decorative too — the <ol> already conveys
     // position, so the visual number must not double-announce.
-    const badges = screen.getAllByRole('listitem').map(item => item.querySelector('[aria-hidden="true"]'))
+    const badges = container.querySelectorAll('span[aria-hidden="true"]')
     expect(badges).toHaveLength(4)
-    badges.forEach(badge => expect(badge).not.toBeNull())
   })
 
   it('never re-runs translations through a hostile locale for the ordinal badges', () => {

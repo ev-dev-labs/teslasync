@@ -6,10 +6,9 @@ import {
   useTransitionRepairCase,
   type RepairCaseStatus,
 } from '@/api/hooks/useDataRepair';
-import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { QueryError, Skeleton } from '@/components/feedback';
 import { Badge, Button, ConfirmDialog, Drawer, Text, Textarea } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { useDataState } from '@/hooks/useDataState';
 import { RepairCaseCollaboration } from './RepairCaseCollaboration';
 import { RepairCaseControlledActions } from './RepairCaseControlledActions';
 import { RepairCaseEvidencePanel } from './RepairCaseEvidencePanel';
@@ -33,7 +32,6 @@ export function RepairCaseDrawer({
 }: RepairCaseDrawerProps) {
   const { t } = useTranslation();
   const detailQuery = useRepairCase(caseId);
-  const detailState = useDataState(detailQuery);
   const transition = useTransitionRepairCase();
   const [resolveReason, setResolveReason] = useState('');
   const [resolveOpen, setResolveOpen] = useState(false);
@@ -94,7 +92,6 @@ export function RepairCaseDrawer({
                   loading={transition.isPending}
                   disabled={!canWrite}
                   title={!canWrite ? writeBlockReason : undefined}
-                  wrapLabel
                 >
                   {t('dataRepair.cases.beginReview', 'Begin review')}
                 </Button>
@@ -108,7 +105,6 @@ export function RepairCaseDrawer({
                   loading={transition.isPending}
                   disabled={!canWrite}
                   title={!canWrite ? writeBlockReason : undefined}
-                  wrapLabel
                 >
                   {t('dataRepair.cases.reopen', 'Reopen')}
                 </Button>
@@ -122,7 +118,6 @@ export function RepairCaseDrawer({
                 onClick={() => setResolveOpen(true)}
                 disabled={!canWrite}
                 title={!canWrite ? writeBlockReason : undefined}
-                wrapLabel
               >
                 {t('dataRepair.cases.resolve', 'Resolve case')}
               </Button>
@@ -131,15 +126,14 @@ export function RepairCaseDrawer({
         ) : null
       }
     >
-      <StaleRefreshWarning state={detailState} />
-      {detailQuery.isLoading && !detail ? (
+      {detailQuery.isLoading ? (
         <div className="space-y-3">
           <Skeleton height={120} />
           <Skeleton height={220} />
           <Skeleton height={180} />
         </div>
-      ) : detailState.fatalError ? (
-        <QueryError error={detailState.fatalError} onRetry={() => void detailQuery.refetch()} />
+      ) : detailQuery.error ? (
+        <QueryError error={detailQuery.error} onRetry={() => void detailQuery.refetch()} />
       ) : repairCase && detail ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -190,23 +184,17 @@ export function RepairCaseDrawer({
         variant="warning"
         loading={transition.isPending}
         details={(
-          <>
-            {!canWrite && <Text as="p" variant="caption" role="note">
-              {writeBlockReason ?? t('dataRepair.cases.readOnly', 'Repair controls are read-only')}
-            </Text>}
-            <Textarea
-              id="repair-case-resolution-reason"
-              label={t('dataRepair.cases.reasonLabel', 'Operator note')}
-              value={resolveReason}
-              onChange={(event) => setResolveReason(event.target.value)}
-              rows={3}
-              maxLength={4000}
-              placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
-              disabled={!canWrite}
-            />
-          </>
+          <Textarea
+            id="repair-case-resolution-reason"
+            label={t('dataRepair.cases.reasonLabel', 'Operator note')}
+            value={resolveReason}
+            onChange={(event) => setResolveReason(event.target.value)}
+            rows={3}
+            maxLength={4000}
+            placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
+          />
         )}
-        confirmDisabled={!canWrite || !resolveReason.trim()}
+        confirmDisabled={!resolveReason.trim()}
       />
     </Drawer>
   );

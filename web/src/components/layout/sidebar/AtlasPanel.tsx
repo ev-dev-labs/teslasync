@@ -322,7 +322,7 @@ export function AtlasPanel({
           </Button>
         )}
         {!compact && (
-          <p className="min-w-0 flex-1 truncate px-1 text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+          <p className="min-w-0 flex-1 truncate px-1 text-sm font-semibold uppercase tracking-wide text-[var(--text-primary)]">
             {viewTitle()}
           </p>
         )}
@@ -469,10 +469,10 @@ export function AtlasPanel({
             {visibleRecent.length > 0 && (
               <div>
                 {compact
-                  ? <div role="separator" aria-label={t('nav.recentlyUsed', 'Recently used')} className="mx-2 my-2 border-t border-[var(--border-default)]" />
+                  ? <div role="separator" aria-label={t('nav.recentlyUsed', 'Recently Used')} className="mx-2 my-2 border-t border-[var(--border-default)]" />
                   : (
                     <NavSectionHeader
-                      label={t('nav.recentlyUsed', 'Recently used')}
+                      label={t('nav.recentlyUsed', 'Recently Used')}
                       action={(
                         <Button
                           type="button"
@@ -588,7 +588,7 @@ export function AtlasPanel({
                       ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden />
                       : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
                     <Icons.pin className="h-4 w-4 text-amber-500" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate text-start text-xs font-semibold tracking-wide">
+                    <span className="min-w-0 flex-1 truncate text-start text-xs font-semibold uppercase tracking-wide">
                       {t('nav.deck.quickAccessPins', 'Quick access pins')}
                     </span>
                     <span aria-hidden className="rounded-full bg-[var(--surface-3)] px-2 py-0.5 text-2xs tabular-nums text-[var(--text-secondary)]">
@@ -652,7 +652,7 @@ export function AtlasPanel({
                     onClick={() => toggleGroup(group.groupKey)}
                     className={cn(
                       'min-h-11 rounded-shape-md text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                      compact ? 'mx-auto flex w-11 justify-center p-0' : 'w-full justify-start gap-2 px-2 text-sm font-semibold tracking-normal',
+                      compact ? 'mx-auto flex w-11 justify-center p-0' : 'w-full justify-start gap-2 px-2 text-sm font-semibold uppercase tracking-normal',
                     )}
                   >
                     {expandedGroups.has(group.groupKey)

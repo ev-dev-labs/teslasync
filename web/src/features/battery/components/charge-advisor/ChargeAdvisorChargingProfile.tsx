@@ -2,11 +2,10 @@ import { BatteryCharging, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargeAdvisorChargingProfileProps extends ChargeAdvisorComponentProps {
   formatEnergy: (value: number | null | undefined, options?: { precision?: number }) => string;
@@ -17,7 +16,6 @@ export function ChargeAdvisorChargingProfile({
   state,
   formatEnergy,
 }: ChargeAdvisorChargingProfileProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const profile = analysis.chargingProfile;
   const items = [
@@ -30,14 +28,14 @@ export function ChargeAdvisorChargingProfile({
     },
     {
       label: t('chargeAdvisor.charging.startSoc', 'Median start SoC'),
-      value: profile.medianStartSocPct == null ? '—' : fmtPercent(profile.medianStartSocPct),
+      value: profile.medianStartSocPct == null ? '—' : fmtPercent(profile.medianStartSocPct, 0),
       detail: t('chargeAdvisor.charging.endSoc', 'Median end {{value}}', {
-        value: profile.medianEndSocPct == null ? '—' : fmtPercent(profile.medianEndSocPct),
+        value: profile.medianEndSocPct == null ? '—' : fmtPercent(profile.medianEndSocPct, 0),
       }),
     },
     {
       label: t('chargeAdvisor.charging.added', 'Median added SoC'),
-      value: profile.medianAddedPct == null ? '—' : fmtPercent(profile.medianAddedPct),
+      value: profile.medianAddedPct == null ? '—' : fmtPercent(profile.medianAddedPct, 1),
       detail: profile.daysSinceLatestCompletedCharge == null
         ? t('chargeAdvisor.charging.noLatest', 'No completed charge date')
         : t('chargeAdvisor.charging.daysSince', '{{days}} days since latest end', {
@@ -46,7 +44,7 @@ export function ChargeAdvisorChargingProfile({
     },
     {
       label: t('chargeAdvisor.charging.energy', 'Energy added'),
-      value: profile.totalEnergyAddedWh == null ? '—' : formatEnergy(profile.totalEnergyAddedWh),
+      value: profile.totalEnergyAddedWh == null ? '—' : formatEnergy(profile.totalEnergyAddedWh, { precision: 1 }),
       detail: t('chargeAdvisor.charging.energyRows', '{{count}} rows with valid Wh', {
         count: profile.energyRows,
       }),

@@ -17,8 +17,8 @@ export function TermRow({
 }) {
   const t = useT();
   return (
-    <tr>
-      <th scope="row" className="min-w-0 font-normal">
+    <div className="flex items-baseline justify-between gap-3 py-1.5">
+      <div className="min-w-0">
         <Text as="span" size="sm">
           {label}
         </Text>{' '}
@@ -26,16 +26,14 @@ export function TermRow({
           {term?.method ?? unknownLabel(t)}
           {term?.missing_signals?.length ? ` · ${t('physicsLedger.missing', 'missing')}: ${term.missing_signals.join(', ')}` : ''}
         </Caption>
-      </th>
-      <td className="text-right tabular-nums">
-        <Text
-          as="span"
-          size="sm"
-          className={highlight ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-primary)]'}
-        >
-          {!term || term.unknown || term.value_wh == null ? unknownLabel(t) : format(term.value_wh)}
-        </Text>
-      </td>
-    </tr>
+      </div>
+      <Text
+        as="span"
+        size="sm"
+        className={highlight ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-primary)] tabular-nums'}
+      >
+        {!term || term.unknown || term.value_wh == null ? unknownLabel(t) : format(term.value_wh)}
+      </Text>
+    </div>
   );
 }

@@ -1,25 +1,20 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plug } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth, type ChartDataRow } from '@/components/charts';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart, type ChartDataRow,
+} from '@/components/charts';
 import { useTeslaWCChargingHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
-import { averageKnown, knownNumber, sumKnown } from '@/api/dataState';
-import { DataProvenanceBadge } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
-import { Caption } from '@/components/ui';
-import { useDataState } from '@/hooks/useDataState';
-import { useUnits } from '@/hooks/useUnits';
-import { convertEnergyFromSI } from '@/lib/unitConversion';
-
-import { chartTokens } from '@/lib/tokens';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChartDatum extends ChartDataRow {
   date: string;
-  energy_kwh: number | null;
+  energy_kwh: number;
 }
 
 function shortDate(iso: string): string {
@@ -47,10 +42,7 @@ function isSameMonth(iso: string): boolean {
 }
 
 export default function WallConnectorWidget({ size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { unitPrefs } = useUnits();
 
   // Discover energy sites
   const {
@@ -91,7 +83,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   const isFetching = sitesFetching || historyFetching;
   const isStale = sitesStale || historyStale;
   const isError = sitesIsError || historyIsError;
-  const updatedAt = siteId ? historyUpdatedAt : sitesUpdatedAt;
+  const updatedAt = Math.max(sitesUpdatedAt ?? 0, historyUpdatedAt ?? 0);
 
   const hasSites = (sites ?? []).length > 0;
 
@@ -100,69 +92,40 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
     // The backend contract promises an array, but a malformed payload (or a
     // stray null row) must degrade cleanly instead of throwing at `.slice`.
     const entries = Array.isArray(history) ? history : [];
-    const byDay = new Map<string, number | null>();
+    const byDay = new Map<string, number>();
     for (const entry of entries) {
       const day = (entry?.timestamp ?? '').slice(0, 10);
       if (!day) continue;
-      const energy = knownNumber(entry?.energy_wh);
-      const previous = byDay.get(day);
-      byDay.set(day, energy == null || previous === null ? null
-        : (previous ?? 0) + convertEnergyFromSI(energy, unitPrefs.energy));
+      byDay.set(day, (byDay.get(day) ?? 0) + (entry?.energy_wh ?? 0) / 1000);
     }
     return Array.from(byDay.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([day, kwh]) => ({ date: shortDate(day), energy_kwh: kwh }));
-  }, [history, unitPrefs.energy]);
+  }, [history]);
 
   // Stats for current month
   const { monthTotalKwh, monthSessions, avgKwhPerSession } = useMemo(() => {
     // Same defensive coercion as `chartData`: a non-array payload here would
     // otherwise throw at `.filter`, blanking the whole widget.
     const entries = Array.isArray(history) ? history : [];
-    const monthEntries = entries.filter((e) => e != null && isSameMonth(e.timestamp ?? ''));
-    const measured = monthEntries.map((e) => {
-      const energy = knownNumber(e.energy_wh);
-      return energy == null ? null : convertEnergyFromSI(energy, unitPrefs.energy);
-    });
-    const total = measured.some((value) => value == null) ? null : sumKnown(measured);
+    const monthEntries = entries.filter((e) => isSameMonth(e?.timestamp ?? ''));
+    const total = monthEntries.reduce((sum, e) => sum + (e?.energy_wh ?? 0) / 1000, 0);
     const count = monthEntries.length;
     return {
       monthTotalKwh: total,
       monthSessions: count,
-      avgKwhPerSession: measured.some((value) => value == null) ? null : averageKnown(measured),
+      avgKwhPerSession: count > 0 ? total / count : 0,
     };
-  }, [history, unitPrefs.energy]);
+  }, [history]);
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
-  const hasData = chartData.length > 0;
-  const axisLabels = useMemo(
-    () => [0, ...chartData.map((entry) => entry.energy_kwh)]
-      .filter((value): value is number => value != null && Number.isFinite(value))
-      .map((value) => fmt(value)),
-    [chartData, fmt],
-  );
-  const axisWidth = useMeasuredAxisWidth({
-    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
-  });
+  const hasData = chartData.length > 0 && chartData.some((d) => d.energy_kwh > 0);
 
   const handleRefresh = useCallback(() => {
     refetchSites();
     if (siteId) refetchHistory();
   }, [refetchSites, refetchHistory, siteId]);
-  const dataState = useDataState({
-    data: siteId ? history ?? (isLoading || isError || error ? undefined : null)
-      : isLoading || isError || error ? undefined : sites ?? null,
-    error,
-    isError,
-    isFetching,
-    dataUpdatedAt: siteId ? historyUpdatedAt : sitesUpdatedAt,
-    refetch: handleRefresh,
-  }, { provenance: 'historical', partial: chartData.some((d) => d.energy_kwh == null) });
-  const shellProps = {
-    title: t('widget.wallConnector.title', 'Wall connector'),
-    icon: <Plug className="h-3.5 w-3.5 text-emerald-400" />,
-  };
 
   // No energy sites linked. Guard on `!sitesError` so a *failed* sites fetch
   // surfaces the shared error panel (below) rather than this misleading empty
@@ -170,9 +133,8 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   if (!hasSites && !isLoading && !sitesError) {
     return (
       <WidgetShell
-        {...shellProps}
         loading={false}
-        dataState={dataState}
+        error={null}
         updatedAt={sitesUpdatedAt}
         isFetching={sitesFetching}
         isStale={sitesStale}
@@ -182,7 +144,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         <WidgetChartSummary
           compact={isCompact}
           isEmpty
-          emptyMessage={t('widget.wallConnector.noSite', 'No Tesla energy site linked')}
+          emptyMessage={t('widget.wallConnector.noSite', 'No Tesla Energy site linked')}
           emptyIcon={<Plug className="h-5 w-5" />}
           stats={[]}
           chart={null}
@@ -195,10 +157,8 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
-        {...shellProps}
         loading={isLoading}
-        dataState={dataState}
-        loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
+        error={error ? String(error) : null}
         updatedAt={updatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -208,13 +168,13 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         <WidgetChartSummary
           compact
           isEmpty={!hasData}
-          emptyMessage={t('widget.wallConnector.noData', 'No wall connector data')}
+          emptyMessage={t('widget.wallConnector.noData', 'No Wall Connector data')}
           emptyIcon={<Plug className="h-5 w-5" />}
           stats={hasData ? [
             {
-              label: t('widget.wallConnector.monthLoaded', 'This month (loaded)'),
-              value: monthTotalKwh == null ? null : fmtNumber(monthTotalKwh),
-              unit: unitPrefs.energy,
+              label: t('widget.wallConnector.monthTotal', 'This Month'),
+              value: fmtNumber(monthTotalKwh, 1),
+              unit: 'kWh',
             },
             {
               label: t('widget.wallConnector.sessions', 'Sessions'),
@@ -231,18 +191,18 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
   const stats: ChartSummaryStat[] = hasData
     ? [
         {
-          label: t('widget.wallConnector.monthLoaded', 'This month (loaded)'),
-          value: monthTotalKwh == null ? null : fmtNumber(monthTotalKwh),
-          unit: unitPrefs.energy,
+          label: t('widget.wallConnector.monthTotal', 'This Month'),
+          value: fmtNumber(monthTotalKwh, 1),
+          unit: 'kWh',
         },
         {
           label: t('widget.wallConnector.sessions', 'Sessions'),
           value: fmtInt(monthSessions),
         },
         {
-          label: t('widget.wallConnector.avgPerSession', 'Avg / session'),
-          value: avgKwhPerSession == null ? null : fmtNumber(avgKwhPerSession),
-          unit: unitPrefs.energy,
+          label: t('widget.wallConnector.avgPerSession', 'Avg / Session'),
+          value: fmtNumber(avgKwhPerSession, 1),
+          unit: 'kWh',
         },
       ]
     : [];
@@ -251,12 +211,10 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
 
   return (
     <WidgetShell
-      {...shellProps}
+      title={t('widget.wallConnector.title', 'Wall Connector')}
+      icon={<Plug className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
-      dataState={dataState}
-      loadingContent={<Skeleton className="h-full min-h-24 rounded-shape-sm" />}
-      status={<DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
-      footer={hasData ? <Caption>{t('widget.wallConnector.loadedWindow', 'Totals cover loaded records from the last 14 days.')}</Caption> : undefined}
+      error={error ? String(error) : null}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -265,24 +223,24 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
     >
       <WidgetChartSummary
         isEmpty={!hasData}
-        emptyMessage={t('widget.wallConnector.noData', 'No wall connector data')}
+        emptyMessage={t('widget.wallConnector.noData', 'No Wall Connector data')}
         emptyIcon={<Plug className="h-5 w-5" />}
         stats={stats}
         chart={
           <EmbeddedChart
-            title={t('widget.wallConnector.title', 'Wall connector')}
+            title={t('widget.wallConnector.title', 'Wall Connector')}
             ariaLabel={t(
               'widget.wallConnector.chartLabel',
-              'Daily wall connector charging energy over the last 14 days',
+              'Daily Wall Connector charging energy over the last 14 days',
             )}
             data={chartData}
             dataColumns={[
               { key: 'date', label: t('widget.wallConnector.date', 'Date') },
-              { key: 'energy_kwh', label: `${t('widget.wallConnector.energy', 'Energy')} (${unitPrefs.energy})` },
+              { key: 'energy_kwh', label: t('widget.wallConnector.energyKwh', 'Energy (kWh)') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
                 {chartGrid}
                 <XAxis
                   dataKey="date"
@@ -294,20 +252,20 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
                   tick={tick}
                   tickLine={false}
                   axisLine={false}
-                  width={axisWidth}
-                  tickFormatter={(v: number) => fmt(v)}
+                  width={40}
+                  tickFormatter={(v: number) => fmt(v, 0)}
                 />
                 <Tooltip
                   content={<ChartTooltip />}
                   formatter={(value: number) => [
-                    `${fmtNumber(value)} ${unitPrefs.energy}`,
+                    `${fmtNumber(value, 1)} kWh`,
                     t('widget.wallConnector.energy', 'Energy'),
                   ]}
-                  cursor={{ fill: chartTokens.gridStroke }}
+                  cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                 />
                 <Bar
                   dataKey="energy_kwh"
-                  fill={chartTokens.series[1]}
+                  fill="#10b981"
                   radius={[4, 4, 0, 0]}
                   name={t('widget.wallConnector.energy', 'Energy')}
                 />

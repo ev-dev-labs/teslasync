@@ -4,22 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Route, ArrowUpRight, MapPin, Clock, Battery } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { Caption, Text } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { formatDurationMinutes } from '@/lib/dateFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { isFiniteNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
-import { knownNumber } from '@/api/dataState';
-import { safeArray } from '@/lib/safeArray';
-import { useDataState } from '@/hooks/useDataState';
 import type { WidgetProps } from './types';
 import type { Drive } from '../types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Truncate a display address to `maxLen` chars with an ellipsis; "—" when absent. */
 export function truncateAddress(addr: string | null | undefined, maxLen: number): string {
@@ -43,7 +37,6 @@ export function batteryUsedPct(
 }
 
 export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -60,18 +53,14 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
     enabled: id > 0,
   });
 
-  const items = useMemo(() => safeArray(drives), [drives]);
-  const trust = useDataState({
-    data: drives, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch,
-  }, { provenance: 'historical' });
+  const items = useMemo(() => drives ?? [], [drives]);
 
   return (
     <WidgetShell
-      title={t('widget.recentDrivesList', 'Recent drives')}
+      title={t('widget.recentDrivesList', 'Recent Drives')}
       icon={<Route className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />}
       loading={isLoading}
-      dataState={trust.hasData ? trust : undefined}
-      error={trust.fatalError?.message ?? null}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -80,7 +69,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       actions={
         <Link
           to="/drives"
-          className="min-h-11 rounded-md text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)] transition-colors flex items-center gap-1"
+          className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
           {t('widget.viewAll', 'View all')} <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
         </Link>
@@ -89,10 +78,8 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
       {items.length > 0 ? (
         <ul className="space-y-1.5 overflow-y-auto h-full">
           {items.map((d) => {
-            const distance = knownNumber(d.distance_m);
-            const duration = knownNumber(d.duration_s);
-            const dist = distance == null ? null : convertDistanceFromSI(distance, unitPrefs.distance);
-            const distanceLabel = dist == null ? '—' : `${fmtNumber(dist)} ${unitPrefs.distance}`;
+            const dist = convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance);
+            const distanceLabel = `${fmtNumber(dist, 1)} ${unitPrefs.distance}`;
             const dateLabel = formatDateShort(d.start_ts);
             const batteryUsed = batteryUsedPct(d.start_soc_pct, d.end_soc_pct);
 
@@ -101,21 +88,19 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                 <Link
                   to={`/drives/${d.id}`}
                   aria-label={`${t('widget.recentDrivesList.drive', 'Drive')}: ${distanceLabel}, ${dateLabel}`}
-                  className="block rounded-lg group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
+                  className="block group"
                 >
-                  <div className="grid grid-cols-1 @xs:flex @xs:flex-wrap items-start gap-2 p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors">
+                  <div className="flex items-start gap-3 p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.05] transition-colors">
                     {/* Left column: distance + duration */}
                     <div className="flex-shrink-0 min-w-[4.5rem]">
-                      <WidgetBigNumber
-                        value={distanceLabel}
-                        size="secondary"
-                        animated={false}
-                      />
+                      <p className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+                        {distanceLabel}
+                      </p>
                       <div className="flex items-center gap-1 mt-0.5">
                         <Clock className="h-2.5 w-2.5 text-[var(--text-muted)]" aria-hidden="true" />
-                        <Caption className="tabular-nums">
-                          {duration == null ? '—' : formatDurationMinutes(duration / 60, { subMinuteLabel: '<1m' })}
-                        </Caption>
+                        <span className="text-2xs text-[var(--text-muted)] tabular-nums">
+                          {formatDurationMinutes((d.duration_s ?? 0) / 60, { subMinuteLabel: '<1m' })}
+                        </span>
                       </div>
                     </div>
 
@@ -124,36 +109,36 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1">
                           <MapPin className="h-2.5 w-2.5 text-emerald-400/60 flex-shrink-0" aria-hidden="true" />
-                          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]" title={d.start_address ?? undefined}>
-                            {d.start_address || '—'}
-                          </Text>
+                          <span className="text-2xs text-[var(--text-secondary)] truncate">
+                            {truncateAddress(d.start_address, 30)}
+                          </span>
                         </div>
                         <div className="flex items-center gap-1 mt-0.5">
                           <MapPin className="h-2.5 w-2.5 text-red-400/60 flex-shrink-0" aria-hidden="true" />
-                          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]" title={d.end_address ?? undefined}>
-                            {d.end_address || '—'}
-                          </Text>
+                          <span className="text-2xs text-[var(--text-secondary)] truncate">
+                            {truncateAddress(d.end_address, 30)}
+                          </span>
                         </div>
                       </div>
                     )}
 
                     {/* Right column: battery + date */}
-                    <div className="min-w-0 @xs:ms-auto @xs:text-end">
+                    <div className="flex-shrink-0 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Battery className="h-2.5 w-2.5 text-[var(--text-muted)]" aria-hidden="true" />
-                        <Text variant="bodySm" className="tabular-nums">
-                          {knownNumber(d.start_soc_pct) == null ? '?' : fmtNumber(d.start_soc_pct)}% → {knownNumber(d.end_soc_pct) == null ? '?' : fmtNumber(d.end_soc_pct)}%
-                        </Text>
+                        <span className="text-2xs text-[var(--text-secondary)] tabular-nums">
+                          {d.start_soc_pct ?? '?'}% → {d.end_soc_pct ?? '?'}%
+                        </span>
                       </div>
                       <div className="flex items-center justify-end gap-1 mt-0.5">
-                        {batteryUsed != null && dist != null && dist > 0 && (
-                          <Text variant="bodySm" className="text-cyan-300 tabular-nums">
-                            {fmtNumber(batteryUsed)}%
-                          </Text>
+                        {batteryUsed != null && dist > 0 && (
+                          <span className="text-2xs text-cyan-300 tabular-nums">
+                            {fmtInt(batteryUsed)}%
+                          </span>
                         )}
-                        <Caption className="tabular-nums">
+                        <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                           {dateLabel}
-                        </Caption>
+                        </span>
                       </div>
                     </div>
                   </div>

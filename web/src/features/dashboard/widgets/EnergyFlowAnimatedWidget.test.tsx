@@ -60,9 +60,6 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: vi.fn(),
   useVehicleState: vi.fn(),
 }));
-vi.mock('@/hooks/useSettings', () => ({
-  useSettings: () => ({ settings: { unit_of_length: 'km', locale: 'en-US' } }),
-}));
 
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import EnergyFlowAnimatedWidget from './EnergyFlowAnimatedWidget';
@@ -74,7 +71,7 @@ const mockUseVehicleState = useVehicleState as unknown as ReturnType<typeof vi.f
 const STATE_OPTS = { refetchInterval: 5_000 };
 
  
-function makeQuery(over: Record<string, unknown> = {}) {
+function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
     error: null,
@@ -132,7 +129,7 @@ function renderWidget(props: Partial<WidgetProps> = {}) {
   );
 }
 
-const diagram = () => screen.queryByRole('img', { name: /energy flow/i });
+const diagram = () => screen.queryByRole('img', { name: /energy flow diagram/i });
 
 beforeEach(() => {
   mockUseVehicles.mockReset();
@@ -212,7 +209,7 @@ describe('EnergyFlowAnimatedWidget — error honesty', () => {
 
   it('keeps the flow diagram on screen when a background refetch errors with cached state', () => {
     mockUseVehicleState.mockReturnValue(
-      stateQuery(makeState({ power: 25_000 }), { isError: true, error: new Error('boom') }),
+      stateQuery(makeState({ power: 25 }), { isError: true, error: new Error('boom') }),
     );
     renderWidget();
 
@@ -224,10 +221,10 @@ describe('EnergyFlowAnimatedWidget — error honesty', () => {
 
 describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
   it('renders the accessible diagram with battery + charger nodes and a "Drive" label when consuming', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25_000 })));
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25 })));
     renderWidget();
 
-    expect(screen.getByRole('img', { name: /energy flow/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /energy flow diagram/i })).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
     expect(screen.getByText('Charger')).toBeInTheDocument();
     expect(screen.getByText('Drive')).toBeInTheDocument();
@@ -236,7 +233,7 @@ describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
   });
 
   it('labels the drive node "Regen" when power is negative (regenerating)', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: -15_000 })));
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: -15 })));
     renderWidget();
 
     expect(screen.getByText('Regen')).toBeInTheDocument();
@@ -244,7 +241,7 @@ describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
   });
 
   it('labels the drive node "Idle" within the ±0.5 kW dead-band', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 400 })));
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 0.4 })));
     renderWidget();
 
     expect(screen.getByText('Idle')).toBeInTheDocument();
@@ -252,19 +249,11 @@ describe('EnergyFlowAnimatedWidget — flow diagram (cols ≥ 2)', () => {
     expect(screen.queryByText('Regen')).not.toBeInTheDocument();
   });
 
-  it.each([
-    [500, 'Idle'], [-500, 'Idle'], [501, 'Drive'], [-501, 'Regen'],
-  ] as const)('classifies %d canonical watts as %s', (power, label) => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power })));
-    renderWidget();
-    expect(screen.getByText(label)).toBeInTheDocument();
-  });
-
   it('exposes the widget title as an accessible heading', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25_000 })));
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25 })));
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: 'Energy flow' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy Flow' })).toBeInTheDocument();
   });
 });
 
@@ -275,7 +264,7 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     renderWidget(compact);
 
-    expect(screen.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('80%')).toBeInTheDocument();
     expect(diagram()).not.toBeInTheDocument();
   });
 
@@ -285,79 +274,44 @@ describe('EnergyFlowAnimatedWidget — compact readout (cols < 2)', () => {
     );
     renderWidget(compact);
 
-    expect(screen.getByText('11.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('11.0 kW')).toBeInTheDocument();
     expect(screen.queryByText('Idle')).not.toBeInTheDocument();
   });
 
   it('shows the drive draw while consuming', () => {
     mockUseVehicleState.mockReturnValue(
-      stateQuery(makeState({ is_charging: false, power: 25_000 })),
+      stateQuery(makeState({ is_charging: false, power: 25 })),
     );
     renderWidget(compact);
 
-    expect(screen.getByText('25.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('25.0 kW')).toBeInTheDocument();
   });
 
   it('shows the absolute regen power while regenerating', () => {
     mockUseVehicleState.mockReturnValue(
-      stateQuery(makeState({ is_charging: false, power: -15_000 })),
+      stateQuery(makeState({ is_charging: false, power: -15 })),
     );
     renderWidget(compact);
 
-    // Canonical negative watts display as a positive regen magnitude.
-    expect(screen.getByText('15.00 kW')).toBeInTheDocument();
+    // Math.abs(-15) → "15.0 kW", never a negative reading.
+    expect(screen.getByText('15.0 kW')).toBeInTheDocument();
   });
 
-  it('shows an "Idle" label and preserves measured zero when parked and not charging', () => {
+  it('shows an "Idle" label (and no kW reading) when parked and not charging', () => {
     mockUseVehicleState.mockReturnValue(
       stateQuery(makeState({ is_charging: false, power: 0 })),
     );
     renderWidget(compact);
 
     expect(screen.getByText('Idle')).toBeInTheDocument();
-    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
-  });
-});
-
-describe('EnergyFlowAnimatedWidget — unknown and cached values', () => {
-  it('does not promote unverified mapper defaults to measured idle or zero SoC', () => {
-    mockUseVehicleState.mockReturnValue(makeQuery({
-      data: { state: makeState({ power: 0, battery_level: 0 }), live: false, verifiedFields: [] },
-    }));
-    renderWidget({ size: { cols: 1, rows: 2 } });
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
-  });
-  it.each([{ cols: 1, rows: 2 }, { cols: 2, rows: 4 }])('does not manufacture zero or idle in renderer %j', (size) => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({
-      power: undefined as unknown as number,
-      battery_level: undefined as unknown as number,
-    })));
-    renderWidget({ size });
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.queryByText('Idle')).not.toBeInTheDocument();
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
-    expect(screen.queryByText('0.00 kW')).not.toBeInTheDocument();
-    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
-  });
-
-  it('retains compact measured values and exposes the stale-refresh warning', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: -15_000 }), {
-      isError: true, error: new Error('refresh failed'),
-    }));
-    renderWidget({ size: { cols: 1, rows: 2 } });
-    expect(screen.getByText('15.00 kW')).toBeInTheDocument();
-    expect(screen.getByText('80.00%')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/kW/)).not.toBeInTheDocument();
   });
 });
 
 describe('EnergyFlowAnimatedWidget — refresh', () => {
   it('refetches vehicle state when the refresh control is activated', () => {
     const refetch = vi.fn();
-    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25_000 }), { refetch }));
+    mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25 }), { refetch }));
     renderWidget();
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

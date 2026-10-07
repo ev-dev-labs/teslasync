@@ -3,14 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Button, DataTable, type Column } from '@/components/ui';
 import { DateTime } from '@/components/data-display';
 import type { AutomationHistory } from '@/api/types';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatDurationMs } from '@/lib/dateFormat';
 
 export function AutomationHistoryTable({ rows, onOpen }: {
   rows: AutomationHistory[];
   onOpen: (id: number) => void;
 }) {
-  const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation();
   const columns = useMemo<Column<AutomationHistory>[]>(() => [
     { key: 'time', header: t('automations.historyPage.time', 'Triggered'), render: (row) => <DateTime value={row.triggered_at} in="user" /> },
@@ -21,14 +19,14 @@ export function AutomationHistoryTable({ rows, onOpen }: {
     { key: 'status', header: t('automations.historyPage.outcome', 'Outcome'), visibleOnMobile: true, render: (row) =>
       t(`automations.historyPage.status.${row.status}`, row.status) },
     { key: 'trigger', header: t('automations.historyPage.trigger', 'Trigger'), render: (row) => row.trigger_type || '—' },
-    { key: 'actions', header: t('automations.historyPage.actions', 'Actions'), align: 'right', render: (row) => `${row.actions_succeeded}/${row.actions_total}` },
-    { key: 'duration', header: t('automations.historyPage.durationColumn', 'Duration'), align: 'right', render: (row) => row.duration_ms != null ? formatDurationMs(row.duration_ms) : '—' },
+    { key: 'actions', header: t('automations.historyPage.actions', 'Actions'), render: (row) => `${row.actions_succeeded}/${row.actions_total}` },
+    { key: 'duration', header: t('automations.historyPage.durationColumn', 'Duration'), render: (row) => row.duration_ms != null ? formatDurationMs(row.duration_ms) : '—' },
     { key: 'error', header: t('automations.historyPage.error', 'Error'), render: (row) => row.error || '—' },
-  ], [t, onOpen, formatDurationMs]);
+  ], [t, onOpen]);
   return (
     <DataTable
       tableId="automations:history"
-      caption={t('automations.historyPage.title', 'Automation history')}
+      caption={t('automations.historyPage.title', 'Automation History')}
       columns={columns}
       data={rows}
       keyExtractor={(row) => row.id}

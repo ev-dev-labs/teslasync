@@ -24,8 +24,8 @@ vi.mock('@/api/hooks/useSettings', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useChangelogStatus', () => ({
-  useChangelogStatus: () => ({ hasUnseen: mocks.hasUnseen }),
+vi.mock('@/hooks/useChangelog', () => ({
+  useChangelog: () => ({ hasUnseen: mocks.hasUnseen }),
 }));
 
 vi.mock('./VersionSegment', async () => {

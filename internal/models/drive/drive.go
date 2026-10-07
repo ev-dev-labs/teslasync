@@ -28,14 +28,12 @@ import "time"
 // Mutability: rows are mutable while a drive is in progress.
 // EndTs is NULL while a drive is in progress (same pattern as ChargingSession).
 type Drive struct {
-	ID             int64      `db:"id"          json:"id"`
-	VehicleID      int64      `db:"vehicle_id"  json:"vehicle_id"`
-	StartTs        time.Time  `db:"start_ts"    json:"start_ts"`
-	EndTs          *time.Time `db:"end_ts"      json:"end_ts"`
-	DurationS      int64      `db:"duration_s"  json:"duration_s"`
-	DistanceM      float64    `db:"distance_m"  json:"distance_m"`
-	StartOdometerM *float64   `db:"start_odometer_m" json:"start_odometer_m"`
-	EndOdometerM   *float64   `db:"end_odometer_m" json:"end_odometer_m"`
+	ID        int64      `db:"id"          json:"id"`
+	VehicleID int64      `db:"vehicle_id"  json:"vehicle_id"`
+	StartTs   time.Time  `db:"start_ts"    json:"start_ts"`
+	EndTs     *time.Time `db:"end_ts"      json:"end_ts"`
+	DurationS int64      `db:"duration_s"  json:"duration_s"`
+	DistanceM float64    `db:"distance_m"  json:"distance_m"`
 
 	StartAddress *string  `db:"start_address" json:"start_address,omitempty"`
 	EndAddress   *string  `db:"end_address"   json:"end_address,omitempty"`

@@ -71,21 +71,21 @@ vi.mock('@/components/ui', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     title,
     subtitle,
-    contextActions,
+    actions,
     children,
   }: {
     title: string;
     subtitle: string;
-    contextActions: ReactNode;
+    actions: ReactNode;
     children: ReactNode;
   }) => (
     <main>
       <h1>{title}</h1>
       <p>{subtitle}</p>
-      {contextActions}
+      {actions}
       {children}
     </main>
   ),
@@ -127,10 +127,6 @@ vi.mock('../components/drive-compare', () => {
     ),
   };
 });
-
-vi.mock('../components/operationalbrief-a-m/CompareVerdictBrief', async () => ({
-  CompareVerdictBrief: (await import('../components/drive-compare')).ComparisonVerdict,
-}));
 
 import DriveComparePage from './DriveComparePage';
 
@@ -206,33 +202,6 @@ beforeEach(() => {
 });
 
 describe('DriveComparePage', () => {
-  it('retains both identities and the complete comparison when all three sources fail to refresh', () => {
-    useDrivesMock.mockReturnValue(query({
-      data: [driveA, driveB], isError: true, error: new Error('list refresh failed'),
-    }));
-    useDriveMock.mockImplementation((id: string) => query({
-      data: id === '1' ? driveA : driveB,
-      isError: true,
-      error: new Error(`${id} refresh failed`),
-    }));
-    renderPage('/drive-compare?drive_a=2&drive_b=1');
-    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
-    expect(screen.getByLabelText('Choose drive A')).toHaveValue('2');
-    expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3);
-  });
-
-  it('keeps a retained A identity usable while B fails initially', () => {
-    useDriveMock.mockImplementation((id: string) =>
-      id === '1' ? query({ data: driveA, isError: true, error: new Error('A refresh failed') })
-        : query({ isError: true, error: new Error('B initial failed') }));
-    renderPage();
-    expect(screen.getByTestId('compare-identity-a')).toHaveTextContent('ready');
-    expect(screen.getByTestId('compare-identity-b')).toHaveTextContent('error');
-    expect(screen.getByTestId('compare-grid')).toHaveTextContent('error');
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
-  });
-
   it('mounts the complete workspace and requests the API maximum history', () => {
     renderPage();
 

@@ -4,12 +4,11 @@ import { useTranslation } from 'react-i18next';
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { CardGrid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useTimezone } from '@/lib/timezone';
@@ -33,6 +32,7 @@ import {
 import { computeChargeAdvice } from '../lib/chargeAdvisor';
 
 const HISTORY_LIMIT = 1_000;
+const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function ChargeAdvisorPage() {
   const { t } = useTranslation();
@@ -44,8 +44,6 @@ export default function ChargeAdvisorPage() {
   const vehicleIdStr = vehicleId == null ? undefined : String(vehicleId);
   const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT);
   const chargingQuery = useChargingHistory(vehicleIdStr, HISTORY_LIMIT);
-  const driveSource = useDataState(drivesQuery, { provenance: 'historical' });
-  const chargingSource = useDataState(chargingQuery, { provenance: 'historical' });
   const live = useVehicleLive(vehicleId ?? undefined);
   const [analysisNowMs] = useState(() => Date.now());
   const [currentStateNowMs, setCurrentStateNowMs] = useState(analysisNowMs);
@@ -115,8 +113,15 @@ export default function ChargeAdvisorPage() {
     chargingLoading: vehicleId != null && !chargingAvailable && chargingQuery.isLoading,
     driveAvailable,
     chargingAvailable,
-    initialError: driveSource.fatalError ?? chargingSource.fatalError,
-    refreshError: driveSource.refreshError ?? chargingSource.refreshError,
+    initialError: !driveCached && drivesQuery.isError
+      ? drivesQuery.error
+      : !chargingCached && chargingQuery.isError
+        ? chargingQuery.error
+        : null,
+    refreshError: (driveCached && drivesQuery.isError)
+      || (chargingCached && chargingQuery.isError)
+      ? drivesQuery.error ?? chargingQuery.error
+      : null,
     onRetry: () => {
       if (drivesQuery.isError) void drivesQuery.refetch();
       if (chargingQuery.isError) void chargingQuery.refetch();
@@ -128,13 +133,13 @@ export default function ChargeAdvisorPage() {
   }));
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('chargeAdvisor.title', 'Charge Advisor')}
       subtitle={t(
         'chargeAdvisor.subtitle',
         'Historical-use evidence for planning the next complete local day.',
       )}
-      contextActions={(
+      actions={(
         <div className="flex flex-wrap items-end gap-2">
           <Select
             id="charge-advisor-reserve-floor"
@@ -161,29 +166,29 @@ export default function ChargeAdvisorPage() {
         <ChargeAdvisorScenarioDirectory analysis={analysis} state={state} />
       </FadeIn>
       <FadeIn delay={0.2}>
-        <CardGrid label={t('chargeAdvisor.weekdayEvidence', 'Weekday and frequency evidence')} items={[
-          { id: 'advisor-weekday-profile', size: 'half', content: <ChargeAdvisorWeekdayProfile analysis={analysis} state={state} /> },
-          { id: 'advisor-frequency-support', size: 'half', content: <ChargeAdvisorFrequencySupport analysis={analysis} state={state} /> },
-        ]} />
+        <Grid cols={TWO_COLUMNS} gap={4}>
+          <ChargeAdvisorWeekdayProfile analysis={analysis} state={state} />
+          <ChargeAdvisorFrequencySupport analysis={analysis} state={state} />
+        </Grid>
       </FadeIn>
       <FadeIn delay={0.25}>
-        <CardGrid label={t('chargeAdvisor.burnEvidence', 'Daily trend and consumption distribution')} items={[
-          { id: 'advisor-daily-trend', size: 'half', content: <ChargeAdvisorDailyTrend analysis={analysis} state={state} /> },
-          { id: 'advisor-burn-distribution', size: 'half', content: <ChargeAdvisorBurnDistribution analysis={analysis} state={state} /> },
-        ]} />
+        <Grid cols={TWO_COLUMNS} gap={4}>
+          <ChargeAdvisorDailyTrend analysis={analysis} state={state} />
+          <ChargeAdvisorBurnDistribution analysis={analysis} state={state} />
+        </Grid>
       </FadeIn>
       <FadeIn delay={0.3}>
         <ChargeAdvisorReserveSensitivity analysis={analysis} state={state} />
       </FadeIn>
       <FadeIn delay={0.35}>
-        <CardGrid label={t('chargeAdvisor.chargingEvidence', 'Charging profile and timing')} items={[
-          { id: 'advisor-charging-profile', size: 'half', content: <ChargeAdvisorChargingProfile
+        <Grid cols={TWO_COLUMNS} gap={4}>
+          <ChargeAdvisorChargingProfile
             analysis={analysis}
             state={state}
             formatEnergy={formatEnergy}
-          /> },
-          { id: 'advisor-charging-timing', size: 'half', content: <ChargeAdvisorChargingTiming analysis={analysis} state={state} /> },
-        ]} />
+          />
+          <ChargeAdvisorChargingTiming analysis={analysis} state={state} />
+        </Grid>
       </FadeIn>
       <FadeIn delay={0.4}>
         <ChargeAdvisorAccounting analysis={analysis} state={state} />
@@ -191,6 +196,6 @@ export default function ChargeAdvisorPage() {
       <FadeIn delay={0.45}>
         <ChargeAdvisorMethodology analysis={analysis} state={state} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

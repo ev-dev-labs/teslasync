@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { FsdInsights } from '@/types/fsd';
 
 import {
@@ -14,7 +14,6 @@ import {
 } from '../../lib/fsdCommuteExperiment';
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const verdictVariant: Record<ExperimentVerdict, 'success' | 'info' | 'warning' | 'neutral'> = {
   changed: 'info',
@@ -30,7 +29,6 @@ export function FsdCommuteExperimentPanel({
   insights: FsdInsights | undefined;
   state: FsdSectionState;
 }) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const experiment = useMemo(() => buildFsdCommuteExperiment(insights), [insights]);
   const rows = [...experiment.firmware, ...experiment.commutes];
@@ -51,14 +49,14 @@ export function FsdCommuteExperimentPanel({
       header: t('fsd.experiment.before', 'Before'),
       render: (row) => row.fromSharePct == null
         ? t('fsd.experiment.unknown', 'Unknown')
-        : `${fmtNumber(row.fromSharePct)}% · ${row.fromDrives}`,
+        : `${fmtNumber(row.fromSharePct, 1)}% · ${row.fromDrives}`,
     },
     {
       key: 'toSharePct',
       header: t('fsd.experiment.after', 'After'),
       render: (row) => row.toSharePct == null
         ? t('fsd.experiment.unknown', 'Unknown')
-        : `${fmtNumber(row.toSharePct)}% · ${row.toDrives}`,
+        : `${fmtNumber(row.toSharePct, 1)}% · ${row.toDrives}`,
     },
     {
       key: 'verdict',
@@ -75,7 +73,7 @@ export function FsdCommuteExperimentPanel({
         </Badge>
       ),
     },
-  ], [t, fmtNumber]);
+  ], [t]);
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-commute-experiment">

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import i18n, {
   flushPendingEnglishResourcesForTest,
   loadEnglishNamespace,
@@ -7,8 +7,6 @@ import i18n, {
 import englishShell from './en/shell.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
-
-const startupShell = structuredClone(englishShell)
 
 const generatedCatalogs = import.meta.glob<{ default: Record<string, unknown> }>(
   './en/locale-*.json',
@@ -32,10 +30,6 @@ function deferredCatalogKeys(): string[] {
   }
   return keys
 }
-
-beforeEach(() => {
-  window.history.replaceState(null, '', '/__locale-fallback-test__')
-})
 
 afterEach(() => {
   flushPendingEnglishResourcesForTest()
@@ -130,9 +124,10 @@ describe('deferred English resources', () => {
   })
 
   it('serves lazy-route plural keys through the deferred detail bundle', async () => {
-    // Earlier feature loads may already have composed this shared key, but
-    // it remains outside the shell and has a narrow explicit fallback.
-    expect(startupShell).not.toHaveProperty('export.jobDrawer.activeCount_other')
+    // export.* renders only in the lazy DataExportPage, so the shell carries
+    // no copy (shellSourceClosure follows precise static imports); the
+    // per-namespace detail bundle answers it after one explicit load.
+    expect(i18n.t('export.jobDrawer.activeCount', { count: 2 })).toBe('export.jobDrawer.activeCount')
     await loadEnglishNamespace('export')
     expect(i18n.t('export.jobDrawer.activeCount', { count: 2 })).toBe('2 exports running')
   })

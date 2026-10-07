@@ -5,34 +5,29 @@ import { HeartPulse } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { Badge, Card, CardHeader } from '@/components/ui';
 import { KVList } from '@/components/data-display';
-import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
-
+import { Skeleton, QueryError } from '@/components/feedback';
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getExtendedHealth } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
 import { statusToBadgeVariant, formatUptime } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function HealthProbesSection() {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const query = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['system-status', 'extended-health'],
     queryFn: getExtendedHealth,
     refetchInterval: 30_000,
   });
-  const { data, isLoading, refetch } = query;
-  const state = useDataState(query);
 
   const handleRetry = useCallback(() => {
     refetch();
   }, [refetch]);
 
-  if (isLoading && !state.hasData) {
+  if (isLoading) {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
-        title={t('systemStatus.probes.title', 'Health probes')}
+        title={t('systemStatus.probes.title', 'Health Probes')}
         description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
         defaultOpen
       >
@@ -47,15 +42,15 @@ export function HealthProbesSection() {
   // Only surface a full-panel error on the INITIAL load (no cached data). A
   // failed background refetch keeps the last good probe readings on screen
   // instead of blanking the whole section over a transient network blip.
-  if (state.fatalError) {
+  if (error && !data) {
     return (
       <AccordionSection
         icon={<HeartPulse className="h-5 w-5" />}
-        title={t('systemStatus.probes.title', 'Health probes')}
+        title={t('systemStatus.probes.title', 'Health Probes')}
         description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
         defaultOpen
       >
-        <QueryError error={state.fatalError} onRetry={handleRetry} />
+        <QueryError error={error} onRetry={handleRetry} />
       </AccordionSection>
     );
   }
@@ -70,7 +65,7 @@ export function HealthProbesSection() {
   return (
     <AccordionSection
       icon={<HeartPulse className="h-5 w-5" />}
-      title={t('systemStatus.probes.title', 'Health probes')}
+      title={t('systemStatus.probes.title', 'Health Probes')}
       description={t('systemStatus.probes.desc', 'Liveness and readiness checks')}
       badges={
         <>
@@ -80,7 +75,6 @@ export function HealthProbesSection() {
       }
       defaultOpen
     >
-      <StaleRefreshWarning state={state} />
       <Grid cols={{ default: 1, md: 2 }} gap={4}>
         <Card>
           <CardHeader
@@ -90,8 +84,8 @@ export function HealthProbesSection() {
           <KVList
             items={[
               { label: t('common.status', 'Status'), value: livenessStatus },
-              { label: t('systemStatus.goroutines', 'Goroutines'), value: system?.goroutines != null ? fmtInt(system.goroutines) : '—' },
-              { label: t('systemStatus.uptime', 'Uptime'), value: system?.uptime_seconds != null ? formatUptime(system.uptime_seconds) : '—' },
+              { label: t('systemStatus.goroutines', 'Goroutines'), value: fmtInt(system?.goroutines ?? 0) },
+              { label: t('systemStatus.uptime', 'Uptime'), value: formatUptime(system?.uptime_seconds ?? 0) },
             ]}
           />
         </Card>
@@ -104,8 +98,8 @@ export function HealthProbesSection() {
           <KVList
             items={[
               { label: t('systemStatus.database', 'Database'), value: dbStatus },
-              { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency)} ms` : '—' },
-              { label: t('systemStatus.probes.poolConns', 'Pool connections'), value: pool?.total_conns != null ? fmtInt(pool.total_conns) : '—' },
+              { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency, 1)} ms` : '—' },
+              { label: t('systemStatus.probes.poolConns', 'Pool Connections'), value: fmtInt(pool?.total_conns ?? 0) },
             ]}
           />
         </Card>

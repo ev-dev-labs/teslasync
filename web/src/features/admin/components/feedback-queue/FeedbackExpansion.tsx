@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 import { Button, Code, Input, Label, MaskedValue, Select, Subhead, Text } from '@/components/ui'
 import { Icons } from '@/lib/icons'
-import { AIFeedbackQueueTriage } from '@/components/ai'
+import { AIFeedbackQueueTriage } from '@/components/ai/AIFeedbackQueueTriage'
 import type { useUpdateFeedback } from '@/api/hooks/useFeedback'
 import type { FeedbackEntry, FeedbackStatus } from '@/api/types'
 

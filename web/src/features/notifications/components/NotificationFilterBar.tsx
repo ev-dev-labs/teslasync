@@ -1,15 +1,11 @@
 /**
- * NotificationFilterBar — shared controlled notification filters.
- * Grouped lists use the full bar; flat tables reuse each control section in
- * column headers, with the full set in the visible mobile Notification header.
+ * NotificationFilterBar — controls for the notifications inbox.
  *
  * Wired controls:
  *   - Severity chips (info/warn/critical) — multi-select
  *   - Vehicle <Select> (single, "All vehicles" option)
  *   - Rule <Select>    (single, "All rules" option)
- *   - Source <Select>  (all sources / rule triggers)
  *   - SearchInput      (debounced, message text search)
- *   - Optional read state for the combined mobile header
  *
  * The parent owns the `NotificationFilters` state; this component is fully
  * controlled and emits `onChange` patches that the parent merges in.
@@ -41,9 +37,6 @@ export interface NotificationFilterBarProps {
   onChange: (next: NotificationFilters) => void;
   vehicles: Vehicle[];
   rules: AlertRule[];
-  /** Reuse the controlled controls inside column-header popovers. */
-  section?: 'all' | 'severity' | 'source' | 'search';
-  includeReadState?: boolean;
 }
 
 export function NotificationFilterBar({
@@ -51,8 +44,6 @@ export function NotificationFilterBar({
   onChange,
   vehicles,
   rules,
-  section = 'all',
-  includeReadState = false,
 }: NotificationFilterBarProps) {
   const { t } = useTranslation();
 
@@ -167,16 +158,8 @@ export function NotificationFilterBar({
         onRemove: () => onChange({ ...filters, q: undefined }),
       });
     }
-    if (includeReadState && filters.read !== undefined) {
-      chips.push({
-        key: 'read',
-        label: t('notifications.inbox.columns.readState', 'Read state'),
-        value: filters.read ? t('notifications.inbox.columns.read', 'Read') : t('notifications.inbox.columns.unread', 'Unread'),
-        onRemove: () => onChange({ ...filters, read: undefined }),
-      });
-    }
     return chips;
-  }, [filters, vehicles, rules, onChange, t, includeReadState]);
+  }, [filters, vehicles, rules, onChange, t]);
 
   const handleClearAll = useCallback(() => {
     onChange({
@@ -186,16 +169,16 @@ export function NotificationFilterBar({
       rule_id: undefined,
       source: undefined,
       q: undefined,
-      ...(includeReadState ? { read: undefined } : {}),
     });
-  }, [filters, onChange, includeReadState]);
+  }, [filters, onChange]);
 
-  const controls = (
-    <>
-        {(section === 'all' || section === 'severity') && <div
+  return (
+    <div className="space-y-3">
+      <FilterBar>
+        <div
           role="group"
           aria-label={t('notifications.inbox.filter.severity', 'Severity')}
-          className="flex min-w-0 max-w-full flex-wrap items-center gap-1"
+          className="flex flex-wrap items-center gap-1"
         >
           {SEVERITY_OPTIONS.map(opt => {
             const active = selectedSeverities.has(opt.value);
@@ -215,29 +198,23 @@ export function NotificationFilterBar({
               </Button>
             );
           })}
-        </div>}
+        </div>
 
-        {(section === 'all' || section === 'source') && <>
-        <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={vehicleOptions}
           value={filters.vehicle_id?.[0] ? String(filters.vehicle_id[0]) : ''}
           onChange={e => setVehicle(e.target.value)}
           aria-label={t('notifications.inbox.filter.vehicle', 'Vehicle')}
-          className="min-w-0 max-w-full"
+          className="min-w-[10rem]"
         />
-        </div>
 
-        <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={ruleOptions}
           value={filters.rule_id?.[0] ? String(filters.rule_id[0]) : ''}
           onChange={e => setRule(e.target.value)}
           aria-label={t('notifications.inbox.filter.rule', 'Rule')}
-          className="min-w-0 max-w-full"
+          className="min-w-[10rem]"
         />
-        </div>
-        <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={[
             { value: '', label: t('notifications.inbox.filter.allSources', 'All sources') },
@@ -246,38 +223,19 @@ export function NotificationFilterBar({
           value={filters.source ?? ''}
           onChange={e => setSource(e.target.value)}
           aria-label={t('notifications.inbox.filter.source', 'Source')}
-          className="min-w-0 max-w-full"
+          className="min-w-[10rem]"
         />
-        </div>
-        </>}
 
-        {(section === 'all' || section === 'search') && <SearchInput
+        <SearchInput
           value={filters.q ?? ''}
           onChange={setQuery}
           placeholder={t('notifications.inbox.filter.searchPlaceholder', 'Search messages…')}
-          className="min-w-0 w-full max-w-full sm:w-72"
+          className="w-full sm:w-72"
           historyScope="notifications"
-        />}
-        {includeReadState && <div className="min-w-0 w-full max-w-full sm:w-40"><Select
-          size="sm"
-          value={filters.read === undefined ? 'all' : filters.read ? 'read' : 'unread'}
-          onChange={event => onChange({ ...filters, read: event.target.value === 'all' ? undefined : event.target.value === 'read' })}
-          aria-label={t('notifications.inbox.filter.readState', 'Filter by read state')}
-          options={[
-            { value: 'all', label: t('notifications.inbox.filter.allReadStates', 'All read states') },
-            { value: 'read', label: t('notifications.inbox.columns.read', 'Read') },
-            { value: 'unread', label: t('notifications.inbox.columns.unread', 'Unread') },
-          ]}
-          className="min-w-0 max-w-full"
-        /></div>}
-    </>
-  );
+        />
+      </FilterBar>
 
-  return (
-    <div className="min-w-0 w-full max-w-full space-y-3">
-      {section === 'all' ? <FilterBar className="min-w-0 w-full max-w-full">{controls}</FilterBar> : <div className="flex min-w-0 w-full max-w-full flex-wrap gap-2">{controls}</div>}
-
-      {section === 'all' && <ActiveFilterChips className="min-w-0 max-w-full" filters={activeFilterChips} onClearAll={handleClearAll} />}
+      <ActiveFilterChips filters={activeFilterChips} onClearAll={handleClearAll} />
     </div>
   );
 }

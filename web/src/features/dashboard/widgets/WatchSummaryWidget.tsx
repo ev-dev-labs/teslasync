@@ -2,19 +2,16 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Watch, Lock, Unlock } from 'lucide-react';
 import { LinearGauge } from '@/components/charts';
-import { StatusBadge, TimeStamp } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { StatusBadge, AnimatedNumber, TimeStamp } from '@/components/data-display';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
 import { useUnits } from '@/hooks/useUnits';
-import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates, knownNumber } from '@/api/dataState';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, WidgetStatusGrid } from './shared';
-import { dashboardTokens } from '../lib/dashboardTokens';
+import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI, convertDistanceToSI, convertTempFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 // Battery state-of-charge health bands → gauge/accent color:
 // healthy (>50%) emerald, low (>20%) amber, critical (≤20%) red.
@@ -25,15 +22,12 @@ export function getBatteryColor(level: number): string {
 }
 
 export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const summaryQuery = useWatchSummary(vehicleId);
   const {
-    data: summary, isLoading: summaryLoading, isFetching: summaryFetching, isStale: summaryStale, isError: summaryError, dataUpdatedAt: summaryUpdatedAt, refetch: refetchSummary, } = summaryQuery;
+    data: summary, isLoading: summaryLoading, isFetching: summaryFetching, isStale: summaryStale, isError: summaryError, dataUpdatedAt: summaryUpdatedAt, refetch: refetchSummary, } = useWatchSummary(vehicleId);
 
-  const complicationQuery = useWatchComplication(vehicleId);
   const {
-    data: complication, isLoading: compLoading, } = complicationQuery;
+    data: complication, isLoading: compLoading, } = useWatchComplication(vehicleId);
 
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -42,33 +36,17 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isLoading = summaryLoading || compLoading;
 
-  const batteryLevel = knownNumber(summary?.battery_level);
+  const batteryLevel = summary?.battery_level ?? null;
   const rangeKm = summary?.range_km ?? null;
   const state = summary?.state ?? null;
-  const stateLabel = state === 'online'
-    ? t('widget.watchState.online', 'Online')
-    : state === 'asleep'
-      ? t('widget.watchState.asleep', 'Asleep')
-      : state === 'offline' ? t('widget.watchState.offline', 'Offline') : state;
   const isLocked = summary?.is_locked ?? null;
   const insideTempC = summary?.inside_temp_c ?? null;
   const lastUpdated = summary?.last_updated ?? null;
-  const summaryTrust = useDataState({ ...summaryQuery, data: summary ?? (summaryLoading || summaryError ? undefined : null) }, { provenance: 'cached' });
-  const complicationTrust = useDataState({ ...complicationQuery, data: complication ?? (compLoading || complicationQuery.isError ? undefined : null) }, { provenance: 'cached' });
-  const combined = combineDataStates([summaryTrust, complicationTrust]);
-  const dataState = {
-    ...combined,
-    status: !summary && !complication && isLoading ? 'initial' : combined.status,
-    fatalError: !summary && summaryTrust.fatalError ? summaryTrust.fatalError : combined.fatalError,
-    data: summary,
-    hasData: summary != null,
-    retry: () => { void refetchSummary(); void complicationQuery.refetch?.(); },
-  } satisfies Parameters<typeof WidgetShell>[0]['dataState'];
 
   const displayRange = useMemo(() => {
     if (rangeKm == null) return null;
     // range_km is kilometres; lift to SI metres before the display-unit cast.
-    return convertDistanceFromSI(convertDistanceToSI(rangeKm, 'km'), distanceUnit);
+    return convertDistanceFromSI(rangeKm * 1000, distanceUnit);
   }, [rangeKm, distanceUnit]);
 
   const displayTemp = useMemo(() => {
@@ -83,8 +61,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
 
   const handleRefresh = useCallback(() => {
     void refetchSummary();
-    void complicationQuery.refetch?.();
-  }, [refetchSummary, complicationQuery]);
+  }, [refetchSummary]);
 
   const hasData = summary != null;
 
@@ -92,43 +69,46 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   if (isCompact) {
     return (
       <WidgetShell
-        title={t('widget.watchSummary', 'Watch summary')}
         loading={isLoading}
-        dataState={dataState}
-        loadingContent={<div className="flex flex-col gap-2"><Skeleton className="h-16" /><Skeleton className="h-11" /></div>}
-        updatedAt={combined.updatedAt ?? summaryUpdatedAt}
-        isFetching={combined.isRefreshing || summaryFetching}
+        updatedAt={summaryUpdatedAt}
+        isFetching={summaryFetching}
         isStale={summaryStale}
         isError={summaryError}
         onRefresh={handleRefresh}
       >
+        {hasData ? (
           <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
             <div className="w-full">
-              {batteryLevel == null ? <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} /> : <LinearGauge
-                preserveReadingAndScale
-                value={batteryLevel}
+              <LinearGauge
+                value={batteryLevel ?? 0}
                 max={100}
                 label=""
                 ariaLabel={t('widget.battery', 'Battery')}
                 unit="%"
                 color={color}
                 size={80}
-                decimals={displayPrecision}
-              />}
+                decimals={0}
+              />
             </div>
             {state && <StatusBadge status={state} size="sm" />}
             {displayRange != null && (
-              <span className={dashboardTokens.metricLabel}>
-                {fmtNumber(displayRange)} {distanceUnit}
+              <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+                {fmtNumber(displayRange, 0)} {distanceUnit}
               </span>
             )}
             {complication?.charging && (
-              <span className={dashboardTokens.metricLabel}>
+              <span className="text-2xs text-emerald-300 animate-pulse">
                 ⚡ {t('widget.charging', 'Charging')}
               </span>
             )}
-            {!hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
           </div>
+        ) : (
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<Watch className="h-5 w-5" />}
+            message={t('widget.noWatchData', 'No watch data')}
+            className="py-4"
+          />
+        )}
       </WidgetShell>
     );
   }
@@ -136,27 +116,26 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   // Standard (2×2+): Full watch summary with all fields
   return (
     <WidgetShell
-      title={t('widget.watchSummary', 'Watch summary')}
+      title={t('widget.watchSummary', 'Watch Summary')}
       icon={<Watch className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
       loading={isLoading}
-      dataState={dataState}
-      loadingContent={<div className="flex flex-col gap-3"><Skeleton className="h-16" /><Skeleton className="h-24" /></div>}
-      updatedAt={combined.updatedAt ?? summaryUpdatedAt}
-      isFetching={combined.isRefreshing || summaryFetching}
+      updatedAt={summaryUpdatedAt}
+      isFetching={summaryFetching}
       isStale={summaryStale}
       isError={summaryError}
       onRefresh={handleRefresh}
     >
+      {hasData ? (
         <div className="h-full flex flex-col gap-3">
           {/* Hero: Battery big number */}
           <WidgetBigNumber
-            value={batteryLevel == null ? null : fmtNumber(batteryLevel)}
+            value={batteryLevel}
             unit="%"
             label={t('widget.battery', 'Battery')}
             badge={
-              stateLabel
+              state
                 ? {
-                    text: stateLabel,
+                    text: state,
                     variant: state === 'online' ? 'success' : state === 'asleep' ? 'neutral' : 'warning',
                   }
                 : undefined
@@ -164,45 +143,78 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
           />
 
           {/* Detail grid: 2 columns */}
-          <WidgetStatGrid cols={2} stats={[
-            {
-              label: t('widget.range', 'Range'),
-              value: displayRange == null ? null : fmtNumber(displayRange),
-              unit: displayRange == null ? undefined : distanceUnit,
-            },
-            {
-              label: t('widget.cabinTemp', 'Cabin'),
-              value: displayTemp == null ? null : fmtNumber(displayTemp),
-              unit: displayTemp == null ? undefined : tempUnit,
-            },
-          ]} />
-          <WidgetStatusGrid cols={2} cells={[
-            {
-              id: 'lock',
-              label: t('widget.lockStatus', 'Lock'),
-              status: isLocked == null ? 'unknown' : isLocked ? 'ok' : 'warning',
-              icon: isLocked === false ? <Unlock className="size-4" /> : <Lock className="size-4" />,
-              statusLabel: isLocked == null ? '—' : isLocked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked'),
-            },
-            {
-              id: 'charging',
-              label: t('widget.charging', 'Charging'),
-              status: complication?.charging == null ? 'unknown' : complication.charging ? 'ok' : 'inactive',
-              statusLabel: complication?.charging == null
-                ? t('widget.status.unknown', 'Unknown')
-                : complication.charging
-                  ? t('widget.charging', 'Charging')
-                  : t('widget.status.inactive', 'Inactive'),
-            },
-          ]} />
-            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-              <span className={dashboardTokens.metricLabel}>{t('widget.lastSeen', 'Last seen')}</span>
-              <span className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
-                <TimeStamp value={lastUpdated} className={dashboardTokens.metricLabel} />
+          <div className="grid grid-cols-2 gap-2">
+            {/* Range */}
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+                {t('widget.range', 'Range')}
+              </span>
+              {displayRange != null ? (
+                <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+                  <AnimatedNumber value={displayRange} className="text-sm font-semibold text-[var(--text-primary)]" />
+                  <span className="text-xs text-[var(--text-secondary)] ml-0.5">{distanceUnit}</span>
+                </span>
+              ) : (
+                <span className="text-sm text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+
+            {/* Lock status */}
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+                {t('widget.lockStatus', 'Lock')}
+              </span>
+              {isLocked != null ? (
+                <div className="flex items-center gap-1">
+                  {isLocked ? (
+                    <Lock className="h-4 w-4 text-neon-green" />
+                  ) : (
+                    <Unlock className="h-4 w-4 text-amber-400" />
+                  )}
+                  <Badge variant={isLocked ? 'success' : 'warning'} size="sm">
+                    {isLocked
+                      ? t('widget.locked', 'Locked')
+                      : t('widget.unlocked', 'Unlocked')}
+                  </Badge>
+                </div>
+              ) : (
+                <span className="text-sm text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+
+            {/* Cabin temp */}
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+                {t('widget.cabinTemp', 'Cabin')}
+              </span>
+              {displayTemp != null ? (
+                <span className="text-sm font-semibold text-[var(--text-primary)] tabular-nums">
+                  <AnimatedNumber value={displayTemp} className="text-sm font-semibold text-[var(--text-primary)]" />
+                  <span className="text-xs text-[var(--text-secondary)] ml-0.5">{tempUnit}</span>
+                </span>
+              ) : (
+                <span className="text-sm text-[var(--text-muted)]">—</span>
+              )}
+            </div>
+
+            {/* Last updated */}
+            <div className="flex flex-col items-center gap-0.5 rounded-lg bg-[var(--surface-2)] p-2 min-h-[44px] justify-center">
+              <span className="text-2xs text-[var(--text-muted)] uppercase tracking-wider">
+                {t('widget.lastSeen', 'Last Seen')}
+              </span>
+              <span className="truncate max-w-full">
+                <TimeStamp value={lastUpdated} className="text-xs text-[var(--text-secondary)]" />
               </span>
             </div>
-          {!hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
+          </div>
         </div>
+      ) : (
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+          icon={<Watch className="h-6 w-6" />}
+          message={t('widget.noWatchData', 'No watch data')}
+          className="py-4"
+        />
+      )}
     </WidgetShell>
   );
 }

@@ -9,7 +9,6 @@ import {
 } from '@/lib/tokens'
 
 type CommonProps = {
-  as?: ElementType
   className?: string
   children?: ReactNode
 } & Omit<HTMLAttributes<HTMLElement>, 'color'>

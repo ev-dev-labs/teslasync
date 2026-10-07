@@ -1,4 +1,4 @@
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface PowerProps {
   /** Canonical input in kW. */
@@ -16,7 +16,6 @@ interface PowerProps {
  * canonical kW value via `title`.
  */
 export function Power({ kw, w, precision, className, unit }: PowerProps) {
-  const { fmtNumber } = useNumberFormatting();
   let sourceKw: number | null = null;
   if (kw != null && Number.isFinite(kw)) {
     sourceKw = kw;
@@ -32,7 +31,7 @@ export function Power({ kw, w, precision, className, unit }: PowerProps) {
   const value = useW ? sourceKw * 1000 : sourceKw;
   const display = fmtNumber(value, precision);
   return (
-    <span className={className} title={`${fmtNumber(sourceKw, precision)} kW`}>
+    <span className={className} title={`${sourceKw.toFixed(3)} kW`}>
       {display} {useW ? 'W' : 'kW'}
     </span>
   );

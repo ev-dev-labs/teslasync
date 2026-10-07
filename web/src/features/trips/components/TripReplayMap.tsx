@@ -46,8 +46,6 @@ export interface TripReplayMapProps {
   initialMapStyle?: MapStyle;
   className?: string;
   height?: number | string;
-  /** The page owns the section surface when the map shares a playback stage. */
-  embedded?: boolean;
 }
 
 /* ── helpers ───────────────────────────────────────────────────── */
@@ -136,7 +134,6 @@ export function TripReplayMap({
   initialMapStyle = 'dark',
   className,
   height = 450,
-  embedded = false,
 }: TripReplayMapProps) {
   const { t } = useTranslation();
   const [mapStyle, setMapStyle] = useState<MapStyle>(initialMapStyle);
@@ -212,13 +209,12 @@ export function TripReplayMap({
   );
 
   const heightStyle = typeof height === 'number' ? `${height}px` : height;
-  const Surface = embedded ? 'div' : GlassPanel;
 
   return (
-    <Surface
+    <GlassPanel
       role="region"
       aria-label={t('replay.map.ariaLabel', 'Trip route map')}
-      className={`relative overflow-hidden ${embedded ? '' : 'rounded-xl'} ${className ?? ''}`}
+      className={`relative overflow-hidden rounded-xl ${className ?? ''}`}
       style={{ height: heightStyle }}
       data-testid="trip-replay-map"
     >
@@ -345,6 +341,6 @@ export function TripReplayMap({
           )}
         />
       )}
-    </Surface>
+    </GlassPanel>
   );
 }

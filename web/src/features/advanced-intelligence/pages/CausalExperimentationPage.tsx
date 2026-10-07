@@ -7,14 +7,14 @@ import {
 } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type {
   CausalExperiment,
   CausalMetric,
@@ -22,7 +22,6 @@ import type {
 } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PAGE_SIZE = 10;
 type ExperimentForm = Omit<CreateCausalExperimentRequest, 'vehicle_id' | 'confirmed'>;
@@ -34,7 +33,6 @@ function isoLocal(daysAgo: number): string {
 }
 
 export default function CausalExperimentationPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -52,7 +50,7 @@ export default function CausalExperimentationPage() {
   const mutation = useCreateCausalExperiment();
   const experiments = query.data?.items ?? [];
   const latest = experiments[0] ?? mutation.data ?? null;
-  usePageTitle(t('advancedIntelligence.causal.title', 'Causal experimentation'));
+  usePageTitle(t('advancedIntelligence.causal.title', 'Causal Experimentation'));
 
   const formatEfficiency = (value: number | null) => {
     return formatEfficiencyFromSI(value, units.unitPrefs);
@@ -66,7 +64,7 @@ export default function CausalExperimentationPage() {
       return units.formatSpeed(item[`${phase}_speed_mps`]);
     }
     const value = item[`${phase}_success_pct`];
-    return value != null ? `${fmtNumber(value)}%` : '—';
+    return value != null ? `${fmtNumber(value, 2)}%` : '—';
   };
 
   const requestConfirmation = (event: FormEvent) => {
@@ -88,12 +86,14 @@ export default function CausalExperimentationPage() {
   };
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.causal.title', 'Causal experimentation')}
+    <PageContainer
+      title={t('advancedIntelligence.causal.title', 'Causal Experimentation')}
       subtitle={t(
         'advancedIntelligence.causal.subtitle',
         'Compare explicit baseline and treatment windows with confounder coverage disclosure.',
       )}
+      loading={vehicleId != null && query.isLoading}
+      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="warning"
@@ -107,7 +107,6 @@ export default function CausalExperimentationPage() {
 
       <FadeIn>
         <InsightPanel
-          query={vehicleId != null ? query : undefined}
           title={t('advancedIntelligence.causal.history.title', 'Experiment history')}
           empty={experiments.length === 0}
           emptyMessage={vehicleId == null
@@ -150,7 +149,7 @@ export default function CausalExperimentationPage() {
                     <Text as="p" variant="caption">{t('advancedIntelligence.causal.confounders', 'Confounder coverage')}</Text>
                     <Text as="p" variant="metricValue">
                       {item.confounder_coverage_pct != null
-                        ? `${fmtNumber(item.confounder_coverage_pct)}%` : '—'}
+                        ? `${fmtNumber(item.confounder_coverage_pct, 1)}%` : '—'}
                     </Text>
                   </div>
                 </div>
@@ -266,6 +265,6 @@ export default function CausalExperimentationPage() {
         onConfirm={confirmExperiment}
         onCancel={() => setConfirmOpen(false)}
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

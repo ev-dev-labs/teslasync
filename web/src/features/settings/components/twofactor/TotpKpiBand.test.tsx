@@ -20,7 +20,7 @@
  *   • a session that exists but is not activated renders "Not enrolled" and
  *     dashes out the two per-user cells;
  *   • null-safety: a malformed session missing `backup_codes_remaining`
- *     degrades to an unknown dash rather than inventing zero,
+ *     degrades to `0` (proving the `?? 0` guard) rather than a blank cell,
  *     and a genuine zero backup-code balance renders "0" — distinct from the
  *     "—" a non-activated credential shows, so an exhausted balance is never
  *     silently hidden;
@@ -43,13 +43,6 @@ import type { ReactNode } from 'react'
 
 import type { TOTPStatus } from '@/api/types'
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
-    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
-}))
-vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => ({ currencySymbol: '$' }),
-}))
 // Deterministic date formatting: the real useDateFormat threads user settings
 // + timezone; stubbing it pins that `formatDateTime` receives the raw ISO
 // string verbatim and lets us assert an exact, timezone-stable cell value.
@@ -122,17 +115,15 @@ beforeEach(() => {
 })
 
 describe('TotpKpiBand', () => {
-  it('retains the Brief labels while loading and suppresses measured-value claims', () => {
+  it('swaps the band for skeleton placeholders while loading and mounts no metric labels', () => {
     const { container } = render(<TotpKpiBand data={undefined} isLoading />)
 
     // None of the metric cards are mounted during the loading branch.
     for (const label of LABELS) {
-      expect(screen.getByText(label)).toBeInTheDocument()
+      expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
     // Skeleton placeholders stand in for the cards (one pulse per skeleton bar).
-    expect(container.querySelectorAll('.motion-safe\\:animate-pulse').length).toBeGreaterThanOrEqual(4)
-    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
-    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
     // The formatter is never touched while there is no data.
     expect(formatDateTime).not.toHaveBeenCalled()
   })
@@ -211,7 +202,10 @@ describe('TotpKpiBand', () => {
     }
   })
 
-  it('keeps a missing backup balance unknown instead of inventing an exhausted balance', () => {
+  it('is null-safe: a session missing backup_codes_remaining degrades to 0, not a blank cell', () => {
+    // A stale/partial cached shape: activated, but the numeric aggregate and
+    // last-used timestamp are absent. The `?? 0` guard must keep the cell
+    // populated and the missing timestamp must resolve to "Never".
     render(
       <TotpKpiBand
         data={{ mode: 'session', activated: true } as TOTPStatus}
@@ -220,9 +214,9 @@ describe('TotpKpiBand', () => {
     )
 
     expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.getByText('0')).toBeInTheDocument()
     expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
     expect(formatDateTime).not.toHaveBeenCalled()
   })
 

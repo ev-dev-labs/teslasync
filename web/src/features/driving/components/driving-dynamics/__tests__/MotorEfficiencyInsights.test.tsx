@@ -88,13 +88,13 @@ function renderInsights(opts: {
 describe('MotorEfficiencyInsights — temperature suffix never doubles °', () => {
   it('renders "49.0°C" for °C preference (no double degree)', () => {
     renderInsights({ tempUnit: '°C' })
-    expect(screen.getByText('49.00°C')).toBeInTheDocument()
+    expect(screen.getByText('49.0°C')).toBeInTheDocument()
     expect(screen.queryByText(/°°/)).toBeNull()
   })
 
   it('renders "64.0°C" for max temp under °C preference', () => {
     renderInsights({ tempUnit: '°C' })
-    expect(screen.getByText('64.00°C')).toBeInTheDocument()
+    expect(screen.getByText('64.0°C')).toBeInTheDocument()
     expect(screen.queryByText(/°°/)).toBeNull()
   })
 
@@ -104,7 +104,7 @@ describe('MotorEfficiencyInsights — temperature suffix never doubles °', () =
       tempUnit: '°F',
       toTemperatureDisplay: (c) => (c * 9) / 5 + 32,
     })
-    expect(screen.getByText('120.20°F')).toBeInTheDocument()
+    expect(screen.getByText('120.2°F')).toBeInTheDocument()
     expect(screen.queryByText(/°°/)).toBeNull()
   })
 
@@ -116,29 +116,31 @@ describe('MotorEfficiencyInsights — temperature suffix never doubles °', () =
 
 describe('MotorEfficiencyInsights — Throttle Behavior MetricBar suppression', () => {
   it('does NOT render a stray "0.00" near the Conservative pill (sublabel="" honoured)', () => {
-    renderInsights({
+    const { container } = renderInsights({
       stats: { ...baseStats, avgPower: 0 },
+      style: 'conservative',
     })
 
     // The "Avg Power" label is present (with its own "0.0 kW" value)
     // — that's the legitimate readout. The MetricBar should NOT add a
     // second textual "0.00" because we explicitly pass sublabel="".
     expect(screen.getByText('Avg Power')).toBeInTheDocument()
-    expect(screen.getAllByText('0.00 kW')).toHaveLength(3)
+    expect(screen.getByText('0.0 kW')).toBeInTheDocument()
 
     // "0.00" was the pre-fix bug: MetricBar's `sublabel || fmtNumber(value)`
     // fell through on empty string and rendered fmtNumber(0) = "0.00".
     expect(screen.queryByText('0.00')).toBeNull()
-    expect(screen.queryByText('Conservative')).toBeNull()
+    expect(container.textContent).not.toMatch(/0\.00/)
   })
 
   it('still renders a non-zero stray "0.00" only when the page genuinely has 0.00 (sanity)', () => {
     // Negative control: with avgPower=12.5 the panel shows "12.5 kW"
     // but no "0.00" (the bar uses sublabel="" so no fallback).
-    renderInsights({
+    const { container } = renderInsights({
       stats: { ...baseStats, avgPower: 12.5 },
+      style: 'conservative',
     })
-    expect(screen.getByText('12.50 kW')).toBeInTheDocument()
-    expect(screen.queryByText('0.00')).toBeNull()
+    expect(screen.getByText('12.5 kW')).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/\b0\.00\b/)
   })
 })

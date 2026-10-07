@@ -348,41 +348,6 @@ func TestDriveDetail_StartSnapshot_PropagatesError(t *testing.T) {
 	}
 }
 
-func TestDriveDetailGetOdometerContract(t *testing.T) {
-	ptr := func(v float64) *float64 { return &v }
-	for _, tc := range []struct {
-		name       string
-		start, end *float64
-	}{
-		{"missing", nil, nil},
-		{"measured zero", ptr(0), ptr(0)},
-		{"SI endpoints", ptr(122360000), ptr(122374500)},
-		{"one missing endpoint", ptr(122360000), nil},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			start := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
-			drive := completedDrive(7, 42, start, start.Add(15*time.Minute))
-			drive.StartOdometerM, drive.EndOdometerM = tc.start, tc.end
-			h := &driveDetailHandler{DriveHandler: &DriveHandler{}, state: &fakeStateReader{}, drives: &fakeDriveByIDFetcher{drive: drive}}
-			rec := httptest.NewRecorder()
-			h.Get(rec, newDriveDetailRequest(t, "7", ""))
-			if rec.Code != http.StatusOK {
-				t.Fatalf("status=%d, body=%s", rec.Code, rec.Body.String())
-			}
-			var body map[string]any
-			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-				t.Fatal(err)
-			}
-			for name, want := range map[string]*float64{"start_odometer_m": tc.start, "end_odometer_m": tc.end} {
-				got, exists := body[name]
-				if !exists || (want == nil && got != nil) || (want != nil && got != *want) {
-					t.Errorf("%s=%v, exists=%v, want=%v", name, got, exists, want)
-				}
-			}
-		})
-	}
-}
-
 // TestDriveDetail_Get_EmbeddedPositions_AliasFields locks in that the
 // `positions` array embedded in the Get response uses the legacy frontend
 // contract (created_at + speed) rather than the raw signal_log column names

@@ -2,13 +2,10 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Navigation } from 'lucide-react';
 import { AnimatedMarker } from '@/components/maps';
-import { Text } from '@/components/ui';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
 import { WidgetMapView } from './shared';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useDataState } from '@/hooks/useDataState';
 
 /**
  * True only when `(lat, lng)` is a usable GPS fix: both finite, inside the
@@ -40,23 +37,16 @@ export function normalizeHeading(
 }
 
 export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const query = useVehicleState(id);
-  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
-  const dataState = useDataState({
-    ...query,
-    data: (query.error || query.isError) && !stateData?.state ? undefined :
-      !query.isLoading && !query.isPending && !query.error && !query.isError ? query.data ?? null : query.data,
-  });
+  const { data: stateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
   const state = stateData?.state;
   const isLive = stateData?.live ?? false;
 
   const lat = state?.latitude ?? 0;
   const lng = state?.longitude ?? 0;
-  const hasCoords = state?.latitude != null && state.longitude != null && hasValidCoords(lat, lng);
+  const hasCoords = state != null && hasValidCoords(lat, lng);
   const heading = normalizeHeading(state?.heading);
   const isCompact = size.cols <= 1;
   const isExpanded = size.cols >= 3 || size.rows >= 3;
@@ -71,10 +61,9 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.locationMap.title', 'Vehicle location map')}
-      icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-cyan-300" aria-hidden="true" />}
+      title={isCompact ? undefined : t('widget.locationMap.title', 'Vehicle Location Map')}
+      icon={isCompact ? undefined : <MapPin className="h-3.5 w-3.5 text-neon-cyan" aria-hidden="true" />}
       loading={isLoading}
-      dataState={dataState}
       noPadding
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
@@ -82,7 +71,7 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="h-full relative">
         <WidgetMapView
           center={center}
           zoom={isCompact ? 13 : 14}
@@ -99,26 +88,26 @@ export default function LocationMapWidget({ vehicleId, size }: WidgetProps) {
         {/* Status overlay */}
         {hasCoords && !isCompact && (
           <div
-            className="absolute bottom-2 start-2 end-2 z-[1000] flex min-w-0 flex-col items-start gap-1"
+            className="absolute bottom-2 left-2 z-[1000] flex flex-col gap-1"
             role="group"
             aria-label={t('widget.locationMap.status', 'Vehicle location status')}
           >
             {!isLive && (
-              <Text variant="caption" className="inline-flex max-w-full items-start gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-amber-300 backdrop-blur-sm [overflow-wrap:anywhere]">
-                <MapPin className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-amber-400 backdrop-blur-sm">
+                <MapPin className="h-2.5 w-2.5" aria-hidden="true" />
                 {t('widget.locationMap.lastKnown', 'Last known position')}
-              </Text>
+              </span>
             )}
             {isExpanded && heading != null && (
-              <Text variant="caption" className="inline-flex max-w-full items-start gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm [overflow-wrap:anywhere]">
-                <Navigation className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-                {t('widget.locationMap.heading', 'Heading')}: {fmtNumber(heading)}°
-              </Text>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-[var(--text-secondary)] backdrop-blur-sm">
+                <Navigation className="h-2.5 w-2.5" aria-hidden="true" />
+                {t('widget.locationMap.heading', 'Heading')}: {Math.round(heading)}°
+              </span>
             )}
             {isExpanded && (
-              <Text variant="caption" className="inline-flex max-w-full items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] backdrop-blur-sm [overflow-wrap:anywhere]">
-                {fmtNumber(lat)}, {fmtNumber(lng)}
-              </Text>
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface-overlay)] text-2xs text-[var(--text-secondary)] backdrop-blur-sm">
+                {lat.toFixed(4)}, {lng.toFixed(4)}
+              </span>
             )}
           </div>
         )}

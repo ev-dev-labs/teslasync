@@ -20,13 +20,12 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { convertDurationFromSI } from '@/lib/unitConversion';
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyDwellTrendProps {
   summary: ParkingSummary;
@@ -37,7 +36,6 @@ interface MonthlyDwellTrendProps {
 export function MonthlyDwellTrend(
   { summary, state, className }: MonthlyDwellTrendProps,
 ) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { locale } = useDateFormat();
   const { unitPrefs } = useUnits();
@@ -76,7 +74,7 @@ export function MonthlyDwellTrend(
       data-testid="parking-monthly"
     >
       <ChartContainer
-        title={t('parking.monthly.title', 'Monthly dwell & stint trend')}
+        title={t('parking.monthly.title', 'Monthly Dwell & Stint Trend')}
         subtitle={t(
           'parking.monthly.subtitle',
           '{{count}} stints grouped by parking-start month in {{timeZone}}; observed dwell includes right-censored tails.',
@@ -100,7 +98,7 @@ export function MonthlyDwellTrend(
           {
             key: 'dwell',
             label: dwellName,
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'average',
@@ -109,7 +107,7 @@ export function MonthlyDwellTrend(
               'Average stint ({{unit}})',
               { unit: durationUnit },
             ),
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'stints',
@@ -148,7 +146,7 @@ export function MonthlyDwellTrend(
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => fmtNumber(value)}
+                    tickFormatter={(value) => fmtNumber(value, 0)}
                     width={46}
                   />
                   <YAxis
@@ -166,7 +164,7 @@ export function MonthlyDwellTrend(
                         valueFormatter={(value, name) =>
                           name === countName
                             ? fmtInt(value)
-                            : `${fmtNumber(value)} ${durationUnit}`
+                            : `${fmtNumber(value, 1)} ${durationUnit}`
                         }
                       />
                     }

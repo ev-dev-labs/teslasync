@@ -140,36 +140,4 @@ describe('ChecklistPanel', () => {
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
   });
-
-  it('keeps every readiness item and the checked timestamp while a re-check is pending', () => {
-    mockRefresh.mockReturnValue({ mutate: vi.fn(), isPending: true });
-    renderPanel();
-    expect(screen.getByRole('heading', { name: 'Ready to roll' })).toBeInTheDocument();
-    for (const item of run.items) expect(screen.getByText(item.detail)).toBeInTheDocument();
-    expect(screen.getByText(/^Checked /)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Re-check' })).toBeDisabled();
-    expect(screen.queryByText(/No checks yet/)).not.toBeInTheDocument();
-  });
-
-  it('does not mistake a retained run with a refresh 404 for a never-run checklist', () => {
-    const refetch = vi.fn();
-    mockRun.mockReturnValue(idle({ data: run, error: new Api404(), isError: true, refetch }));
-    renderPanel();
-    for (const item of run.items) expect(screen.getByText(item.detail)).toBeInTheDocument();
-    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Run checklist' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('surfaces re-check failure independently without dropping the last run or retrying the mutation', () => {
-    const mutate = vi.fn();
-    mockRefresh.mockReturnValue({ mutate, isPending: false, error: new Error('check unavailable') });
-    renderPanel();
-    expect(screen.getByText(/Readiness could not be checked/)).toBeInTheDocument();
-    expect(screen.getByText('lowest FR at 2.6 bar (placard 2.9)')).toBeInTheDocument();
-    expect(mutate).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole('button', { name: 'Re-check' }));
-    expect(mutate).toHaveBeenCalledWith(session.id);
-  });
 });

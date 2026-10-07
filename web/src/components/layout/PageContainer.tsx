@@ -11,10 +11,7 @@ import {
   type DataSourceDescriptor,
 } from '@/components/feedback/DataSourceNotice';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button, Tooltip } from '@/components/ui';
 import { Heading, Text } from '@/components/ui/Typography';
-import { Info } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { useSetBreadcrumbOverrides } from './BreadcrumbOverridesContext';
 import {
   DataFreshnessAuto,
@@ -52,8 +49,6 @@ export interface PageContainerProps {
   actionLayout?: PageActionsProps['layout'];
   title: string;
   subtitle?: ReactNode;
-  /** Defaults to the compact data-first header; descriptions remain available as help. */
-  compactHeader?: boolean;
   /** @deprecated Use the semantic action slots below for new or touched pages. */
   actions?: ReactNode;
   /** Vehicle, time-range, and other scope controls. */
@@ -116,7 +111,7 @@ export interface PageContainerProps {
 }
 
 export function PageContainer({
-  title, subtitle, compactHeader = true, actions, contextActions, metadataActions, secondaryActions,
+  title, subtitle, actions, contextActions, metadataActions, secondaryActions,
   destructiveActions, overflowActions, primaryAction,
   loading, busy, error, empty, emptyMessage,
   breadcrumbLabels,
@@ -124,7 +119,6 @@ export function PageContainer({
   announce = true,
   actionLayout,
 }: PageContainerProps) {
-  const { t } = useTranslation();
   const operationalMode = useOperationalMode();
   // A11Y-06: every page funnels through here, so the "your data finished
   // loading" / "the refresh failed" announcements can be centralised
@@ -158,19 +152,15 @@ export function PageContainer({
 
   return (
     <div
-      className={cn('min-w-0 space-y-6', compactHeader && 'space-y-3 sm:space-y-4', className)}
+      className={cn('min-w-0 space-y-6', className)}
       data-role="page-container"
       aria-busy={loading || busy || undefined}
     >
       <header
-        className={cn(
-          'relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between',
-          actionLayout === 'scope-first' && 'gap-3 px-4 py-4 sm:px-6 sm:py-5',
-          compactHeader && 'gap-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0 xl:gap-3',
-        )}
+        className={cn('relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between', actionLayout === 'scope-first' && 'gap-3 px-4 py-4 sm:px-6 sm:py-5')}
         data-role="page-header"
       >
-        <div className={cn('flex min-w-0 max-w-4xl gap-4 xl:flex-1', compactHeader && 'gap-3')}>
+        <div className="flex min-w-0 max-w-4xl gap-4 xl:flex-1">
           <span
             className="w-1 shrink-0 self-stretch rounded-pill bg-[var(--theme-primary)]"
             aria-hidden="true"
@@ -182,30 +172,15 @@ export function PageContainer({
                 the start of the new page's content after a client-side
                 navigation. The attribute name is asserted against
                 `ROUTE_FOCUS_TARGET_ATTR` by the PageContainer test. */}
-            <div className="flex items-center gap-2">
-              <Heading
-                level="page"
-                className="font-bold tracking-[-0.025em] outline-none"
-                tabIndex={-1}
-                data-route-focus-target="true"
-              >
-                {title}
-              </Heading>
-              {compactHeader && subtitle && (
-                <Tooltip content={subtitle} side="bottom" multiline>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`${t('help.tooltip.iconLabel', 'More info')}: ${title}`}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-primary)] sm:h-9 sm:w-9"
-                  >
-                    <Info className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </Tooltip>
-              )}
-            </div>
-            {subtitle && !compactHeader && (
+            <Heading
+              level="page"
+              className="font-bold tracking-[-0.025em] outline-none"
+              tabIndex={-1}
+              data-route-focus-target="true"
+            >
+              {title}
+            </Heading>
+            {subtitle && (
               <Text as="p" variant="bodySm" className="mt-2 max-w-3xl leading-relaxed">
                 {subtitle}
               </Text>
@@ -214,7 +189,6 @@ export function PageContainer({
         </div>
         <PageActions
           layout={actionLayout}
-          className={compactHeader ? 'border-0 bg-transparent p-0' : undefined}
           metadata={
             resolvedQuery || metadataActions || operationalMode.isReadOnly
               ? <>
@@ -233,7 +207,7 @@ export function PageContainer({
           destructive={destructiveActions}
           overflow={
             copyLink || overflowActions
-              ? <>{overflowActions}{copyLink && <CopyLinkButton iconOnly />}</>
+              ? <>{overflowActions}{copyLink && <CopyLinkButton className={actionLayout === 'scope-first' ? 'h-11 sm:h-9' : undefined} />}</>
               : undefined
           }
           primary={primaryAction}
@@ -246,7 +220,7 @@ export function PageContainer({
         <ErrorDisplay error={error} />
       ) : empty ? (
         <GlassPanel>
-          <EmptyState message={emptyMessage ?? t('common.emptyResultsForTitle', 'No {{title}} found.', { title })} />
+          <EmptyState message={emptyMessage ?? `No ${title.toLowerCase()} found.`} />
         </GlassPanel>
       ) : (
         <PageErrorBoundary pageName={title}>

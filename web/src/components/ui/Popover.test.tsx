@@ -29,23 +29,6 @@ function HandoffHarness() {
 }
 
 describe('Popover focus restoration', () => {
-  it('supports menu semantics without changing the default dialog surface', () => {
-    function MenuHarness() {
-      const anchorRef = useRef<HTMLButtonElement | null>(null);
-      return (
-        <>
-          <Button ref={anchorRef}>Menu trigger</Button>
-          <Popover open onClose={() => {}} anchorRef={anchorRef} role="menu" ariaLabel="Actions">
-            <Button>Action</Button>
-          </Popover>
-        </>
-      );
-    }
-    render(<MenuHarness />);
-    expect(screen.getByRole('menu', { name: 'Actions' })).not.toHaveAttribute('aria-modal');
-    expect(screen.queryByRole('dialog', { name: 'Actions' })).toBeNull();
-  });
-
   it('does not steal focus from another control during a popover handoff', () => {
     render(<HandoffHarness />);
 

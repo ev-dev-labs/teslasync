@@ -32,7 +32,7 @@ export function distanceAddedM(s: ChargingSession): number | null {
 export function sessionLabel(s: ChargingSession): string {
   const date = formatDateShort(s.started_at);
   const label = getChargerLabel(s);
-  const energy = s.total_energy_added_wh != null ? fmtNumber(s.total_energy_added_wh / 1000) : '?';
+  const energy = s.total_energy_added_wh != null ? fmtNumber(s.total_energy_added_wh / 1000, 1) : '?';
   return `${date} — ${label} — ${energy} kWh`;
 }
 

@@ -7,9 +7,6 @@ export interface Drive {
   durationS: number;
   /** Distance travelled in meters (SI canonical). */
   distanceM: number;
-  /** Recorded drive endpoint odometers in meters; null means not recorded. */
-  start_odometer_m?: number | null;
-  end_odometer_m?: number | null;
   startAddress: string | null;
   endAddress: string | null;
   startLat: number | null;
@@ -103,19 +100,19 @@ export interface DrivingStats {
   totalDrives: number;
   totalDistanceKm: number;
   totalDurationS: number;
-  avgEfficiencyWhKm: number | null;
-  avgSpeedKmh: number | null;
-  topSpeedKmh: number | null;
+  avgEfficiencyWhKm: number;
+  avgSpeedKmh: number;
+  topSpeedKmh: number;
   /**
-   * Recorded recovered/used energy ratio bounded to **0-1**.
-   * Null when energy coverage is incomplete or used energy is not positive.
+   * Regen share as a **0-1 fraction** — the API rounds
+   * `regen / total` to three decimals (internal/api/drives/listing.go).
    *
    * Note this differs from {@link RegenEfficiencyData.regenRatio}, which
    * carries the same name but is already a 0-100 percentage. Multiply this one
    * by 100 before displaying it as a percentage.
    */
-  regenRatio: number | null;
-  regenEnergyWh: number | null;
+  regenRatio: number;
+  regenEnergyWh: number;
   co2SavedKg: number;
 }
 
@@ -265,7 +262,7 @@ export interface DrivingCoachData {
 
 export interface CoachPatterns {
   hard_accel_pct: number;
-  hard_brake_pct: number | null;
+  hard_brake_pct: number;
   highway_pct: number;
   short_trip_pct: number;
   cold_start_pct: number;

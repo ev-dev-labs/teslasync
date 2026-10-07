@@ -12,9 +12,8 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityMethodologyProps {
   analysis: ArrivalReliabilityResult;
@@ -25,7 +24,6 @@ export function ArrivalReliabilityMethodology({
   analysis,
   timeZone,
 }: ArrivalReliabilityMethodologyProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {

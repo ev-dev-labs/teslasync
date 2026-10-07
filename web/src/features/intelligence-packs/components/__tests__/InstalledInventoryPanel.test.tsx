@@ -33,9 +33,9 @@ describe('InstalledInventoryPanel', () => {
     repository = createInMemoryPackRepository();
   });
 
-  it('renders an empty state with no installed packs', async () => {
+  it('renders an empty state with no installed packs', () => {
     renderWithProviders(<InstalledInventoryPanel />, { repository });
-    expect(await screen.findByText(/No packs are installed yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/No packs are installed yet/i)).toBeInTheDocument();
   });
 
   it('shows an installed pack disabled-toggle warning when no trust decision is recorded', async () => {

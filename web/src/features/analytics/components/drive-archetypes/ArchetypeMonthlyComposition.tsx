@@ -5,6 +5,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   CHART_COLORS,
@@ -15,15 +16,13 @@ import {
   axisTick,
   type ChartDataColumn,
 } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeMonthlyCompositionProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -34,7 +33,6 @@ export function ArchetypeMonthlyComposition({
   state,
   display,
 }: ArchetypeMonthlyCompositionProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -67,13 +65,12 @@ export function ArchetypeMonthlyComposition({
         format: (value: unknown) => fmtInt(value),
       })),
     ],
-    [summary.clusters, t, fmtInt],
+    [summary.clusters, t],
   );
 
   return (
     <section data-testid="drive-archetypes-monthly">
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t('archetypes.monthly.title', 'Monthly archetype composition')}
         subtitle={t(
           'archetypes.monthly.subtitle',
@@ -118,7 +115,7 @@ export function ArchetypeMonthlyComposition({
             </ResponsiveContainer>
           </ArchetypeSectionBody>
         )}
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

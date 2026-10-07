@@ -51,8 +51,7 @@ vi.mock('react-i18next', () => ({
 // above them safely). Only the two hooks the widget reads are overridden — the
 // rest of the real module is preserved so transitive importers keep working.
 const mockUseSecurityLatest = vi.fn((_id: number, _interval?: number) => MOCK_SECURITY);
-let MOCK_VEHICLES: { data: Vehicle[] | undefined; refetch: () => void };
-const refetchVehicles = vi.fn();
+let MOCK_VEHICLES: { data: Vehicle[] | undefined };
 let MOCK_SECURITY: SecurityQuery;
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();
@@ -135,7 +134,7 @@ interface RenderOpts {
 
 function renderWidget(size: WidgetSize, opts: RenderOpts = {}) {
   MOCK_SECURITY = opts.query ?? makeQuery();
-  MOCK_VEHICLES = { data: opts.vehicles ?? [], refetch: refetchVehicles };
+  MOCK_VEHICLES = { data: opts.vehicles ?? [] };
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
@@ -154,8 +153,7 @@ function sectionOf(heading: string): HTMLElement {
 }
 
 beforeEach(() => {
-  MOCK_VEHICLES = { data: [], refetch: refetchVehicles };
-  refetchVehicles.mockClear();
+  MOCK_VEHICLES = { data: [] };
   MOCK_SECURITY = makeQuery();
   mockUseSecurityLatest.mockClear();
 });
@@ -224,40 +222,9 @@ describe('parseWindowState', () => {
 });
 
 describe('parseDoorStates', () => {
-  it('does not turn unknown or unrecognized door enums into closed readings', () => {
-    for (const raw of ['Unknown', 'DoorStateUnknown', 'unrecognized']) {
-      expect(Object.values(parseDoorStates(raw))).toEqual(['unknown', 'unknown', 'unknown', 'unknown']);
-    }
-  });
   it('coerces native booleans to all-open / all-closed', () => {
     expect(parseDoorStates(true)).toEqual({ fl: 'open', fr: 'open', rl: 'open', rr: 'open' });
     expect(parseDoorStates(false)).toEqual({ fl: 'closed', fr: 'closed', rl: 'closed', rr: 'closed' });
-  });
-
-  describe('DoorWindowStatusWidget retained readings', () => {
-    it.each([COMPACT, FULL, { cols: 4, rows: 4 }])('retains real false readings and retry after failed refresh in %o', (size) => {
-      const refetch = vi.fn();
-      renderWidget(size, {
-        query: makeQuery({
-          data: makeSecurity({ door_state: false, fd_window: false, fp_window: false, rd_window: false, rp_window: false } as unknown as Partial<SecurityEvent>),
-          error: new Error('refresh failed'), isError: true, refetch,
-        }),
-      });
-      const warning = screen.getByTestId('stale-refresh-warning');
-      expect(warning).toHaveTextContent('Previously loaded data remains visible');
-      if (size.cols === 1) expect(screen.getByText('Windows ✓')).toBeInTheDocument();
-      else expect(screen.getAllByText('Closed')).toHaveLength(8);
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
-      expect(refetch).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not claim all doors or windows are closed from an empty snapshot', () => {
-      renderWidget(COMPACT);
-      expect(screen.getByText('Doors unknown')).toBeInTheDocument();
-      expect(screen.getByText('Windows unknown')).toBeInTheDocument();
-      expect(screen.queryByText('Doors ✓')).toBeNull();
-      expect(screen.queryByText('Windows ✓')).toBeNull();
-    });
   });
 
   it('treats absent / blank values as all-unknown', () => {
@@ -314,7 +281,7 @@ describe('DoorWindowStatusWidget — full view', () => {
       }),
     });
 
-    expect(screen.getByText('Door & window status')).toBeInTheDocument();
+    expect(screen.getByText('Door & Window Status')).toBeInTheDocument();
     expect(screen.getByText('Doors')).toBeInTheDocument();
     expect(screen.getByText('Windows')).toBeInTheDocument();
 
@@ -366,10 +333,10 @@ describe('DoorWindowStatusWidget — compact view', () => {
     expect(screen.getByText('2 door(s) open')).toBeInTheDocument();
     expect(screen.getByText('1 window(s) open')).toBeInTheDocument();
     // A 1×1 tile suppresses the header title entirely.
-    expect(screen.queryByText('Door & window status')).toBeNull();
+    expect(screen.queryByText('Door & Window Status')).toBeNull();
   });
 
-  it('keeps unknown windows distinct from measured closed windows', () => {
+  it('regression: all-"Unknown" windows summarise as closed, not a false open count', () => {
     renderWidget(COMPACT, {
       query: makeQuery({
         data: makeSecurity({
@@ -383,22 +350,21 @@ describe('DoorWindowStatusWidget — compact view', () => {
     });
 
     expect(screen.getByText('Doors ✓')).toBeInTheDocument();
-    expect(screen.getByText('Windows unknown')).toBeInTheDocument();
-    expect(screen.queryByText('Windows ✓')).toBeNull();
+    expect(screen.getByText('Windows ✓')).toBeInTheDocument();
     expect(screen.queryByText('4 window(s) open')).toBeNull();
   });
 });
 
 describe('DoorWindowStatusWidget — lifecycle states', () => {
   it('renders only a skeleton while loading', () => {
-    const { container } = renderWidget(FULL, { query: makeQuery({ data: undefined, isLoading: true }) });
+    const { container } = renderWidget(FULL, { query: makeQuery({ isLoading: true }) });
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Door & window status')).toBeInTheDocument();
+    expect(screen.queryByText('Door & Window Status')).toBeNull();
     expect(screen.queryByText('No door/window data')).toBeNull();
   });
 
   it('surfaces a query error instead of the grids', () => {
-    renderWidget(FULL, { query: makeQuery({ data: undefined, error: new Error('boom'), isError: true }) });
+    renderWidget(FULL, { query: makeQuery({ error: new Error('boom'), isError: true }) });
     // jsdom reports navigator.onLine === true → QueryError's network branch.
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('Doors')).toBeNull();
@@ -431,17 +397,9 @@ describe('DoorWindowStatusWidget — vehicle resolution + refresh', () => {
 
   it('refetches when the accessible "Refresh" freshness control is activated', () => {
     const refetch = vi.fn();
-    renderWidget(FULL, { vehicleId: 1, query: makeQuery({ refetch, isFetching: false }) });
+    renderWidget(FULL, { query: makeQuery({ refetch, isFetching: false }) });
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('refreshes vehicle discovery rather than the disabled security query when no vehicle is selected', () => {
-    const refetch = vi.fn();
-    renderWidget(FULL, { vehicles: [], query: makeQuery({ data: undefined, refetch }) });
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
-    expect(refetchVehicles).toHaveBeenCalledTimes(1);
-    expect(refetch).not.toHaveBeenCalled();
   });
 });

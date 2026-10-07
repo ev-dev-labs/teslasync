@@ -75,8 +75,6 @@ vi.mock('@/components/charts', () => ({
     empty,
     height,
     className,
-    data,
-    exportData,
     children,
   }: {
     title?: string;
@@ -86,8 +84,6 @@ vi.mock('@/components/charts', () => ({
     empty?: boolean;
     height?: number;
     className?: string;
-    data?: unknown[];
-    exportData?: unknown[];
     children?: ReactNode | ((context: {
       hiddenSeries: { isHidden: (key: string) => boolean };
     }) => ReactNode);
@@ -101,8 +97,6 @@ vi.mock('@/components/charts', () => ({
         data-loading={String(!!loading)}
         data-empty={String(!!empty)}
         data-height={String(height ?? '')}
-        data-rows={JSON.stringify(data ?? [])}
-        data-export-rows={JSON.stringify(exportData ?? [])}
         className={className}
       >
         <h3>{title}</h3>
@@ -185,11 +179,6 @@ vi.mock('@/components/charts', () => ({
   axisTick: {},
   chartMarginLabeled: {},
   AREA_DEFAULTS: {},
-}));
-
-vi.mock('@/components/layout', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/components/layout')>(),
-  ChartCard: (await import('@/components/charts')).ChartContainer,
 }));
 
 import { PowerHistoryChart, type PowerHistoryPoint } from './PowerHistoryChart';
@@ -359,7 +348,7 @@ describe('PowerHistoryChart — ready state', () => {
     const yAxis = screen.getByTestId('y-axis');
     expect(yAxis.getAttribute('data-sample-kw')).toContain('kW');
     expect(yAxis.getAttribute('data-sample-kw')).toMatch(/1[.,]5/);
-    expect(yAxis).toHaveAttribute('data-sample-w', '500.00 W');
+    expect(yAxis).toHaveAttribute('data-sample-w', '500 W');
   });
 
   it('mounts the tooltip and legend', () => {
@@ -408,13 +397,13 @@ describe('PowerHistoryChart — null safety', () => {
 });
 
 describe('PowerHistoryChart — styling passthrough', () => {
-  it('keeps allocation classes on the host around the canonical chart in the ready state', () => {
+  it('forwards className onto the chart container in the ready state', () => {
     renderChart({ data: [point()], className: 'xl:col-span-2' });
 
-    expect(screen.getByTestId('chart-container').parentElement).toHaveClass('xl:col-span-2');
+    expect(screen.getByTestId('chart-container')).toHaveClass('xl:col-span-2');
   });
 
-  it('keeps allocation classes and the canonical card in the error state', () => {
+  it('forwards className onto the glass panel in the error state', () => {
     const { container } = renderChart({
       error: new Error('boom'),
       className: 'xl:col-span-2',
@@ -422,20 +411,6 @@ describe('PowerHistoryChart — styling passthrough', () => {
 
     const panel = container.firstChild as HTMLElement;
     expect(panel.className).toContain('xl:col-span-2');
-    expect(panel.querySelector('[data-card]')).not.toBeNull();
-  });
-
-  it('preserves every signed and unknown sample in the chart alternative and export rows', () => {
-    renderChart({ data: [
-      point({ solar: null, battery: -800, grid: 0, load: 3700 }),
-      point({ time: VALID_TICK + 1000, solar: 4200, battery: null, grid: -200, load: null }),
-    ] });
-    const frame = screen.getByTestId('chart-container');
-    const expected = [
-      { time: VALID_TICK, solar: null, battery: -800, grid: 0, load: 3700 },
-      { time: VALID_TICK + 1000, solar: 4200, battery: null, grid: -200, load: null },
-    ];
-    expect(JSON.parse(frame.getAttribute('data-rows') ?? '[]')).toEqual(expected);
-    expect(JSON.parse(frame.getAttribute('data-export-rows') ?? '[]')).toEqual(expected);
+    expect(panel.className).toContain('p-4');
   });
 });

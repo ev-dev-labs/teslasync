@@ -13,9 +13,8 @@ import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { type SectionState, type VehicleCostBar } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TopTalkersPanelProps extends SectionState {
   talkers: VehicleCostBar[];
@@ -29,7 +28,6 @@ export function TopTalkersPanel({
   error,
   onRetry,
 }: TopTalkersPanelProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safe the inputs before any `.length` / `.reduce` / `.map`: the page
@@ -93,7 +91,7 @@ export function TopTalkersPanel({
                   value={value}
                   max={max}
                   color={chartTokens.series[i % chartTokens.series.length]}
-                  sublabel={`${fmtInt(value)} · ${fmtPercent(pct)}`}
+                  sublabel={`${fmtInt(value)} · ${fmtPercent(pct, 1)}`}
                 />
               </li>
             );

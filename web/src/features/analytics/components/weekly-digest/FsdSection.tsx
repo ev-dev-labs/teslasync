@@ -5,11 +5,10 @@ import { Gauge, TrendingDown, TrendingUp } from 'lucide-react';
 import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { FsdInsights } from '@/types/fsd';
 
 import { MiniStat } from './MiniStat';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FsdSectionProps {
   insights: FsdInsights | undefined;
@@ -28,7 +27,6 @@ export function FsdSection({
   onRetry,
   isCurrentWeek,
 }: FsdSectionProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const fsdDistanceM = insights?.totals?.fsd_distance_m;
@@ -68,11 +66,11 @@ export function FsdSection({
                 'analytics.weeklyDigest.fsdNotice',
                 'Reported FSD {{distance}}{{share}}{{change}}.',
                 {
-                  distance: formatDistance(fsdDistanceM),
+                  distance: formatDistance(fsdDistanceM, { precision: 1 }),
                   share: share == null
                     ? ''
                     : t('analytics.weeklyDigest.fsdNoticeShare', ' ({{value}}% of observed driving)', {
-                        value: fmtNumber(share),
+                        value: fmtNumber(share, 1),
                       }),
                   change: shareChange == null
                     ? ''
@@ -80,7 +78,7 @@ export function FsdSection({
                         'analytics.weeklyDigest.fsdNoticeChange',
                         ', {{delta}} pts vs last week',
                         {
-                          delta: `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange)}`,
+                          delta: `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange, 1)}`,
                         },
                       ),
                 },
@@ -91,19 +89,19 @@ export function FsdSection({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <MiniStat
               label={t('analytics.weeklyDigest.fsdDistance', 'Reported FSD')}
-              value={formatDistance(fsdDistanceM)}
+              value={formatDistance(fsdDistanceM, { precision: 1 })}
               icon={<Gauge className="h-4 w-4" />}
             />
             <MiniStat
               label={t('analytics.weeklyDigest.fsdShare', 'Share of observed driving')}
-              value={share == null ? '—' : `${fmtNumber(share)}%`}
+              value={share == null ? '—' : `${fmtNumber(share, 1)}%`}
               icon={<Gauge className="h-4 w-4" />}
             />
             <MiniStat
               label={t('analytics.weeklyDigest.fsdDistanceChange', 'FSD vs previous week')}
               value={distanceChange == null
                 ? t('analytics.weeklyDigest.fsdNoBaseline', 'No comparable week')
-                : `${distanceChange >= 0 ? '+' : ''}${formatDistance(distanceChange)}`}
+                : `${distanceChange >= 0 ? '+' : ''}${formatDistance(distanceChange, { precision: 1 })}`}
               icon={
                 distanceChange != null && distanceChange < 0
                   ? <TrendingDown className="h-4 w-4 text-amber-300" />
@@ -114,7 +112,7 @@ export function FsdSection({
               label={t('analytics.weeklyDigest.fsdShareChange', 'Share vs previous week')}
               value={shareChange == null
                 ? t('analytics.weeklyDigest.fsdNoBaseline', 'No comparable week')
-                : `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange)} pts`}
+                : `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange, 1)} pts`}
               icon={
                 shareChange != null && shareChange < 0
                   ? <TrendingDown className="h-4 w-4 text-amber-300" />

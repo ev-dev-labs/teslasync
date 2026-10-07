@@ -6,13 +6,12 @@ import { ChartContainer } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { Subhead } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import { ParkingStartBarChart } from './ParkingStartBarChart';
 import type { ParkingSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ParkingTemporalProfileProps {
   summary: ParkingSummary;
@@ -26,7 +25,6 @@ export function ParkingTemporalProfile({
   state,
   className,
 }: ParkingTemporalProfileProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { locale } = useDateFormat();
   const hourRows = useMemo(
@@ -78,7 +76,7 @@ export function ParkingTemporalProfile({
       data-testid="parking-temporal"
     >
       <ChartContainer
-        title={t('parking.temporal.title', 'When parking starts')}
+        title={t('parking.temporal.title', 'When Parking Starts')}
         subtitle={t(
           'parking.temporal.subtitle',
           '{{count}} reconstructed starts grouped in {{timeZone}}; dwell is credited to its start period.',

@@ -1,11 +1,9 @@
 import { useTranslation } from 'react-i18next';
+import { Icons } from '@/lib/icons';
 import { useNudge, type JourneyNudgeVerdict, type JourneySession } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
 import { Badge, Text } from '@/components/ui';
-import { KVList } from '@/components/data-display';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { ListSkeleton } from '@/components/feedback';
-import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
+import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
 import { safeArray } from '@/lib/safeArray';
 
@@ -51,18 +49,21 @@ export function NudgePanel({ session }: { session: JourneySession }) {
   const evidence = safeArray(nudge?.evidence);
 
   return (
-    <LayoutCard title={t('journey.nudge.title', 'Leave now?')}>
-      <SourceContent
-        state={nudgeState.fatalError ? 'error' : nudgeQuery.isLoading && !nudgeState.hasData
-          ? 'loading' : nudgeState.status === 'stale' ? 'retained' : nudge == null ? 'empty' : 'ready'}
-        label={t('journey.nudge.title', 'Leave now?')}
-        emptyMessage={t('journey.nudge.empty', 'No nudge yet.')}
-        errorMessage={t('journey.nudge.loadFailed', 'The departure nudge could not be loaded.')}
-        error={nudgeState.fatalError}
-        errorRecovery={{ onRetry: nudgeState.retry ?? undefined }}
-        loadingContent={<ListSkeleton label={t('journey.nudge.loading', 'Reading departure window…')} />}
-      >
-      {nudge != null ? (
+    <div className="space-y-4">
+      <Text as="p" variant="label" className="flex items-center gap-2">
+        <Icons.timer className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+        {t('journey.nudge.title', 'Leave now?')}
+      </Text>
+
+      {nudgeQuery.isLoading ? (
+        <ListSkeleton label={t('journey.nudge.loading', 'Reading departure window…')} />
+      ) : nudgeState.fatalError ? (
+        <QueryError error={nudgeState.fatalError} onRetry={() => nudgeState.retry?.()} />
+      ) : nudge == null ? (
+        <Text as="p" size="sm" color="secondary">
+          {t('journey.nudge.empty', 'No nudge yet.')}
+        </Text>
+      ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={verdictVariant(nudge.verdict)}>
@@ -78,22 +79,32 @@ export function NudgePanel({ session }: { session: JourneySession }) {
           </div>
 
           {blockers.length > 0 ? (
-            <KVList
-              layout="responsive"
-              items={blockers.map((item) => ({
-                id: item.key,
-                label: item.detail,
-                value: <Badge variant="danger">{t('journey.nudge.blocker', 'Blocker')}</Badge>,
-              }))}
-            />
+            <ul className="space-y-2">
+              {blockers.map((item) => (
+                <li
+                  key={item.key}
+                  className="flex items-start justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"
+                >
+                  <Text as="p" variant="caption">
+                    {item.detail}
+                  </Text>
+                  <Badge variant="danger">{t('journey.nudge.blocker', 'Blocker')}</Badge>
+                </li>
+              ))}
+            </ul>
           ) : null}
 
-          <JourneyEvidenceList evidence={evidence} />
+          {evidence.length > 0 ? (
+            <ul className="space-y-1">
+              {evidence.map((line) => (
+                <Text as="li" key={line} size="xs" color="muted">
+                  · {line}
+                </Text>
+              ))}
+            </ul>
+          ) : null}
         </div>
-      ) : (
-        <Text as="p" variant="bodySm">{t('journey.nudge.empty', 'No nudge yet.')}</Text>
       )}
-      </SourceContent>
-    </LayoutCard>
+    </div>
   );
 }

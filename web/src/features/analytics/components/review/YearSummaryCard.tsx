@@ -38,7 +38,7 @@ export function YearSummaryCard({ data }: Props) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <Heading level="panel">{data.year}</Heading>
-          <Caption>{t('yearReview.title', 'Year in review')}</Caption>
+          <Caption>{t('yearReview.title', 'Year in Review')}</Caption>
         </div>
         <div className="text-end">
           <Text size="sm" weight="semibold" color="primary" className="block">{data.vehicle?.display_name ?? '—'}</Text>
@@ -59,7 +59,7 @@ export function YearSummaryCard({ data }: Props) {
       {gasSavings > 0 && (
         <div className="mt-auto border-t border-[var(--border-subtle)] pt-3">
           <Text variant="bodySm" className="text-emerald-300">
-            💰 {t('yearReview.savedSummary', { amount: formatCurrency(gasSavings), defaultValue: 'Saved {{amount}} vs. gas' })}
+            💰 {t('yearReview.savedSummary', { amount: formatCurrency(gasSavings, 0), defaultValue: 'Saved {{amount}} vs. gas' })}
           </Text>
         </div>
       )}

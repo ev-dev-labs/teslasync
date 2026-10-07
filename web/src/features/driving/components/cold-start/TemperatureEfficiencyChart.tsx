@@ -9,13 +9,12 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { formatDate } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 
 import type { TemperatureEvidence } from '../../lib/coldStart';
 import type { ColdStartSectionState } from './types';
 import { useColdStartDisplay } from './useColdStartDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TemperatureEfficiencyChartProps {
   points: TemperatureEvidence[];
@@ -25,7 +24,6 @@ interface TemperatureEfficiencyChartProps {
 
 /** Outside-temperature scatter, colored by parking-gap classification. */
 export function TemperatureEfficiencyChart({ points, state, className }: TemperatureEfficiencyChartProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { convertEfficiency, efficiencyUnit, unitPrefs } = useColdStartDisplay();
   const rows = useMemo(
@@ -93,17 +91,17 @@ export function TemperatureEfficiencyChart({ points, state, className }: Tempera
           {
             key: 'temperature',
             label: `${temperatureName} (${unitPrefs.temperature})`,
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'consumption',
             label: `${consumptionName} (${efficiencyUnit})`,
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
           {
             key: 'distance',
             label: `${distanceName} (${unitPrefs.distance})`,
-            format: (value) => fmtNumber(value),
+            format: (value) => fmtNumber(value, 1),
           },
         ]}
       >
@@ -165,10 +163,10 @@ export function TemperatureEfficiencyChart({ points, state, className }: Tempera
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === temperatureName
-                          ? `${fmtNumber(value)}${unitPrefs.temperature}`
+                          ? `${fmtNumber(value, 1)}${unitPrefs.temperature}`
                           : name === distanceName
-                            ? `${fmtNumber(value)} ${unitPrefs.distance}`
-                            : `${fmtNumber(value)} ${efficiencyUnit}`
+                            ? `${fmtNumber(value, 1)} ${unitPrefs.distance}`
+                            : `${fmtNumber(value, 1)} ${efficiencyUnit}`
                       }
                     />
                   }

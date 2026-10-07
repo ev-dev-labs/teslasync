@@ -32,13 +32,13 @@ export function JourneyDirectory({ result }: JourneyFragmentationSectionProps) {
                 </div>
                 <Text as="p" variant="caption">{t('journeyFragmentation.directory.fragments', '{{count}} drives', { count: journey.fragments })}</Text>
               </div>
-              <MetricValue>{formatDistance(journey.distanceM)}</MetricValue>
+              <MetricValue>{formatDistance(journey.distanceM, { precision: 1 })}</MetricValue>
               <Text as="p" variant="caption">
                 {journey.startAddress ?? t('journeyFragmentation.directory.unknownStart', 'Unlocated start')}
                 {' → '}
                 {journey.endAddress ?? t('journeyFragmentation.directory.unknownEnd', 'Unlocated end')}
               </Text>
-              <Text as="p" variant="caption">{formatDuration(journey.drivingSeconds + journey.observedParkingSeconds)} · {t('journeyFragmentation.directory.gaps', '{{count}} linked gaps', { count: journey.parkingGapsMin.length })}</Text>
+              <Text as="p" variant="caption">{formatDuration(journey.drivingSeconds + journey.observedParkingSeconds, { precision: 1 })} · {t('journeyFragmentation.directory.gaps', '{{count}} linked gaps', { count: journey.parkingGapsMin.length })}</Text>
             </div>
           ))}
         </div>

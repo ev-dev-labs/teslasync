@@ -191,11 +191,11 @@ function renderPage(initialEntries: string[] = ['/system/fsm']) {
   );
 }
 
-/** Resolve the canonical stat tile from its unique source label. */
+/** Resolve a StatCard root element from its unique label. */
 function kpiCard(label: string): HTMLElement {
   const labelEl = screen.getByText(label);
-  const card = labelEl.closest('[data-operational-metric]');
-  if (!card) throw new Error(`Stat tile not found for label "${label}"`);
+  const card = labelEl.closest('div')?.parentElement;
+  if (!card) throw new Error(`StatCard not found for label "${label}"`);
   return card as HTMLElement;
 }
 
@@ -228,9 +228,9 @@ describe('StateMachineDebuggerPage — KPI band', () => {
     renderPage();
 
     expect(within(kpiCard('Transitions (Page)')).getByText('3 / 233')).toBeInTheDocument();
-    expect(within(kpiCard('Total transitions')).getByText('233')).toBeInTheDocument();
-    expect(within(kpiCard('Flap warnings')).getByText('3')).toBeInTheDocument();
-    expect(within(kpiCard('Current state')).getByText('driving')).toBeInTheDocument();
+    expect(within(kpiCard('Total Transitions')).getByText('233')).toBeInTheDocument();
+    expect(within(kpiCard('Flap Warnings')).getByText('3')).toBeInTheDocument();
+    expect(within(kpiCard('Current State')).getByText('driving')).toBeInTheDocument();
   });
 
   it('falls back to an em dash for the current state when no live state is loaded', () => {
@@ -238,7 +238,7 @@ describe('StateMachineDebuggerPage — KPI band', () => {
 
     renderPage();
 
-    expect(within(kpiCard('Current state')).getByText('—')).toBeInTheDocument();
+    expect(within(kpiCard('Current State')).getByText('—')).toBeInTheDocument();
   });
 });
 
@@ -253,7 +253,7 @@ describe('StateMachineDebuggerPage — live-state hero', () => {
 
     renderPage();
 
-    const hero = screen.getByText('Vehicle live state').closest('div')?.parentElement as HTMLElement;
+    const hero = screen.getByText('Vehicle Live State').closest('div')?.parentElement as HTMLElement;
     expect(within(hero).getByText('charging')).toBeInTheDocument();
     expect(within(hero).getByText('Charging')).toBeInTheDocument();
   });
@@ -313,7 +313,7 @@ describe('StateMachineDebuggerPage — empty fleet', () => {
     renderPage();
 
     expect(screen.getByText('No vehicles available')).toBeInTheDocument();
-    expect(screen.queryByLabelText('FSM type')).toBeNull();
+    expect(screen.queryByLabelText('FSM Type')).toBeNull();
     expect(screen.queryByLabelText('Select vehicle')).toBeNull();
   });
 });
@@ -328,7 +328,7 @@ describe('StateMachineDebuggerPage — transition log', () => {
 
     renderPage();
 
-    expect(screen.getByText('Transition log')).toBeInTheDocument();
+    expect(screen.getByText('Transition Log')).toBeInTheDocument();
     expect(screen.getByText('speed_changed')).toBeInTheDocument();
     expect(screen.getByText('gear_changed')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View detail' })).toHaveLength(2);
@@ -366,11 +366,11 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
     renderPage();
 
     // Detail is collapsed until the toggle is clicked.
-    expect(screen.queryByText('Transition detail')).toBeNull();
+    expect(screen.queryByText('Transition Detail')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
 
-    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getByText('Transition Detail')).toBeInTheDocument();
     // Transition ID field (id=42) is unique to the detail panel.
     expect(screen.getByText('42')).toBeInTheDocument();
     // Guard field renders the raw guard string.
@@ -390,10 +390,10 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
     // Re-query the toggle each time: selecting a row re-memoises the column
     // defs (selectedId is a dep), which replaces the button node.
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
-    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getByText('Transition Detail')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
-    expect(screen.queryByText('Transition detail')).toBeNull();
+    expect(screen.queryByText('Transition Detail')).toBeNull();
   });
 });
 
@@ -426,12 +426,12 @@ describe('StateMachineDebuggerPage — filter controls', () => {
 
     renderPage();
 
-    const select = screen.getByLabelText('FSM type') as HTMLSelectElement;
+    const select = screen.getByLabelText('FSM Type') as HTMLSelectElement;
     expect(select.value).toBe('all');
 
     fireEvent.change(select, { target: { value: 'vehicle' } });
 
-    expect((screen.getByLabelText('FSM type') as HTMLSelectElement).value).toBe('vehicle');
+    expect((screen.getByLabelText('FSM Type') as HTMLSelectElement).value).toBe('vehicle');
   });
 
   it('lets the user change the per-page size', () => {
@@ -477,9 +477,9 @@ describe('StateMachineDebuggerPage — loading', () => {
 
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'FSM debugger' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'FSM Debugger' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /Loading/i })).toBeInTheDocument();
     // The KPI band is replaced by the spinner while loading.
-    expect(screen.queryByText('Total transitions')).toBeNull();
+    expect(screen.queryByText('Total Transitions')).toBeNull();
   });
 });

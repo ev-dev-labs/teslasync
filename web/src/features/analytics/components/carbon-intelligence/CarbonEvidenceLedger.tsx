@@ -8,9 +8,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { StatStrip, type StatMetric } from '@/components/data-display';
+import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { LayoutCard } from '@/components/layout';
+import { Grid } from '@/components/layout';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -29,50 +30,6 @@ export function CarbonEvidenceLedger({
       : period.netDisposition === 'balanced'
         ? t('carbon.evidence.netBalanced', 'At gas baseline')
         : t('carbon.evidence.netAvoided', 'Net avoided vs gas baseline');
-  const metrics: StatMetric[] = [
-    {
-      metricId: 'text', occurrenceId: 'carbon-period-energy',
-      label: t('carbon.evidence.energy', 'Charging energy'),
-      rawValue: resolved ? display.formatEnergy(period.totalEnergyWh) : null,
-      description: t('carbon.evidence.energyHint', 'Normalized once from the legacy API wire value'),
-      context: <><Zap className="h-5 w-5" aria-hidden="true" />{t('carbon.evidence.energyHint', 'Normalized once from the legacy API wire value')}</>,
-    },
-    {
-      metricId: 'text', occurrenceId: 'carbon-period-co2',
-      label: t('carbon.evidence.co2', 'Attributed charging CO₂'),
-      rawValue: resolved ? display.formatKg(period.totalCo2Kg) : null,
-      description: t('carbon.evidence.co2Hint', 'Energy attributed by backend model clock-hour'),
-      context: <><Factory className="h-5 w-5" aria-hidden="true" />{t('carbon.evidence.co2Hint', 'Energy attributed by backend model clock-hour')}</>,
-    },
-    {
-      metricId: 'text', occurrenceId: 'carbon-period-sessions',
-      label: t('carbon.evidence.sessions', 'Sessions scored'),
-      rawValue: resolved ? display.formatNumber(period.sessionsScored) : null,
-      description: t('carbon.evidence.sessionsHint', 'Positive-energy charging sessions'),
-      context: <><Activity className="h-5 w-5" aria-hidden="true" />{t('carbon.evidence.sessionsHint', 'Positive-energy charging sessions')}</>,
-    },
-    {
-      metricId: 'text', occurrenceId: 'carbon-period-intensity',
-      label: t('carbon.evidence.average', 'Energy-weighted intensity'),
-      rawValue: resolved ? display.formatIntensity(period.energyWeightedIntensityGPerKwh) : null,
-      description: t('carbon.evidence.averageHint', 'Derived from returned CO₂ and energy'),
-      context: <><Gauge className="h-5 w-5" aria-hidden="true" />{t('carbon.evidence.averageHint', 'Derived from returned CO₂ and energy')}</>,
-    },
-    {
-      metricId: 'text', occurrenceId: 'carbon-period-gas',
-      label: t('carbon.evidence.gas', 'Gas-car baseline'),
-      rawValue: resolved ? display.formatKg(period.gasBaselineCo2Kg) : null,
-      description: t('carbon.evidence.gasHint', 'Fixed 0.192 kg CO₂ per km'),
-      context: <><Fuel className="h-5 w-5" aria-hidden="true" />{t('carbon.evidence.gasHint', 'Fixed 0.192 kg CO₂ per km')}</>,
-    },
-    {
-      metricId: 'text', occurrenceId: 'carbon-period-net',
-      label: netLabel,
-      rawValue: resolved ? display.formatSignedKg(period.netAvoidedCo2Kg) : null,
-      description: t('carbon.evidence.netHint', 'Gas baseline minus attributed charging CO₂'),
-      context: <><CalendarRange className="h-5 w-5" aria-hidden="true" />{t('carbon.evidence.netHint', 'Gas baseline minus attributed charging CO₂')}</>,
-    },
-  ];
 
   return (
     <section
@@ -82,31 +39,91 @@ export function CarbonEvidenceLedger({
         'Selected-period carbon KPI and evidence ledger',
       )}
     >
-      <LayoutCard
-        title={t('carbon.evidence.title', 'Selected-period evidence ledger')}
-        actions={<CalendarRange className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
-      >
-        <CarbonSectionBody state={states.period}>
-          <StatStrip
-            id="carbon-period-evidence-metrics"
-            variant="embedded"
-            metrics={metrics}
-            period={analysis.window.availability === 'invalid' ? {
-              kind: 'unknown',
-              label: t('carbon.source.period', 'Selected-period summary'),
-              reason: t('carbon.source.invalidWindow', 'The date-window labels or RFC3339 boundaries are invalid; period interpretation is withheld.'),
-            } : {
-              kind: 'analysis',
-              label: t('carbon.source.periodScope', '{{start}} through {{end}} calendar labels', {
-                start: analysis.window.startLabel, end: analysis.window.endLabel,
-              }),
-              start: analysis.window.startInstant,
-              endExclusive: analysis.window.endInstantExclusive,
-              timezone: analysis.window.timezone,
-              completeness: 'unknown',
-              provenance: t('carbon.source.period', 'Selected-period summary'),
-            }}
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <CalendarRange
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
           />
+          {t('carbon.evidence.title', 'Selected-period evidence ledger')}
+        </PanelTitle>
+        <CarbonSectionBody state={states.period}>
+          <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
+            <MetricCard
+              label={t('carbon.evidence.energy', 'Charging energy')}
+              value={resolved ? display.formatEnergy(period.totalEnergyWh) : '—'}
+              subtitle={t(
+                'carbon.evidence.energyHint',
+                'Normalized once from the legacy API wire value',
+              )}
+              icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('carbon.evidence.co2', 'Attributed charging CO₂')}
+              value={resolved ? display.formatKg(period.totalCo2Kg) : '—'}
+              subtitle={t(
+                'carbon.evidence.co2Hint',
+                'Energy attributed by backend model clock-hour',
+              )}
+              icon={<Factory className="h-5 w-5" aria-hidden="true" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('carbon.evidence.sessions', 'Sessions scored')}
+              value={resolved
+                ? display.formatNumber(period.sessionsScored, 0)
+                : '—'}
+              subtitle={t(
+                'carbon.evidence.sessionsHint',
+                'Positive-energy charging sessions',
+              )}
+              icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+              color="blue"
+            />
+            <MetricCard
+              label={t('carbon.evidence.average', 'Energy-weighted intensity')}
+              value={resolved
+                ? display.formatIntensity(
+                  period.energyWeightedIntensityGPerKwh,
+                )
+                : '—'}
+              subtitle={t(
+                'carbon.evidence.averageHint',
+                'Derived from returned CO₂ and energy',
+              )}
+              icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('carbon.evidence.gas', 'Gas-car baseline')}
+              value={resolved
+                ? display.formatKg(period.gasBaselineCo2Kg)
+                : '—'}
+              subtitle={t(
+                'carbon.evidence.gasHint',
+                'Fixed 0.192 kg CO₂ per km',
+              )}
+              icon={<Fuel className="h-5 w-5" aria-hidden="true" />}
+              color="red"
+            />
+            <MetricCard
+              label={netLabel}
+              value={resolved
+                ? display.formatSignedKg(period.netAvoidedCo2Kg)
+                : '—'}
+              subtitle={t(
+                'carbon.evidence.netHint',
+                'Gas baseline minus attributed charging CO₂',
+              )}
+              icon={<CalendarRange className="h-5 w-5" aria-hidden="true" />}
+              color={period.netDisposition === 'excess'
+                ? 'red'
+                : period.netDisposition === 'unknown'
+                  ? 'blue'
+                  : 'green'}
+            />
+          </Grid>
           {period.availability === 'empty' ? (
             <AlertBanner className="mt-4" variant="info">
               {t(
@@ -123,7 +140,7 @@ export function CarbonEvidenceLedger({
             </AlertBanner>
           ) : null}
         </CarbonSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

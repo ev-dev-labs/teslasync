@@ -89,10 +89,10 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
       ? logs
       : logs.filter((_, index) => severities[index] === severityFilter)
     const selectedSeverityLabel = severityFilter === 'critical'
-      ? t('notifications.bellPopover.sentenceCritical', 'critical')
+      ? t('notifications.bellPopover.filterCritical', 'Critical')
       : severityFilter === 'warn'
-        ? t('notifications.bellPopover.sentenceWarning', 'warning')
-        : t('notifications.bellPopover.sentenceInfo', 'info')
+        ? t('notifications.bellPopover.filterWarning', 'Warning')
+        : t('notifications.bellPopover.filterInfo', 'Info')
 
     const vehicleMap = useMemo(() => {
       const m: Record<number, Vehicle> = {}
@@ -369,7 +369,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
               {severityFilter === 'all'
                 ? t('notifications.bellPopover.viewAll', 'Open full inbox')
                 : t('notifications.bellPopover.viewAllSeverity', 'See all {{severity}} unread', {
-                    severity: selectedSeverityLabel,
+                    severity: selectedSeverityLabel.toLowerCase(),
                   })}
             </span>
             <Icons.next className="h-3.5 w-3.5" aria-hidden="true" />

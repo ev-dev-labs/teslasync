@@ -279,12 +279,12 @@ describe('ChargingSection — stat row values', () => {
       },
     });
 
-    expect(screen.getByText('50.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('7.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('50.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('7.0 kW')).toBeInTheDocument();
     expect(screen.getByText('$12.50')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     // Regression guard: the raw SI magnitude must NOT leak through.
-    expect(screen.queryByText('50,000.00 kWh')).toBeNull();
+    expect(screen.queryByText('50,000.0 kWh')).toBeNull();
   });
 
   it('null-safe defaults render zeroed stats rather than NaN / blank tiles', () => {
@@ -298,11 +298,11 @@ describe('ChargingSection — stat row values', () => {
       dailyEnergyData: zeroEnergy,
     });
 
-    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('0.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.0 kW')).toBeInTheDocument();
     expect(screen.getByText('$0.00')).toBeInTheDocument();
     // The "Sessions" tile falls back to fmtInt(0) → "0".
-    expect(screen.getByText('Total energy added')).toBeInTheDocument();
+    expect(screen.getByText('Total Energy Added')).toBeInTheDocument();
   });
 
   it('always renders every stat label + the section title', () => {
@@ -310,9 +310,9 @@ describe('ChargingSection — stat row values', () => {
 
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText('Sessions')).toBeInTheDocument();
-    expect(screen.getByText('Total energy added')).toBeInTheDocument();
-    expect(screen.getByText('Avg charge rate')).toBeInTheDocument();
-    expect(screen.getByText('Total cost')).toBeInTheDocument();
+    expect(screen.getByText('Total Energy Added')).toBeInTheDocument();
+    expect(screen.getByText('Avg Charge Rate')).toBeInTheDocument();
+    expect(screen.getByText('Total Cost')).toBeInTheDocument();
   });
 });
 
@@ -323,7 +323,7 @@ describe('ChargingSection — energy-vs-last-week badge', () => {
       metrics: { chargeEnergyAddedWh: 60_000, prevChargeEnergyWh: 50_000 },
     });
 
-    const badge = screen.getByText('20.00%');
+    const badge = screen.getByText('20.0%');
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain('green');
     expect(badge.className).not.toContain('yellow');
@@ -334,7 +334,7 @@ describe('ChargingSection — energy-vs-last-week badge', () => {
       metrics: { chargeEnergyAddedWh: 40_000, prevChargeEnergyWh: 50_000 },
     });
 
-    const badge = screen.getByText('-20.00%');
+    const badge = screen.getByText('-20.0%');
     expect(badge).toBeInTheDocument();
     expect(badge.className).toContain('yellow');
   });
@@ -361,6 +361,6 @@ describe('ChargingSection — structure', () => {
     expect(icon).not.toBeNull();
     expect(icon).toHaveAttribute('aria-hidden', 'true');
     // The panel always renders its caption regardless of data state.
-    expect(container.textContent).toContain('Daily energy added (kWh)');
+    expect(container.textContent).toContain('Daily Energy Added (kWh)');
   });
 });

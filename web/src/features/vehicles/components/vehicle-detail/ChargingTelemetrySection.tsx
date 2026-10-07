@@ -4,17 +4,15 @@ import { Zap, Activity, BatteryCharging, Battery } from 'lucide-react'
 import { GlassPanel, PanelTitle } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
-
+import { fmtNumber } from '@/lib/numberFormat'
 import { useUnits } from '@/hooks/useUnits'
 import type { ChargingTelemetry } from '@/api/types'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargingTelemetrySectionProps {
   chargingTelemetry: ChargingTelemetry | null | undefined
 }
 
 export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetrySectionProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatDistance, formatSpeed, formatPower, formatEnergy } = useUnits()
 
@@ -22,12 +20,12 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
     <GlassPanel className="p-6">
       <PanelTitle className="mb-4 flex items-center gap-2">
         <Zap className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-        {t('vehicles.detail.chargingTelemetry', 'Charging telemetry')}
+        {t('vehicles.detail.chargingTelemetry', 'Charging Telemetry')}
       </PanelTitle>
       {chargingTelemetry ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 3xl:grid-cols-8">
           <MetricCard
-            label={t('vehicles.detail.chargerPower', 'Charger power')}
+            label={t('vehicles.detail.chargerPower', 'Charger Power')}
             value={
               chargingTelemetry.charger_power_w != null
                 ? formatPower(chargingTelemetry.charger_power_w)
@@ -57,7 +55,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             color="purple"
           />
           <MetricCard
-            label={t('vehicles.detail.energyAdded', 'Energy added')}
+            label={t('vehicles.detail.energyAdded', 'Energy Added')}
             value={
               chargingTelemetry.charge_energy_added_wh != null
                 ? formatEnergy(chargingTelemetry.charge_energy_added_wh)
@@ -67,13 +65,13 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             color="green"
           />
           <MetricCard
-            label={t('vehicles.detail.chargingState', 'Charging state')}
+            label={t('vehicles.detail.chargingState', 'Charging State')}
             value={chargingTelemetry.charging_state ?? '—'}
             icon={<Battery className="h-4 w-4" aria-hidden="true" />}
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.batteryLevel', 'Battery level')}
+            label={t('vehicles.detail.batteryLevel', 'Battery Level')}
             value={
               chargingTelemetry.battery_level != null
                 ? `${fmtNumber(chargingTelemetry.battery_level)}%`
@@ -83,7 +81,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             color="green"
           />
           <MetricCard
-            label={t('vehicles.detail.chargeRate', 'Charge rate')}
+            label={t('vehicles.detail.chargeRate', 'Charge Rate')}
             value={
               chargingTelemetry.range_added_meters_per_hour != null
                 ? formatSpeed(chargingTelemetry.range_added_meters_per_hour / 3600)
@@ -93,7 +91,7 @@ export function ChargingTelemetrySection({ chargingTelemetry }: ChargingTelemetr
             color="cyan"
           />
           <MetricCard
-            label={t('vehicles.detail.rangeAdded', 'Range added')}
+            label={t('vehicles.detail.rangeAdded', 'Range Added')}
             value={
               chargingTelemetry.range_added_meters != null
                 ? formatDistance(chargingTelemetry.range_added_meters)

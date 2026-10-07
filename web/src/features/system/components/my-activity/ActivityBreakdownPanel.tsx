@@ -11,9 +11,8 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import type { BreakdownSlice } from './myActivityAnalytics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ActivityBreakdownPanelProps {
   title: ReactNode;
@@ -42,7 +41,6 @@ export function ActivityBreakdownPanel({
   emptyIcon,
   className,
 }: ActivityBreakdownPanelProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(() => slices ?? [], [slices]);
   const max = useMemo(
@@ -88,7 +86,7 @@ export function ActivityBreakdownPanel({
                     value={slice.count ?? 0}
                     max={max}
                     color={slice.color}
-                    sublabel={`${fmtInt(slice.count ?? 0)} · ${fmtPercent(slice.percent ?? 0)}`}
+                    sublabel={`${fmtInt(slice.count ?? 0)} · ${fmtPercent(slice.percent ?? 0, 0)}`}
                   />
                 </li>
               );

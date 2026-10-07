@@ -24,8 +24,7 @@
 import { useTranslation } from 'react-i18next'
 import { GlassPanel, ConfirmDialog } from '@/components/ui'
 import { VisuallyHidden } from '@/components/a11y'
-import { Skeleton, QueryError } from '@/components/feedback'
-import { deriveDataState } from '@/api/dataState'
+import { Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import {
   useTotpEnrollmentFlow,
@@ -39,7 +38,6 @@ export function TOTPEnrollmentSection() {
   const { t } = useTranslation('settings')
   const flow = useTotpEnrollmentFlow()
   const { status } = flow
-  const statusState = deriveDataState(status)
 
   if (status.isLoading) {
     return (
@@ -63,16 +61,6 @@ export function TOTPEnrollmentSection() {
     )
   }
 
-  if (statusState.fatalError) {
-    return (
-      <FadeIn delay={0.05}>
-        <GlassPanel className="p-4 sm:p-5">
-          <QueryError error={statusState.fatalError} onRetry={() => void status.refetch()} />
-        </GlassPanel>
-      </FadeIn>
-    )
-  }
-
   if (!status.data || status.data.mode === 'open') {
     return (
       <FadeIn delay={0.05}>
@@ -84,7 +72,7 @@ export function TOTPEnrollmentSection() {
   const sessionStatus = status.data
   const activated = sessionStatus.activated === true
   const lastUsedAt = activated ? sessionStatus.last_used_at : undefined
-  const backupRemaining = activated ? sessionStatus.backup_codes_remaining : 0
+  const backupRemaining = activated ? sessionStatus.backup_codes_remaining ?? 0 : 0
 
   return (
     <>

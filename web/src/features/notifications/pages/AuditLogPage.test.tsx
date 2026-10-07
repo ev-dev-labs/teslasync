@@ -26,7 +26,7 @@
  *      cells or a crash. Guards the `?? '—'` hardening in the column renderers.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -99,13 +99,8 @@ vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: vi.fn() };
 });
-vi.mock('@/lib/csvExport', async importOriginal => {
-  const actual = await importOriginal<typeof import('@/lib/csvExport')>();
-  return { ...actual, downloadCSV: vi.fn(), downloadJSON: vi.fn() };
-});
 
 import { request, ApiError } from '@/api/client';
-import { downloadCSV, downloadJSON } from '@/lib/csvExport';
 import AuditLogPage from './AuditLogPage';
 import type { AuditLogEntry } from '@/types/admin';
 
@@ -137,89 +132,28 @@ function renderPage() {
       queries: { retry: false, retryDelay: 0, gcTime: 0 },
     },
   });
-  const view = render(
+  return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <AuditLogPage />
       </QueryClientProvider>
     </MemoryRouter>,
   );
-  return { ...view, client };
 }
 
 beforeEach(() => {
   mockedRequest.mockReset();
-  vi.mocked(downloadCSV).mockClear();
-  vi.mocked(downloadJSON).mockClear();
   localStorage.clear();
 });
 
 describe('AuditLogPage — data states', () => {
-  it('recovers a fatal source failure only after the explicit retry action', async () => {
-    mockedRequest.mockRejectedValue(new ApiError('audit unavailable', 500));
-    renderPage();
-    expect(await screen.findByRole('alert')).toHaveTextContent('audit unavailable');
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
-    expect(mockedRequest).toHaveBeenCalledTimes(1);
-    mockedRequest.mockResolvedValue(AUDIT);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(await screen.findByText('settings.update')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-  });
-  it('keeps complete typography and exports every loaded value beyond the first client page', async () => {
-    const details = 'Complete first diagnostic line\nComplete second diagnostic line without truncation';
-    const entries = Array.from({ length: 63 }, (_, index) => ({
-      ...AUDIT[0], id: String(index + 1),
-      action: index === 62 ? 'Complete final loaded action' : `loaded action ${index}`,
-      resource: `complete resource ${index}`,
-      details: index === 62 ? 'Complete final export details' : details,
-    }));
-    mockedRequest.mockResolvedValue(entries);
-    renderPage();
-    await screen.findByRole('table');
-    const cells = screen.getAllByText(/Complete second diagnostic line/);
-    expect(cells[0]).toHaveClass('whitespace-pre-wrap', 'break-words');
-    expect(cells[0]).not.toHaveClass('truncate', 'max-w-xs');
-    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
-    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
-    const csv = vi.mocked(downloadCSV).mock.calls[0][1];
-    expect(csv).toContain(details);
-    expect(csv).toContain('Complete final loaded action');
-    expect(csv).toContain('Complete final export details');
-    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
-    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
-    const rows = vi.mocked(downloadJSON).mock.calls[0][1];
-    expect(rows).toHaveLength(63);
-    expect(rows).toEqual(expect.arrayContaining([expect.objectContaining({
-      action: 'Complete final loaded action', resource: 'complete resource 62',
-      details: 'Complete final export details',
-    })]));
-    expect(mockedRequest).toHaveBeenCalledWith('/system/audit', expect.anything());
-  });
-
-  it('retains search, table values and export controls after a failed refresh', async () => {
-    mockedRequest.mockResolvedValue(AUDIT);
-    const { client } = renderPage();
-    await screen.findByText('settings.update');
-    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), { target: { value: 'theme' } });
-    await waitFor(() => expect(screen.queryByText('apikey.revoke')).not.toBeInTheDocument());
-    mockedRequest.mockRejectedValue(new ApiError('refresh unavailable', 500));
-    await act(async () => { await client.refetchQueries({ queryKey: ['audit-logs'] }); });
-    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.getByText('settings.update')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(SEARCH_PLACEHOLDER)).toHaveValue('theme');
-    expect(screen.getByRole('button', { name: 'Export list' })).toBeInTheDocument();
-    expect(screen.queryByText('Failed to load audit logs')).not.toBeInTheDocument();
-  });
   it('renders five skeleton rows while the audit fetch is in flight', () => {
     // A never-resolving fetch keeps the query in its loading state.
     mockedRequest.mockReturnValue(new Promise<AuditLogEntry[]>(() => {}));
     const { container } = renderPage();
 
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
-    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent Activity' })).toBeInTheDocument();
     // No table has mounted yet — skeletons stand in for it.
     expect(screen.queryByRole('table')).toBeNull();
   });
@@ -239,29 +173,10 @@ describe('AuditLogPage — data states', () => {
       expect(screen.getByRole('columnheader', { name: header })).toBeInTheDocument();
     }
 
-    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument();
+    // CSV export is reachable by its accessible name (icon-only control).
+    expect(screen.getByRole('button', { name: 'Download CSV' })).toBeInTheDocument();
 
     // The hook hits the un-prefixed path (request() adds /api/v1).
-    expect(mockedRequest).toHaveBeenCalledWith('/system/audit', expect.anything());
-  });
-
-  it('keeps checklists disabled when a bounded audit response spans client pages', async () => {
-    const entries: AuditLogEntry[] = Array.from({ length: 63 }, (_, index) => ({
-      ...AUDIT[0],
-      id: String(index + 1),
-      action: index === 62 ? 'audit.last.loaded.action' : 'audit.update',
-    }));
-    mockedRequest.mockResolvedValue(entries);
-    renderPage();
-
-    const table = await screen.findByRole('table');
-    expect(within(table).getAllByRole('row')).toHaveLength(51);
-    expect(screen.queryByText('audit.last.loaded.action')).not.toBeInTheDocument();
-    const actionHeader = within(table).getByRole('columnheader', { name: 'Action' });
-    expect(within(actionHeader).queryByRole('button', { name: /filter/i }))
-      .not.toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledWith('/system/audit', expect.anything());
   });
 
@@ -273,7 +188,7 @@ describe('AuditLogPage — data states', () => {
     expect(screen.queryByRole('table')).toBeNull();
     // Search + export chrome only appears once there is data to filter.
     expect(screen.queryByPlaceholderText(SEARCH_PLACEHOLDER)).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Export list' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Download CSV' })).toBeNull();
   });
 
   it('announces a fetch failure through a role="alert" region', async () => {
@@ -345,6 +260,6 @@ describe('AuditLogPage — null safety', () => {
     // Four cells (time, action, resource, details) each collapse to "—".
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
     // The page did not crash — its heading is still present.
-    expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Recent Activity' })).toBeInTheDocument();
   });
 });

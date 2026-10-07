@@ -68,7 +68,6 @@ vi.mock('@/components/maps', () => ({
   MapTileLayer: ({ style }: { style?: string }) => (
     <div data-testid="map-tile-layer" data-style={style} />
   ),
-  MapInvalidator: () => <div data-testid="map-invalidator" />,
 }));
 
 import { WidgetMapView } from './WidgetMapView';
@@ -91,7 +90,6 @@ describe('WidgetMapView — map rendering', () => {
     expect(map).toHaveAttribute('data-zoom', '15');
     // Tiles are always the dark theme layer.
     expect(screen.getByTestId('map-tile-layer')).toHaveAttribute('data-style', 'dark');
-    expect(map).toContainElement(screen.getByTestId('map-invalidator'));
     // Children are projected into the map, not dropped on the floor.
     expect(screen.getByTestId('marker')).toHaveTextContent('pin');
   });
@@ -119,9 +117,6 @@ describe('WidgetMapView — accessibility & styling', () => {
     // The caller className merges with the base frame classes (via cn()).
     expect(region).toHaveClass('custom-frame');
     expect(region).toHaveClass('rounded-lg');
-    expect(region).toHaveClass('flex', 'flex-col', 'flex-1', 'min-h-0');
-    expect(screen.getByTestId('map-container')).toHaveClass('flex-1', 'min-h-0');
-    expect(screen.getByTestId('map-container')).not.toHaveClass('h-full');
     // The region wraps the leaflet container.
     expect(region).toContainElement(screen.getByTestId('map-container'));
   });

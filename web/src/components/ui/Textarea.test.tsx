@@ -98,14 +98,13 @@ describe('Textarea — label association', () => {
     expect(label.getAttribute('for')).toBe(el.id);
   });
 
-  it('uses a generated id independent of the visible label', () => {
+  it('slugifies a multi-word label into the shared id', () => {
     render(<Textarea label="Release Notes" />);
     const el = screen.getByRole('textbox', { name: 'Release Notes' });
-    expect(el.id).toBeTruthy();
-    expect(el.id).not.toBe('release-notes');
+    expect(el.id).toBe('release-notes');
   });
 
-  it('preserves an explicit caller id', () => {
+  it('prefers an explicit id over the label-derived slug', () => {
     render(<Textarea label="Notes" id="custom-id" />);
     const el = screen.getByRole('textbox', { name: 'Notes' });
     expect(el.id).toBe('custom-id');
@@ -237,18 +236,19 @@ describe('Textarea — error a11y wiring', () => {
     const textarea = screen.getByRole('textbox', { name: 'Notes' });
     expect(textarea).toHaveAttribute(
       'aria-describedby',
-      `external-help ${textarea.id}-hint`,
+      'external-help notes-hint',
     );
-    expect(document.getElementById(`${textarea.id}-hint`)).toHaveTextContent(
+    expect(document.getElementById('notes-hint')).toHaveTextContent(
       'Up to 120 characters',
     );
   });
 });
 
 describe('Textarea — help icon', () => {
-  it('names implicit field help using the visible label, not the generated id', () => {
+  it('renders a HelpIcon whose accessible name defaults to "Help for {id}"', () => {
     render(<Textarea label="Notes" help={{ content: 'Explain the field' }} />);
-    expect(screen.getByRole('button', { name: 'Help for Notes' })).toBeInTheDocument();
+    // textareaId derives from the label slug -> "notes".
+    expect(screen.getByRole('button', { name: 'Help for notes' })).toBeInTheDocument();
   });
 
   it('honours an explicit help.for override for the trigger label', () => {

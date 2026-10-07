@@ -17,4 +17,4 @@ export interface ChargeAdvisorComponentProps {
   state: ChargeAdvisorQueryState;
 }
 
-export type ChargeAdvisorDependency = 'drive' | 'charging' | 'both' | 'live';
+export type ChargeAdvisorDependency = 'drive' | 'charging' | 'both';

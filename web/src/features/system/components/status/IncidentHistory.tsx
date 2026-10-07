@@ -4,15 +4,11 @@ import { CalendarDays, ChevronRight } from 'lucide-react'
 import { useIncidents } from '@/api/hooks/useIncidents'
 import { GlassPanel, PanelTitle, Text, Caption, Badge } from '@/components/ui'
 import { DateTime } from '@/components/data-display'
-import { Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback'
-import { useDataState } from '@/hooks/useDataState'
+import { Skeleton, QueryError } from '@/components/feedback'
 
 export function IncidentHistory() {
   const { t } = useTranslation()
-  const query = useIncidents({ limit: 10 })
-  const { data, isLoading, refetch } = query
-  const state = useDataState(query, { provenance: 'historical' })
-  const error = state.fatalError
+  const { data, isLoading, error, refetch } = useIncidents({ limit: 10 })
   const incidents = data?.incidents ?? []
 
   return (
@@ -24,7 +20,6 @@ export function IncidentHistory() {
       <Caption className="mb-4 block">
         {t('systemStatus.incidentHistory.scope', 'Recorded incidents only; no uptime percentage is inferred from missing monitoring data.')}
       </Caption>
-      <StaleRefreshWarning state={state} label={t('systemStatus.incidentHistory.title', 'Recent incidents')} />
       {isLoading && !data ? (
         <div role="status" aria-label={t('systemStatus.incidentHistory.loading', 'Loading incident history')}>
           <Skeleton className="h-16" />
@@ -44,7 +39,7 @@ export function IncidentHistory() {
                 className="flex min-w-0 items-center gap-3 rounded-md py-3 hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
               >
                 <div className="min-w-0 flex-1">
-                  <Text as="span" variant="bodySm" weight="medium" className="block break-words">
+                  <Text as="span" variant="bodySm" weight="medium" className="block truncate">
                     {incident.title || t('systemStatus.incidentHistory.untitled', 'Untitled incident')}
                   </Text>
                   <Caption className="block">

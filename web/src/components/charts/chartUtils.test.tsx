@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { isValidElement, type ReactElement } from 'react'
 import { CartesianGrid } from 'recharts'
 import {
@@ -15,13 +15,8 @@ import {
 } from './chartUtils'
 import { CHART_COLORS as SRC_CHART_COLORS, CHART_COLORS_NEON } from '../../lib/colors'
 import { chartTokens } from '../../lib/tokens'
-import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/
-beforeEach(() => {
-  setGlobalPrecision(2)
-  setGlobalLocale('en-US')
-})
 
 describe('safe', () => {
   it('returns finite numbers unchanged', () => {
@@ -54,12 +49,9 @@ describe('safe', () => {
 })
 
 describe('fmt', () => {
-  it('defaults to settings precision and preserves explicit precision', () => {
-    expect(fmt(3.14159)).toBe('3.14')
-    expect(fmt(2)).toBe('2.00')
-    setGlobalPrecision(3)
-    expect(fmt(3.14159)).toBe('3.142')
-    expect(fmt(3.14159, 1)).toBe('3.1')
+  it('defaults to a single decimal place', () => {
+    expect(fmt(3.14159)).toBe('3.1')
+    expect(fmt(2)).toBe('2.0')
   })
 
   it('honors an explicit decimal count (and rounds)', () => {
@@ -69,10 +61,10 @@ describe('fmt', () => {
   })
 
   it('routes nullish / non-numeric input through safe() to 0', () => {
-    expect(fmt(null)).toBe('0.00')
-    expect(fmt(undefined)).toBe('0.00')
-    expect(fmt(NaN)).toBe('0.00')
-    expect(fmt('nope')).toBe('0.00')
+    expect(fmt(null)).toBe('0.0')
+    expect(fmt(undefined)).toBe('0.0')
+    expect(fmt(NaN)).toBe('0.0')
+    expect(fmt('nope')).toBe('0.0')
   })
 
   it('adds locale grouping separators for large magnitudes', () => {

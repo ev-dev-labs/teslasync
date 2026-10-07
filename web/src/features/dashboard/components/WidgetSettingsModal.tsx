@@ -43,7 +43,7 @@ export function WidgetSettingsModal({
 
   const vehicleOptions = useMemo(
     () => [
-      { value: 'all', label: t('dashboard.settings.allVehicles', 'All vehicles (first)') },
+      { value: 'all', label: t('dashboard.settings.allVehicles', 'All Vehicles (first)') },
       ...vehicleList.map((v) => ({
         value: v.id.toString(),
         label: v.display_name || t('dashboard.settings.vehicleName', 'Vehicle {{id}}', { id: v.id }),
@@ -88,9 +88,9 @@ export function WidgetSettingsModal({
         )}
 
         {/* Refresh rate */}
-        <FormSection title={t('dashboard.settings.refreshInterval', 'Refresh interval')}>
+        <FormSection title={t('dashboard.settings.refreshInterval', 'Refresh Interval')}>
           <UiSelect
-            aria-label={t('dashboard.settings.refreshInterval', 'Refresh interval')}
+            aria-label={t('dashboard.settings.refreshInterval', 'Refresh Interval')}
             value={config.refreshRate?.toString() ?? 'default'}
             options={[
               { value: 'default', label: t('dashboard.settings.default', 'Default') },
@@ -111,9 +111,9 @@ export function WidgetSettingsModal({
 
         {/* Time range (for chart widgets) */}
         {isChartWidget && (
-          <FormSection title={t('dashboard.settings.timeRange', 'Time range')}>
+          <FormSection title={t('dashboard.settings.timeRange', 'Time Range')}>
             <UiSelect
-              aria-label={t('dashboard.settings.timeRange', 'Time range')}
+              aria-label={t('dashboard.settings.timeRange', 'Time Range')}
               value={config.timeRange ?? '7d'}
               options={[
                 { value: '24h', label: t('dashboard.settings.24h', 'Last 24 hours') },

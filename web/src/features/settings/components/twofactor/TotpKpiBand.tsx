@@ -9,17 +9,15 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldCheck, ShieldAlert, ShieldQuestion, Clock, KeyRound, Smartphone } from 'lucide-react'
-import type { StatMetric } from '@/components/data-display'
-import { SettingsSummaryBrief } from '../operationalbrief-all/SettingsSummaryBrief'
+import { MetricCard } from '@/components/data-display'
+import { StatSkeleton } from '@/components/feedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import type { NeonColor } from '@/lib/tokens'
 import type { TOTPStatus } from '@/api/types'
-import { knownNumber } from '@/api/dataState'
 
 interface TotpKpiBandProps {
   data: TOTPStatus | undefined
   isLoading: boolean
-  retained?: boolean
 }
 
 interface KpiCell {
@@ -31,14 +29,22 @@ interface KpiCell {
   icon: ReactNode
 }
 
-export function TotpKpiBand({ data, isLoading, retained = false }: TotpKpiBandProps) {
+export function TotpKpiBand({ data, isLoading }: TotpKpiBandProps) {
   const { t } = useTranslation('settings')
   const { formatDateTime } = useDateFormat()
+
+  if (isLoading) {
+    return (
+      <section aria-label={t('totp.kpi.aria', 'Two-factor status summary')}>
+        <StatSkeleton count={4} />
+      </section>
+    )
+  }
 
   const session = data && data.mode === 'session' ? data : null
   const isOpen = !data || data.mode === 'open'
   const activated = session?.activated === true
-  const backupRemaining = knownNumber(session?.backup_codes_remaining)
+  const backupRemaining = session?.backup_codes_remaining ?? 0
   const lastUsedAt = session?.last_used_at
   const dash = t('common.dash', '—')
 
@@ -84,7 +90,7 @@ export function TotpKpiBand({ data, isLoading, retained = false }: TotpKpiBandPr
     {
       key: 'backup',
       label: t('totp.backupCodesRemaining.label', 'Backup codes remaining'),
-      value: activated ? backupRemaining ?? dash : dash,
+      value: activated ? backupRemaining : dash,
       color: 'purple',
       icon: <KeyRound className="h-5 w-5" aria-hidden="true" />,
     },
@@ -97,27 +103,22 @@ export function TotpKpiBand({ data, isLoading, retained = false }: TotpKpiBandPr
       icon: <Smartphone className="h-5 w-5" aria-hidden="true" />,
     },
   ]
-  const metrics: readonly StatMetric[] = cells.map(cell => ({
-    metricId: cell.key === 'backup' ? 'count' : cell.key === 'status' ? 'status' : 'text',
-    occurrenceId: `totp-${cell.key}`,
-    label: cell.label,
-    rawValue: isLoading ? null : cell.key === 'backup'
-      ? activated ? session?.backup_codes_remaining : null
-      : cell.value === dash ? null : cell.value,
-    context: <>{cell.icon}{cell.subtitle}</>,
-  }))
 
   return (
     <section
       aria-label={t('totp.kpi.aria', 'Two-factor status summary')}
-      aria-busy={isLoading}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
     >
-      <SettingsSummaryBrief title={t('totp.brief.title', 'Two-factor overview')}
-        description={t('totp.brief.description', 'Protection status, last verification and remaining recovery codes for this account. Enrollment and recovery controls remain unchanged.')}
-        source={t('totp.brief.source', 'Account two-factor status')}
-        scope={t('totp.brief.scope', 'Latest credential status · last verification is a recorded event, not a date-range total')}
-        metrics={metrics} loading={isLoading} retained={retained}
-        unavailable={!session} testId="totp-summary" />
+      {cells.map((cell) => (
+        <MetricCard
+          key={cell.key}
+          label={cell.label}
+          value={cell.value}
+          subtitle={cell.subtitle}
+          color={cell.color}
+          icon={cell.icon}
+        />
+      ))}
     </section>
   )
 }

@@ -83,7 +83,6 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         'Monthly average DC and AC charging speed line chart',
       )}
       data={tableData}
-      exportData={tableData}
       dataColumns={dataColumns}
       empty={monthlyTrend.length === 0}
       height={280}

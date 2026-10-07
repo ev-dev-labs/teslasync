@@ -86,16 +86,16 @@ function renderConfig(
 }
 
 const CONFIG_LABELS = [
-  'Car type',
+  'Car Type',
   'Trim',
-  'Exterior color',
+  'Exterior Color',
   'Wheels',
-  'Roof color',
-  'Charge port',
-  'Right-hand drive',
-  'Europe vehicle',
-  'Offroad lightbar',
-  'Rear seat heaters',
+  'Roof Color',
+  'Charge Port',
+  'Right-Hand Drive',
+  'Europe Vehicle',
+  'Offroad Lightbar',
+  'Rear Seat Heaters',
   'Sunroof',
   'Software',
 ] as const
@@ -112,7 +112,7 @@ describe('VehicleConfigSection', () => {
     // The heading (h3 via PanelTitle) is always present — the section is never
     // hidden, even in the empty branch.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Vehicle configuration' }),
+      screen.getByRole('heading', { level: 3, name: 'Vehicle Configuration' }),
     ).toBeInTheDocument()
 
     for (const label of CONFIG_LABELS) {
@@ -210,7 +210,7 @@ describe('VehicleConfigSection', () => {
 
     // Title still renders; the body degrades to the i18n empty message.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Vehicle configuration' }),
+      screen.getByRole('heading', { level: 3, name: 'Vehicle Configuration' }),
     ).toBeInTheDocument()
     const empty = screen.getByRole('status')
     expect(empty).toHaveTextContent('No configuration data available')
@@ -220,7 +220,7 @@ describe('VehicleConfigSection', () => {
     )
 
     // None of the config rows leak through in the empty branch.
-    expect(screen.queryByText('Car type')).toBeNull()
+    expect(screen.queryByText('Car Type')).toBeNull()
     expect(screen.queryByText('Software')).toBeNull()
   })
 
@@ -244,7 +244,7 @@ describe('VehicleConfigSection', () => {
     )
 
     // Labels are still present (the section never blanks out)…
-    expect(screen.getByText('Car type')).toBeInTheDocument()
+    expect(screen.getByText('Car Type')).toBeInTheDocument()
     // …all twelve value cells are em-dashes…
     expect(screen.getAllByText(DASH)).toHaveLength(12)
     // …never the literal "undefined", and this is the data branch (not empty).
@@ -256,17 +256,17 @@ describe('VehicleConfigSection', () => {
     renderConfig()
 
     const expected: ReadonlyArray<readonly [string, string]> = [
-      ['vehicles.detail.vehicleConfig', 'Vehicle configuration'],
-      ['vehicles.detail.carType', 'Car type'],
+      ['vehicles.detail.vehicleConfig', 'Vehicle Configuration'],
+      ['vehicles.detail.carType', 'Car Type'],
       ['vehicles.detail.trim', 'Trim'],
-      ['vehicles.detail.color', 'Exterior color'],
+      ['vehicles.detail.color', 'Exterior Color'],
       ['vehicles.detail.wheels', 'Wheels'],
-      ['vehicles.detail.roofColor', 'Roof color'],
-      ['vehicles.detail.chargePort', 'Charge port'],
-      ['vehicles.detail.rhd', 'Right-hand drive'],
-      ['vehicles.detail.europeVehicle', 'Europe vehicle'],
-      ['vehicles.detail.offroadLightbar', 'Offroad lightbar'],
-      ['vehicles.detail.rearSeatHeaters', 'Rear seat heaters'],
+      ['vehicles.detail.roofColor', 'Roof Color'],
+      ['vehicles.detail.chargePort', 'Charge Port'],
+      ['vehicles.detail.rhd', 'Right-Hand Drive'],
+      ['vehicles.detail.europeVehicle', 'Europe Vehicle'],
+      ['vehicles.detail.offroadLightbar', 'Offroad Lightbar'],
+      ['vehicles.detail.rearSeatHeaters', 'Rear Seat Heaters'],
       ['vehicles.detail.sunroofInstalled', 'Sunroof'],
       ['vehicles.detail.softwareVersion', 'Software'],
     ]

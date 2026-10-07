@@ -308,9 +308,10 @@ describe('SelectedTripPreview — accessibility', () => {
   it('marks the decorative shield icons aria-hidden so they are not announced', () => {
     const { container } = renderPreview(makeTrip({ total_cost: 5 }));
 
-    // The privacy note's shield is decorative; LayoutCard owns the plain heading.
+    // The two ShieldCheck glyphs (heading + privacy note) are the only svgs the
+    // component renders, and both are decorative — every one is aria-hidden.
     const svgs = Array.from(container.querySelectorAll('svg'));
-    expect(svgs.length).toBe(1);
+    expect(svgs.length).toBe(2);
     for (const svg of svgs) {
       expect(svg).toHaveAttribute('aria-hidden', 'true');
     }

@@ -168,11 +168,9 @@ describe('OptimizerSection — charging habits', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Charging Habits' })).toBeInTheDocument();
-    expect(screen.getByText('4.50')).toBeInTheDocument(); // sessions/week (1 dp)
-    expect(screen.getByText('85.00%')).toBeInTheDocument(); // most-used recorded location
-    expect(screen.getByText('Most-used recorded location')).toBeInTheDocument();
-    expect(screen.queryByText('Home charging')).not.toBeInTheDocument();
-    expect(screen.getByText('80.00%')).toBeInTheDocument(); // avg charge target
+    expect(screen.getByText('4.5')).toBeInTheDocument(); // sessions/week (1 dp)
+    expect(screen.getByText('85%')).toBeInTheDocument(); // home charging
+    expect(screen.getByText('80%')).toBeInTheDocument(); // avg charge target
     expect(screen.getByText('22:00')).toBeInTheDocument(); // common start hour
     expect(screen.getByText('Wednesday')).toBeInTheDocument(); // common day
   });
@@ -199,18 +197,6 @@ describe('OptimizerSection — charging habits', () => {
     renderSection({ schedule: { most_common_start_hour: 0 } });
     // `!= null` guard keeps the falsy-but-valid 0 — it must not become "—".
     expect(screen.getByText('0:00')).toBeInTheDocument();
-  });
-
-  it.each([0, -1, NaN, Infinity, 101])('shows unknown instead of a location share for %s', (value) => {
-    renderSection({ schedule: { home_charging_pct: value } });
-    expect(screen.getByText('Most-used recorded location').closest('[data-operational-metric]')).toHaveTextContent('—');
-    expect(screen.getByText('Location clusters do not confirm home charging. Missing location evidence is shown as unknown.')).toBeInTheDocument();
-  });
-
-  it('preserves a fully recorded location share without claiming it is home', () => {
-    renderSection({ schedule: { home_charging_pct: 100 } });
-    expect(screen.getByText('Most-used recorded location').closest('[data-operational-metric]')).toHaveTextContent('100.00%');
-    expect(screen.queryByText('Home charging')).not.toBeInTheDocument();
   });
 });
 
@@ -259,19 +245,18 @@ describe('OptimizerSection — cost analysis', () => {
     renderSection();
 
     expect(screen.getByRole('heading', { name: 'Cost Analysis' })).toBeInTheDocument();
-    expect(screen.getByText('$0.42/kWh')).toBeInTheDocument();
-    expect(screen.getByText('$0.11/kWh')).toBeInTheDocument();
-    expect(screen.getByText('Hourly costs combine recorded charging locations, not a confirmed tariff. Savings are illustrative, not guaranteed.')).toBeInTheDocument();
+    expect(screen.getByText('$0.420/kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.110/kWh')).toBeInTheDocument();
     expect(screen.getByText('17:00, 18:00, 19:00')).toBeInTheDocument();
     expect(screen.getByText('1:00, 2:00, 3:00')).toBeInTheDocument();
   });
 
   it('flags a high peak-session share red and a low share emerald', () => {
     renderSection({ cost: { sessions_during_peak_pct: 45 } });
-    expect(screen.getByText('45.00%').className).toContain('dark:text-rose-300');
+    expect(screen.getByText('45%').className).toContain('text-red-400');
 
     renderSection({ cost: { sessions_during_peak_pct: 10 } });
-    expect(screen.getByText('10.00%').className).toContain('dark:text-emerald-300');
+    expect(screen.getByText('10%').className).toContain('text-emerald-300');
   });
 
   it('shows "—" for empty peak / off-peak hour lists (never a blank cell)', () => {
@@ -331,8 +316,8 @@ describe('OptimizerSection — recommendations', () => {
 
     // Savings chip only appears for the > 0 estimate (the high rec's $24) —
     // the medium rec's $0 and the low rec's missing estimate render no chip.
-    expect(screen.getByText('~$24.00/mo')).toBeInTheDocument();
-    expect(screen.queryByText('~$0.00/mo')).toBeNull();
+    expect(screen.getByText('~$24/mo')).toBeInTheDocument();
+    expect(screen.queryByText('~$0/mo')).toBeNull();
   });
 
   it('renders the labelled empty state (never a blank panel) when there are none', () => {

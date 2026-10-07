@@ -33,7 +33,7 @@
 // Network is never touched; the clipboard is stubbed per-test.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -115,45 +115,12 @@ afterEach(() => {
 });
 
 describe('DashboardsPage', () => {
-  it('retains the full draft for manual copy after denial and retries the trimmed payload', async () => {
-    const writeText = vi.fn().mockRejectedValueOnce(new Error('denied')).mockResolvedValueOnce(undefined);
-    stubClipboard({ writeText });
-    renderPage();
-    const draft = '  {"title":"Complete dashboard","panels":[{"id":42}]}  ';
-    typeInEditor(draft);
-    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
-    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
-    editor().select();
-    expect(editor().selectionEnd).toBe(draft.length);
-    expect(editor().value).toBe(draft);
-    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(draft);
-    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
-    expect(await screen.findByText(/Copied\. Paste the JSON/)).toBeInTheDocument();
-    expect(screen.queryByText(/Select the text manually/)).toBeNull();
-    expect(writeText.mock.calls).toEqual([[draft.trim()], [draft.trim()]]);
-  });
-
-  it.each(['edit', 'clear', 'apply'] as const)('does not announce a stale pending copy after %s', async (change) => {
-    let resolveCopy: (() => void) | undefined;
-    stubClipboard({ writeText: vi.fn(() => new Promise<void>((resolve) => { resolveCopy = resolve; })) });
-    renderPage();
-    typeInEditor('{"title":"old"}');
-    fireEvent.click(screen.getByRole('button', { name: /Copy to clipboard/i }));
-    if (change === 'edit') typeInEditor('{"title":"new"}');
-    if (change === 'clear') fireEvent.click(screen.getByRole('button', { name: /^Clear$/i }));
-    if (change === 'apply') fireEvent.click(screen.getByTestId('stub-apply-draft'));
-    await act(async () => { resolveCopy?.(); });
-    expect(screen.queryByText(/Copied\. Paste the JSON/)).toBeNull();
-    if (change === 'edit') expect(editor().value).toBe('{"title":"new"}');
-    if (change === 'clear') expect(editor().value).toBe('');
-    if (change === 'apply') expect(editor().value).toBe(JSON.stringify(SAMPLE_DRAFT.dashboard, null, 2));
-  });
   it('renders the page scaffold: title, how-it-works intro, and three numbered workflow steps', () => {
     const { container } = renderPage();
 
     expect(screen.getByTestId('power-dashboards-composer-root')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 1, name: /Dashboard composer/i }),
+      screen.getByRole('heading', { level: 1, name: /Dashboard Composer/i }),
     ).toBeInTheDocument();
     expect(screen.getByText('How it works')).toBeInTheDocument();
 
@@ -194,20 +161,6 @@ describe('DashboardsPage', () => {
     positions.forEach((p) => expect(p).toBeGreaterThanOrEqual(0));
     const ascending = positions.every((p, i) => i === 0 || positions[i - 1] < p);
     expect(ascending).toBe(true);
-  });
-
-  it('keeps the manual composer and workflow reference free of fabricated fleet summary measurements', () => {
-    const { container } = renderPage();
-    expect(container.querySelector('[data-operational-brief]')).toBeNull();
-    expect(container.querySelector('[data-operational-metric]')).toBeNull();
-    expect(screen.getByText('How it works')).toBeInTheDocument();
-    expect(screen.getByText('Curated panel catalog')).toBeInTheDocument();
-    expect(editor()).toHaveValue('');
-    for (const name of SORTED_PANEL_NAMES) {
-      expect(screen.getByText(name)).toBeInTheDocument();
-    }
-    expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeDisabled();
-    expect(screen.getByRole('button', { name: /^Clear$/i })).toBeDisabled();
   });
 
   it('maps each curated panel to its Grafana panel-kind glyph via panelKindIcon', () => {

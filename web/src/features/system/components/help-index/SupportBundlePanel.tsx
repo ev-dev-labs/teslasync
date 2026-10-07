@@ -5,7 +5,6 @@ import { Download, ShieldCheck } from 'lucide-react'
 import { Button, CopyButton, GlassPanel, PanelTitle, Text } from '@/components/ui'
 import { useSupportBundle } from '@/api/hooks/useSupport'
 import { ProblemReportModal } from '@/components/feedback/ProblemReportModal'
-import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief'
 
 /**
  * Support bundle + problem report entry point (HELP-08, HELP-09).
@@ -91,19 +90,22 @@ export function SupportBundlePanel() {
         </div>
       </div>
 
-      <div className="mt-4">
-        <SystemSummaryBrief
-          title={t('supportBundle.title', 'Support bundle')}
-          description={t('supportBundle.subtitle', 'A redacted technical summary of this browser session. Copy or download it to attach to a support conversation.')}
-          scope={t('supportBundle.brief.scope', 'Current browser-session bundle; exact redacted contents remain available below.')}
-          available loading={isLoading}
-          metrics={[{ metricId: 'count', occurrenceId: 'errors', rawValue: bundle.errors.length,
-            label: t('supportBundle.field.errors', 'Recent errors') }]}
-          textMetrics={[
-            { key: 'version', label: t('supportBundle.field.version', 'App version'), value: bundle.app.version || '—', detail: t('supportBundle.brief.metadata', 'Redacted browser-session bundle metadata.') },
-            { key: 'browser', label: t('supportBundle.field.browser', 'Browser'), value: `${bundle.browser.family} ${bundle.browser.major_version}`.trim() || '—', detail: t('supportBundle.brief.metadata', 'Redacted browser-session bundle metadata.') },
-            { key: 'health', label: t('supportBundle.field.health', 'Health'), value: bundle.health.overall || '—', detail: t('supportBundle.brief.metadata', 'Redacted browser-session bundle metadata.') },
-          ]}
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <SummaryCell
+          label={t('supportBundle.field.version', 'App version')}
+          value={bundle.app.version}
+        />
+        <SummaryCell
+          label={t('supportBundle.field.browser', 'Browser')}
+          value={`${bundle.browser.family} ${bundle.browser.major_version}`.trim()}
+        />
+        <SummaryCell
+          label={t('supportBundle.field.health', 'Health')}
+          value={bundle.health.overall}
+        />
+        <SummaryCell
+          label={t('supportBundle.field.errors', 'Recent errors')}
+          value={String(bundle.errors.length)}
         />
       </div>
 
@@ -125,5 +127,18 @@ export function SupportBundlePanel() {
           hooks on every render of a panel the user has not opened. */}
       {reportOpen && <ProblemReportModal open onClose={() => setReportOpen(false)} />}
     </GlassPanel>
+  )
+}
+
+function SummaryCell({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] p-2.5">
+      <Text as="p" variant="caption">
+        {label}
+      </Text>
+      <Text as="p" size="sm" weight="medium" color="primary" className="truncate">
+        {value || '—'}
+      </Text>
+    </div>
   )
 }

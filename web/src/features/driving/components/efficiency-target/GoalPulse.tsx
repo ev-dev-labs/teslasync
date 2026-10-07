@@ -9,7 +9,6 @@ import type { TargetBand, TargetSummary } from '../../lib/efficiencyTarget';
 import { EfficiencyTargetSectionBody } from './EfficiencyTargetSectionBody';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface GoalPulseProps {
   summary: TargetSummary;
@@ -18,7 +17,6 @@ interface GoalPulseProps {
 }
 
 export function GoalPulse({ summary, state, className }: GoalPulseProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance, formatEfficiency, formatWeek } =
     useEfficiencyTargetDisplay();
@@ -47,10 +45,10 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
       ? '—'
       : latest.targetGapWhPerKm <= 0
         ? t('effTarget.pulse.underTarget', '{{value}} under target', {
-            value: formatEfficiency(Math.abs(latest.targetGapWhPerKm)),
+            value: formatEfficiency(Math.abs(latest.targetGapWhPerKm), 1),
           })
         : t('effTarget.pulse.overTarget', '{{value}} over target', {
-            value: formatEfficiency(latest.targetGapWhPerKm),
+            value: formatEfficiency(latest.targetGapWhPerKm, 1),
           });
 
   return (
@@ -101,7 +99,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
             {latest ? (
               <div className="mt-5 space-y-3">
                 <div>
-                  <MetricValue>{formatEfficiency(latest.whPerKm)}</MetricValue>
+                  <MetricValue>{formatEfficiency(latest.whPerKm, 1)}</MetricValue>
                   <MetricLabel>
                     {t('effTarget.pulse.consumption', 'Consumption')}
                   </MetricLabel>
@@ -152,7 +150,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
               <div className="mt-5 grid grid-cols-3 gap-2">
                 <div>
                   <MetricValue className="text-lg">
-                    {formatEfficiency(active.whPerKm)}
+                    {formatEfficiency(active.whPerKm, 1)}
                   </MetricValue>
                   <MetricLabel>
                     {t('effTarget.pulse.consumption', 'Consumption')}
@@ -160,7 +158,7 @@ export function GoalPulse({ summary, state, className }: GoalPulseProps) {
                 </div>
                 <div>
                   <MetricValue className="text-lg">
-                    {formatDistance(active.distanceM)}
+                    {formatDistance(active.distanceM, { precision: 1 })}
                   </MetricValue>
                   <MetricLabel>
                     {t('effTarget.pulse.distance', 'Distance')}

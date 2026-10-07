@@ -4,13 +4,11 @@ import { useSearchParams } from 'react-router-dom';
 
 import { useDrive, useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -19,6 +17,7 @@ import type { Drive } from '@/types/driving';
 import {
   AdvantageBreakdown,
   BatteryComparisonChart,
+  ComparisonVerdict,
   DriveIdentityCard,
   HeadToHeadGrid,
   SpeedComparisonChart,
@@ -29,7 +28,6 @@ import {
   normalizeDriveProfile,
   summarizeComparison,
 } from '../lib/driveCompare';
-import { CompareVerdictBrief } from '../components/operationalbrief-a-m/CompareVerdictBrief';
 
 const DRIVE_HISTORY_WINDOW = { limit: 1000 } as const;
 const HERO_COLUMNS = { default: 1, xl: 5 } as const;
@@ -43,7 +41,6 @@ export default function DriveComparePage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { formatDistance } = useUnits();
   const drivesQuery = useDrives(vehicleIdStr, DRIVE_HISTORY_WINDOW);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -81,8 +78,6 @@ export default function DriveComparePage() {
 
   const driveAQuery = useDrive(activeA);
   const driveBQuery = useDrive(activeB);
-  const driveAState = useDataState(driveAQuery, { provenance: 'historical' });
-  const driveBState = useDataState(driveBQuery, { provenance: 'historical' });
   const driveA = driveAQuery.data ?? null;
   const driveB = driveBQuery.data ?? null;
   const sameDrive = activeA !== '' && activeA === activeB;
@@ -98,16 +93,15 @@ export default function DriveComparePage() {
   const driveOptions = useMemo(
     () => drives.map((drive) => ({
       value: String(drive.id),
-      label: `${formatDateShort(drive.startTs)} · ${formatDistance(drive.distanceM)}`,
+      label: `${formatDateShort(drive.startTs)} · ${formatDistance(drive.distanceM, { precision: 1 })}`,
     })),
     [drives, formatDistance],
   );
 
-  const listError = drivesState.fatalError;
-  const detailAError = driveAState.fatalError;
-  const detailBError = driveBState.fatalError;
-  const listLoading = drivesState.status === 'initial';
-  const needTwo = !listLoading && !listError && drives.length < 2;
+  const listError = drivesQuery.isError ? drivesQuery.error : null;
+  const detailAError = driveAQuery.isError ? driveAQuery.error : null;
+  const detailBError = driveBQuery.isError ? driveBQuery.error : null;
+  const needTwo = !drivesQuery.isLoading && !listError && drives.length < 2;
   const selectionMessage = needTwo
     ? t('driveCompare.needTwo', 'At least two drives are needed for a comparison.')
     : sameDrive
@@ -117,9 +111,7 @@ export default function DriveComparePage() {
         )
       : null;
 
-  const combinedLoading = listLoading
-    || (activeA !== '' && driveAState.status === 'initial')
-    || (activeB !== '' && driveBState.status === 'initial');
+  const combinedLoading = drivesQuery.isLoading || driveAQuery.isLoading || driveBQuery.isLoading;
   const combinedError = listError ?? detailAError ?? detailBError;
   const missingDetails = !combinedLoading && !combinedError && !selectionMessage && (!driveA || !driveB)
     ? t('driveCompare.detailsUnavailable', 'Drive details are not available for this comparison.')
@@ -141,9 +133,7 @@ export default function DriveComparePage() {
   ): CompareSectionState => {
     const query = side === 'a' ? driveAQuery : driveBQuery;
     const detailError = side === 'a' ? detailAError : detailBError;
-    const source = side === 'a' ? driveAState : driveBState;
-    const activeId = side === 'a' ? activeA : activeB;
-    const isLoading = listLoading || (activeId !== '' && source.status === 'initial');
+    const isLoading = drivesQuery.isLoading || query.isLoading;
     const error = listError ?? detailError;
     const noDetail = !isLoading && !error && !selectionMessage && !hasData
       ? t('driveCompare.detailsUnavailable', 'Drive details are not available for this comparison.')
@@ -164,11 +154,11 @@ export default function DriveComparePage() {
   }
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('driveCompare.title', 'Drive Compare')}
       subtitle={t('driveCompare.subtitle', 'Compare context, efficiency, and telemetry from any two drives')}
       query={[drivesQuery, driveAQuery, driveBQuery]}
-      contextActions={
+      actions={
         <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
           {driveOptions.length > 0 ? (
             <>
@@ -191,18 +181,13 @@ export default function DriveComparePage() {
         </div>
       }
     >
-      <StaleRefreshWarning state={drivesState} label={t('driveCompare.title', 'Drive Compare')} />
-      <StaleRefreshWarning state={driveAState} label={t('driveCompare.pickA', 'Choose drive A')} />
-      <StaleRefreshWarning state={driveBState} label={t('driveCompare.pickB', 'Choose drive B')} />
       <FadeIn>
         <section aria-label={t('driveCompare.sections.verdict', 'Comparison verdict and advantages')}>
           <Grid cols={HERO_COLUMNS} gap={4}>
-            <CompareVerdictBrief
+            <ComparisonVerdict
               summary={summary}
               state={compareState}
               className="xl:col-span-3"
-              retained={driveAState.status === 'stale' || driveBState.status === 'stale'
-                || driveAState.refreshError != null || driveBState.refreshError != null}
               browseAction={needTwo
                 ? { label: t('driveCompare.browseDrives', 'Browse drives'), to: '/drives' }
                 : undefined}
@@ -243,6 +228,6 @@ export default function DriveComparePage() {
           state={compareState}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

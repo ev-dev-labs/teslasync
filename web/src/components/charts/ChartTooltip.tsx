@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { fmtNumber } from '../../lib/numberFormat'
 import { formatDateTime } from '../../lib/dateFormat'
 
 interface TooltipPayload {
@@ -48,7 +48,7 @@ export interface ChartTooltipProps {
   ) => ReactNode
   /** IANA timezone for ISO timestamp labels (defaults to the browser zone). */
   timezone?: string
-  /** Fraction digits for the default numeric formatter (0–20, defaults to settings). */
+  /** Fraction digits for the default numeric formatter (0–20, defaults to 1). */
   precision?: number
 }
 
@@ -85,11 +85,10 @@ function defaultValueFormatter(
   _name: string,
   unit: string | undefined,
   precision: number | undefined,
-  fmtNumber: ReturnType<typeof useNumberFormatting>['fmtNumber'],
 ): ReactNode {
   const formatted =
     typeof value === 'number'
-      ? !Number.isFinite(value) ? '—' : precision == null
+      ? precision == null
         ? fmtNumber(value)
         : fmtNumber(value, Math.max(0, Math.min(20, precision)))
       : value == null
@@ -123,7 +122,6 @@ export function ChartTooltipBase({
   timezone,
   precision,
 }: ChartTooltipProps) {
-  const { fmtNumber } = useNumberFormatting()
   if (!active || !payload?.length) return null
   const displayLabel = labelFormatter
     ? labelFormatter(label, payload)
@@ -154,7 +152,7 @@ export function ChartTooltipBase({
             displayValue = formatted
           }
         } else {
-          displayValue = defaultValueFormatter(p.value, defaultName, p.unit, precision, fmtNumber)
+          displayValue = defaultValueFormatter(p.value, defaultName, p.unit, precision)
         }
 
         return (

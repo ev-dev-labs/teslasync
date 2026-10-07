@@ -8,10 +8,9 @@
  * aggregate the drive+charge domains for the two summary bands, scope the
  * vehicle, and hand the numeric vehicle id to the opt-in AI narration.
  *
- * This suite replaces the digest hook and AI boundary. Transparent spies
- * observe current panel props while rendering their REAL shared subtree.
- * Loading, error, retry and navigation assertions inspect that real UI.
- * The real page layout
+ * This suite drives that orchestration by mocking the `weekly-digest` barrel
+ * (the hook + section spies that reflect their props as data-attributes), the
+ * AI narration surface, the motion wrapper, and i18n. The real `PageContainer`
  * renders the page landmarks without duplicating the application header's
  * vehicle picker. Network is never touched.
  *
@@ -42,11 +41,6 @@ import type { DigestMetrics } from '../components/weekly-digest/types';
 const selectedVehicleContext = vi.hoisted(() => ({
   setVehicleId: vi.fn(),
 }));
-const sectionCaptures = vi.hoisted(() => ({} as Record<string, {
-  isLoading?: boolean;
-  isError?: boolean;
-  error?: unknown;
-}>));
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', () => ({
@@ -68,6 +62,11 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
+// ── motion: render children inline (no animation frames in jsdom) ──
+vi.mock('@/components/motion', () => ({
+  FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
+}));
+
 // ── AI narration: reflect the numeric vehicle id the page derived ──
 vi.mock('@/components/ai/AIDigestNarration', () => ({
   AIDigestNarration: ({ vehicleId }: { vehicleId?: number }) => (
@@ -87,56 +86,71 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   }),
 }));
 
-vi.mock('../components/weekly-digest', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../components/weekly-digest')>();
+// ── weekly-digest barrel: mock the hook + reflect each section's props ──
+vi.mock('../components/weekly-digest', () => {
+  type SpyProps = {
+    isLoading?: boolean;
+    isError?: boolean;
+    error?: unknown;
+    onRetry?: () => void;
+  };
+  const sectionSpy = (testId: string) => {
+    const Spy = ({ isLoading, isError, error, onRetry }: SpyProps) => (
+      <div
+        data-testid={testId}
+        data-loading={isLoading ? 'true' : 'false'}
+        data-error={isError ? 'true' : 'false'}
+        data-error-message={
+          error instanceof Error ? error.message : error != null ? String(error) : ''
+        }
+      >
+        <button type="button" aria-label={`retry ${testId}`} onClick={() => onRetry?.()}>
+          retry
+        </button>
+      </div>
+    );
+    Spy.displayName = `Spy(${testId})`;
+    return Spy;
+  };
+
+  type WeekSelectorProps = {
+    weekLabel: string;
+    isCurrentWeek: boolean;
+    onPrevWeek: () => void;
+    onNextWeek: () => void;
+  };
+
   return {
-    ...actual,
     useWeeklyDigest: vi.fn(),
+    WeekSelector: ({ weekLabel, isCurrentWeek, onPrevWeek, onNextWeek }: WeekSelectorProps) => (
+      <div
+        data-testid="week-selector"
+        data-week-label={weekLabel}
+        data-current-week={isCurrentWeek ? 'true' : 'false'}
+      >
+        <button type="button" aria-label="previous week" onClick={onPrevWeek}>
+          prev
+        </button>
+        <button type="button" aria-label="next week" onClick={onNextWeek}>
+          next
+        </button>
+      </div>
+    ),
+    SummaryHeroCards: sectionSpy('summary-hero'),
+    DrivingSection: sectionSpy('driving-section'),
+    ChargingSection: sectionSpy('charging-section'),
+    BatteryHealthSection: sectionSpy('battery-section'),
+    AlertsSection: sectionSpy('alerts-section'),
+    FsdSection: sectionSpy('fsd-section'),
+    WeekOverWeekSummary: sectionSpy('wow-summary'),
     useFsdWeeklyDigestNotification: vi.fn(),
   };
-});
-
-vi.mock('../components/weekly-digest-modernization', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../components/weekly-digest-modernization')>();
-  return {
-    ...actual,
-    DrivingPanel: (props: Parameters<typeof actual.DrivingPanel>[0]) => {
-      sectionCaptures['driving-section'] = props;
-      return <actual.DrivingPanel {...props} />;
-    },
-    ChargingPanel: (props: Parameters<typeof actual.ChargingPanel>[0]) => {
-      sectionCaptures['charging-section'] = props;
-      return <actual.ChargingPanel {...props} />;
-    },
-    BatteryPanel: (props: Parameters<typeof actual.BatteryPanel>[0]) => {
-      sectionCaptures['battery-section'] = props;
-      return <actual.BatteryPanel {...props} />;
-    },
-    AlertsPanel: (props: Parameters<typeof actual.AlertsPanel>[0]) => {
-      sectionCaptures['alerts-section'] = props;
-      return <actual.AlertsPanel {...props} />;
-    },
-  };
-});
-vi.mock('../components/operationalbrief-n-z/FsdOperationalPanel', async importOriginal => {
-  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/FsdOperationalPanel')>();
-  return { ...actual, FsdOperationalPanel: (props: Parameters<typeof actual.FsdOperationalPanel>[0]) => {
-    sectionCaptures['fsd-section'] = props;
-    return <actual.FsdOperationalPanel {...props} />;
-  } };
-});
-vi.mock('../components/operationalbrief-n-z/DigestOperationalSummary', async importOriginal => {
-  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/DigestOperationalSummary')>();
-  return { ...actual, DigestOperationalSummary: (props: Parameters<typeof actual.DigestOperationalSummary>[0]) => {
-    sectionCaptures[props.comparison ? 'wow-summary' : 'summary-hero'] = props;
-    return <actual.DigestOperationalSummary {...props} />;
-  } };
 });
 
 import { useWeeklyDigest } from '../components/weekly-digest';
 import WeeklyDigestPage from './WeeklyDigestPage';
 
-const mockHook = vi.mocked(useWeeklyDigest);
+const mockHook = useWeeklyDigest as unknown as ReturnType<typeof vi.fn>;
 type HookReturn = ReturnType<typeof useWeeklyDigest>;
 
 const baseMetrics: DigestMetrics = {
@@ -164,8 +178,8 @@ const baseMetrics: DigestMetrics = {
   alertTotal: 0,
 };
 
-function makeHook(over: Partial<HookReturn> = {}): HookReturn {
-  const base: HookReturn = {
+function makeHook(over: Record<string, unknown> = {}): HookReturn {
+  const base = {
     weekLabel: 'Jun 24 – Jun 30',
     isCurrentWeek: true,
     isLoading: false,
@@ -201,7 +215,7 @@ function makeHook(over: Partial<HookReturn> = {}): HookReturn {
     refetchAll: vi.fn(),
     freshnessQueries: [],
   };
-  return { ...base, ...over };
+  return { ...base, ...over } as unknown as HookReturn;
 }
 
 function renderPage() {
@@ -215,52 +229,23 @@ function renderPage() {
   );
 }
 
-const panelTitles: Record<string, string> = {
-  'summary-hero': 'Week summary',
-  'wow-summary': 'Week-over-week comparison',
-  'driving-section': 'Daily distance',
-  'charging-section': 'Daily energy added',
-  'battery-section': 'Battery health',
-  'alerts-section': 'Alerts',
-  'fsd-section': 'Supervised driving',
-};
-function section(id: string): HTMLElement {
-  if (id === 'summary-hero' || id === 'wow-summary') {
-    const brief = screen.getByTestId(id === 'summary-hero' ? 'weekly-digest-summary' : 'weekly-digest-comparison');
-    const frame = brief.closest('[data-digest-summary-frame]');
-    if (!(frame instanceof HTMLElement)) throw new Error(`Missing real summary frame: ${id}`);
-    return frame;
-  }
-  const heading = screen.getAllByRole('heading', { name: panelTitles[id], level: 3 })
-    .find(element => element.hasAttribute('data-card-title'));
-  const card = heading?.closest('[data-card]');
-  if (!(card instanceof HTMLElement)) throw new Error(`Missing real panel: ${id}`);
-  return card;
-}
-const loadingAttr = (id: string) =>
-  section(id).querySelector('[data-state="loading"], [aria-busy="true"], .animate-pulse') ? 'true' : 'false';
-const errorAttr = (id: string) =>
-  within(section(id)).queryByRole('alert') ? 'true' : 'false';
-function errorMessage(id: string): string {
-  const error = sectionCaptures[id]?.error;
-  if (error) expect(within(section(id)).getByRole('alert')).toBeInTheDocument();
-  return error instanceof Error ? error.message : error != null ? String(error) : '';
-}
+const loadingAttr = (id: string) => screen.getByTestId(id).getAttribute('data-loading');
+const errorAttr = (id: string) => screen.getByTestId(id).getAttribute('data-error');
+const errorMessage = (id: string) => screen.getByTestId(id).getAttribute('data-error-message');
 const retryButton = (id: string) =>
-  within(section(id)).getByRole('button', { name: 'Retry' });
+  within(screen.getByTestId(id)).getByRole('button', { name: `retry ${id}` });
 
 beforeEach(() => {
   mockHook.mockReset();
   mockHook.mockReturnValue(makeHook());
   selectedVehicleContext.setVehicleId.mockReset();
-  for (const id of Object.keys(sectionCaptures)) delete sectionCaptures[id];
 });
 
 describe('WeeklyDigestPage — scaffolding + a11y', () => {
   it('renders the page header and every digest surface without a redundant vehicle picker', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Weekly digest' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Weekly Digest' })).toBeInTheDocument();
     expect(
       screen.getByText('Your driving and charging summary for the week'),
     ).toBeInTheDocument();
@@ -268,6 +253,7 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
     for (const id of [
+      'week-selector',
       'summary-hero',
       'driving-section',
       'charging-section',
@@ -275,12 +261,10 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
       'alerts-section',
       'fsd-section',
       'wow-summary',
+      'ai-narration',
     ]) {
-      expect(section(id)).toBeInTheDocument();
+      expect(screen.getByTestId(id)).toBeInTheDocument();
     }
-    expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
-    expect(screen.getByTestId('ai-narration')).toBeInTheDocument();
   });
 
   it('exposes labelled region landmarks for the activity and battery/alerts bentos', () => {
@@ -296,59 +280,11 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
 
   it('sets the document title via usePageTitle', () => {
     renderPage();
-    expect(document.title).toContain('Weekly digest');
+    expect(document.title).toContain('Weekly Digest');
   });
 });
 
 describe('WeeklyDigestPage — summary aggregation (drives + charging)', () => {
-  it('reviews numeric weekly metrics and prior-week trends through the real evidence drawer', () => {
-    mockHook.mockReturnValue(makeHook({ metrics: {
-      ...baseMetrics, totalDistanceM: 120000, prevDistanceM: 60000, totalDrives: 12, prevDriveCount: 6,
-      energyUsedWh: 18000, prevEnergyWh: 9000, chargingCost: 36, prevChargingCost: 18, co2Saved: 24, prevCo2: 12,
-    } }));
-    renderPage();
-    const brief = screen.getByTestId('weekly-digest-summary');
-    expect(brief).toHaveAttribute('data-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
-    expect(within(drawer).getByText(/^120(?:\.00)? km$/)).toBeInTheDocument();
-    expect(within(drawer).getByText('Selected week; based on available history records.')).toBeInTheDocument();
-  });
-
-  it('renders measured SI totals and source chart rows through the real shared renderers', () => {
-    mockHook.mockReturnValue(makeHook({
-      metrics: {
-        ...baseMetrics,
-        totalDistanceM: 120000,
-        totalDrives: 12,
-        energyUsedWh: 18000,
-        chargingCost: 36,
-        co2Saved: 24,
-        chargingSessionCount: 3,
-        chargeEnergyAddedWh: 20000,
-        avgChargePowerW: 7000,
-        batteryStart: 20,
-        batteryEnd: 80,
-        totalDurationS: 7200,
-      },
-      dailyDistanceData: [{ day: 'Mon', distanceM: 120000 }],
-      dailyEnergyData: [{ day: 'Mon', energyWh: 20000 }],
-    }));
-    renderPage();
-    const summary = section('summary-hero');
-    expect(within(summary).getByText(/^120(?:\.00)? km$/)).toBeInTheDocument();
-    expect(within(summary).getByText('12')).toBeInTheDocument();
-    expect(within(summary).getByText(/^18(?:\.00)? kWh$/)).toBeInTheDocument();
-    expect(within(summary).getByText('$36.00')).toBeInTheDocument();
-    expect(within(summary).getByText(/^24(?:\.00)? kg$/)).toBeInTheDocument();
-    expect(within(section('driving-section')).getByRole('table')).toHaveTextContent('120');
-    expect(within(section('charging-section')).getByRole('table')).toHaveTextContent('20');
-    expect(section('battery-section')).toHaveTextContent('60');
-    expect(section('battery-section')).toHaveTextContent('110');
-  });
-
   it('marks both summary bands loading when the drives query is loading', () => {
     mockHook.mockReturnValue(makeHook({ drivesLoading: true, chargingLoading: false }));
     renderPage();
@@ -505,12 +441,12 @@ describe('WeeklyDigestPage — week navigation', () => {
     );
     renderPage();
 
-    expect(screen.getByText('Jul 1 – Jul 7', { selector: '[title]' })).toBeInTheDocument();
-    expect(screen.queryByText('Current')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Next' })).not.toBeDisabled();
+    const selector = screen.getByTestId('week-selector');
+    expect(selector).toHaveAttribute('data-week-label', 'Jul 1 – Jul 7');
+    expect(selector).toHaveAttribute('data-current-week', 'false');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    fireEvent.click(screen.getByRole('button', { name: 'previous week' }));
+    fireEvent.click(screen.getByRole('button', { name: 'next week' }));
     expect(goToPrevWeek).toHaveBeenCalledTimes(1);
     expect(goToNextWeek).toHaveBeenCalledTimes(1);
   });

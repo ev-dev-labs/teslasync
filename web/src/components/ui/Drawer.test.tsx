@@ -143,9 +143,6 @@ describe('<Drawer>', () => {
     );
     expect(screen.getByText('Drawer body content')).toBeInTheDocument();
     expect(screen.getByTestId('drawer-footer')).toBeInTheDocument();
-    const footer = screen.getByRole('dialog').querySelector('[data-drawer-footer]');
-    expect(footer).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
-    expect(footer).not.toHaveClass('bg-[var(--surface-overlay)]');
 
     // Dropping the footer prop installs the standard read-only Close action.
     rerender(

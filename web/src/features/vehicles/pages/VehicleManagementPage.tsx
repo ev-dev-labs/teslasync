@@ -1,21 +1,19 @@
 import { useTranslation } from 'react-i18next'
 
-import { PageLayout } from '@/components/layout'
-import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
+import { PageContainer } from '@/components/layout'
+import { AlertBanner } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { Button } from '@/components/ui'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
-import { useDataState } from '@/hooks/useDataState'
 import { VehicleManagementWorkspace } from '../components/vehicle-management'
 
 export default function VehicleManagementPage() {
   const { t } = useTranslation()
-  usePageTitle(t('vehicleManagement.pageTitle', 'Vehicle management'))
+  usePageTitle(t('vehicleManagement.pageTitle', 'Vehicle Management'))
 
   const vehiclesQuery = useVehicles()
-  const vehiclesState = useDataState(vehiclesQuery)
   const {
     vehicleId,
     vehicle: selectedFromStore,
@@ -30,8 +28,8 @@ export default function VehicleManagementPage() {
     null
 
   return (
-    <PageLayout
-      title={t('vehicleManagement.pageTitle', 'Vehicle management')}
+    <PageContainer
+      title={t('vehicleManagement.pageTitle', 'Vehicle Management')}
       subtitle={t(
         'vehicleManagement.pageSubtitle',
         'Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.',
@@ -53,8 +51,7 @@ export default function VehicleManagementPage() {
           </AlertBanner>
         )}
 
-        <StaleRefreshWarning state={vehiclesState} label={t('vehicleManagement.pageTitle', 'Vehicle management')} />
-        {vehiclesState.fatalError && (
+        {vehiclesQuery.error && (
           <AlertBanner
             variant="danger"
             title={t(
@@ -82,7 +79,7 @@ export default function VehicleManagementPage() {
         )}
 
         {!vehiclesQuery.isLoading &&
-          !vehiclesState.fatalError &&
+          !vehiclesQuery.error &&
           vehicles.length === 0 && (
             <AlertBanner
               variant="info"
@@ -105,6 +102,6 @@ export default function VehicleManagementPage() {
           />
         </FadeIn>
       </div>
-    </PageLayout>
+    </PageContainer>
   )
 }

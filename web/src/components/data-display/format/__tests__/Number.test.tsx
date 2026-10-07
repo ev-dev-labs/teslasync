@@ -94,17 +94,17 @@ describe('FormattedNumber', () => {
     expect(container.textContent).toBe('—');
   });
 
-  it('uses the display precision in the hover title', () => {
+  it('exposes the full-precision raw value via the hover title even when the display is rounded', () => {
     const { container } = render(<FormattedNumber value={1234.567} precision={1} />);
-    // Both visible text and hover title honour the explicit 1dp override.
+    // Visible text is rounded to 1dp; the title keeps every digit.
     expect(container.textContent).toBe('1,234.6');
-    expect(span(container)?.getAttribute('title')).toBe('1,234.6');
+    expect(span(container)?.getAttribute('title')).toBe('1234.567');
   });
 
   it('includes the unit in the hover title so the exact figure is never ambiguous', () => {
     const { container } = render(<FormattedNumber value={1234.567} precision={1} unit="kWh" />);
     expect(container.textContent).toBe('1,234.6 kWh');
-    expect(span(container)?.getAttribute('title')).toBe('1,234.6 kWh');
+    expect(span(container)?.getAttribute('title')).toBe('1234.567 kWh');
   });
 
   it('omits the title attribute entirely on the empty state', () => {

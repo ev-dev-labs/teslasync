@@ -7,7 +7,7 @@ import {
   useCarbonSummary,
 } from '@/api/hooks/useCarbon';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -15,28 +15,26 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import {
   CarbonAccountingIdentities,
+  CarbonCurveCoverage,
+  CarbonEvidenceLedger,
+  CarbonGreenTimingScore,
+  CarbonHourlyDirectory,
   CarbonIntensityCurve,
+  CarbonLifetimeContext,
   CarbonMethodology,
   CarbonMonthlyTrend,
+  CarbonOpportunityMath,
+  CarbonPeriodFootprint,
+  CarbonRecommendation,
   CarbonSourceScopeLedger,
   useCarbonDisplay,
   useCarbonQueryStates,
 } from '../components/carbon-intelligence';
-import { CarbonEvidenceBrief as CarbonEvidenceLedger } from '../components/operationalbrief-a-m/CarbonEvidenceBrief';
-import { CarbonCoverageBrief as CarbonCurveCoverage } from '../components/operationalbrief-a-m/CarbonCoverageBrief';
-import { CarbonLifetimeBrief as CarbonLifetimeContext } from '../components/operationalbrief-a-m/CarbonLifetimeBrief';
-import { CarbonFootprintBrief as CarbonPeriodFootprint } from '../components/operationalbrief-a-m/CarbonFootprintBrief';
-import { CarbonDirectoryBrief as CarbonHourlyDirectory } from '../components/operationalbrief-a-m/CarbonDirectoryBrief';
-import { CarbonScoreBrief as CarbonGreenTimingScore } from '../components/operationalbrief-a-m/CarbonScoreBrief';
-import { CarbonRecommendationBrief as CarbonRecommendation } from '../components/operationalbrief-a-m/CarbonRecommendationBrief';
-import { CarbonOpportunityBrief as CarbonOpportunityMath } from '../components/operationalbrief-a-m/CarbonOpportunityBrief';
 import { buildCarbonIntelligence } from '../lib/carbonIntelligence';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function CarbonIntelligencePage() {
-  useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('carbon.title', 'Carbon intelligence'));
+  usePageTitle(t('carbon.title', 'Carbon Intelligence'));
   const { vehicleId } = useSelectedVehicle();
   const timezone = useTimezone('vehicle');
   const { start, end, startInstant, endInstantExclusive } = useRangeState({
@@ -91,8 +89,8 @@ export default function CarbonIntelligencePage() {
   const sectionProps = { analysis, states, display };
 
   return (
-    <PageLayout
-      title={t('carbon.title', 'Carbon intelligence')}
+    <PageContainer
+      title={t('carbon.title', 'Carbon Intelligence')}
       subtitle={t(
         'carbon.subtitle',
         'Dense evidence for selected-period charging emissions, model coverage, lifetime context, and bounded scenarios',
@@ -106,6 +104,10 @@ export default function CarbonIntelligencePage() {
         ]
         : intensityQuery}
       copyLink
+      actions={(
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        </div>
+      )}
     >
       <FadeIn>
         <CarbonEvidenceLedger {...sectionProps} />
@@ -150,6 +152,6 @@ export default function CarbonIntelligencePage() {
       <FadeIn delay={0.14}>
         <CarbonMethodology {...sectionProps} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

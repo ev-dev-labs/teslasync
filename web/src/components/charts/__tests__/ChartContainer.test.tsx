@@ -15,7 +15,6 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
-import { EmbeddedChart } from '../EmbeddedChart';
 import { ChartLegend } from '../ChartLegend';
 import { useChartHiddenSeries } from '../ChartHiddenSeriesContext';
 
@@ -86,31 +85,6 @@ function ContextProbe({ seriesKeys }: { seriesKeys: string[] }) {
 }
 
 describe('ChartContainer chartKey + ChartLegend toggle (Phase-46/67)', () => {
-  it('retains the same URL controller and render/context state in an opt-in embedded toolbar frame', () => {
-    const { container } = renderWithProviders(
-      <EmbeddedChart title="Embedded complete trend" ariaLabel="Embedded complete trend chart"
-        chartKey="embedded-complete" toolbar
-        data={[{ health: 1, projected: 2 }]}
-        dataColumns={[{ key: 'health', label: 'Health' }, { key: 'projected', label: 'Projected' }]}>
-        {({ hiddenSeries }) => (
-          <>
-            <div data-testid="embedded-render-prop"
-              data-hidden={hiddenSeries?.isHidden('health')} />
-            <ContextProbe seriesKeys={['health', 'projected']} />
-          </>
-        )}
-      </EmbeddedChart>,
-      '/page?hidden_embedded-complete=health',
-    );
-    expect(screen.getByTestId('embedded-render-prop')).toHaveAttribute('data-hidden', 'true');
-    expect(screen.getByTestId('probe-series-health')).toHaveAttribute('data-hidden', 'true');
-    expect(screen.getByTestId('probe-series-projected')).toHaveAttribute('data-hidden', 'false');
-    expect(container.querySelectorAll('[data-chart-toolbar]')).toHaveLength(1);
-    expect(screen.getByRole('figure', { name: 'Embedded complete trend' }))
-      .toHaveAttribute('data-chart-variant', 'embedded');
-    expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();
-  });
-
   it('exposes hiddenSeries via function-children render-prop when chartKey is set', () => {
     renderWithProviders(
       // chart-a11y:no-table unit-test stub container — does not render real data

@@ -2,7 +2,7 @@
 /**
  * Bundle-size guard.
  *
- * Walks dist/assets/ (or --dist <dir>), computes gzipped size of each JS chunk, prints a
+ * Walks dist/assets/, computes gzipped size of each JS chunk, prints a
  * report, and (with `--strict`) fails the build when measurable startup,
  * vendor, route, or locale budgets are exceeded.
  *
@@ -27,14 +27,7 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = resolve(__dirname, '..')
-const distFlagIndex = process.argv.indexOf('--dist')
-const distArgument = distFlagIndex === -1 ? 'dist' : process.argv[distFlagIndex + 1]
-if (!distArgument || distArgument.startsWith('--')) {
-  console.error('[bundle-size] --dist requires a directory argument')
-  process.exit(1)
-}
-const DIST_DIR = resolve(WEB_ROOT, distArgument)
-const ASSETS_DIR = join(DIST_DIR, 'assets')
+const ASSETS_DIR = join(WEB_ROOT, 'dist', 'assets')
 const LOCALE_MANIFEST_PATH = join(WEB_ROOT, 'src', 'i18n', 'en', 'usage-manifest.json')
 const SHELL_RESOURCE_PATH = join(WEB_ROOT, 'src', 'i18n', 'en', 'shell.json')
 const RUNTIME_MANIFEST_PATH = join(WEB_ROOT, 'src', 'i18n', 'en', 'runtime-manifest.json')
@@ -186,11 +179,7 @@ function startupFeatureModules(startupNames, assetsDir) {
 function main() {
   verifyLocaleBundleNameFixtures()
   if (!existsSync(ASSETS_DIR) || !statSync(ASSETS_DIR).isDirectory()) {
-    if (STRICT) {
-      console.error(`[bundle-size] ${ASSETS_DIR} not found — strict measurement requires a build`)
-      process.exit(1)
-    }
-    console.warn(`[bundle-size] ${ASSETS_DIR} not found — skipping (run \`npm run build\` first)`)
+    console.warn('[bundle-size] dist/assets/ not found — skipping (run `npm run build` first)')
     return
   }
 

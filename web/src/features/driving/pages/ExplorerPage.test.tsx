@@ -61,7 +61,7 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     title,
     subtitle,
     actions,
@@ -243,8 +243,8 @@ describe('ExplorerPage', () => {
   });
 
   it.each([
-    ['loading', query({ data: undefined, isLoading: true })],
-    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
+    ['loading', query({ isLoading: true })],
+    ['error', query({ isError: true, error: new Error('unavailable') })],
     ['empty', query({ data: [] })],
   ])('propagates the %s state to every mounted section', (expected, result) => {
     historyMock.mockReturnValue(result);

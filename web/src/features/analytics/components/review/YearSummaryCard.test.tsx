@@ -140,7 +140,7 @@ describe('YearSummaryCard', () => {
     render(<YearSummaryCard data={makeReview()} />);
 
     expect(screen.getByRole('heading', { level: 3, name: '2024' })).toBeInTheDocument();
-    expect(screen.getByText('Year in review')).toBeInTheDocument();
+    expect(screen.getByText('Year in Review')).toBeInTheDocument();
     expect(screen.getByText('Model 3 Performance')).toBeInTheDocument();
     expect(screen.getByText('model3')).toBeInTheDocument();
     expect(screen.getByText('Screenshot to share your year')).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('YearSummaryCard', () => {
     render(<YearSummaryCard data={makeReview({ gas_savings: 640 })} />);
 
     // formatCurrency(640, 0) → "$640", interpolated into the fallback copy.
-    expect(screen.getByText(/Saved \$640\.00 vs\. gas/)).toBeInTheDocument();
+    expect(screen.getByText(/Saved \$640 vs\. gas/)).toBeInTheDocument();
   });
 
   it('omits the gas-savings footnote when there are no savings but keeps the highlights', () => {

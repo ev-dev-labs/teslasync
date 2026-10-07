@@ -4,7 +4,7 @@
  * Operator-facing view of the package-derived Fleet Telemetry routing
  * snapshot. Renders, full-bleed:
  *
- * • the shared OperationalBrief (categories / routed / subscribed /
+ * • a responsive KPI band (categories / routed / subscribed /
  *   routed-not-subscribed / orphans / subscription-coverage %)
  * • a primary bento — the destination-distribution bar chart (hero,
  *   spanning two columns on wide screens) beside a "reading this page"
@@ -28,28 +28,40 @@
  * routed-fields count don't look like a bug.
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AlertTriangle,
   RefreshCw,
+  Layers,
+  Route as RouteIcon,
+  Radio,
+  Unplug,
+  Unlink,
+  Gauge,
+  Database,
+  BookOpen,
 } from 'lucide-react'
 
-import { PageLayout, LayoutCard, Masonry } from '@/components/layout'
+import { PageContainer, Masonry } from '@/components/layout'
 import {
   GlassPanel,
   Badge,
   Button,
+  DataTable,
   Input,
   PanelTitle,
   Text,
   Caption,
+  type Column,
 } from '@/components/ui'
+import { MetricCard } from '@/components/data-display'
 import {
   ChartSkeleton,
   EmptyState,
   ListSkeleton,
   QueryError,
+  Skeleton,
 } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import {
@@ -66,35 +78,226 @@ import {
   EmbeddedChart,
 } from '@/components/charts'
 import { useFleetTelemetryCoverage } from '@/api/hooks/useFleetTelemetry'
+import type {
+  FleetTelemetryCategoryCoverage,
+  FleetTelemetryFieldCoverage,
+  FleetTelemetryCoverageResponse,
+} from '@/api/types'
 import { usePageTitle } from '@/hooks/usePageTitle'
-
-import { chartTokens, severityTokens } from '@/lib/tokens'
+import { fmtInt, fmtPercent } from '@/lib/numberFormat'
+import { chartTokens, severityTokens, type NeonColor } from '@/lib/tokens'
 import { cn } from '@/lib/cn'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { deriveDataState } from '@/api/dataState';
-import { CoverageCategory } from '../components/continuation-admin-3/CoverageCategory';
-import { CoverageOperationalBrief } from '../components/statstrip-coverage-flags-secrets/CoverageOperationalBrief';
 
 export interface FleetTelemetryCoveragePageProps {
   /** Override the live hook for Storybook / tests. */
   testHookOverride?: ReturnType<typeof useFleetTelemetryCoverage>
 }
 
+interface SummaryStats {
+  totalCategories: number
+  totalRoutedFields: number
+  subscribedFields: number
+  unsubscribedRoutedFields: number
+  orphanFields: number
+  /** subscribed / routed, as a 0–100 percentage. */
+  subscriptionCoverage: number
+}
+
+interface Kpi {
+  id: string
+  testId: string
+  label: string
+  value: string
+  icon: ReactNode
+  color: NeonColor
+}
+
+function summarise(data: FleetTelemetryCoverageResponse | undefined): SummaryStats {
+  const empty: SummaryStats = {
+    totalCategories: 0,
+    totalRoutedFields: 0,
+    subscribedFields: 0,
+    unsubscribedRoutedFields: 0,
+    orphanFields: 0,
+    subscriptionCoverage: 0,
+  }
+  if (!data) return empty
+  const categories = data.categories ?? []
+  let totalRoutedFields = 0
+  let subscribedFields = 0
+  for (const cat of categories) {
+    const fields = cat.fields ?? []
+    totalRoutedFields += fields.length
+    for (const f of fields) {
+      if (f.subscribed) subscribedFields += 1
+    }
+  }
+  return {
+    totalCategories: categories.length,
+    totalRoutedFields,
+    subscribedFields,
+    unsubscribedRoutedFields: totalRoutedFields - subscribedFields,
+    orphanFields: (data.orphan_fields ?? []).length,
+    subscriptionCoverage:
+      totalRoutedFields > 0 ? (subscribedFields / totalRoutedFields) * 100 : 0,
+  }
+}
+
+function buildFieldColumns(
+  t: (key: string, fb: string) => string,
+): Column<FleetTelemetryFieldCoverage>[] {
+  return [
+    {
+      key: 'field',
+      header: t('coverage.col.field', 'Field'),
+      sortable: true,
+      render: (row) => (
+        <Text as="span" mono size="sm" color="primary">
+          {row.field}
+        </Text>
+      ),
+    },
+    {
+      key: 'destination',
+      header: t('coverage.col.destination', 'Destination'),
+      sortable: true,
+      render: (row) => (
+        <Badge variant="info" size="sm">
+          {row.destination}
+        </Badge>
+      ),
+    },
+    {
+      key: 'column',
+      header: t('coverage.col.column', 'Column'),
+      sortable: true,
+      render: (row) =>
+        row.column ? (
+          <Text as="span" mono size="xs" color="secondary">
+            {row.column}
+          </Text>
+        ) : (
+          <Text as="span" size="xs" color="muted">
+            —
+          </Text>
+        ),
+    },
+    {
+      key: 'also_signal_log',
+      header: t('coverage.col.dualWrite', 'Dual write'),
+      render: (row) =>
+        row.also_signal_log ? (
+          <Badge variant="warning" size="sm">
+            {t('coverage.dualWrite.yes', 'signal_log')}
+          </Badge>
+        ) : (
+          <Text as="span" size="xs" color="muted">
+            —
+          </Text>
+        ),
+    },
+    {
+      key: 'subscribed',
+      header: t('coverage.col.subscribed', 'Subscribed'),
+      sortable: true,
+      render: (row) =>
+        row.subscribed ? (
+          <Badge variant="success" size="sm">
+            {t('coverage.subscribed.yes', 'yes')}
+          </Badge>
+        ) : (
+          <Badge variant="neutral" size="sm">
+            {t('coverage.subscribed.no', 'no')}
+          </Badge>
+        ),
+    },
+  ]
+}
+
+/** One protomodel Category: header + destination chips + a per-field table. */
+function CategorySection({
+  category,
+  filter,
+}: {
+  category: FleetTelemetryCategoryCoverage
+  filter: string
+}) {
+  const { t } = useTranslation()
+  const fields = category.fields ?? []
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase()
+    if (!q) return fields
+    return fields.filter(
+      (f) =>
+        f.field.toLowerCase().includes(q) ||
+        f.destination.toLowerCase().includes(q) ||
+        (f.column ?? '').toLowerCase().includes(q),
+    )
+  }, [fields, filter])
+  const columns = useMemo(() => buildFieldColumns(t), [t])
+  const destinations = category.destinations ?? {}
+  const destEntries = Object.entries(destinations).sort((a, b) => b[1] - a[1])
+
+  return (
+    <GlassPanel
+      className="h-full p-4 sm:p-5"
+      data-testid={`coverage-category-${category.category}`}
+    >
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <PanelTitle className="mb-1 truncate">{category.category}</PanelTitle>
+          <Caption>
+            {t('coverage.category.totalFields', '{{count}} routed fields', {
+              count: category.total_fields ?? 0,
+            })}
+          </Caption>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {destEntries.map(([dest, count]) => (
+            <Badge
+              key={dest}
+              variant="neutral"
+              size="sm"
+              data-testid={`coverage-cat-dest-${category.category}-${dest}`}
+            >
+              {dest}: {fmtInt(count)}
+            </Badge>
+          ))}
+        </div>
+      </div>
+      {filtered.length === 0 ? (
+        <Text as="p" size="sm" color="muted" className="italic">
+          {t('coverage.category.noMatch', 'No fields match the current filter.')}
+        </Text>
+      ) : (
+        <div data-testid={`coverage-fields-${category.category}`}>
+          <DataTable<FleetTelemetryFieldCoverage>
+            tableId={`coverage:fields:${category.category}`}
+            data={filtered}
+            columns={columns}
+            mobileColumns={['field', 'destination', 'subscribed']}
+            keyExtractor={(row) => `${category.category}:${row.field}`}
+            emptyMessage={t('coverage.category.empty', 'This category has no routed fields.')}
+          />
+        </div>
+      )}
+    </GlassPanel>
+  )
+}
+
 export default function FleetTelemetryCoveragePage({
   testHookOverride,
 }: FleetTelemetryCoveragePageProps = {}) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
-  usePageTitle(t('coverage.pageTitle', 'Fleet Telemetry coverage'))
+  usePageTitle(t('coverage.pageTitle', 'Fleet Telemetry Coverage'))
 
   const liveQuery = useFleetTelemetryCoverage()
   const query = testHookOverride ?? liveQuery
-  const { data, isLoading, isFetching, refetch } = query
-  const source = deriveDataState(query)
-  const error = source.fatalError
+  const { data, isLoading, isFetching, error, refetch } = query
 
   const [filter, setFilter] = useState('')
 
+  const stats = useMemo(() => summarise(data), [data])
   const destinationTotals = data?.destination_totals ?? {}
   const sortedDestinations = useMemo(
     () => Object.entries(destinationTotals).sort((a, b) => b[1] - a[1]),
@@ -128,16 +331,66 @@ export default function FleetTelemetryCoveragePage({
   // keep the last snapshot on screen so the layout never jumps.
   const firstLoad = isLoading && !data
 
+  const kpis: Kpi[] = [
+    {
+      id: 'categories',
+      testId: 'coverage-stat-categories',
+      label: t('coverage.stat.categories', 'Categories'),
+      value: fmtInt(stats.totalCategories),
+      icon: <Layers className="h-5 w-5" aria-hidden />,
+      color: 'cyan',
+    },
+    {
+      id: 'routed',
+      testId: 'coverage-stat-routed',
+      label: t('coverage.stat.routedFields', 'Routed fields'),
+      value: fmtInt(stats.totalRoutedFields),
+      icon: <RouteIcon className="h-5 w-5" aria-hidden />,
+      color: 'blue',
+    },
+    {
+      id: 'subscribed',
+      testId: 'coverage-stat-subscribed',
+      label: t('coverage.stat.subscribed', 'Subscribed'),
+      value: fmtInt(stats.subscribedFields),
+      icon: <Radio className="h-5 w-5" aria-hidden />,
+      color: 'green',
+    },
+    {
+      id: 'unsubscribed',
+      testId: 'coverage-stat-unsubscribed',
+      label: t('coverage.stat.routedNotSubscribed', 'Routed, not subscribed'),
+      value: fmtInt(stats.unsubscribedRoutedFields),
+      icon: <Unplug className="h-5 w-5" aria-hidden />,
+      color: 'amber',
+    },
+    {
+      id: 'orphans',
+      testId: 'coverage-stat-orphans',
+      label: t('coverage.stat.orphans', 'Orphan fields'),
+      value: fmtInt(stats.orphanFields),
+      icon: <Unlink className="h-5 w-5" aria-hidden />,
+      color: stats.orphanFields > 0 ? 'red' : 'green',
+    },
+    {
+      id: 'coverage',
+      testId: 'coverage-stat-coverage',
+      label: t('coverage.stat.subscriptionCoverage', 'Subscription coverage'),
+      value: fmtPercent(stats.subscriptionCoverage, 0),
+      icon: <Gauge className="h-5 w-5" aria-hidden />,
+      color: 'purple',
+    },
+  ]
+
   return (
-    <PageLayout
-      title={t('coverage.pageTitle', 'Fleet Telemetry coverage')}
+    <PageContainer
+      title={t('coverage.pageTitle', 'Fleet Telemetry Coverage')}
       subtitle={t(
         'coverage.subtitle',
         'Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.',
       )}
       query={query}
-      dataSources={[{ id: 'fleet-telemetry-coverage', label: t('coverage.pageTitle', 'Fleet Telemetry coverage'), query }]}
-      secondaryActions={
+      actions={
         <Button
           variant="ghost"
           onClick={() => {
@@ -154,7 +407,23 @@ export default function FleetTelemetryCoveragePage({
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <CoverageOperationalBrief query={query} />
+        <section
+          aria-label={t('coverage.kpis', 'Coverage summary')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          {firstLoad
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <GlassPanel key={i} className="space-y-2 p-4">
+                  <Skeleton className="h-3 w-16" />
+                  <Skeleton className="h-7 w-24" />
+                </GlassPanel>
+              ))
+            : kpis.map((k) => (
+                <div key={k.id} data-testid={k.testId}>
+                  <MetricCard label={k.label} value={k.value} icon={k.icon} color={k.color} />
+                </div>
+              ))}
+        </section>
       </FadeIn>
 
       {/* 2 — Primary bento: destination-distribution hero + reading legend */}
@@ -163,18 +432,21 @@ export default function FleetTelemetryCoveragePage({
           aria-label={t('coverage.routing', 'Destination routing')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
-          <div
-            className="min-w-0 xl:col-span-2"
+          <GlassPanel
+            className="p-4 sm:p-5 xl:col-span-2"
             data-testid="coverage-destinations-panel"
           >
-          <LayoutCard title={t('coverage.destinations.title', 'Destination breakdown')}>
+            <PanelTitle className="mb-1 flex items-center gap-2">
+              <Database className="h-4 w-4 text-cyan-300" aria-hidden />
+              {t('coverage.destinations.title', 'Destination breakdown')}
+            </PanelTitle>
             <Caption className="mb-3 block">
               {t(
                 'coverage.destinations.help',
                 'Counts how many routed fields land in each storage destination. Fields routed with also_signal_log:true are counted under both their primary destination and signal_log, matching the runtime fan-out — totals may exceed the unique routed-fields count.',
               )}
             </Caption>
-            {error ? <QueryError error={error} onRetry={() => void refetch()} /> : firstLoad ? (
+            {firstLoad ? (
               <ChartSkeleton />
             ) : (
               <>
@@ -237,7 +509,7 @@ export default function FleetTelemetryCoveragePage({
                   <ul className="mt-3 flex flex-wrap gap-2" data-testid="coverage-destinations-list">
                     {sortedDestinations.map(([dest, count]) => (
                       <li key={dest}>
-                        <Badge variant="info" size="md" className="max-w-full whitespace-normal break-all" data-testid={`coverage-dest-${dest}`}>
+                        <Badge variant="info" size="md" data-testid={`coverage-dest-${dest}`}>
                           {dest}: {fmtInt(count)}
                         </Badge>
                       </li>
@@ -246,11 +518,13 @@ export default function FleetTelemetryCoveragePage({
                 )}
               </>
             )}
-          </LayoutCard>
-          </div>
+          </GlassPanel>
 
-          <div className="min-w-0" data-testid="coverage-legend-panel">
-          <LayoutCard title={t('coverage.legend.title', 'Reading this page')}>
+          <GlassPanel className="p-4 sm:p-5" data-testid="coverage-legend-panel">
+            <PanelTitle className="mb-1 flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-cyan-300" aria-hidden />
+              {t('coverage.legend.title', 'Reading this page')}
+            </PanelTitle>
             <Caption className="mb-3 block">
               {t(
                 'coverage.legend.intro',
@@ -292,8 +566,7 @@ export default function FleetTelemetryCoveragePage({
                 </Text>
               </li>
             </ul>
-          </LayoutCard>
-          </div>
+          </GlassPanel>
         </section>
       </FadeIn>
 
@@ -324,7 +597,7 @@ export default function FleetTelemetryCoveragePage({
             <ul className="flex flex-wrap gap-2">
               {orphans.map((orphan) => (
                 <li key={orphan}>
-                  <Badge variant="warning" size="sm" className="max-w-full whitespace-normal break-all font-mono">
+                  <Badge variant="warning" size="sm" className="font-mono">
                     {orphan}
                   </Badge>
                 </li>
@@ -403,11 +676,11 @@ export default function FleetTelemetryCoveragePage({
             data-testid="coverage-categories"
           >
             {filteredCategories.map((cat) => (
-              <CoverageCategory key={cat.category} category={cat} filter={filter} />
+              <CategorySection key={cat.category} category={cat} filter={filter} />
             ))}
           </Masonry>
         </FadeIn>
       )}
-    </PageLayout>
+    </PageContainer>
   )
 }

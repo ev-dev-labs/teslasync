@@ -10,8 +10,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
-import { PageHeader } from '@/components/layout'
-import { Button, ErrorText, GlassPanel, Input, Text } from '@/components/ui'
+import { Button, ErrorText, GlassPanel, Heading, Input, Text } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import {
   getServerBaseUrl,
@@ -107,11 +106,15 @@ export default function ConnectPage() {
   return (
     <div className="flex min-h-dvh items-center justify-center p-4">
       <GlassPanel className="w-full max-w-md p-6">
-        <PageHeader
-          title={t('serverConnect.connect.title', 'Connect to your server')}
-          subtitle={t('serverConnect.connect.subtitle', 'Enter your TeslaSync address to continue.')}
-          icon={<ServerIcon className="h-5 w-5" aria-hidden="true" />}
-        />
+        <div className="mb-1 flex items-center gap-3">
+          <ServerIcon className="h-7 w-7" aria-hidden="true" />
+          <Heading level="page" as="h1">
+            {t('serverConnect.connect.title', 'Connect to your server')}
+          </Heading>
+        </div>
+        <Text as="p" variant="bodySm" className="mb-5">
+          {t('serverConnect.connect.subtitle', 'Enter your TeslaSync address to continue.')}
+        </Text>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label={t('serverConnect.connect.serverLabel', 'Server address')}

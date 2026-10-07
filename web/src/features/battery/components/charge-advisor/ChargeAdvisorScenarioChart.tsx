@@ -2,7 +2,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 
-import { EmbeddedChart, ChartLegend, ChartTooltip } from '@/components/charts';
+import { ChartContainer, ChartLegend, ChartTooltip } from '@/components/charts';
 import { Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 
@@ -39,7 +39,7 @@ export function ChargeAdvisorScenarioChart({ analysis, state }: ChargeAdvisorCom
           )}
         </Text>
       ) : (
-        <EmbeddedChart toolbar exportable size="standard"
+        <ChartContainer
           title={t('chargeAdvisor.scenarios.chartTitle', 'Scenario SoC paths')}
           ariaLabel={t(
             'chargeAdvisor.scenarios.aria',
@@ -88,7 +88,7 @@ export function ChargeAdvisorScenarioChart({ analysis, state }: ChargeAdvisorCom
               </AreaChart>
             </ResponsiveContainer>
           )}
-        </EmbeddedChart>
+        </ChartContainer>
       )}
     </ChargeAdvisorSection>
   );

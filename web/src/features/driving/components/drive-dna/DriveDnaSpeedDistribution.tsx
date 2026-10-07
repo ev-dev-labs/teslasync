@@ -7,7 +7,7 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
 import {
@@ -20,7 +20,6 @@ import {
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import { DriveDnaDistributionBarPlot } from './DriveDnaDistributionBarPlot';
 import type { DriveDnaSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveDnaSpeedDistributionProps {
   model: DriveDnaModel;
@@ -33,7 +32,6 @@ export function DriveDnaSpeedDistribution({
   state,
   units,
 }: DriveDnaSpeedDistributionProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const stationary = convertSpeedFromSI(
     SPEED_STATIONARY_MAX_MPS,
@@ -51,13 +49,13 @@ export function DriveDnaSpeedDistribution({
     switch (id) {
       case 'stationary':
         return t('driveDna.speedBands.stationary', 'Below {{value}} {{unit}}', {
-          value: fmtNumber(stationary),
+          value: fmtNumber(stationary, 1),
           unit: units.unitPrefs.speed,
         });
       case 'low':
         return t('driveDna.speedBands.low', '{{min}} to <{{max}} {{unit}}', {
-          min: fmtNumber(stationary),
-          max: fmtNumber(low),
+          min: fmtNumber(stationary, 1),
+          max: fmtNumber(low, 0),
           unit: units.unitPrefs.speed,
         });
       case 'medium':
@@ -65,14 +63,14 @@ export function DriveDnaSpeedDistribution({
           'driveDna.speedBands.medium',
           '{{min}} to <{{max}} {{unit}}',
           {
-            min: fmtNumber(low),
-            max: fmtNumber(medium),
+            min: fmtNumber(low, 0),
+            max: fmtNumber(medium, 0),
             unit: units.unitPrefs.speed,
           },
         );
       case 'high':
         return t('driveDna.speedBands.high', '{{value}}+ {{unit}}', {
-          value: fmtNumber(medium),
+          value: fmtNumber(medium, 0),
           unit: units.unitPrefs.speed,
         });
     }
@@ -131,7 +129,7 @@ export function DriveDnaSpeedDistribution({
             ),
             format: (value) =>
               typeof value === 'number'
-                ? `${fmtNumber(value)}%`
+                ? `${fmtNumber(value, 1)}%`
                 : '—',
           },
         ]}

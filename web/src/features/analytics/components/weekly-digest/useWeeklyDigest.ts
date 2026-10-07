@@ -6,7 +6,7 @@ import { useAlertHistory } from '@/api/hooks/useNotifications';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
-import { safeNumber } from '@/lib/numberFormat';
+import { fmtNumber, safeNumber } from '@/lib/numberFormat';
 import { browserTimezone } from '@/lib/timezone';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
@@ -17,7 +17,6 @@ import type {
 import { DAY_LABELS, ALERT_SEVERITY_COLORS, CO2_PER_KWH_GASOLINE_KG } from './constants';
 import { CHART_COLORS } from '@/components/charts';
 import { getWeekRange, isInRange, dayOfWeekIndex, findCityPair } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ANALYTICS_WINDOW_LIMIT = 1000;
 
@@ -65,7 +64,6 @@ function chargingPowerW(session: ChargingSession): number {
 }
 
 export function useWeeklyDigest() {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const [weekOffset, setWeekOffset] = useState(0);
 
   const [weekStart, weekEnd] = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
@@ -313,7 +311,7 @@ export function useWeeklyDigest() {
       alertsByType,
       alertTotal: weekAlerts.length,
     };
-  }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts, displayPrecision, displayLocale]);
+  }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts]);
 
   /* ── Daily distance chart data ── */
   const dailyDistanceData: DailyDistanceEntry[] = useMemo(() => {
@@ -324,7 +322,7 @@ export function useWeeklyDigest() {
       bins[idx].distanceM += safeNumber(drive.distanceM);
     }
     return bins;
-  }, [weekDrives, displayPrecision, displayLocale]);
+  }, [weekDrives]);
 
   /* ── Daily energy added chart data ── */
   const dailyEnergyData: DailyEnergyEntry[] = useMemo(() => {
@@ -335,7 +333,7 @@ export function useWeeklyDigest() {
       bins[idx].energyWh += safeNumber(session.total_energy_added_wh);
     }
     return bins;
-  }, [weekCharging, displayPrecision, displayLocale]);
+  }, [weekCharging]);
 
   /* ── Alert pie data ── */
   const alertPieData: AlertPieEntry[] = useMemo(() => {
@@ -353,8 +351,8 @@ export function useWeeklyDigest() {
     const pair = findCityPair(totalDistanceKm);
     if (!pair) return undefined;
     const times = totalDistanceKm / pair.km;
-    return { from: pair.from, to: pair.to, times: fmtNumber(times) };
-  }, [metrics.totalDistanceM, fmtNumber]);
+    return { from: pair.from, to: pair.to, times: fmtNumber(times, 1) };
+  }, [metrics.totalDistanceM]);
 
   /* ── Navigation callbacks ── */
   const goToPrevWeek = useCallback(() => setWeekOffset((o) => o - 1), []);

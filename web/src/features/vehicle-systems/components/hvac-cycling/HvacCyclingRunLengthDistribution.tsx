@@ -1,10 +1,11 @@
+import { BarChart3 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
@@ -12,8 +13,13 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { LayoutCard, Grid } from '@/components/layout';
-import { MetricLabel, Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
+import {
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
 import type {
@@ -47,17 +53,17 @@ export function HvacCyclingRunLengthDistribution({
   const binLabel = (bin: HvacRunLengthBin) => {
     if (bin.upperS == null) {
       return t('hvacCycling.distribution.over', '> {{value}}', {
-        value: formatDuration(bin.lowerS),
+        value: formatDuration(bin.lowerS, { precision: 2 }),
       });
     }
     if (bin.lowerS === 0) {
       return t('hvacCycling.distribution.upTo', '≤ {{value}}', {
-        value: formatDuration(bin.upperS),
+        value: formatDuration(bin.upperS, { precision: 2 }),
       });
     }
     return t('hvacCycling.distribution.range', '{{lower}}–{{upper}}', {
-      lower: formatDuration(bin.lowerS),
-      upper: formatDuration(bin.upperS),
+      lower: formatDuration(bin.lowerS, { precision: 2 }),
+      upper: formatDuration(bin.upperS, { precision: 2 }),
     });
   };
   const data = summary.runLengthDistribution.map((bin) => ({
@@ -71,7 +77,14 @@ export function HvacCyclingRunLengthDistribution({
 
   return (
     <section data-testid="hvac-cycling-run-distribution">
-      <LayoutCard title={t('hvacCycling.distribution.title', 'Run-length distribution')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <BarChart3
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
+          {t('hvacCycling.distribution.title', 'Run-length distribution')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'hvacCycling.distribution.subtitle',
@@ -84,7 +97,7 @@ export function HvacCyclingRunLengthDistribution({
           requirement="runs"
           skeletonHeight={220}
         >
-          <EmbeddedChart toolbar exportable size="standard"
+          <ChartContainer
             className="border-0 bg-transparent p-0 shadow-none"
             title={t('hvacCycling.distribution.plotTitle', 'Run fragments by duration band')}
             ariaLabel={t(
@@ -126,19 +139,19 @@ export function HvacCyclingRunLengthDistribution({
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </EmbeddedChart>
+          </ChartContainer>
           <Grid cols={{ default: 2, md: 4 }} gap={2} className="mt-3">
-            <Quantile label={t('hvacCycling.distribution.onP25', 'On fragment P25')} value={formatDuration(on.p25S)} />
-            <Quantile label={t('hvacCycling.distribution.onMedian', 'On fragment median')} value={formatDuration(on.medianS)} />
-            <Quantile label={t('hvacCycling.distribution.onP90', 'On fragment P90')} value={formatDuration(on.p90S)} />
-            <Quantile label={t('hvacCycling.distribution.onMax', 'Longest on fragment')} value={formatDuration(on.maxS)} />
-            <Quantile label={t('hvacCycling.distribution.offP25', 'Off fragment P25')} value={formatDuration(off.p25S)} />
-            <Quantile label={t('hvacCycling.distribution.offMedian', 'Off fragment median')} value={formatDuration(off.medianS)} />
-            <Quantile label={t('hvacCycling.distribution.offP90', 'Off fragment P90')} value={formatDuration(off.p90S)} />
-            <Quantile label={t('hvacCycling.distribution.offMax', 'Longest off fragment')} value={formatDuration(off.maxS)} />
+            <Quantile label={t('hvacCycling.distribution.onP25', 'On fragment P25')} value={formatDuration(on.p25S, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.onMedian', 'On fragment median')} value={formatDuration(on.medianS, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.onP90', 'On fragment P90')} value={formatDuration(on.p90S, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.onMax', 'Longest on fragment')} value={formatDuration(on.maxS, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.offP25', 'Off fragment P25')} value={formatDuration(off.p25S, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.offMedian', 'Off fragment median')} value={formatDuration(off.medianS, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.offP90', 'Off fragment P90')} value={formatDuration(off.p90S, { precision: 1 })} />
+            <Quantile label={t('hvacCycling.distribution.offMax', 'Longest off fragment')} value={formatDuration(off.maxS, { precision: 1 })} />
           </Grid>
         </HvacCyclingSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

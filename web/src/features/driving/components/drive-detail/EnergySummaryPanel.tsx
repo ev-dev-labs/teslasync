@@ -8,7 +8,6 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtWithUnit } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import type { DriveStats } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EnergySummaryPanelProps {
   drive: DriveDetail;
@@ -30,7 +29,6 @@ function fmtEnergy(wh: number): string {
 }
 
 export function EnergySummaryPanel({ drive, stats }: EnergySummaryPanelProps) {
-  const { fmtNumber, fmtWithUnit } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const headingId = useId();

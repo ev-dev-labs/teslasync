@@ -1,13 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { RotateCcw, RefreshCw, Bookmark } from 'lucide-react';
-import { Slider, Toggle, Select, Button, Caption } from '@/components/ui';
-import { FormSection } from '@/components/forms';
+import { GlassPanel, PanelTitle, Slider, Toggle, Select, Button, Caption } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { updateScenario, resetScenario, type OrchestrationScenario } from '../hooks/useOrchestrationScenario';
 import type { ObjectiveWeights } from '../lib/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ScenarioControlsProps {
   scenario: OrchestrationScenario;
@@ -25,7 +23,6 @@ const WEIGHT_PRESETS: Record<string, Partial<ObjectiveWeights>> = {
 
 /** Scenario/assumption controls: horizon, tariff shape, grid limits, Powerwall spec, and objective weight preset. */
 export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: ScenarioControlsProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatPower } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -43,16 +40,17 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
     'custom';
 
   return (
-    <FormSection title={t('homeEnergy.scenario.title', 'Scenario & assumptions')}>
-      <div className="mb-4 flex flex-wrap items-center justify-end gap-3">
+    <GlassPanel className="p-4 sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <PanelTitle>{t('homeEnergy.scenario.title', 'Scenario & Assumptions')}</PanelTitle>
         <div className="flex flex-wrap gap-2">
-          <Button wrapLabel size="sm" variant="secondary" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefreshNow}>
+          <Button size="sm" variant="secondary" icon={<RefreshCw className="h-3.5 w-3.5" />} onClick={onRefreshNow}>
             {t('homeEnergy.scenario.refreshNow', 'Recompute from now')}
           </Button>
-          <Button wrapLabel size="sm" variant="secondary" icon={<Bookmark className="h-3.5 w-3.5" />} onClick={onCommitBaseline}>
+          <Button size="sm" variant="secondary" icon={<Bookmark className="h-3.5 w-3.5" />} onClick={onCommitBaseline}>
             {t('homeEnergy.scenario.commitBaseline', 'Save as stability baseline')}
           </Button>
-          <Button wrapLabel size="sm" variant="outline" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => resetScenario()}>
+          <Button size="sm" variant="outline" icon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => resetScenario()}>
             {t('homeEnergy.scenario.reset', 'Reset to defaults')}
           </Button>
         </div>
@@ -60,7 +58,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
 
       <Grid cols={{ default: 1, md: 2, xl: 4 }} gap={5}>
         <div className="space-y-4">
-          <Caption>{t('homeEnergy.scenario.horizonGroup', 'Planning horizon')}</Caption>
+          <Caption>{t('homeEnergy.scenario.horizonGroup', 'Planning Horizon')}</Caption>
           <Slider
             label={t('homeEnergy.scenario.horizonHours', 'Horizon')}
             min={6}
@@ -89,7 +87,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             max={1}
             step={0.01}
             value={scenario.tariff.importPeakPerKwh}
-            formatValue={(n) => `${formatCurrency(n)}/kWh`}
+            formatValue={(n) => `${formatCurrency(n, 2)}/kWh`}
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, importPeakPerKwh: n } })}
           />
           <Slider
@@ -98,7 +96,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             max={1}
             step={0.01}
             value={scenario.tariff.importOffPeakPerKwh}
-            formatValue={(n) => `${formatCurrency(n)}/kWh`}
+            formatValue={(n) => `${formatCurrency(n, 2)}/kWh`}
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, importOffPeakPerKwh: n } })}
           />
           <Slider
@@ -107,7 +105,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
             max={1}
             step={0.01}
             value={scenario.tariff.exportPerKwh}
-            formatValue={(n) => `${formatCurrency(n)}/kWh`}
+            formatValue={(n) => `${formatCurrency(n, 2)}/kWh`}
             onChange={(n) => updateScenario({ tariff: { ...scenario.tariff, exportPerKwh: n } })}
           />
           <Slider
@@ -131,7 +129,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
         </div>
 
         <div className="space-y-4">
-          <Caption>{t('homeEnergy.scenario.gridGroup', 'Grid / panel limits (editable assumption)')}</Caption>
+          <Caption>{t('homeEnergy.scenario.gridGroup', 'Grid / Panel Limits (editable assumption)')}</Caption>
           <Slider
             label={t('homeEnergy.scenario.maxImport', 'Max grid import')}
             min={1_000}
@@ -154,7 +152,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
 
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Caption>{t('homeEnergy.scenario.powerwallGroup', 'Home battery (editable assumption)')}</Caption>
+            <Caption>{t('homeEnergy.scenario.powerwallGroup', 'Home Battery (editable assumption)')}</Caption>
             <Toggle
               label={t('homeEnergy.scenario.powerwallEnabled', 'Present')}
               size="sm"
@@ -170,7 +168,7 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
                 max={40_000}
                 step={500}
                 value={scenario.powerwall.capacityWh}
-                formatValue={(n) => `${fmtNumber((n / 1000))} kWh`}
+                formatValue={(n) => `${(n / 1000).toFixed(1)} kWh`}
                 onChange={(n) => updateScenario({ powerwall: { ...scenario.powerwall, capacityWh: n } })}
               />
               <Slider
@@ -204,6 +202,6 @@ export function ScenarioControls({ scenario, onRefreshNow, onCommitBaseline }: S
           )}
         </div>
       </Grid>
-    </FormSection>
+    </GlassPanel>
   );
 }

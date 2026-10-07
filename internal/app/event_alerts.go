@@ -11,11 +11,8 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
-	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
-	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/rs/zerolog/log"
@@ -32,18 +29,11 @@ type placeObservations interface {
 	Observe(context.Context, int64, time.Time, float64, float64) ([]geofencedb.PlaceTransition, error)
 }
 
-type eventAlertVehicles interface {
-	GetByID(context.Context, int64) (*vehiclemodel.Vehicle, error)
-}
-
 type eventAlertObserver struct {
 	rules             eventAlertRules
 	claims            eventAlertClaims
 	places            placeObservations
 	deliver           func(context.Context, componentTransitionEvent)
-	settings          alertmsg.SettingsReader
-	vehicles          eventAlertVehicles
-	now               func() time.Time
 	mu                sync.RWMutex
 	cachedSystemRules []*alertmodel.AlertRule
 	positionMu        sync.Mutex
@@ -79,22 +69,6 @@ func (o *eventAlertObserver) fire(ctx context.Context, kind, subject string, veh
 		o.mu.Unlock()
 	}
 	now := time.Now().UTC()
-	if o.now != nil {
-		now = o.now().UTC()
-	}
-	prefs, prefsErr := alertmsg.LoadPreferences(ctx, o.settings)
-	if prefsErr != nil {
-		log.Warn().Err(prefsErr).Msg("event alert: formatting settings unavailable; using defaults")
-	}
-	prefs.ReferenceTime = now
-	if vehicleID > 0 && o.vehicles != nil && prefs.TimezoneMode == "vehicle" {
-		vehicle, err := o.vehicles.GetByID(ctx, vehicleID)
-		if err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("event alert: vehicle timezone unavailable; using configured fallback")
-		} else if vehicle != nil {
-			prefs = prefs.WithVehicleTimezone(vehicle.Timezone)
-		}
-	}
 	for _, rule := range rules {
 		if !matchesEventAlert(rule, vehicleID, placeID, component, transition, now) {
 			continue
@@ -123,7 +97,7 @@ func (o *eventAlertObserver) fire(ctx context.Context, kind, subject string, veh
 		renderCtx := alertmsg.BuildContext(rule, vehicleName, nil, map[string]any{
 			"EventTitle": title, "EventMessage": body, "PlaceName": placeName,
 			"ComponentName": component, "Transition": transition, "PlaceID": placeID,
-		}, prefs)
+		})
 		o.deliver(ctx, componentTransitionEvent{
 			Component: component, EventType: eventType, Severity: rule.Severity,
 			Title: alertmsg.RenderTitle(rule, renderCtx), Message: alertmsg.RenderBody(rule, renderCtx),
@@ -228,11 +202,9 @@ func (o *eventAlertObserver) OnPayloadProcessed(ctx context.Context, vehicleID i
 
 func (a *App) newEventAlertObserver() *eventAlertObserver {
 	observer := &eventAlertObserver{
-		settings: settingsdb.NewSettingsRepo(a.DB),
-		vehicles: vehicledb.NewVehicleRepo(a.DB),
-		rules:    dbalert.NewAlertRuleRepo(a.DB),
-		claims:   dbalert.NewEventCooldownRepo(a.DB),
-		places:   geofencedb.NewPlaceObservationRepo(a.DB),
+		rules:  dbalert.NewAlertRuleRepo(a.DB),
+		claims: dbalert.NewEventCooldownRepo(a.DB),
+		places: geofencedb.NewPlaceObservationRepo(a.DB),
 	}
 	observer.deliver = func(ctx context.Context, evt componentTransitionEvent) {
 		var channels componentNotificationChannelSource = dbnotif.NewNotificationRepo(a.DB)

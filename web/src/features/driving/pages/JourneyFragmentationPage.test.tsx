@@ -5,7 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Drive } from '@/types/driving';
-import type { DataState } from '@/api/dataState';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -23,7 +22,6 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   refetch: () => Promise<unknown>;
-  fetchStatus?: 'idle' | 'fetching' | 'paused';
 }
 
 vi.mock('react-i18next', () => ({
@@ -84,25 +82,30 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageLayout: ({
+  PageContainer: ({
     children,
-    contextActions,
+    actions,
     query,
   }: {
     children: ReactNode;
-    contextActions?: ReactNode;
+    actions?: ReactNode;
     query?: { refetch: () => Promise<unknown> };
   }) => (
     <main>
-      {query && <span data-testid="page-query-freshness">Freshness</span>}
-      {contextActions}
+      {query && (
+        <button
+          type="button"
+          data-testid="page-query-refresh"
+          onClick={() => void query.refetch()}
+        >
+          Page refresh
+        </button>
+      )}
+      {actions}
       {children}
     </main>
   ),
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  LayoutCard: ({ title, children }: { title: string; children: ReactNode }) => (
-    <section data-testid="analytical-shell"><h2>{title}</h2>{children}</section>
-  ),
 }));
 
 vi.mock('@/components/motion', () => ({
@@ -145,13 +148,6 @@ vi.mock('@/components/data-display', () => ({
 }));
 
 vi.mock('@/components/feedback', () => ({
-  StaleRefreshWarning: ({ state }: { state: DataState<Drive[]> }) =>
-    state.hasData && (state.refreshError || state.isRefreshBlocked) ? (
-      <div role="status" data-testid="stale-refresh-warning">
-        {state.isRefreshBlocked ? 'offline' : 'Refresh failed'}
-        <button type="button" onClick={() => state.retry?.()}>Refresh</button>
-      </div>
-    ) : null,
   EmptyState: ({ message }: { message: string }) => <div role="status">{message}</div>,
   QueryError: ({ onRetry }: { onRetry?: () => void }) => (
     <div role="alert"><button type="button" onClick={onRetry}>Retry</button></div>
@@ -420,24 +416,11 @@ describe('JourneyFragmentationPage', () => {
     h.history = { data: readyHistory(), isLoading: false, isError: true, error: new Error('refresh'), refetch };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(screen.queryAllByRole('alert')).toHaveLength(0);
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Refresh failed');
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getByText('Observed journeys')).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'Refresh' })).toHaveLength(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expectOneRecoveryControl();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('keeps every analytical shell and observed result when refresh is paused', () => {
-    h.history = {
-      data: readyHistory(), isLoading: false, isError: false,
-      error: null, refetch, fetchStatus: 'paused',
-    };
-    renderPage();
-    expectPersistentAnalyticalShells();
-    expect(screen.getByText('Observed journeys')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
-    expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
   it('changes the visible linked-pair and journey metrics at a 30-minute threshold', () => {

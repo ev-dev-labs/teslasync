@@ -1,11 +1,10 @@
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceToSI, type UnitPref } from '@/lib/unitConversion';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function formatEfficiencyFromSI(
   valueWhPerM: number | null | undefined,
   unitPrefs: UnitPref,
-  precision = getGlobalPrecision(),
+  precision = 1,
 ): string {
   if (valueWhPerM == null || !Number.isFinite(valueWhPerM)) return '—';
   const whPerDisplayDistance =

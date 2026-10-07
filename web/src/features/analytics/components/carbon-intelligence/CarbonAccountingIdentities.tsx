@@ -1,12 +1,9 @@
-import { LayoutCard } from '@/components/layout';
-import { Badge, Table, Text } from '@/components/ui';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { CarbonReconciliation } from '../../lib/carbonIntelligence';
 import type { CarbonSectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function checkLabel(
   id: string,
@@ -82,12 +79,12 @@ function checkValue(
   t: ReturnType<typeof useTranslation>['t'],
 ): string {
   if (value == null) return '—';
-  if (check.unit === 'Wh') return display.formatEnergy(value, { precision: Math.max(3, getGlobalPrecision()) });
-  if (check.unit === 'kg') return display.formatSignedKg(value);
-  if (check.unit === 'g/kWh') return display.formatIntensity(value);
-  if (check.unit === '%') return display.formatPercent(value);
+  if (check.unit === 'Wh') return display.formatEnergy(value, { precision: 3 });
+  if (check.unit === 'kg') return display.formatSignedKg(value, 4);
+  if (check.unit === 'g/kWh') return display.formatIntensity(value, 3);
+  if (check.unit === '%') return display.formatPercent(value, 3);
   return t('carbon.units.hours', '{{value}} h', {
-    value: display.formatNumber(value),
+    value: display.formatNumber(value, 0),
   });
 }
 
@@ -107,7 +104,6 @@ export function CarbonAccountingIdentities({
   analysis,
   display,
 }: CarbonSectionProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -118,10 +114,14 @@ export function CarbonAccountingIdentities({
         'Exact carbon accounting identities and tolerances',
       )}
     >
-      <LayoutCard
-        title={t('carbon.accounting.title', 'Exact accounting identities')}
-        actions={<Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
-      >
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-2 flex items-center gap-2">
+          <Binary
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
+          {t('carbon.accounting.title', 'Exact accounting identities')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'carbon.accounting.subtitle',
@@ -153,42 +153,54 @@ export function CarbonAccountingIdentities({
                   <Text as="p" variant="label">{checkLabel(check.id, t)}</Text>
                   <Badge variant={status.variant}>{status.label}</Badge>
                 </div>
-                <Table className="mt-2" aria-label={checkLabel(check.id, t)}>
-
-                  <tbody>
-                    <tr>
-                      <th scope="row"><Text variant="caption">{t('carbon.accounting.expected', 'Expected')}</Text></th>
-                      <td className="text-right"><Text variant="caption" mono>
-                        {check.unit === 'hour_set'
-                          ? hourSetValue(check.expectedHours, display, t)
-                          : checkValue(check.expected, check, display, t)}
-                      </Text></td>
-                    </tr>
-                    <tr>
-                      <th scope="row"><Text variant="caption">{t('carbon.accounting.observed', 'Observed')}</Text></th>
-                      <td className="text-right"><Text variant="caption" mono>
-                        {check.unit === 'hour_set'
-                          ? hourSetValue(check.observedHours, display, t)
-                          : checkValue(check.observed, check, display, t)}
-                      </Text></td>
-                    </tr>
-                    {check.unit !== 'hour_set' && <>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('carbon.accounting.residual', 'Residual')}</Text></th>
-                        <td className="text-right"><Text variant="caption" mono>{checkValue(check.residual, check, display, t)}</Text></td>
-                      </tr>
-                      <tr>
-                        <th scope="row"><Text variant="caption">{t('carbon.accounting.tolerance', 'Tolerance')}</Text></th>
-                        <td className="text-right"><Text variant="caption" mono>{checkValue(check.tolerance, check, display, t)}</Text></td>
-                      </tr>
-                    </>}
-                  </tbody>
-                </Table>
+                {check.unit === 'hour_set' ? (
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <Text as="span" variant="caption">
+                      {t('carbon.accounting.expected', 'Expected')}
+                    </Text>
+                    <Text as="span" variant="caption" mono>
+                      {hourSetValue(check.expectedHours, display, t)}
+                    </Text>
+                    <Text as="span" variant="caption">
+                      {t('carbon.accounting.observed', 'Observed')}
+                    </Text>
+                    <Text as="span" variant="caption" mono>
+                      {hourSetValue(check.observedHours, display, t)}
+                    </Text>
+                  </div>
+                ) : (
+                  <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                    <Text as="span" variant="caption">
+                      {t('carbon.accounting.expected', 'Expected')}
+                    </Text>
+                    <Text as="span" variant="caption" mono>
+                      {checkValue(check.expected, check, display, t)}
+                    </Text>
+                    <Text as="span" variant="caption">
+                      {t('carbon.accounting.observed', 'Observed')}
+                    </Text>
+                    <Text as="span" variant="caption" mono>
+                      {checkValue(check.observed, check, display, t)}
+                    </Text>
+                    <Text as="span" variant="caption">
+                      {t('carbon.accounting.residual', 'Residual')}
+                    </Text>
+                    <Text as="span" variant="caption" mono>
+                      {checkValue(check.residual, check, display, t)}
+                    </Text>
+                    <Text as="span" variant="caption">
+                      {t('carbon.accounting.tolerance', 'Tolerance')}
+                    </Text>
+                    <Text as="span" variant="caption" mono>
+                      {checkValue(check.tolerance, check, display, t)}
+                    </Text>
+                  </div>
+                )}
               </li>
             );
           })}
         </ul>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

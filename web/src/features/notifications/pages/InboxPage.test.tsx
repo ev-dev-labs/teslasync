@@ -215,17 +215,6 @@ describe('InboxPage — page shell & composition', () => {
     );
     expect(screen.getByTestId('notification-report').getAttribute('data-timezone')).toBeTruthy();
   });
-
-  it('places evidence before the complete secondary report, without tabs or hidden analytics', () => {
-    renderPage();
-    const evidence = screen.getByTestId('inbox-body');
-    const report = screen.getByTestId('notification-report');
-    expect(evidence.compareDocumentPosition(report) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // FadeIn starts at opacity zero in jsdom; assert no disclosure or hidden attribute.
-    expect(report).toBeInTheDocument();
-    expect(report.closest('[hidden], details')).toBeNull();
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
-  });
 });
 
 describe('InboxPage — summary KPI derivation (happy path)', () => {
@@ -255,10 +244,8 @@ describe('InboxPage — summary states', () => {
     renderPage();
     // Page shell is still present around the skeleton.
     expect(screen.getByRole('heading', { level: 1, name: 'Inbox' })).toBeInTheDocument();
-    const brief = screen.getByTestId('notification-backlog-brief');
-    expect(brief).toHaveAttribute('aria-busy', 'true');
-    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.getByRole('status', { name: 'Loading stat cards' })).toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
   });
 
   it('surfaces a retryable error state and invokes refetch on retry', () => {

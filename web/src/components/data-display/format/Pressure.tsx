@@ -1,5 +1,5 @@
 import { useUnits } from '@/hooks/useUnits';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertPressureFromSI } from '@/lib/unitConversion';
 
 interface PressureProps {
@@ -16,10 +16,9 @@ interface PressureProps {
 
 /**
  * Pressure renderer that respects the user's bar/psi preference.
- * Hover title shows the source-unit value at the requested display precision.
+ * Hover title shows the raw caller-supplied value with its source unit.
  */
 export function Pressure({ bar, psi, precision, className }: PressureProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const pressureUnit = unitPrefs.pressure;
   const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
@@ -30,10 +29,10 @@ export function Pressure({ bar, psi, precision, className }: PressureProps) {
   let title: string | undefined;
   if (bar != null && Number.isFinite(bar)) {
     sourceKpa = bar * 100;
-    title = `${fmtNumber(bar, precision)} bar`;
+    title = `${bar.toFixed(2)} bar`;
   } else if (psi != null && Number.isFinite(psi)) {
     sourceKpa = psi * 6.894757;
-    title = `${fmtNumber(psi, precision)} psi`;
+    title = `${psi.toFixed(2)} psi`;
   }
 
   if (sourceKpa == null) {

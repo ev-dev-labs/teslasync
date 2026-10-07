@@ -51,7 +51,7 @@ describe('ConflictWarnings', () => {
     )
     const alert = screen.getByRole('alert')
     expect(alert.className).toContain('border-neon-amber/25')
-    expect(within(alert).getByText('Potential conflict')).toBeInTheDocument()
+    expect(within(alert).getByText('Potential Conflict')).toBeInTheDocument()
     expect(within(alert).getByText('"Night Charge": overlaps a schedule')).toBeInTheDocument()
   })
 

@@ -4,7 +4,6 @@ import { Badge, Button, Caption, Code, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, isFiniteNumber } from '@/lib/numberFormat';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** A single formatted, display-boundary metric chip shown on a stale row. */
 export interface StaleRowMetric {
@@ -61,7 +60,6 @@ export function StaleSessionRow({
   disabled = false,
   disabledReason,
 }: StaleSessionRowProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (

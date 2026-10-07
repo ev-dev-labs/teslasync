@@ -61,8 +61,8 @@ export default function DynamicsTripToolbar({
       </div>
       <Text as="p" variant="caption">
         {t(
-          'dynamics.trip.reviewDescription',
-          'Choose a ride to review its recorded outcome and motor samples. Current vehicle signals and multi-trip context are separated below.',
+          'dynamics.trip.subtitle',
+          'Live gauges stay on now. Charts and motor stats are one drive — in progress if the car is moving, otherwise the trip you pick.',
         )}{' '}
         {startDate} – {endDate}
       </Text>

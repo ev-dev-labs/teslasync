@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { StatMetric } from '@/components/data-display'
-import { QueryError } from '@/components/feedback'
+import { MonitorSmartphone, ShieldCheck, Globe, Clock } from 'lucide-react'
+
+import { MetricCard } from '@/components/data-display'
+import { Skeleton, QueryError } from '@/components/feedback'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import type { ActiveSession } from '@/api/types'
 
 import { describeDevice } from './deviceLabel'
-import { SettingsSummaryBrief } from '../operationalbrief-all/SettingsSummaryBrief'
 
 interface SessionsSummaryCardsProps {
   total: number
@@ -19,14 +20,12 @@ interface SessionsSummaryCardsProps {
   isError: boolean
   error?: unknown
   onRetry?: () => void
-  retained?: boolean
-  sourceAvailable?: boolean
 }
 
 /**
  * KPI band for the Active Sessions page. Presentational: the page computes the
- * stats and hands them down. The compact Brief retains source context through
- * loading/failure and keeps successful empty lists distinct from missing lists.
+ * stats and hands them down. Renders four metric cards (or matching skeletons
+ * while the list query is in flight) so the layout never jumps.
  */
 export function SessionsSummaryCards({
   total,
@@ -37,8 +36,6 @@ export function SessionsSummaryCards({
   isError,
   error,
   onRetry,
-  retained = false,
-  sourceAvailable = true,
 }: SessionsSummaryCardsProps) {
   const { t } = useTranslation('settings')
   const { formatRelativeTime, formatDateTime } = useDateFormat()
@@ -58,31 +55,52 @@ export function SessionsSummaryCards({
     () => error ?? new Error('Session list unavailable'),
     [error],
   )
-  const sourceUnavailable = isError || !sourceAvailable
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'sessions-total', rawValue: sourceUnavailable || isLoading ? null : total,
-      label: t('account.sessions.kpi.total', 'Active sessions') },
-    { metricId: 'text', occurrenceId: 'sessions-current', rawValue: sourceUnavailable || isLoading ? null : currentLabel,
-      label: t('account.sessions.kpi.thisDevice', 'This device'), context: currentIp },
-    { metricId: 'count', occurrenceId: 'sessions-other', rawValue: sourceUnavailable || isLoading ? null : otherCount,
-      label: t('account.sessions.kpi.otherDevices', 'Other devices') },
-    { metricId: 'text', occurrenceId: 'sessions-last', rawValue: sourceUnavailable || isLoading ? null : lastActiveLabel,
-      label: t('account.sessions.kpi.lastActive', 'Last active'),
-      context: lastActive ? formatDateTime(lastActive) : undefined },
-  ]
 
   return (
     <section
       aria-label={t('account.sessions.summaryAria', 'Session summary')}
       aria-busy={isLoading}
     >
-      <SettingsSummaryBrief title={t('account.sessions.brief.title', 'Session overview')}
-        description={t('account.sessions.brief.description', 'Signed-in devices and their most recent activity. Sign-out controls remain below and in the page header.')}
-        source={t('account.sessions.brief.source', 'Account session list')}
-        scope={t('account.sessions.brief.scope', 'Current account · latest session list; not a historical activity range')}
-        metrics={metrics} loading={isLoading} unavailable={sourceUnavailable} retained={retained}
-        testId="sessions-summary" />
-      {isError && <QueryError error={displayError} onRetry={onRetry} />}
+      {isError ? (
+        <QueryError error={displayError} onRetry={onRetry} />
+      ) : (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {isLoading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} height={76} className="rounded-xl" />
+              ))
+            : (
+              <>
+                <MetricCard
+                  label={t('account.sessions.kpi.total', 'Active sessions')}
+                  value={total}
+                  icon={<MonitorSmartphone className="h-5 w-5" aria-hidden="true" />}
+                  color="cyan"
+                />
+                <MetricCard
+                  label={t('account.sessions.kpi.thisDevice', 'This device')}
+                  value={currentLabel}
+                  subtitle={currentIp}
+                  icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+                  color="green"
+                />
+                <MetricCard
+                  label={t('account.sessions.kpi.otherDevices', 'Other devices')}
+                  value={otherCount}
+                  icon={<Globe className="h-5 w-5" aria-hidden="true" />}
+                  color="amber"
+                />
+                <MetricCard
+                  label={t('account.sessions.kpi.lastActive', 'Last active')}
+                  value={lastActiveLabel}
+                  subtitle={lastActive ? formatDateTime(lastActive) : undefined}
+                  icon={<Clock className="h-5 w-5" aria-hidden="true" />}
+                  color="blue"
+                />
+              </>
+            )}
+        </div>
+      )}
     </section>
   )
 }

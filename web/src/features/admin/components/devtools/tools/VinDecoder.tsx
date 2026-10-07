@@ -57,10 +57,10 @@ export function VinDecoderTool() {
       : undefined
 
   return (
-    <ToolCard icon={Car} color="cyan" title={t('devtools.utils.vin', 'VIN decoder')} description={t('devtools.utils.vinDesc', 'VIN decoder desc')}>
+    <ToolCard icon={Car} color="cyan" title={t('devtools.utils.vin', 'Vin Decoder')} description={t('devtools.utils.vinDesc', 'Vin Decoder Desc')}>
       <div className="space-y-3">
         <Input
-          label={t('devtools.utils.vinInput', 'VIN')}
+          label={t('devtools.utils.vinInput', 'Vin')}
           placeholder="5YJ3E1EA1NF000001"
           value={vin}
           onChange={handleChange}

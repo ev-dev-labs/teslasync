@@ -350,45 +350,6 @@ describe('AIFeatureCard — interactions', () => {
 })
 
 describe('AIFeatureCard — placement + slots', () => {
-  it('allows the existing inline action and title to wrap without hiding card content', () => {
-    render(
-      <AIFeatureCard
-        title="A long specialist title with complete evidence"
-        description="All specialist context remains reachable."
-        buttonLabel="Explain complete evidence"
-        canStart
-        stream={makeStream()}
-      />,
-    )
-    const heading = screen.getByRole('heading', { level: 3, name: 'A long specialist title with complete evidence' })
-    const button = screen.getByRole('button', { name: 'Ask Helix · Explain complete evidence' })
-    expect(button).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal')
-    expect(button).not.toHaveClass('whitespace-nowrap')
-    expect(button.parentElement).toHaveClass('flex-wrap', 'min-w-0')
-    expect(button.parentElement).toContainElement(heading)
-    expect(screen.getByText('All specialist context remains reachable.')).toBeVisible()
-  })
-
-  it('retains streaming state and accessible action identity with an adaptive label', () => {
-    const start = vi.fn()
-    render(
-      <AIFeatureCard
-        title="Evidence"
-        description="Complete context"
-        buttonLabel="Explain evidence"
-        canStart
-        stream={makeStream({ state: 'streaming', start })}
-      />,
-    )
-    const button = screen.getByRole('button', { name: 'Ask Helix · Explain evidence' })
-    expect(button).toHaveClass('h-auto', 'whitespace-normal')
-    expect(button).toHaveTextContent('Helix is thinking')
-    expect(button).toHaveAttribute('aria-busy', 'true')
-    expect(button).toBeDisabled()
-    fireEvent.click(button)
-    expect(start).not.toHaveBeenCalled()
-  })
-
   it('coerces the button below and after the inputSlot even when placement is inline', () => {
     render(
       <AIFeatureCard

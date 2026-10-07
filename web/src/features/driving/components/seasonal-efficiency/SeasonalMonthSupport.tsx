@@ -8,7 +8,6 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayDistance, formatMonth } from './formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalMonthSupport({
   analysis,
@@ -17,7 +16,6 @@ export function SeasonalMonthSupport({
   timeZone,
   units,
 }: SeasonalSectionProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const data = analysis.months.map((month) => ({
     monthKey: `${month.month}-${formatMonth(month.month, locale, timeZone)}`,

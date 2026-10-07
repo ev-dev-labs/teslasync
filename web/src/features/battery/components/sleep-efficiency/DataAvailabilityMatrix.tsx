@@ -89,9 +89,6 @@ export function DataAvailabilityMatrix({
         <SleepEfficiencySectionBody state={state} skeletonHeight={260}>
           <DataTable<SleepAvailabilityRow>
             tableId="battery:sleep-availability"
-            resizable={false}
-            columnReorder={false}
-            columnVisibility={false}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.key}

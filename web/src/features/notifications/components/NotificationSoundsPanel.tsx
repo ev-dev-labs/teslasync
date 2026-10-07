@@ -99,7 +99,7 @@ export function NotificationSoundsPanel({ className }: NotificationSoundsPanelPr
           <InlineCallout variant="warning" icon={<Info aria-hidden="true" />}>
             {t(
               'notificationSounds.autoplayHint',
-              'Some browsers require a click before audio is allowed. Use the test buttons below once to authorise playback.',
+              'Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.',
             )}
           </InlineCallout>
         )}

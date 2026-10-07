@@ -44,6 +44,7 @@ export function TrueCostBreakEven({
                     ? t('tco.breakEven.priceValue', '{{value}}/{{unit}}', {
                       value: display.formatCurrency(
                         analysis.breakEven.gasPricePerConfiguredUnit,
+                        3,
                       ),
                       unit: unitLabel,
                     })
@@ -60,7 +61,7 @@ export function TrueCostBreakEven({
                 <Text as="p" variant="metricValue" mono className="mt-2">
                   {analysis.breakEven.comparisonMpg != null
                     ? t('tco.breakEven.mpgValue', '{{value}} MPG', {
-                      value: display.formatNumber(analysis.breakEven.comparisonMpg),
+                      value: display.formatNumber(analysis.breakEven.comparisonMpg, 2),
                     })
                     : '—'}
                 </Text>

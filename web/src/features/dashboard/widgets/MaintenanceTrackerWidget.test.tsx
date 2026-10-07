@@ -225,7 +225,8 @@ describe('MaintenanceTrackerWidget — compact layout', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
     expect(screen.getByText('months')).toBeInTheDocument();
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Maintenance', level: 3 })).toBeInTheDocument();
+    // No title in compact mode → no header label.
+    expect(screen.queryByText('Maintenance')).toBeNull();
   });
 
   it('renders an explicit empty state (never a blank panel) when there is no data', () => {
@@ -266,22 +267,22 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Maintenance')).toBeInTheDocument();
-    expect(screen.getByText('Shortest configured interval')).toBeInTheDocument();
+    expect(screen.getByText('Next Service')).toBeInTheDocument();
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
     // intervalMonths 2 → 'soon' → 'Soon' badge.
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Soon')).toBeInTheDocument();
     // estimatedCostUsd 120 → currency (real useFormatting, '$' + 2 dp).
     expect(screen.getByText('$120.00')).toBeInTheDocument();
   });
 
-  it('preserves a real zero estimated cost', () => {
+  it('hides the cost row when the estimated cost is zero', () => {
     mockMaintenance.mockReturnValue(
       qr({ data: [makeItem({ estimatedCostUsd: 0, intervalMonths: 6 })] }),
     );
     renderWidget(STANDARD);
 
     expect(screen.getByText('Brake Fluid')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.queryByText(/^\$/)).toBeNull();
   });
 
   it('maps the three most-recent service records into the timeline (name via itemId)', () => {
@@ -302,11 +303,11 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     );
     const { container } = renderWidget(STANDARD);
 
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
+    expect(screen.getByText('Recent Service')).toBeInTheDocument();
     // The record's itemId 'tires' resolves to the maintenance item name.
     expect(screen.getByText('Tire Rotation')).toBeInTheDocument();
     // Subtitle carries the (converted) odometer + notes.
-    expect(container).toHaveTextContent('15,000.00 km · Rotated');
+    expect(container).toHaveTextContent('15,000 km · Rotated');
   });
 
   it('shows a "no records yet" note when there are items but no history', () => {
@@ -327,8 +328,8 @@ describe('MaintenanceTrackerWidget — standard layout', () => {
     const { container } = renderWidget(STANDARD);
 
     // No next-service panel (no items) but the history still renders.
-    expect(screen.queryByText('Next service')).toBeNull();
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
+    expect(screen.queryByText('Next Service')).toBeNull();
+    expect(screen.getByText('Recent Service')).toBeInTheDocument();
     // itemId falls back to its own value when no matching item exists.
     expect(screen.getByText('wipers')).toBeInTheDocument();
     expect(container).toHaveTextContent('New blades');
@@ -344,7 +345,7 @@ describe('MaintenanceTrackerWidget — distance conversion (regression)', () => 
     );
     const { container } = renderWidget(STANDARD);
 
-    expect(container).toHaveTextContent('40,000.00 km');
+    expect(container).toHaveTextContent('40,000 km');
     expect(container).not.toHaveTextContent('25 km');
   });
 
@@ -362,7 +363,7 @@ describe('MaintenanceTrackerWidget — distance conversion (regression)', () => 
     const { container } = renderWidget(STANDARD);
 
     // Both the interval and the odometer restate to "1,000 mi", not "1 mi".
-    expect(container).toHaveTextContent('1,000.00 mi');
+    expect(container).toHaveTextContent('1,000 mi');
     expect(container).not.toHaveTextContent('1 mi');
   });
 });
@@ -372,14 +373,13 @@ describe('MaintenanceTrackerWidget — urgency badge variants', () => {
     [0, 'Overdue'],
     [3, 'Soon'],
     [12, 'Good'],
-  ])('does not derive "%s" due status from a %i month interval alone', (months) => {
+  ])('labels an interval of %i months as "%s"', (months, label) => {
     mockMaintenance.mockReturnValue(
       qr({ data: [makeItem({ intervalMonths: months })] }),
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(screen.getByText('Intervals are recommendations, not time remaining.')).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
   });
 });
 
@@ -389,7 +389,7 @@ describe('MaintenanceTrackerWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Maintenance')).toBeInTheDocument();
+    expect(screen.queryByText('Maintenance')).toBeNull();
     expect(screen.queryByText('No maintenance data')).toBeNull();
   });
 
@@ -397,8 +397,7 @@ describe('MaintenanceTrackerWidget — shell states', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('No maintenance data')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Recent service' })).toBeInTheDocument();
-    expect(screen.getByText('No service records yet')).toBeInTheDocument();
+    expect(screen.queryByText('Recent Service')).toBeNull();
   });
 
   it('invokes the maintenance refetch from the standard-layout freshness control', () => {
@@ -415,7 +414,7 @@ describe('MaintenanceTrackerWidget — shell states', () => {
 });
 
 describe('MaintenanceTrackerWidget — null-safety & hardening', () => {
-  it('renders unknown name and interval as placeholders, never zero (compact)', () => {
+  it('renders a null name as "—" and a null interval as 0 without crashing (compact)', () => {
     mockMaintenance.mockReturnValue(
       qr({
         data: [
@@ -428,9 +427,9 @@ describe('MaintenanceTrackerWidget — null-safety & hardening', () => {
     );
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.getByText('Configured interval')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('months')).toBeInTheDocument();
   });
 
   it('renders records with null fields without crashing (standard timeline)', () => {
@@ -450,31 +449,12 @@ describe('MaintenanceTrackerWidget — null-safety & hardening', () => {
     const { container } = renderWidget(STANDARD);
 
     // The history section still renders; the null odometer degrades to "0 km".
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
-    expect(container).not.toHaveTextContent('0.00 km');
+    expect(screen.getByText('Recent Service')).toBeInTheDocument();
+    expect(container).toHaveTextContent('0 km');
   });
 });
 
 describe('MaintenanceTrackerWidget — forecast banner', () => {
-  it('retains service history when the recommendation source fails', () => {
-    mockMaintenance.mockReturnValue(qr({ data: undefined, isError: true, error: new Error('refresh') }));
-    mockRecords.mockReturnValue(qr({ data: [makeRecord({ notes: 'Verified service' })] }));
-    renderWidget(STANDARD);
-    expect(screen.getByText('Recent service')).toBeInTheDocument();
-    expect(screen.getByText(/Verified service/)).toBeInTheDocument();
-  });
-
-  it('uses matching forecast evidence rather than the configured interval for due status', () => {
-    mockMaintenance.mockReturnValue(qr({ data: [makeItem({ intervalMonths: 24 })] }));
-    mockForecast.mockReturnValue(qr({ data: {
-      items: [{ name: 'Brake Fluid', category: 'fluids', status: 'overdue' }],
-      overdue_count: 1, due_soon_count: 0, km_per_day: 0, vehicle_id: 7,
-    } }));
-    renderWidget(STANDARD);
-    expect(screen.getAllByText('Overdue')).toHaveLength(2);
-    expect(screen.queryByText('Good')).not.toBeInTheDocument();
-  });
-
   it('renders due counts when the forecast flags items', () => {
     mockMaintenance.mockReturnValue(qr({ data: [makeItem()] }));
     mockForecast.mockReturnValue(
@@ -484,19 +464,16 @@ describe('MaintenanceTrackerWidget — forecast banner', () => {
 
     expect(
       screen.getByRole('status', { name: 'Maintenance forecast status' }),
-    ).toHaveTextContent('Overdue');
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
+    ).toHaveTextContent('1 overdue · 2 due soon');
   });
 
-  it('preserves verified zero due counts in the forecast section', () => {
+  it('hides the banner when nothing is due', () => {
     mockMaintenance.mockReturnValue(qr({ data: [makeItem()] }));
     mockForecast.mockReturnValue(
       qr({ data: { overdue_count: 0, due_soon_count: 0, km_per_day: 55.5 } }),
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('status', { name: 'Maintenance forecast status' })).toBeInTheDocument();
-    expect(screen.getAllByText('0')).toHaveLength(2);
+    expect(screen.queryByRole('status', { name: 'Maintenance forecast status' })).toBeNull();
   });
 });

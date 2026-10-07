@@ -153,16 +153,6 @@ describe('QueryError', () => {
       expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
       expect(screen.getByText('Waiting for upstream')).toBeInTheDocument()
     })
-
-    it('retains a supplied recovery action when a rate-limited query has exhausted its retries', () => {
-      const onRetry = vi.fn()
-      renderInRouter(
-        <QueryError error={new RateLimitError('slow down', 1, '/settings')} onRetry={onRetry} />,
-      )
-      expect(screen.getByText('Requests are paused briefly. Wait before retrying.')).toBeInTheDocument()
-      fireEvent.click(screen.getByRole('button', { name: /^retry$/i }))
-      expect(onRetry).toHaveBeenCalledOnce()
-    })
   })
 
   describe('Network / unknown', () => {

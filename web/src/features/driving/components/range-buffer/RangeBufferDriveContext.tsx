@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { RangeBufferResult } from '../../lib/rangeBuffer';
 import { rangeBufferPercent } from './labels';
 import { RangeBufferSectionBody } from './RangeBufferSectionBody';
@@ -19,7 +19,6 @@ import type {
   RangeBufferDistanceFormatter,
   RangeBufferQueryState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferDriveContextProps {
   result: RangeBufferResult;
@@ -34,7 +33,6 @@ export function RangeBufferDriveContext({
   locale,
   formatDistance,
 }: RangeBufferDriveContextProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const context = result.driveContext;
 
@@ -141,7 +139,9 @@ export function RangeBufferDriveContext({
                 'rangeBuffer.context.medianDistance',
                 'Median drive distance',
               )}
-              value={formatDistance(context.medianDistanceM)}
+              value={formatDistance(context.medianDistanceM, {
+                precision: 1,
+              })}
               subtitle={t(
                 'rangeBuffer.context.distanceRowsOnly',
                 'positive finite distance rows',

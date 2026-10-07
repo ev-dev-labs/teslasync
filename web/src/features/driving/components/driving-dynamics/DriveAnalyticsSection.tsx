@@ -18,8 +18,7 @@ import {
   Area,
   XAxis,
   YAxis,
-  chartGrid,
-  axisTick,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
@@ -28,8 +27,6 @@ import { FadeIn } from '@/components/motion';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { Drive } from '@/types/driving';
 import { SPEED_BUCKETS_RANGES } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface SpeedBucket {
   range: string;
@@ -44,8 +41,8 @@ interface AccelPoint {
 interface PowerPoint {
   index: number;
   label: string;
-  powerMax: number | null;
-  powerMin: number | null;
+  powerMax: number;
+  powerMin: number;
 }
 
 /** Stable empty reference so `filteredDrives ?? EMPTY_DRIVES` doesn't
@@ -68,10 +65,6 @@ export default function DriveAnalyticsSection({
   speedUnit,
 }: DriveAnalyticsSectionProps) {
   const { t } = useTranslation();
-  const { fmtNumber } = useNumberFormatting();
-  // Format the accessible table only. Keep chart/export series numeric and
-  // unrounded so display precision never changes the underlying evidence.
-  const formatMeasurement = (value: unknown) => isFiniteNumber(value) ? fmtNumber(value) : '—';
 
   const drives = filteredDrives ?? EMPTY_DRIVES;
 
@@ -103,7 +96,7 @@ export default function DriveAnalyticsSection({
     drives
       .filter((d) => d.avgPowerW != null)
       .map((d) => ({
-        distance: toDistanceDisplay(d.distanceM),
+        distance: Math.round(toDistanceDisplay(d.distanceM ?? 0)),
         powerMax: (d.avgPowerW as number) / 1000,
       })),
   [drives, toDistanceDisplay]);
@@ -117,12 +110,12 @@ export default function DriveAnalyticsSection({
   }, [accelPatterns]);
 
   const powerProfile = useMemo<PowerPoint[]>(() => {
-    const recent = [...drives].sort((a, b) => b.startTs.localeCompare(a.startTs)).slice(0, 20).reverse();
+    const recent = drives.slice(-20);
     return recent.map((d, i) => ({
       index: i + 1,
       label: formatDateShort(d.startTs),
-      powerMax: d.avgPowerW != null ? d.avgPowerW / 1000 : null,
-      powerMin: d.regenEnergyWh != null ? d.regenEnergyWh / 1000 : null,
+      powerMax: (d.avgPowerW ?? 0) / 1000,
+      powerMin: 0,
     }));
   }, [drives]);
 
@@ -130,7 +123,7 @@ export default function DriveAnalyticsSection({
   // instead of an axis-only blank chart when its series has no points.
   const speedEmpty = speedDistribution.every((b) => b.count === 0);
   const accelEmpty = accelPatterns.length === 0;
-  const powerEmpty = powerProfile.every((point) => point.powerMax == null && point.powerMin == null);
+  const powerEmpty = powerProfile.length === 0;
 
   return (
     <>
@@ -164,9 +157,9 @@ export default function DriveAnalyticsSection({
                 <defs>
                   <ChartGradient id="speedFill" color="#3b82f6" />
                 </defs>
-                {chartGrid}
-                <XAxis dataKey="range" tick={axisTick} />
-                <YAxis tick={axisTick} allowDecimals={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="range" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="count" fill="url(#speedFill)" radius={[4, 4, 0, 0]} name={t('dynamics.drives', 'Drives')} />
               </BarChart>
@@ -175,9 +168,9 @@ export default function DriveAnalyticsSection({
 
           {/* chart-a11y:no-table scatter chart of every drive — a per-row table here would be too dense; CSV export available */}
           <ChartContainer
-            title={t('dynamics.contextCharts.load', 'Trip load comparison')}
-            subtitle={t('dynamics.contextCharts.loadDescription', 'Recorded average motor power versus trip distance — not peak power or acceleration')}
-            ariaLabel={t('dynamics.contextCharts.loadAria', 'Per-drive scatter chart of average motor power versus trip distance')}
+            title={t('dynamics.accelPatterns', 'Acceleration Patterns')}
+            subtitle={t('dynamics.accelPatternsDesc', 'Peak power vs trip distance')}
+            ariaLabel={t('dynamics.accelPatterns.aria', 'Per-drive scatter chart of peak power versus trip distance')}
             height={300}
             empty={accelEmpty}
             exportable
@@ -185,9 +178,9 @@ export default function DriveAnalyticsSection({
           >
             <ResponsiveContainer width="100%" height={300}>
               <ScatterChart>
-                {chartGrid}
-                <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={axisTick} />
-                <YAxis dataKey="powerMax" type="number" name={t('dynamics.avgPower', 'Avg Power')} unit=" kW" tick={axisTick} />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="distance" type="number" name={t('dynamics.distance', 'Distance')} unit={` ${distanceUnit}`} tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+                <YAxis dataKey="powerMax" type="number" name={t('dynamics.peakPower', 'Peak Power')} unit=" kW" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Scatter data={accelPatterns} fill="#a855f7" name={t('dynamics.drives', 'Drives')} />
                 {accelAvgPower != null && (
@@ -208,8 +201,8 @@ export default function DriveAnalyticsSection({
       <FadeIn delay={0.55}>
         <ChartContainer
           title={t('dynamics.powerProfile', 'Power Profile')}
-          subtitle={t('dynamics.contextCharts.profileDescription', 'Average power (left, kW) and recovered energy (right, kWh) for the latest 20 loaded trips')}
-          ariaLabel={t('dynamics.contextCharts.profileAria', 'Recent-drives average motor power and recorded recovered energy on separate axes')}
+          subtitle={t('dynamics.powerProfileDesc', 'Peak & regen power for recent drives')}
+          ariaLabel={t('dynamics.powerProfile.aria', 'Recent-drives peak and regen power dual-area chart')}
           chartKey="driving-dynamics-power-profile"
           data={powerProfile.map((d) => ({
             label: d.label,
@@ -218,8 +211,8 @@ export default function DriveAnalyticsSection({
           }))}
           dataColumns={[
             { key: 'label', label: t('dynamics.col.drive', 'Drive') },
-            { key: 'powerMax', label: t('dynamics.contextCharts.averageKw', 'Average power (kW)'), format: formatMeasurement },
-            { key: 'powerMin', label: t('dynamics.contextCharts.recoveredKwh', 'Recovered energy (kWh)'), format: formatMeasurement },
+            { key: 'powerMax', label: t('dynamics.col.maxKw', 'Max kW') },
+            { key: 'powerMin', label: t('dynamics.col.regenKw', 'Regen kW') },
           ]}
           height={320}
           empty={powerEmpty}
@@ -231,15 +224,14 @@ export default function DriveAnalyticsSection({
               <AreaChart data={powerProfile}>
               {areaGradient('powerMaxGrad', '#3b82f6')}
               {areaGradient('powerMinGrad', '#ef4444', 0.25)}
-              {chartGrid}
-              <XAxis dataKey="label" tick={axisTick} />
-              <YAxis tick={axisTick} unit=" kW" />
-              <YAxis yAxisId="energy" orientation="right" tick={axisTick} unit=" kWh" />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
+              <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} unit=" kW" />
               <Tooltip content={<ChartTooltip />} />
               <ChartLegend />
-              <ReferenceLine y={0} stroke="var(--border-default)" />
-              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.contextCharts.averageKw', 'Average power (kW)')} hide={hiddenSeries?.isHidden('powerMax')} />
-              <Area {...AREA_DEFAULTS} yAxisId="energy" dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.contextCharts.recoveredKwh', 'Recovered energy (kWh)')} hide={hiddenSeries?.isHidden('powerMin')} />
+              <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
+              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} hide={hiddenSeries?.isHidden('powerMax')} />
+              <Area {...AREA_DEFAULTS} dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} hide={hiddenSeries?.isHidden('powerMin')} />
               </AreaChart>
             </ResponsiveContainer>
           )}

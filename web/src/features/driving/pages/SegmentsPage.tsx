@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Flag, Trophy, Zap, Timer, Swords, MapPin, Route as RouteIcon,
+  Flag, Trophy, Zap, Gauge, Timer, Swords, MapPin, Route as RouteIcon,
 } from 'lucide-react';
 
-import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
   Button,
   DataTable,
@@ -20,11 +20,10 @@ import {
 import {
   ComposedChart, LineChart, Line, Area, XAxis, YAxis, Tooltip, ReferenceLine,
   ResponsiveContainer, ChartGradient, ChartTooltip, ChartLegend, chartGrid, axisTick,
+  EmbeddedChart,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import type { StatMetric } from '@/components/data-display/stat-reference';
-import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
 
 import {
   useSegments, useSegmentLeaderboard, useSegmentGhost,
@@ -32,14 +31,11 @@ import {
 } from '@/api/hooks/useSegments';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationClock, formatDateShort } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
 
 const DASH = '—';
 
@@ -65,11 +61,10 @@ function whPerKm(v: number | null | undefined): string {
 function signedDelta(s: number): string {
   if (!Number.isFinite(s) || s === 0) return '—';
   const sign = s < 0 ? '−' : '+';
-  return `${sign}${fmtNumber(Math.abs(s))}s`;
+  return `${sign}${Math.abs(s).toFixed(1)}s`;
 }
 
 export default function SegmentsPage() {
-  useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('segments.title', 'Ghost Racing'));
 
@@ -78,10 +73,9 @@ export default function SegmentsPage() {
   const noVehicle = vehicleId === null;
 
   const segmentsQuery = useSegments(vehicleId);
-  const segmentsState = useDataState(segmentsQuery, { provenance: 'historical' });
-  const { data: segmentsData, refetch: refetchSegments } = segmentsQuery;
-  const segLoading = !noVehicle && segmentsState.status === 'initial';
-  const segError = segmentsState.fatalError;
+  const {
+    data: segmentsData, isLoading: segLoading, error: segError, refetch: refetchSegments,
+  } = segmentsQuery;
   const segments = useMemo(() => segmentsData?.segments ?? [], [segmentsData]);
   const [page, setPage] = useUrlNumber('page', 1);
   const totalPages = Math.max(1, Math.ceil(segments.length / SEGMENTS_PAGE_SIZE));
@@ -143,10 +137,9 @@ export default function SegmentsPage() {
   }, []);
 
   const lbQuery = useSegmentLeaderboard(selectedSegmentId);
-  const leaderboardState = useDataState(lbQuery, { provenance: 'historical' });
-  const { data: leaderboard, refetch: refetchLeaderboard } = lbQuery;
-  const lbLoading = selectedSegmentId != null && leaderboardState.status === 'initial';
-  const lbError = leaderboardState.fatalError;
+  const {
+    data: leaderboard, isLoading: lbLoading, error: lbError, refetch: refetchLeaderboard,
+  } = lbQuery;
 
   /* Default the two racers to the fastest run (the by-time PR) versus the
      runner-up so a ghost renders as soon as a segment is opened. Keyed on the
@@ -176,10 +169,9 @@ export default function SegmentsPage() {
   }, []);
 
   const ghostQuery = useSegmentGhost(selectedSegmentId, racerA, racerB);
-  const ghostState = useDataState(ghostQuery, { provenance: 'historical' });
-  const { data: ghost, refetch: refetchGhost } = ghostQuery;
-  const ghostLoading = racerA != null && racerB != null && ghostState.status === 'initial';
-  const ghostError = ghostState.fatalError;
+  const {
+    data: ghost, isLoading: ghostLoading, error: ghostError, refetch: refetchGhost,
+  } = ghostQuery;
 
   const onRetrySegments = useCallback(() => { void refetchSegments(); }, [refetchSegments]);
   const onRetryLeaderboard = useCallback(() => { void refetchLeaderboard(); }, [refetchLeaderboard]);
@@ -249,33 +241,13 @@ export default function SegmentsPage() {
 
   const selectVehicleMsg = t('segments.selectVehicle', 'Select a vehicle to find its route segments.');
   const bothChosen = racerA != null && racerB != null && racerA !== racerB;
-  const raceMetrics: readonly StatMetric[] = [
-    {
-      metricId: 'status', occurrenceId: 'winner', rawValue: ghost ? winnerLabel : null,
-      label: t('segments.ghost.winner', 'Winner'),
-      context: ghost?.winner_drive_id == null
-        ? t('segments.ghost.tieHelp', 'Identical recorded times.')
-        : t('segments.ghost.margin', 'Won by {{margin}}', { margin: clock(ghost.margin_s) }),
-    },
-    {
-      metricId: 'duration', occurrenceId: 'attempt-a', rawValue: ghost?.a.duration_s,
-      label: t('segments.ghost.racerA', 'Attempt A'), context: labelFor(racerA),
-      display: { formatter: (raw) => ({ value: clock(raw), unit: '' }) },
-    },
-    {
-      metricId: 'duration', occurrenceId: 'attempt-b', rawValue: ghost?.b.duration_s,
-      label: t('segments.ghost.racerB', 'Attempt B'), context: labelFor(racerB),
-      display: { formatter: (raw) => ({ value: clock(raw), unit: '' }) },
-    },
-  ];
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('segments.title', 'Ghost Racing')}
       subtitle={t('segments.subtitle', 'Race your most-repeated routes against your own personal best')}
       query={segmentsQuery}
     >
-      <StaleRefreshWarning state={segmentsState} label={t('segments.list.title', 'Route segments')} />
       {/* ── 1. Detected segments ─────────────────────────────────────────── */}
       <FadeIn>
         <section aria-label={t('segments.list.title', 'Route segments')}>
@@ -337,10 +309,12 @@ export default function SegmentsPage() {
       {/* ── 2. Leaderboard for the selected segment ──────────────────────── */}
       {selectedSegmentId != null ? (
         <FadeIn delay={0.05}>
-          <LayoutCard
-            title={leaderboard?.segment.name ?? t('segments.board.title', 'Leaderboard')}
-            actions={<>
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <PanelTitle className="flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                {leaderboard?.segment.name ?? t('segments.board.title', 'Leaderboard')}
+              </PanelTitle>
               {/* by-time / by-efficiency toggle */}
               <div className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
                 {(['time', 'efficiency'] as const).map((mode) => (
@@ -358,9 +332,7 @@ export default function SegmentsPage() {
                   </Button>
                 ))}
               </div>
-            </>}
-          >
-            <StaleRefreshWarning state={leaderboardState} label={t('segments.board.title', 'Leaderboard')} />
+            </div>
 
             {lbLoading && !leaderboard ? (
               <Skeleton height={240} className="rounded-xl" />
@@ -382,21 +354,21 @@ export default function SegmentsPage() {
                 t={t}
               />
             )}
-          </LayoutCard>
+          </GlassPanel>
         </FadeIn>
       ) : null}
 
       {/* ── 3. Ghost race — head-to-head between the two chosen attempts ──── */}
       {selectedSegmentId != null ? (
         <FadeIn delay={0.1}>
-          <LayoutCard
-            title={t('segments.ghost.title', 'Ghost Race')}
-            description={t('segments.ghost.subtitle', 'Pick two attempts above (A and B) to race them lap-over-lap on the same route.')}
-            actions={
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-1 flex items-center gap-2">
               <Swords className="h-4 w-4 text-fuchsia-300" aria-hidden="true" />
-            }
-          >
-            <StaleRefreshWarning state={ghostState} label={t('segments.ghost.title', 'Ghost Race')} />
+              {t('segments.ghost.title', 'Ghost Race')}
+            </PanelTitle>
+            <Text as="p" variant="caption" className="mb-4">
+              {t('segments.ghost.subtitle', 'Pick two attempts above (A and B) to race them lap-over-lap on the same route.')}
+            </Text>
 
             {!bothChosen ? (
               <EmptyState /* no-action: selection-gated — needs two distinct attempts */
@@ -410,28 +382,49 @@ export default function SegmentsPage() {
             ) : ghost ? (
               <div className="flex flex-col gap-5">
                 {/* Winner banner + the two attempts */}
-                <DrivingSummaryBrief
-                  id="segment-ghost-brief"
-                  title={t('segments.ghost.title', 'Ghost Race')}
-                  description={t('segments.brief.description', 'Recorded attempt durations and the original winner result for the selected segment.')}
-                  metrics={raceMetrics}
-                  scope={leaderboard?.segment.name ?? String(selectedSegmentId)}
-                  provenance={t('segments.brief.provenance', 'Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin.')}
-                  retained={ghostState.isRefreshBlocked}
-                />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-neon-green/20 bg-neon-green/10 p-4 sm:col-span-1">
+                    <Text as="p" variant="metricLabel" className="mb-1 flex items-center gap-1.5">
+                      <Trophy className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
+                      {t('segments.ghost.winner', 'Winner')}
+                    </Text>
+                    <Text as="p" size="lg" weight="bold" className="text-emerald-300">
+                      {winnerLabel}
+                    </Text>
+                    <Text as="p" variant="caption" className="mt-1">
+                      {ghost.winner_drive_id == null
+                        ? t('segments.ghost.tieHelp', 'Identical recorded times.')
+                        : t('segments.ghost.margin', 'Won by {{margin}}', { margin: clock(ghost.margin_s) })}
+                    </Text>
+                  </div>
+                  <RacerStat
+                    color={COLOR_A}
+                    label={t('segments.ghost.racerA', 'Attempt A')}
+                    date={labelFor(racerA)}
+                    time={clock(ghost.a.duration_s)}
+                    lead={ghost.winner_drive_id === racerA}
+                  />
+                  <RacerStat
+                    color={COLOR_B}
+                    label={t('segments.ghost.racerB', 'Attempt B')}
+                    date={labelFor(racerB)}
+                    time={clock(ghost.b.duration_s)}
+                    lead={ghost.winner_drive_id === racerB}
+                  />
+                </div>
 
                 {/* Elapsed time vs distance — the lower line is ahead */}
                 <div>
-                  <div className="min-w-0">
+                  <Text as="p" variant="label" className="mb-2">
+                    {t('segments.ghost.elapsed', 'Elapsed time along the route')}
+                  </Text>
+                  <div className="h-64 sm:h-72">
                     {/* chart-a11y:no-table dense route telemetry trace — variable-length, not meaningfully tabular */}
-                    <ChartCard
+                    <EmbeddedChart
                       chartKey="segment-ghost-elapsed"
                       title={t('segments.ghost.elapsed', 'Elapsed time along the route')}
                       ariaLabel={t('segments.ghost.elapsedAria', 'Line chart of elapsed time versus distance for both attempts; the lower line is ahead')}
-                      height={288}
-                      mobileHeight={256}
-                      toolbar={false}
-                      exportable={false}
+                      fluid
                     >
                       {({ hiddenSeries }) => (
                         <ResponsiveContainer width="100%" height="100%">
@@ -481,22 +474,22 @@ export default function SegmentsPage() {
                           </LineChart>
                         </ResponsiveContainer>
                       )}
-                    </ChartCard>
+                    </EmbeddedChart>
                   </div>
                 </div>
 
                 {/* Time gap — where A gained or lost against B */}
                 {gapData.length > 0 ? (
                   <div>
-                    <div className="min-w-0">
+                    <Text as="p" variant="label" className="mb-2">
+                      {t('segments.ghost.gap', 'Time gap (A vs B)')}
+                    </Text>
+                    <div className="h-48 sm:h-56">
                       {/* chart-a11y:no-table route-fraction time-gap area — dense trace, not tabular */}
-                      <ChartCard
+                      <EmbeddedChart
                         title={t('segments.ghost.gap', 'Time gap (A vs B)')}
                         ariaLabel={t('segments.ghost.gapAria', 'Area chart of the A-versus-B time gap along the route; below the zero line means A is ahead')}
-                        height={224}
-                        mobileHeight={192}
-                        toolbar={false}
-                        exportable={false}
+                        fluid
                       >
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={gapData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
@@ -537,7 +530,7 @@ export default function SegmentsPage() {
                             />
                           </ComposedChart>
                         </ResponsiveContainer>
-                      </ChartCard>
+                      </EmbeddedChart>
                     </div>
                     <Text as="p" variant="caption" className="mt-2">
                       {t('segments.ghost.gapHelp', 'Below the line, Attempt A is ahead; above it, Attempt B leads.')}
@@ -551,10 +544,10 @@ export default function SegmentsPage() {
                 message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
               />
             )}
-          </LayoutCard>
+          </GlassPanel>
         </FadeIn>
       ) : null}
-    </PageLayout>
+    </PageContainer>
   );
 }
 
@@ -641,7 +634,6 @@ interface LeaderboardTableProps {
 }
 
 function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: LeaderboardTableProps) {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const columns = useMemo<Column<LeaderboardRow>[]>(() => [
     {
       key: 'rank',
@@ -726,7 +718,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
         </div>
       ),
     },
-  ], [board, onPickA, onPickB, racerA, racerB, t, displayPrecision, displayLocale]);
+  ], [board, onPickA, onPickB, racerA, racerB, t]);
 
   return (
     <DataTable
@@ -766,5 +758,33 @@ function RaceButton({ active, color, onClick, label }: RaceButtonProps) {
     >
       {label}
     </Button>
+  );
+}
+
+/* ── Racer summary tile in the ghost banner ───────────────────────────── */
+
+interface RacerStatProps {
+  color: string;
+  label: string;
+  date: string;
+  time: string;
+  lead: boolean;
+}
+
+function RacerStat({ color, label, date, time, lead }: RacerStatProps) {
+  return (
+    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-4">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+          <Text as="span" variant="metricLabel">{label}</Text>
+        </span>
+        {lead ? <Gauge className="h-3.5 w-3.5 text-emerald-300" aria-hidden="true" /> : null}
+      </div>
+      <Text as="p" size="xl" weight="bold" className="tabular-nums" style={{ color }}>
+        {time}
+      </Text>
+      <Text as="p" variant="caption" className="mt-1">{date}</Text>
+    </div>
   );
 }

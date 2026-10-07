@@ -80,7 +80,7 @@ vi.mock('@/components/charts', () => ({
   Bar: () => null,
   BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
-  EmbeddedChart: ({
+  ChartContainer: ({
     children,
     title,
     ariaLabel,
@@ -252,7 +252,7 @@ describe('ComfortConsistencyPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'Comfort consistency',
+      name: 'Comfort Consistency',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.historyHook).toHaveBeenLastCalledWith('7');

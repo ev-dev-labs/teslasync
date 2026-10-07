@@ -6,12 +6,10 @@ import {
   useDriveTelemetry,
 } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
 import { Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -23,6 +21,7 @@ import {
   DriveDnaEncodingLegend,
   DriveDnaFingerprintPanel,
   DriveDnaGenomePanel,
+  DriveDnaKpiBand,
   DriveDnaMethodology,
   DriveDnaPowerDistribution,
   DriveDnaSocElevationChart,
@@ -31,7 +30,6 @@ import {
   type DriveDnaSectionState,
 } from '../components/drive-dna';
 import { buildDriveDnaModel } from '../lib/driveDNA';
-import { DriveDnaEvidenceBrief } from '../components/operationalbrief-a-m/DriveDnaEvidenceBrief';
 
 const DRIVE_HISTORY_LIMIT = 1_000;
 const HERO_COLUMNS = { default: 1, xl: 3 } as const;
@@ -45,9 +43,8 @@ export default function DriveDNAPage() {
   const timezone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const hasDriveListData =
-    vehicleId != null && drivesState.hasData;
+    vehicleId != null && drivesQuery.data !== undefined;
   const listIsResolved =
     vehicleId != null && (hasDriveListData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -61,9 +58,8 @@ export default function DriveDNAPage() {
   );
   const activeId = activeDrive ? String(activeDrive.id) : '';
   const telemetryQuery = useDriveTelemetry(activeId);
-  const telemetryState = useDataState(telemetryQuery, { provenance: 'historical' });
   const hasTelemetryData =
-    activeId !== '' && telemetryState.hasData;
+    activeId !== '' && telemetryQuery.data !== undefined;
   const telemetryIsResolved =
     activeId !== '' && (hasTelemetryData || telemetryQuery.isSuccess);
   const telemetryData =
@@ -83,7 +79,7 @@ export default function DriveDNAPage() {
           '{{date}} · {{distance}}',
           {
             date: formatDateTime(drive.startTs, { tz: timezone }),
-            distance: units.formatDistance(drive.distanceM),
+            distance: units.formatDistance(drive.distanceM, { precision: 1 }),
           },
         ),
       })),
@@ -101,23 +97,33 @@ export default function DriveDNAPage() {
       list: {
         isLoading:
           vehicleId != null &&
-          drivesState.status === 'initial',
+          !hasDriveListData &&
+          drivesQuery.isLoading,
         isResolved: listIsResolved,
         error:
-          drivesState.fatalError,
+          drivesQuery.isError && !hasDriveListData
+            ? drivesQuery.error
+            : null,
         refreshError:
-          drivesState.refreshError,
+          drivesQuery.isError && hasDriveListData
+            ? drivesQuery.error
+            : null,
         onRetry: () => void drivesQuery.refetch(),
       },
       telemetry: {
         isLoading:
           activeId !== '' &&
-          telemetryState.status === 'initial',
+          !hasTelemetryData &&
+          telemetryQuery.isLoading,
         isResolved: telemetryIsResolved,
         error:
-          telemetryState.fatalError,
+          telemetryQuery.isError && !hasTelemetryData
+            ? telemetryQuery.error
+            : null,
         refreshError:
-          telemetryState.refreshError,
+          telemetryQuery.isError && hasTelemetryData
+            ? telemetryQuery.error
+            : null,
         onRetry: () => void telemetryQuery.refetch(),
       },
     }),
@@ -125,29 +131,28 @@ export default function DriveDNAPage() {
       activeDrive,
       activeId,
       drivesQuery,
-      drivesState,
-      telemetryState,
+      hasDriveListData,
+      hasTelemetryData,
       listIsResolved,
       telemetryIsResolved,
       telemetryQuery,
       vehicleId,
     ],
   );
-  const selectorPlaceholder = drivesState.status === 'initial'
+  const selectorPlaceholder = drivesQuery.isLoading
     ? t('driveDna.selector.loading', 'Loading drives…')
-    : drivesState.fatalError
+    : drivesQuery.isError && !hasDriveListData
       ? t('driveDna.selector.error', 'Drive list unavailable')
       : t('driveDna.selector.empty', 'No drives available');
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('driveDna.title', 'Drive DNA')}
-      query={[drivesQuery, telemetryQuery]}
       subtitle={t(
         'driveDna.subtitle',
         'Deterministic artwork and sampled evidence from one selected drive’s telemetry emissions',
       )}
-      contextActions={
+      actions={
         <div className="flex flex-wrap items-start justify-end gap-2 sm:gap-3">
           <Select
             aria-label={t('driveDna.selector.aria', 'Choose a drive')}
@@ -171,14 +176,8 @@ export default function DriveDNAPage() {
         </div>
       }
     >
-      {drivesState.isRefreshBlocked && (
-        <StaleRefreshWarning state={drivesState} label={t('driveDna.selector.aria', 'Choose a drive')} />
-      )}
-      {telemetryState.isRefreshBlocked && (
-        <StaleRefreshWarning state={telemetryState} label={driveLabel} />
-      )}
       <FadeIn>
-        <DriveDnaEvidenceBrief drive={activeDrive} model={model} state={state} units={units} capReached={capReached} />
+        <DriveDnaKpiBand drive={activeDrive} model={model} state={state} units={units} capReached={capReached} />
       </FadeIn>
       <FadeIn delay={0.05}>
         <Grid cols={HERO_COLUMNS} gap={4}>
@@ -203,6 +202,6 @@ export default function DriveDNAPage() {
       <FadeIn delay={0.3}>
         <DriveDnaMethodology state={state} historyLimit={DRIVE_HISTORY_LIMIT} historyReturned={drives.length} capReached={capReached} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

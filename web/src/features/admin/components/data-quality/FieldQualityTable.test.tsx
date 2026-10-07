@@ -151,7 +151,7 @@ describe('FieldQualityTable', () => {
   it('makes partial / unattested coverage visible with real counts', () => {
     renderTable();
     const row = rowFor('PartialField');
-    expect(within(row).getByText('75.00%')).toBeInTheDocument();
+    expect(within(row).getByText('75.0%')).toBeInTheDocument();
     expect(within(row).getByText('Partially attested')).toBeInTheDocument();
     expect(within(row).getByText('300')).toBeInTheDocument();
     expect(within(row).getByText('100')).toBeInTheDocument();
@@ -163,13 +163,13 @@ describe('FieldQualityTable', () => {
     const row = rowFor('PartialField');
     expect(within(row).getByText('2m')).toBeInTheDocument(); // freshness 120s
     expect(within(row).getByText('1h')).toBeInTheDocument(); // max gap 3600s
-    expect(within(row).getByText('25.00%')).toBeInTheDocument(); // duplicate ratio
+    expect(within(row).getByText('25.0%')).toBeInTheDocument(); // duplicate ratio
   });
 
   it('marks a fully attested field as complete', () => {
     renderTable();
     const row = rowFor('HealthyField');
-    expect(within(row).getByText('100.00%')).toBeInTheDocument();
+    expect(within(row).getByText('100.0%')).toBeInTheDocument();
     expect(within(row).getByText('Fully attested')).toBeInTheDocument();
   });
 

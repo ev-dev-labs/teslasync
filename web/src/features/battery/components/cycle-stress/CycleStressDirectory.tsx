@@ -9,7 +9,10 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import {
+  formatDateTime,
+  formatDurationMsCompact,
+} from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import type {
   CycleStressResult,
@@ -22,7 +25,6 @@ import {
 } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressDirectoryProps {
   result: CycleStressResult;
@@ -39,8 +41,6 @@ export function CycleStressDirectory({
   state,
   locale,
 }: CycleStressDirectoryProps) {
-  const { formatDurationMsCompact } = useNumberFormatting();
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo<DirectoryRow[]>(
     () =>
@@ -67,8 +67,6 @@ export function CycleStressDirectory({
       },
       {
         key: 'depth',
-        filterValue: (row) => row.depthPct ?? null,
-        filterValueLabel: (_, row) => cycleStressPercent(row.depthPct, locale),
         header: t('cycleStress.directory.depth', 'Depth'),
         align: 'right',
         visibleOnMobile: true,
@@ -88,8 +86,6 @@ export function CycleStressDirectory({
       },
       {
         key: 'meanSoc',
-        filterValue: (row) => row.meanSocPct ?? null,
-        filterValueLabel: (_, row) => cycleStressPercent(row.meanSocPct, locale),
         header: t('cycleStress.directory.meanSoc', 'Mean SoC'),
         align: 'right',
         render: (row) => (
@@ -100,8 +96,6 @@ export function CycleStressDirectory({
       },
       {
         key: 'closure',
-        filterValue: (row) => row.count ?? null,
-        filterValueLabel: (_, row) => row.count === 1 ? t('cycleStress.directory.full', 'Full') : t('cycleStress.directory.half', 'Boundary half'),
         header: t('cycleStress.directory.closure', 'Closure'),
         visibleOnMobile: true,
         render: (row) => (
@@ -114,8 +108,6 @@ export function CycleStressDirectory({
       },
       {
         key: 'duration',
-        filterValue: (row) => row.durationS ?? null,
-        filterValueLabel: (_, row) => formatDurationMsCompact(row.durationS * 1_000),
         header: t('cycleStress.directory.duration', 'Closure duration'),
         align: 'right',
         render: (row) => (
@@ -146,7 +138,7 @@ export function CycleStressDirectory({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {cycleStressNumber(row.equivalentFullCycles, locale)}
+            {cycleStressNumber(row.equivalentFullCycles, locale, 3)}
           </Text>
         ),
       },
@@ -156,14 +148,12 @@ export function CycleStressDirectory({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {cycleStressNumber(row.depthWeightedIndex, locale)}
+            {cycleStressNumber(row.depthWeightedIndex, locale, 3)}
           </Text>
         ),
       },
       {
         key: 'segment',
-        filterValue: (row) => row.segmentId ?? null,
-        filterValueLabel: (_, row) => cycleStressNumber(row.segmentId, locale, 0),
         header: t('cycleStress.directory.segment', 'Segment'),
         align: 'right',
         render: (row) => (
@@ -177,13 +167,13 @@ export function CycleStressDirectory({
       locale,
       result.config.deepThresholdPct,
       result.timeZone,
-      t, displayPrecision, displayLocale, formatDurationMsCompact,
+      t,
     ],
   );
 
   return (
     <section data-testid="cycle-stress-directory">
-      <GlassPanel className="min-w-0 p-4 sm:p-5">
+      <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <ListTree
             className="h-4 w-4 text-cyan-300"
@@ -206,7 +196,6 @@ export function CycleStressDirectory({
           requirement="cycles"
         >
           <DataTable
-            enableValueFilters
             tableId="battery:cycle-stress-directory"
             columns={columns}
             data={rows}

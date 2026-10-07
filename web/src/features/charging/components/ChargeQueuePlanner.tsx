@@ -7,8 +7,7 @@ import { Skeleton, EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAdviseChargeQueue } from '@/api/hooks/useCharging';
 import { useDateFormat } from '@/hooks/useDateFormat';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface QueueRow {
   currentSoc: string;
@@ -24,7 +23,6 @@ const DEFAULT_ROW: QueueRow = { currentSoc: '40', targetSoc: '80', readyBy: '07:
  * queue with feasibility per car.
  */
 export function ChargeQueuePlanner() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
   const { data: vehicles } = useVehicles();
@@ -148,7 +146,7 @@ export function ChargeQueuePlanner() {
                       {t('chargeQueue.slot', '{{start}}–{{end}} · {{kwh}} kWh · ready {{ready}}', {
                         start: formatTime(slot.start_time),
                         end: formatTime(slot.end_time),
-                        kwh: fmtNumber(slot.kwh_needed),
+                        kwh: fmtNumber(slot.kwh_needed, 1),
                         ready: formatTime(slot.ready_by),
                       })}
                     </Caption>

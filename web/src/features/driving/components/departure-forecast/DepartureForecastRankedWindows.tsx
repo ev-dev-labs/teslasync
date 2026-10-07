@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { DepartureForecastSectionBody } from './DepartureForecastSectionBody';
 import {
@@ -11,7 +11,6 @@ import {
   relativeDepartureLabel,
 } from './labels';
 import type { DepartureForecastQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastRankedWindowsProps {
   forecast: DepartureForecast;
@@ -26,7 +25,6 @@ export function DepartureForecastRankedWindows({
   locale,
   timeZone,
 }: DepartureForecastRankedWindowsProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const windows = forecast.rankedWindows;
 
@@ -108,7 +106,7 @@ export function DepartureForecastRankedWindows({
                         'departure.ranked.likelihood',
                         '{{value}}% modeled',
                         {
-                          value: fmtNumber(slot.p * 100, undefined, locale),
+                          value: fmtNumber(slot.p * 100, 1, locale),
                         },
                       )}
                     </Badge>

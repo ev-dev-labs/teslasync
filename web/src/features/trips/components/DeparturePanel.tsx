@@ -1,15 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Icons } from '@/lib/icons';
 import { useDeparture, type JourneySession } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
 import { Badge, Button, Text } from '@/components/ui';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { ListSkeleton } from '@/components/feedback';
-import { JourneyEvidenceList } from './continuation-mobility-trips-watch/JourneyEvidenceList';
+import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { safeArray } from '@/lib/safeArray';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HORIZONS = [12, 24, 48] as const;
 
@@ -30,7 +28,6 @@ function levelVariant(level: string) {
  * rides along when the vehicle has reported recently.
  */
 export function DeparturePanel({ session }: { session: JourneySession }) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [horizonH, setHorizonH] = useState<(typeof HORIZONS)[number]>(12);
 
@@ -50,48 +47,45 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
 
   if (!hasOrigin) {
     return (
-      <LayoutCard title={t('journey.departure.title', 'When to leave')}>
-      <Text as="p" variant="bodySm">
+      <Text as="p" size="sm" color="secondary">
         {t(
           'journey.departure.noOrigin',
           'Add an origin to advise departure hours for this journey.',
         )}
       </Text>
-      </LayoutCard>
     );
   }
 
   return (
-    <LayoutCard
-      title={t('journey.departure.title', 'When to leave')}
-      actions={
-        <div className="flex flex-wrap gap-1" role="group" aria-label={t('journey.departure.window', 'Window')}>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Text as="p" variant="label" className="flex items-center gap-2">
+          <Icons.departure className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('journey.departure.title', 'When to leave')}
+        </Text>
+        <div className="flex gap-1" role="group" aria-label={t('journey.departure.window', 'Window')}>
           {HORIZONS.map((h) => (
             <Button
               key={h}
-              wrapLabel
               variant={horizonH === h ? 'primary' : 'ghost'}
               size="sm"
-              aria-pressed={horizonH === h}
               onClick={() => setHorizonH(h)}
             >
               {t('journey.departure.hours', '{{h}}h', { h })}
             </Button>
           ))}
         </div>
-      }
-    >
-      <SourceContent
-        state={adviceState.fatalError ? 'error' : adviceQuery.isLoading && !adviceState.hasData
-          ? 'loading' : adviceState.status === 'stale' ? 'retained' : advice == null || slots.length === 0 ? 'empty' : 'ready'}
-        label={t('journey.departure.title', 'When to leave')}
-        emptyMessage={t('journey.departure.uncovered', 'The forecast covers none of this window.')}
-        errorMessage={t('journey.departure.loadFailed', 'Departure advice could not be loaded.')}
-        error={adviceState.fatalError}
-        errorRecovery={{ onRetry: adviceState.retry ?? undefined }}
-        loadingContent={<ListSkeleton label={t('journey.departure.loading', 'Scoring departure hours…')} />}
-      >
-      {advice != null && slots.length > 0 ? (
+      </div>
+
+      {adviceQuery.isLoading ? (
+        <ListSkeleton label={t('journey.departure.loading', 'Scoring departure hours…')} />
+      ) : adviceState.fatalError ? (
+        <QueryError error={adviceState.fatalError} onRetry={() => adviceState.retry?.()} />
+      ) : advice == null || slots.length === 0 ? (
+        <Text as="p" size="sm" color="secondary">
+          {t('journey.departure.uncovered', 'The forecast covers none of this window.')}
+        </Text>
+      ) : (
         <div className="space-y-3">
           {advice.recommended_at != null ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -103,7 +97,7 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
               {advice.charge?.soc_pct != null ? (
                 <Text as="span" variant="caption">
                   {t('journey.departure.socNow', 'Battery {{pct}}% now', {
-                    pct: fmtNumber(advice.charge.soc_pct),
+                    pct: fmtNumber(advice.charge.soc_pct, 0),
                   })}
                 </Text>
               ) : null}
@@ -113,31 +107,31 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
               {t('journey.departure.allWarn', 'Every hour warns — delay if you can')}
             </Badge>
           )}
-          <ul className="flex min-w-0 flex-wrap gap-1.5" aria-label={t('journey.departure.slots', 'Departure hours')}>
+          <div className="flex flex-wrap gap-1.5" role="list" aria-label={t('journey.departure.slots', 'Departure hours')}>
             {slots.map((slot) => (
-              <Text
-                as="li"
-                variant="caption"
+              <span
                 key={slot.depart_at}
+                role="listitem"
                 title={slot.level}
-                className={`rounded-md border px-2 py-1 tabular-nums ${
+                className={`rounded-md border px-2 py-1 text-xs tabular-nums ${
                   slot.depart_at === advice.recommended_at
                     ? 'border-emerald-500/40 bg-emerald-500/10'
-                    : 'border-[var(--border-subtle)] bg-[var(--surface-2)]'
+                    : 'border-white/[0.07] bg-white/[0.02]'
                 }`}
               >
                 <Badge variant={levelVariant(slot.level)}>{formatTime(slot.depart_at)}</Badge>
+              </span>
+            ))}
+          </div>
+          <ul className="space-y-1">
+            {safeArray(advice.evidence).map((line) => (
+              <Text as="li" key={line} size="xs" color="muted">
+                · {line}
               </Text>
             ))}
           </ul>
-          <JourneyEvidenceList evidence={safeArray(advice.evidence)} />
         </div>
-      ) : (
-        <Text as="p" variant="bodySm">
-          {t('journey.departure.uncovered', 'The forecast covers none of this window.')}
-        </Text>
       )}
-      </SourceContent>
-    </LayoutCard>
+    </div>
   );
 }

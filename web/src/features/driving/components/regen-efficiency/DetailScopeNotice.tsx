@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { Text } from '@/components/ui';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtInt } from '@/lib/numberFormat';
 
 interface DetailScopeNoticeProps {
   capReached: boolean;
@@ -17,7 +16,6 @@ export function DetailScopeNotice({
   historyLimit,
   className,
 }: DetailScopeNoticeProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   if (!capReached) return null;
 

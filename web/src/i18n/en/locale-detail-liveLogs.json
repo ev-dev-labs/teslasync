@@ -35,8 +35,7 @@
       "level": "Level",
       "message": "Message",
       "fields": "Fields",
-      "noLevel": "—",
-      "fullEvent": "Full log event"
+      "noLevel": "—"
     },
     "empty": {
       "noEvents": "No log events yet. Trigger activity (e.g. start a charging session) to see live output."

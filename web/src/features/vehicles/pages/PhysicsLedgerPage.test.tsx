@@ -11,7 +11,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -252,20 +252,6 @@ beforeEach(() => {
 });
 
 describe('PhysicsLedgerPage', () => {
-  it('reviews the real ledger brief without dropping truncation and contradiction evidence', () => {
-    usePhysicsLedgerMock.mockReturnValue(queryState({
-      data: ledgerResponse({ truncated: true, contradictions: ['gear_P_with_speed'] }),
-    }));
-    renderPage();
-    const brief = screen.getByTestId('ledger-summary');
-    expect(brief.querySelector('[data-operational-metric="ledger-kind"]')).toHaveAttribute('data-value-state', 'value');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText(/Sample cap hit/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/gear_P_with_speed/)).toBeInTheDocument();
-    expect(within(drawer).getAllByText('Predicted vs measured.').length).toBeGreaterThan(0);
-  });
-
   it('renders all eleven domain panels with data', () => {
     renderPage();
     for (const testId of [
@@ -283,24 +269,6 @@ describe('PhysicsLedgerPage', () => {
     const drive = screen.getByTestId('ledger-drive');
     expect(drive.textContent).toMatch(/unknown/);
     expect(drive.textContent).not.toMatch(/Grade[^]*\b0 Wh\b/);
-  });
-
-  it('keeps accounting terms, unknown evidence, and the residual in semantic shared tables', () => {
-    const ledger = ledgerResponse();
-    ledger.drive.measured_wh = term(0, 'recorded_zero');
-    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
-    renderPage();
-
-    const drive = screen.getByRole('table', { name: 'Drive energy ledger' });
-    expect(within(drive).getAllByRole('rowheader')).toHaveLength(8);
-    const measured = within(drive).getByRole('rowheader', { name: /Measured pack energy/ }).closest('tr')!;
-    expect(within(measured).getByRole('cell')).toHaveTextContent(/0(?:\.0+)?\s+(?:kWh|Wh)/);
-    const grade = within(drive).getByRole('rowheader', { name: /Grade/ }).closest('tr')!;
-    expect(grade).toHaveTextContent('PackVoltage');
-    expect(within(grade).getByRole('cell')).toHaveTextContent(/unknown/i);
-    expect(within(drive).getByRole('rowheader', { name: 'Unexplained residual' }).closest('tfoot')).not.toBeNull();
-    expect(within(screen.getByRole('table', { name: 'Charge physics' })).getAllByRole('rowheader')).toHaveLength(3);
-    expect(within(screen.getByRole('table', { name: 'Park / vampire physics' })).getAllByRole('rowheader')).toHaveLength(6);
   });
 
   it('renders the residual, reconcile, and honesty strings', () => {

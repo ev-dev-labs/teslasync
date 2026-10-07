@@ -12,7 +12,6 @@ import type {
   RangeBufferDistanceFormatter,
   RangeBufferQueryState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferDistanceProfileProps {
   result: RangeBufferResult;
@@ -25,7 +24,6 @@ export function RangeBufferDistanceProfile({
   state,
   formatDistance,
 }: RangeBufferDistanceProfileProps) {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo<RangeBufferProfileChartRow[]>(
     () =>
@@ -33,15 +31,15 @@ export function RangeBufferDistanceProfile({
         key: `${point.fromM}-${point.toM ?? 'max'}`,
         label:
           point.toM == null
-            ? `${formatDistance(point.fromM)}+`
-            : `${formatDistance(point.fromM)}-${formatDistance(point.toM)}`,
+            ? `${formatDistance(point.fromM, { precision: 0 })}+`
+            : `${formatDistance(point.fromM, { precision: 0 })}-${formatDistance(point.toM, { precision: 0 })}`,
         samples: point.samples,
         p10Pct: point.p10Pct,
         medianPct: point.medianPct,
         p90Pct: point.p90Pct,
         contextPct: point.medianDropPct,
       })),
-    [formatDistance, result.distanceProfile, displayPrecision, displayLocale],
+    [formatDistance, result.distanceProfile],
   );
 
   return (

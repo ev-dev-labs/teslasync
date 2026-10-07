@@ -100,7 +100,7 @@ function bodyRowNames(): string[] {
 
 function getFilterInput(): HTMLInputElement {
   return screen.getByRole('textbox', {
-    name: /Filter signals/i,
+    name: /filter signals/i,
   }) as HTMLInputElement;
 }
 
@@ -297,7 +297,8 @@ describe('LiveSignalsTable — timestamp cell', () => {
     const row = getRow('no-ts');
     expect(within(row).queryByTestId('timestamp')).toBeNull();
     const cells = within(row).getAllByRole('cell');
-    expect(cells[4]).toHaveTextContent('1.50s');
+    // formatAge(1500) → "1.5s".
+    expect(cells[4]).toHaveTextContent('1.5s');
   });
 });
 

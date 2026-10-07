@@ -116,21 +116,6 @@ describe('currencyFormat — currencySymbol', () => {
 })
 
 describe('currencyFormat — parseCurrencyText', () => {
-  it.each(['--$1.50', '++$1.50', '(-$1.50)'])(
-    'rejects ambiguous signs rather than changing the amount: %s',
-    text => expect(parseCurrencyText(text, 'USD', 'en-US')).toBeNull(),
-  )
-
-  it.each([
-    ['SEK', 'sv-SE'],
-    ['EUR', 'fi-FI'],
-    ['USD', 'ar-EG'],
-    ['USD', 'fa-IR'],
-  ])('parses the native negative %s currency display in %s', (currency, locale) => {
-    const text = new Intl.NumberFormat(locale, { style: 'currency', currency }).format(-1234.5)
-    expect(parseCurrencyText(text, currency, locale)).toBe(-1234.5)
-  })
-
   it('parses plain numeric strings in en-US', () => {
     expect(parseCurrencyText('1.50', 'USD', 'en-US')).toBe(1.5)
     expect(parseCurrencyText('1234.56', 'USD', 'en-US')).toBe(1234.56)
@@ -216,32 +201,6 @@ describe('currencyFormat — parseCurrencyTextToMicro', () => {
 })
 
 describe('currencyFormat — parseLocaleNumber (exported helper)', () => {
-  it.each([
-    ['en-US', '1,2'],
-    ['en-US', '1,,234'],
-    ['en-US', '1.2,34'],
-    ['de-DE', '1.23,45'],
-    ['fr-FR', '1 23,45'],
-    ['hi-IN', '123,456.7'],
-    ['en-US', '0x10'],
-  ])('rejects malformed grouping or non-decimal notation in %s: %s', (locale, text) => {
-    expect(parseLocaleNumber(text, locale)).toBeNaN()
-    expect(parseCurrencyText(text, 'USD', locale)).toBeNull()
-  })
-
-  it.each(['sv-SE', 'fi-FI', 'ar-EG', 'fa-IR'])(
-    'round-trips native digits and the negative sign in %s',
-    locale => {
-      const text = new Intl.NumberFormat(locale).format(-1234.5)
-      expect(parseLocaleNumber(text, locale)).toBe(-1234.5)
-    },
-  )
-
-  it('validates Indian grouping without rejecting ungrouped values', () => {
-    expect(parseLocaleNumber('1,23,456.7', 'hi-IN')).toBe(123456.7)
-    expect(parseLocaleNumber('123456.7', 'hi-IN')).toBe(123456.7)
-  })
-
   it('parses en-US grouped numbers', () => {
     expect(parseLocaleNumber('1,234.56', 'en-US')).toBe(1234.56)
   })

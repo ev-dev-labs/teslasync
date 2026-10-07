@@ -10,11 +10,11 @@
  * a responsive bento that reflows to more columns on wide monitors.
  */
 
-import { useId, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { WifiOff } from 'lucide-react';
 
-import { Grid, PageLayout, Section } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { Badge } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -32,7 +32,6 @@ import { useThroughputHistory } from '../hooks/useThroughputHistory';
 
 const TAIL_MAX = 500;
 const TOP_SIGNAL_COUNT = 12;
-const ANALYTICS_COLUMNS = { default: 1, xl: 3 } as const;
 
 interface LiveAnalytics {
   uniqueSignals: number;
@@ -44,8 +43,7 @@ interface LiveAnalytics {
 
 export default function LiveSignalMonitorPage() {
   const { t } = useTranslation();
-  const analyticsId = useId();
-  usePageTitle(t('liveMonitor.title', 'Live monitor'));
+  usePageTitle(t('liveMonitor.title', 'Live Monitor'));
 
   const { vehicleId } = useSelectedVehicle();
 
@@ -111,10 +109,10 @@ export default function LiveSignalMonitorPage() {
   );
 
   return (
-    <PageLayout
-      title={t('liveMonitor.title', 'Live monitor')}
+    <PageContainer
+      title={t('liveMonitor.title', 'Live Monitor')}
       subtitle={t('liveMonitor.subtitle', 'Real-time scrolling view of incoming vehicle signals')}
-      metadataActions={
+      actions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {connectionBadge}
         </div>
@@ -130,7 +128,7 @@ export default function LiveSignalMonitorPage() {
       )}
 
       {/* 1 — KPI band: full-width responsive metric grid */}
-      <FadeIn className="min-w-0 max-w-full">
+      <FadeIn>
         <LiveMonitorKpiBand
           connected={live.connected}
           rate={live.tailRate}
@@ -139,34 +137,33 @@ export default function LiveSignalMonitorPage() {
           uniqueSignals={analytics.uniqueSignals}
           numericCount={analytics.numericCount}
           categoricalCount={analytics.booleanCount + analytics.stringCount}
-          scope={vehicleId == null ? t('telemetryBrief.fleetSse', 'Fleet SSE session · 500-entry tail')
-            : t('telemetryBrief.vehicleSse', 'Selected vehicle SSE session · 500-entry tail')}
         />
       </FadeIn>
 
       {/* 2 — Live analytics bento: hero throughput chart + type breakdown */}
-      <FadeIn delay={0.1} className="min-w-0 max-w-full">
-        <Section id={analyticsId} title={t('liveMonitor.analytics', 'Live analytics')}>
-          <Grid cols={ANALYTICS_COLUMNS} gap={4} className="min-w-0">
-            <LiveThroughputPanel
-              className="min-w-0 max-w-full xl:col-span-2"
-              history={throughput.history}
-              rate={live.tailRate}
-              peak={throughput.peak}
-              connected={live.connected}
-            />
-            <SignalTypeBreakdown
-              className="min-w-0 max-w-full xl:col-span-1"
-              numericCount={analytics.numericCount}
-              booleanCount={analytics.booleanCount}
-              stringCount={analytics.stringCount}
-            />
-          </Grid>
-        </Section>
+      <FadeIn delay={0.1}>
+        <section
+          aria-label={t('liveMonitor.analytics', 'Live analytics')}
+          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
+        >
+          <LiveThroughputPanel
+            className="xl:col-span-2"
+            history={throughput.history}
+            rate={live.tailRate}
+            peak={throughput.peak}
+            connected={live.connected}
+          />
+          <SignalTypeBreakdown
+            className="xl:col-span-1"
+            numericCount={analytics.numericCount}
+            booleanCount={analytics.booleanCount}
+            stringCount={analytics.stringCount}
+          />
+        </section>
       </FadeIn>
 
       {/* 3 — Most active signals: full-width multi-column bar grid */}
-      <FadeIn delay={0.2} className="min-w-0 max-w-full">
+      <FadeIn delay={0.2}>
         <TopSignalsPanel signals={analytics.topSignals} />
       </FadeIn>
 
@@ -179,9 +176,9 @@ export default function LiveSignalMonitorPage() {
         onClear={live.clearTail}
         bufferMax={TAIL_MAX}
         showStats={false}
-        title={t('liveMonitor.tailTitle', 'Live signal tail')}
+        title={t('liveMonitor.tailTitle', 'Live Signal Tail')}
         headerExtra={connectionBadge}
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

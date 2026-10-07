@@ -19,7 +19,6 @@ import type {
 import { cycleStressNumber } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressSourceCoverageProps {
   result: CycleStressResult;
@@ -53,7 +52,6 @@ export function CycleStressSourceCoverage({
   state,
   locale,
 }: CycleStressSourceCoverageProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const drive = result.coverage.drive;
   const charging = result.coverage.charging;
@@ -103,7 +101,7 @@ export function CycleStressSourceCoverage({
               value={
                 driveUnavailable
                   ? '—'
-                  : cycleStressNumber(drive.returnedRows, locale)
+                  : cycleStressNumber(drive.returnedRows, locale, 0)
               }
               subtitle={
                 driveUnavailable
@@ -132,6 +130,7 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           drive.observedSpanDays,
                           locale,
+                          1,
                         ),
                       },
                     )
@@ -159,6 +158,7 @@ export function CycleStressSourceCoverage({
                   : cycleStressNumber(
                       charging.returnedRows,
                       locale,
+                      0,
                     )
               }
               subtitle={
@@ -189,6 +189,7 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           charging.observedSpanDays,
                           locale,
+                          1,
                         ),
                       },
                     )
@@ -220,6 +221,7 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           result.coverage.commonSourceOverlapDays,
                           locale,
+                          1,
                         ),
                       },
                     )
@@ -246,6 +248,7 @@ export function CycleStressSourceCoverage({
                         value: cycleStressNumber(
                           result.coverage.observedSpanDays,
                           locale,
+                          0,
                         ),
                       },
                     )
@@ -266,6 +269,7 @@ export function CycleStressSourceCoverage({
               value={cycleStressNumber(
                 result.coverage.activeLocalDays,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.coverage.retainedEndpoints',
@@ -282,6 +286,7 @@ export function CycleStressSourceCoverage({
               value={cycleStressNumber(
                 result.config.historyLimit,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.coverage.capStatus',

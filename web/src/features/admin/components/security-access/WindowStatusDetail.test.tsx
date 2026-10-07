@@ -83,7 +83,7 @@ function renderDetail(overrides: Partial<Props> = {}) {
   return { ...utils, onRetry };
 }
 
-const WINDOW_LABELS = ['Front driver', 'Front passenger', 'Rear driver', 'Rear passenger'];
+const WINDOW_LABELS = ['Front Driver', 'Front Passenger', 'Rear Driver', 'Rear Passenger'];
 
 // StatusTile renders exactly one <p> (the value) per tile when no description
 // is passed, wrapped in an outer `.rounded-xl` container next to its label.
@@ -124,17 +124,17 @@ describe('WindowStatusDetail — data', () => {
       }),
     });
 
-    expect(screen.getByText('Window status detail')).toBeInTheDocument();
+    expect(screen.getByText('Window Status Detail')).toBeInTheDocument();
 
     // Every physical position is labelled and rendered — none hidden.
     for (const label of WINDOW_LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
 
-    expect(windowValueText('Front driver')).toBe('Closed');
-    expect(windowValueText('Front passenger')).toBe('Open');
-    expect(windowValueText('Rear driver')).toBe('Venting');
-    expect(windowValueText('Rear passenger')).toBe('Unknown');
+    expect(windowValueText('Front Driver')).toBe('Closed');
+    expect(windowValueText('Front Passenger')).toBe('Open');
+    expect(windowValueText('Rear Driver')).toBe('Venting');
+    expect(windowValueText('Rear Passenger')).toBe('Unknown');
   });
 
   it('maps each parsed window state to its semantic tone accent', () => {
@@ -147,16 +147,16 @@ describe('WindowStatusDetail — data', () => {
       }),
     });
 
-    expect(windowValueNode('Front driver').className).toContain(TONE_VALUE_CLASS.green);
-    expect(windowValueNode('Front passenger').className).toContain(TONE_VALUE_CLASS.red);
-    expect(windowValueNode('Rear driver').className).toContain(TONE_VALUE_CLASS.amber);
-    expect(windowValueNode('Rear passenger').className).toContain(TONE_VALUE_CLASS.muted);
+    expect(windowValueNode('Front Driver').className).toContain(TONE_VALUE_CLASS.green);
+    expect(windowValueNode('Front Passenger').className).toContain(TONE_VALUE_CLASS.red);
+    expect(windowValueNode('Rear Driver').className).toContain(TONE_VALUE_CLASS.amber);
+    expect(windowValueNode('Rear Passenger').className).toContain(TONE_VALUE_CLASS.muted);
   });
 
   it('exposes the four windows as one labelled group with no loading/error affordances', () => {
     const { container } = renderDetail();
 
-    const group = screen.getByRole('group', { name: /Window status by position/i });
+    const group = screen.getByRole('group', { name: /window status by position/i });
     expect(group).toBeInTheDocument();
     for (const label of WINDOW_LABELS) {
       expect(within(group).getByText(label)).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe('WindowStatusDetail — data', () => {
     ['FullyOpen', 'Open'],
   ])('parses raw window value %p to the displayed state %p', (raw, shown) => {
     renderDetail({ latest: makeEvent({ fdWindow: raw }) });
-    expect(windowValueText('Front driver')).toBe(shown);
+    expect(windowValueText('Front Driver')).toBe(shown);
   });
 });
 
@@ -194,7 +194,7 @@ describe('WindowStatusDetail — null-safety (Phase-42a typed values)', () => {
     });
 
     // Render succeeded → group present, no error boundary tripped.
-    expect(screen.getByRole('group', { name: /Window status by position/i })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /window status by position/i })).toBeInTheDocument();
     for (const label of WINDOW_LABELS) {
       expect(windowValueText(label)).toBe('Unknown');
       expect(windowValueNode(label).className).toContain(TONE_VALUE_CLASS.muted);
@@ -206,8 +206,8 @@ describe('WindowStatusDetail — placeholder (no event)', () => {
   it('renders four Unknown placeholder tiles when latest is undefined (never blank)', () => {
     const { container } = renderDetail({ latest: undefined });
 
-    expect(screen.getByText('Window status detail')).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: /Window status by position/i })).toBeInTheDocument();
+    expect(screen.getByText('Window Status Detail')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /window status by position/i })).toBeInTheDocument();
     for (const label of WINDOW_LABELS) {
       expect(windowValueText(label)).toBe('Unknown');
     }
@@ -222,7 +222,7 @@ describe('WindowStatusDetail — loading', () => {
     const { container } = renderDetail({ isLoading: true, latest: undefined });
 
     // Title still anchors the panel while loading.
-    expect(screen.getByText('Window status detail')).toBeInTheDocument();
+    expect(screen.getByText('Window Status Detail')).toBeInTheDocument();
 
     const skeletonGrid = container.querySelector('[aria-hidden="true"]');
     expect(skeletonGrid).not.toBeNull();
@@ -230,7 +230,7 @@ describe('WindowStatusDetail — loading', () => {
 
     // Neither the window group nor its tiles may render yet.
     expect(screen.queryByRole('group')).toBeNull();
-    expect(screen.queryByText('Front driver')).toBeNull();
+    expect(screen.queryByText('Front Driver')).toBeNull();
   });
 
   it('prioritises the skeleton over stale event data when both are present', () => {
@@ -241,7 +241,7 @@ describe('WindowStatusDetail — loading', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBe(4);
     expect(screen.queryByRole('group')).toBeNull();
-    expect(screen.queryByText('Front driver')).toBeNull();
+    expect(screen.queryByText('Front Driver')).toBeNull();
   });
 });
 

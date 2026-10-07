@@ -1,27 +1,127 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Users } from 'lucide-react';
-import { EmptyState, QueryError } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates, knownString } from '@/api/dataState';
-import { VehicleAccessBody } from '../components/continuation-dashboard-3/VehicleAccessBody';
-import { VehicleAccessCompact } from '../components/continuation-dashboard-3/VehicleAccessCompact';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import { useVehicleDrivers, useVehicleInvitations } from '@/api/hooks/useVehicleAccess';
 import { useVehicleMobileEnabled, useVehicles } from '@/api/hooks/useVehicles';
 import { WidgetShell } from './WidgetShell';
+import { WidgetDetailCard } from './shared';
 import type { DetailEntry } from './shared';
 import type { WidgetProps } from './types';
 import { formatDateShort } from '@/lib/dateFormat';
 
+// ── Compact layout (1×2) ─────────────────────────────────────────────
+
+function CompactView({
+  driverCount,
+  mobileEnabled,
+  t,
+}: {
+  driverCount: number;
+  mobileEnabled: boolean | null;
+  t: (key: string, fallback: string) => string;
+}) {
+  const mobileLabel =
+    mobileEnabled === true
+      ? t('widget.vehicleAccessMobileOn', 'Mobile access enabled')
+      : mobileEnabled === false
+        ? t('widget.vehicleAccessMobileOff', 'Mobile access disabled')
+        : t('widget.vehicleAccessMobileUnknown', 'Mobile access unknown');
+
+  return (
+    <div className="flex items-center justify-between gap-2 min-h-[44px]">
+      <div className="flex items-center gap-2 min-w-0">
+        <Users className="h-4 w-4 flex-shrink-0 text-[var(--text-secondary)]" />
+        <span className="text-sm text-[var(--text-primary)] truncate">
+          {driverCount} {t('widget.vehicleAccessDrivers', 'Drivers')}
+        </span>
+      </div>
+      <span
+        role="img"
+        aria-label={mobileLabel}
+        className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+          mobileEnabled === true
+            ? 'bg-emerald-400'
+            : mobileEnabled === false
+              ? 'bg-red-400'
+              : 'bg-[var(--surface-2)]'
+        }`}
+        title={mobileLabel}
+      />
+    </div>
+  );
+}
+
+// ── Standard / Wide layout ───────────────────────────────────────────
+
+function StandardView({
+  mobileEnabled,
+  driverEntries,
+  invitationEntries,
+  isCompact,
+  t,
+}: {
+  mobileEnabled: boolean | null;
+  driverEntries: DetailEntry[];
+  invitationEntries: DetailEntry[];
+  isCompact: boolean;
+  t: (key: string, fallback: string) => string;
+}) {
+  return (
+    <div className="flex flex-col gap-3 h-full">
+      {/* Mobile access status */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 min-h-[44px]">
+        <span className="text-xs text-[var(--text-muted)] uppercase tracking-wide">
+          {t('widget.vehicleAccessMobile', 'Mobile Access')}
+        </span>
+        <Badge variant={mobileEnabled === true ? 'success' : mobileEnabled === false ? 'danger' : 'neutral'}>
+          {mobileEnabled === true
+            ? t('widget.vehicleAccessEnabled', 'Enabled')
+            : mobileEnabled === false
+              ? t('widget.vehicleAccessDisabled', 'Disabled')
+              : t('widget.vehicleAccessUnknown', 'Unknown')}
+        </Badge>
+      </div>
+
+      {/* Drivers section */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <p className="text-2xs uppercase text-[var(--text-muted)] tracking-wide mb-1">
+          {t('widget.vehicleAccessAuthorized', 'Authorized Drivers')}
+        </p>
+        <WidgetDetailCard
+          entries={driverEntries}
+          compact={isCompact}
+          emptyMessage={t('widget.vehicleAccessNoDrivers', 'No authorized drivers')}
+          emptyIcon={<Users className="h-5 w-5" />}
+        />
+      </div>
+
+      {/* Invitations section */}
+      {invitationEntries.length > 0 && (
+        <div className="flex-shrink-0 border-t border-white/[0.06] pt-2">
+          <p className="text-2xs uppercase text-[var(--text-muted)] tracking-wide mb-1">
+            {t('widget.vehicleAccessPending', 'Pending Invitations')}
+          </p>
+          <WidgetDetailCard
+            entries={invitationEntries}
+            compact={isCompact}
+            emptyMessage={t('widget.vehicleAccessNoInvitations', 'No pending invitations')}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main widget ──────────────────────────────────────────────────────
+
 export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const vehicleQuery = useVehicles();
-  const { data: vehicles, isLoading: vehiclesLoading } = vehicleQuery;
-  const vehicleState = useDataState(vehicleQuery);
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id;
   const vidStr = vid != null ? String(vid) : undefined;
 
-  const driversQuery = useVehicleDrivers(vidStr);
   const {
     data: drivers,
     isLoading: driversLoading,
@@ -30,10 +130,8 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     isError: driversError,
     dataUpdatedAt: driversUpdatedAt,
     refetch: refetchDrivers,
-  } = driversQuery;
-  const driverState = useDataState(driversQuery);
+  } = useVehicleDrivers(vidStr);
 
-  const invitationsQuery = useVehicleInvitations(vidStr);
   const {
     data: invitations,
     isLoading: invitationsLoading,
@@ -42,10 +140,8 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     isError: invitationsError,
     dataUpdatedAt: invitationsUpdatedAt,
     refetch: refetchInvitations,
-  } = invitationsQuery;
-  const invitationState = useDataState(invitationsQuery);
+  } = useVehicleInvitations(vidStr);
 
-  const mobileQuery = useVehicleMobileEnabled(vidStr);
   const {
     data: mobileData,
     isLoading: mobileLoading,
@@ -54,9 +150,7 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     isError: mobileError,
     dataUpdatedAt: mobileUpdatedAt,
     refetch: refetchMobile,
-  } = mobileQuery;
-  const mobileState = useDataState(mobileQuery);
-  const combined = combineDataStates([driverState, invitationState, mobileState]);
+  } = useVehicleMobileEnabled(vidStr);
 
   const isCompact = size.cols <= 1;
 
@@ -67,15 +161,12 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const driverEntries = useMemo<DetailEntry[]>(
     () =>
       safeDrivers.map((d) => ({
-        id: d.id,
-        label: knownString(d.driver_name) ?? knownString(d.driver_email) ?? '—',
+        label: d.driver_name ?? d.driver_email ?? '—',
         value: formatDateShort(d.fetched_at),
         badge: {
           text: d.role === 'owner'
             ? t('widget.vehicleAccessOwner', 'Owner')
-            : d.role === 'driver'
-              ? t('widget.vehicleAccessDriver', 'Driver')
-              : knownString(d.role) ?? t('widget.vehicleAccessUnknown', 'Unknown'),
+            : t('widget.vehicleAccessDriver', 'Driver'),
           variant: (d.role === 'owner' ? 'success' : 'neutral') as 'success' | 'neutral',
         },
       })),
@@ -85,7 +176,6 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const invitationEntries = useMemo<DetailEntry[]>(
     () =>
       safeInvitations.map((inv) => ({
-        id: inv.id,
         label: inv.created_by ?? '—',
         value: formatDateShort(inv.created_at),
         badge: {
@@ -93,14 +183,12 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
             ? t('widget.vehicleAccessPendingStatus', 'Pending')
             : inv.status === 'accepted'
               ? t('widget.vehicleAccessAccepted', 'Accepted')
-              : inv.status === 'expired'
-                ? t('widget.vehicleAccessExpired', 'Expired')
-                : inv.status || t('widget.vehicleAccessUnknown', 'Unknown'),
+              : t('widget.vehicleAccessExpired', 'Expired'),
           variant: (
             inv.status === 'pending' ? 'warning'
               : inv.status === 'accepted' ? 'success'
-                : inv.status === 'expired' ? 'error' : 'neutral'
-          ) as 'warning' | 'success' | 'error' | 'neutral',
+                : 'error'
+          ) as 'warning' | 'success' | 'error',
         },
       })),
     [safeInvitations, t],
@@ -119,10 +207,24 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
   const isFetching = driversFetching || invitationsFetching || mobileFetching;
   const isStale = driversStale || invitationsStale || mobileStale;
   const isError = driversError || invitationsError || mobileError;
-  const updatedAt = combined.updatedAt ?? Math.min(driversUpdatedAt ?? 0, invitationsUpdatedAt ?? 0, mobileUpdatedAt ?? 0);
+  const updatedAt = Math.max(
+    driversUpdatedAt ?? 0,
+    invitationsUpdatedAt ?? 0,
+    mobileUpdatedAt ?? 0,
+  );
 
   const hasAnyData =
-    drivers !== undefined || invitations !== undefined || mobileData !== undefined || isError;
+    safeDrivers.length > 0 || safeInvitations.length > 0 || mobileEnabled !== null;
+
+  // An errored INITIAL load (nothing cached across all three sources) surfaces
+  // an error panel instead of the misleading "No access data available" empty
+  // state. A background-refetch error over already-loaded data keeps the panel
+  // on screen — the freshness dot still flags the error — so a transient blip
+  // never blanks out a working widget.
+  const errorMessage =
+    isError && !hasAnyData
+      ? t('widget.vehicleAccessError', 'Failed to load access data')
+      : undefined;
 
   const handleRefresh = useCallback(() => {
     void refetchDrivers();
@@ -132,15 +234,10 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.vehicleAccess', 'Vehicle access')}
-      icon={<Users className="h-3.5 w-3.5" aria-hidden="true" />}
+      title={t('widget.vehicleAccess', 'Vehicle Access')}
+      icon={<Users className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
-      dataState={vidStr === undefined && (vehicleState.fatalError || vehiclesLoading) ? vehicleState : {
-        ...driverState, ...combined,
-        hasData: driverState.hasData || invitationState.hasData || mobileState.hasData,
-        retry: handleRefresh,
-        status: combined.status === 'initial' && !isLoading ? 'unavailable' : combined.status,
-      }}
+      error={errorMessage}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -149,19 +246,18 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
     >
       {hasAnyData ? (
         isCompact ? (
-          <VehicleAccessCompact
-            driverCount={drivers === undefined ? null : safeDrivers.length}
+          <CompactView
+            driverCount={safeDrivers.length}
             mobileEnabled={mobileEnabled}
+            t={t}
           />
         ) : (
-          <VehicleAccessBody
+          <StandardView
             mobileEnabled={mobileEnabled}
             driverEntries={driverEntries}
             invitationEntries={invitationEntries}
-            compact={isCompact}
-            driverState={{ ...driverState, status: driverState.status === 'initial' && !driversLoading ? 'unavailable' : driverState.status }}
-            invitationState={{ ...invitationState, status: invitationState.status === 'initial' && !invitationsLoading ? 'unavailable' : invitationState.status }}
-            mobileState={mobileState}
+            isCompact={isCompact}
+            t={t}
           />
         )
       ) : (
@@ -171,9 +267,6 @@ export default function VehicleAccessWidget({ vehicleId, size }: WidgetProps) {
           className="py-4"
         />
       )}
-      {isCompact && driverState.fatalError && <QueryError error={driverState.fatalError} onRetry={driverState.retry ?? undefined} />}
-      {isCompact && invitationState.fatalError && <QueryError error={invitationState.fatalError} onRetry={invitationState.retry ?? undefined} />}
-      {isCompact && mobileState.fatalError && <QueryError error={mobileState.fatalError} onRetry={mobileState.retry ?? undefined} />}
     </WidgetShell>
   );
 }

@@ -52,7 +52,6 @@ COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=go-builder /bin/teslasync /usr/local/bin/teslasync
 COPY migrations /migrations
 COPY docs/public/openapi.yaml /docs/public/openapi.yaml
-COPY slo/catalog.yaml /slo/catalog.yaml
 COPY --from=web-builder /app/dist /web/dist
 
 USER nonroot:nonroot

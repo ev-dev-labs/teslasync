@@ -1,10 +1,29 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
-import { ChartLegend, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ChartTooltip, ResponsiveContainer, ReferenceLine, ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX, chartGrid, axisTick, CHART_COLORS, AREA_DEFAULTS, areaGradient } from '@/components/charts';
-import { ChartCard } from '@/components/layout';
+import {
+  ChartContainer,
+  ChartLegend,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ChartTooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  ChartTimeRangeProvider,
+  useSyncedCursor,
+  useSyncedReferenceLineX,
+  chartGrid,
+  axisTick,
+  fmt,
+  CHART_COLORS,
+  AREA_DEFAULTS,
+  areaGradient,
+} from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Trip-replay charts with cursor sync                              */
@@ -18,9 +37,9 @@ export interface TripReplayChartPoint {
    *  store, so `syncMethod="value"` is required on the provider. */
   time: number;
   /** Speed in user-preferred units. */
-  speed: number | null;
+  speed: number;
   /** Power in kW. */
-  power: number | null;
+  power: number;
 }
 
 export interface TripReplayChartsProps {
@@ -92,7 +111,6 @@ function TimelineChart({
   onSeekToIndex,
   height,
 }: TimelineChartProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
   const { t } = useTranslation();
   const syncProps = useSyncedCursor();
 
@@ -103,17 +121,15 @@ function TimelineChart({
 
   // chart-a11y:no-table dense per-sample replay timeline; per-segment summary appears in the trip overview panel
   return (
-    <ChartCard
+    <ChartContainer
       title={t('replay.timeline.title', 'Speed & Power Timeline')}
       subtitle={t('replay.timeline.subtitle', 'Click to seek replay position')}
       ariaLabel={t('replay.timeline.aria', 'Trip replay speed and power timeline area chart')}
       chartKey="trip-replay-speed-power"
-      size="standard"
-      exportable
       height={height}
     >
       {({ hiddenSeries }) => (
-        data.some(point => point.speed != null || point.power != null) ? (
+        data.length > 0 ? (
           <ResponsiveContainer width="100%" height={height}>
             <AreaChart
             data={data}
@@ -137,12 +153,12 @@ function TimelineChart({
               type="number"
               domain={['dataMin', 'dataMax']}
               {...axisTick}
-              tickFormatter={(v: number) => `${fmt(v)}m`}
+              tickFormatter={(v: number) => `${fmt(v, 0)}m`}
             />
             <YAxis
               yAxisId="speed"
               {...axisTick}
-              tickFormatter={(v: number) => fmt(v)}
+              tickFormatter={(v: number) => fmt(v, 0)}
               label={{
                 value: speedUnit,
                 angle: -90,
@@ -154,7 +170,7 @@ function TimelineChart({
               yAxisId="power"
               orientation="right"
               {...axisTick}
-              tickFormatter={(v: number) => fmt(v)}
+              tickFormatter={(v: number) => fmt(v, 0)}
               label={{
                 value: 'kW',
                 angle: 90,
@@ -163,7 +179,7 @@ function TimelineChart({
               }}
             />
             <Tooltip
-              content={<ChartTooltip labelFormatter={(v) => `${fmt(v)} min`} />}
+              content={<ChartTooltip labelFormatter={(v) => `${fmt(v, 1)} min`} />}
             />
             <ChartLegend />
             <Area
@@ -174,7 +190,6 @@ function TimelineChart({
               stroke={CHART_COLORS[0]}
               fill="url(#speedGrad)"
               isAnimationActive={false}
-              connectNulls={false}
               hide={hiddenSeries?.isHidden('speed')}
             />
             <Area
@@ -185,7 +200,6 @@ function TimelineChart({
               stroke={CHART_COLORS[1]}
               fill="url(#powerGrad)"
               isAnimationActive={false}
-              connectNulls={false}
               hide={hiddenSeries?.isHidden('power')}
             />
             {cursorTime != null && (
@@ -206,7 +220,7 @@ function TimelineChart({
           />
         )
       )}
-    </ChartCard>
+    </ChartContainer>
   );
 }
 

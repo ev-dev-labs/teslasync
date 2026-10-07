@@ -1,9 +1,7 @@
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Wifi, Cog, Thermometer, CircleDot } from 'lucide-react';
-import { Badge, Subhead } from '@/components/ui';
-import { KVList } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Badge } from '@/components/ui';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import {
   useVehicles,
   useMotorLatest,
@@ -12,82 +10,55 @@ import {
   useLatestTirePressure,
 } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { resolveHvacActive } from '@/lib/climateState';
-import { isFiniteNumber } from '@/lib/numberFormat';
+import { fmtNumber, fmtInt, isFiniteNumber } from '@/lib/numberFormat';
 import { cleanNil } from '@/lib/cleanNil';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { convertTempFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
-import { dashboardTokens } from '../lib/dashboardTokens';
-import type { DataStateSource } from '@/api/dataState';
+import { convertTempFromSI, convertPressureFromSI } from '@/lib/unitConversion';
 
-function snapshotSource<T extends object | null>(query: DataStateSource<T>): DataStateSource<T> {
-  return {
-    ...query,
-    data: (query.isError || query.error) && (!query.data || Object.keys(query.data).length === 0)
-      ? undefined : query.data,
-  };
-}
-
-function Row({ label, value }: { label: string; value: ReactNode }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
-    <KVList layout="responsive" wrap items={[{ label, value: <span className="tabular-nums">{value}</span> }]} />
+    <div className="flex items-center justify-between">
+      <span className="text-2xs text-[var(--text-secondary)]">{label}</span>
+      <span className="text-xs font-bold text-[var(--text-primary)] truncate max-w-[100px]">
+        {value}
+      </span>
+    </div>
   );
 }
 
 export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const opts = { enabled: id > 0, refetchInterval: 5_000 } as const;
 
-  const motorQuery = useMotorLatest(id, opts.refetchInterval);
-  const climateQuery = useClimateLatest(id, opts.refetchInterval);
-  const securityQuery = useSecurityLatest(id, opts.refetchInterval);
-  const tiresQuery = useLatestTirePressure(id, opts.refetchInterval);
-  const { data: motor } = motorQuery;
-  const { data: climate } = climateQuery;
-  const { data: security } = securityQuery;
-  const { data: tires } = tiresQuery;
-  const motorState = useDataState(snapshotSource(motorQuery));
-  const climateState = useDataState(snapshotSource(climateQuery));
-  const securityState = useDataState(snapshotSource(securityQuery));
-  const tiresState = useDataState(snapshotSource(tiresQuery));
-  const dataState = useCombinedDataState([motorState, climateState, securityState, tiresState]);
-  const handleRefresh = () => {
-    void motorQuery.refetch();
-    void climateQuery.refetch();
-    void securityQuery.refetch();
-    void tiresQuery.refetch();
-  };
+  const { data: motor, isFetching: motorFetching, isStale: motorStale, isError: motorError, dataUpdatedAt: motorUpdatedAt, refetch: refetchMotor } = useMotorLatest(id, opts.refetchInterval);
+  const { data: climate } = useClimateLatest(id, opts.refetchInterval);
+  const { data: security } = useSecurityLatest(id, opts.refetchInterval);
+  const { data: tires } = useLatestTirePressure(id, opts.refetchInterval);
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
 
   const tempUnit = unitPrefs.temperature;
-  const { pressureUnit, toPressureValue: toPressureDisplay } = usePressureFormat();
+  const pressureUnit = unitPrefs.pressure;
+  const toPressureDisplay = (value: number) => convertPressureFromSI(value, unitPrefs.pressure);
 
-  const hasData = [motor, climate, security, tires].some((value) => value != null && Object.keys(value).length > 0);
+  const hasData = motor || climate || security || tires;
   const climateHvacState = climate
     ? resolveHvacActive(climate.hvac_power, climate.is_ac_on)
     : null;
 
   return (
     <WidgetShell
-      title={t('widget.liveSignals', 'Live signals')}
+      title={t('widget.liveSignals', 'Live Signals')}
       icon={<Wifi className="h-3.5 w-3.5 text-neon-cyan" />}
-      dataState={{
-        ...dataState, retry: handleRefresh, data: motor ?? climate ?? security ?? tires, hasData: Boolean(hasData),
-        fatalError: hasData ? null : motorState.fatalError ?? climateState.fatalError ?? securityState.fatalError ?? tiresState.fatalError,
-      }}
-      updatedAt={dataState.updatedAt ?? 0}
-      isFetching={dataState.isRefreshing}
-      isStale={dataState.status === 'stale'}
-      isError={Boolean(dataState.refreshError || dataState.fatalError)}
-      onRefresh={handleRefresh}
+      updatedAt={motorUpdatedAt}
+      isFetching={motorFetching}
+      isStale={motorStale}
+      isError={motorError}
+      onRefresh={() => refetchMotor()}
     >
       {!hasData ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
@@ -96,45 +67,45 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
           className="py-4"
         />
       ) : (
-        <div className={`grid ${dashboardTokens.columns[2]} gap-4 h-full overflow-y-auto`}>
+        <div className="grid grid-cols-2 gap-4 h-full overflow-y-auto">
           {/* Drivetrain */}
           <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
+            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <Cog className="h-3 w-3 text-purple-300" /> {t('widget.motor', 'Motor')}
-            </Subhead>
+            </h4>
             {motor ? (
               <>
                 <Row
                   label={t('widget.torque', 'Torque')}
-                  value={isFiniteNumber(motor.di_torque) ? `${fmtNumber(motor.di_torque)} Nm` : '—'}
+                  value={isFiniteNumber(motor.di_torque) ? `${fmtInt(motor.di_torque)} Nm` : '—'}
                 />
                 <Row
                   label={t('widget.motorTemp', 'Temp')}
                   value={
                     isFiniteNumber(motor.di_stator_temp)
-                      ? `${fmtNumber(toTemperatureDisplay(motor.di_stator_temp))}${tempUnit}`
+                      ? `${fmtInt(toTemperatureDisplay(motor.di_stator_temp))}${tempUnit}`
                       : '—'
                   }
                 />
                 <Row label={t('widget.gear', 'Gear')} value={cleanNil(motor.gear) ?? '—'} />
               </>
             ) : (
-              motorState.fatalError ? <QueryError error={motorState.fatalError} onRetry={() => { void motorQuery.refetch(); }} /> : motorQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.motor', 'Motor')} value="—" />
+              <Skeleton className="h-12" />
             )}
           </div>
 
           {/* Climate */}
           <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
+            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <Thermometer className="h-3 w-3 text-cyan-300" /> {t('widget.climate', 'Climate')}
-            </Subhead>
+            </h4>
             {climate ? (
               <>
                 <Row
                   label={t('widget.cabin', 'Cabin')}
                   value={
                     isFiniteNumber(climate.inside_temp)
-                      ? `${fmtNumber(toTemperatureDisplay(climate.inside_temp))}${tempUnit}`
+                      ? `${fmtInt(toTemperatureDisplay(climate.inside_temp))}${tempUnit}`
                       : '—'
                   }
                 />
@@ -142,7 +113,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label={t('widget.outside', 'Outside')}
                   value={
                     isFiniteNumber(climate.outside_temp)
-                      ? `${fmtNumber(toTemperatureDisplay(climate.outside_temp))}${tempUnit}`
+                      ? `${fmtInt(toTemperatureDisplay(climate.outside_temp))}${tempUnit}`
                       : '—'
                   }
                 />
@@ -156,22 +127,22 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                 />
               </>
             ) : (
-              climateState.fatalError ? <QueryError error={climateState.fatalError} onRetry={() => { void climateQuery.refetch(); }} /> : climateQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.climate', 'Climate')} value="—" />
+              <Skeleton className="h-12" />
             )}
           </div>
 
           {/* Tires */}
           <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
+            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <CircleDot className="h-3 w-3 text-cyan-300" /> {t('widget.tires', 'Tires')}
-            </Subhead>
+            </h4>
             {tires ? (
               <>
                 <Row
                   label="FL"
                   value={
                     isFiniteNumber(tires.front_left)
-                      ? `${fmtNumber(toPressureDisplay(tires.front_left))} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.front_left), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -179,7 +150,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="FR"
                   value={
                     isFiniteNumber(tires.front_right)
-                      ? `${fmtNumber(toPressureDisplay(tires.front_right))} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.front_right), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -187,7 +158,7 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="RL"
                   value={
                     isFiniteNumber(tires.rear_left)
-                      ? `${fmtNumber(toPressureDisplay(tires.rear_left))} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.rear_left), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
@@ -195,36 +166,42 @@ export default function LiveSignalsWidget({ vehicleId }: WidgetProps) {
                   label="RR"
                   value={
                     isFiniteNumber(tires.rear_right)
-                      ? `${fmtNumber(toPressureDisplay(tires.rear_right))} ${pressureUnit}`
+                      ? `${fmtNumber(toPressureDisplay(tires.rear_right), 1)} ${pressureUnit}`
                       : '—'
                   }
                 />
               </>
             ) : (
-              tiresState.fatalError ? <QueryError error={tiresState.fatalError} onRetry={() => { void tiresQuery.refetch(); }} /> : tiresQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.tires', 'Tires')} value="—" />
+              <Skeleton className="h-12" />
             )}
           </div>
 
           {/* Security summary */}
           <div className="space-y-1.5">
-            <Subhead as="h4" className="flex items-center gap-1">
+            <h4 className="text-2xs font-semibold uppercase text-[var(--text-muted)] flex items-center gap-1">
               <span aria-hidden="true">🛡️</span> {t('widget.security', 'Security')}
-            </Subhead>
+            </h4>
             {security ? (
               <>
-                <Row label={t('widget.lock', 'Lock')} value={
-                  <Badge variant={typeof security.locked !== 'boolean' ? 'neutral' : security.locked ? 'success' : 'danger'}>
-                    {typeof security.locked !== 'boolean' ? '—' : security.locked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked')}
+                <div className="flex items-center justify-between">
+                  <span className="text-2xs text-[var(--text-secondary)]">
+                    {t('widget.lock', 'Lock')}
+                  </span>
+                  <Badge variant={security.locked ? 'success' : 'danger'}>
+                    {security.locked ? t('widget.locked', 'Locked') : t('widget.unlocked', 'Unlocked')}
                   </Badge>
-                } />
-                <Row label={t('widget.sentry', 'Sentry')} value={
-                  <Badge variant={security.sentry_mode === true ? 'success' : 'neutral'}>
-                    {typeof security.sentry_mode !== 'boolean' ? '—' : security.sentry_mode ? t('widget.active', 'Active') : t('widget.off', 'Off')}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-2xs text-[var(--text-secondary)]">
+                    {t('widget.sentry', 'Sentry')}
+                  </span>
+                  <Badge variant={security.sentry_mode ? 'success' : 'neutral'}>
+                    {security.sentry_mode ? t('widget.active', 'Active') : t('widget.off', 'Off')}
                   </Badge>
-                } />
+                </div>
               </>
             ) : (
-              securityState.fatalError ? <QueryError error={securityState.fatalError} onRetry={() => { void securityQuery.refetch(); }} /> : securityQuery.isLoading ? <Skeleton className="h-12" /> : <Row label={t('widget.security', 'Security')} value="—" />
+              <Skeleton className="h-12" />
             )}
           </div>
         </div>

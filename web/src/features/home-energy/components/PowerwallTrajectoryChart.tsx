@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { BatteryCharging } from 'lucide-react';
-import { ChartCard, LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import {
+  ChartContainer,
   ChartTooltip,
   chartGrid,
   axisTick,
@@ -33,33 +34,28 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
 
   if (!powerwall) {
     return (
-      <LayoutCard title={t('homeEnergy.powerwall.title', 'Powerwall trajectory')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-3">{t('homeEnergy.powerwall.title', 'Powerwall Trajectory')}</PanelTitle>
         {/* no-action: the enable toggle lives in the Scenario & Assumptions panel above this chart. */}
         <EmptyState
           icon={<BatteryCharging className="h-8 w-8" />}
-          message={t('homeEnergy.powerwall.none', 'No home battery is modeled in this scenario. Enable it under scenario & assumptions.')}
+          message={t('homeEnergy.powerwall.none', 'No home battery is modeled in this scenario. Enable it under Scenario & Assumptions.')}
         />
-      </LayoutCard>
+      </GlassPanel>
     );
   }
 
   const rows = slots.map((s) => ({ time: s.startIso, socPct: Math.round(s.batterySocPct * 10) / 10 }));
 
   return (
-    <ChartCard
-      title={t('homeEnergy.powerwall.title', 'Powerwall trajectory')}
+    // chart-a11y:no-table dense 15-minute-slot SoC trace — the KPI summary reports the
+    // aggregate battery energy figures in tabular form already.
+    <ChartContainer
+      title={t('homeEnergy.powerwall.title', 'Powerwall Trajectory')}
       subtitle={t('homeEnergy.powerwall.subtitle', 'Projected state of charge, with the backup reserve floor')}
       ariaLabel={t('homeEnergy.powerwall.aria', 'Powerwall state of charge over time, with reserve floor reference line')}
       empty={rows.length === 0}
       height={CHART_HEIGHT}
-      data={rows}
-      exportData={rows}
-      exportable
-      fullscreen
-      dataColumns={[
-        { key: 'time', label: t('powershare.time', 'Time') },
-        { key: 'socPct', label: t('homeEnergy.powerwall.soc', 'State of charge') },
-      ]}
     >
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <ComposedChart data={rows} margin={chartMarginLabeled}>
@@ -83,6 +79,6 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
           />
         </ComposedChart>
       </ResponsiveContainer>
-    </ChartCard>
+    </ChartContainer>
   );
 }

@@ -81,7 +81,7 @@
       "uncorrelated": "Deliveries without a linked trigger",
       "outboundCalls": "Outbound HTTP calls",
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
-      "httpScope": "Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By service for the same window.",
+      "httpScope": "Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By Service for the same window.",
       "timeline": "Daily activity",
       "day": "Day",
       "period": "Period",
@@ -99,17 +99,6 @@
       "inbox": "Open inbox",
       "values": {
         "digest.fsd.weekly": "Weekly FSD digest",
-        "system.telemetry.outage": "System telemetry outage",
-        "system.telemetry.recovery": "System telemetry recovery",
-        "system.mqtt.outage": "System MQTT outage",
-        "system.mqtt.recovery": "System MQTT recovery",
-        "system.database.outage": "System database outage",
-        "system.redis.outage": "System Redis outage",
-        "system.redis.recovery": "System Redis recovery",
-        "system.tesla_api.outage": "System Tesla API outage",
-        "system.tesla_api.recovery": "System Tesla API recovery",
-        "system.worker.outage": "System worker outage",
-        "system.worker.recovery": "System worker recovery",
         "system.database.recovery": "Database recovery",
         "system": "System",
         "alert": "Alert rules",
@@ -192,9 +181,6 @@
         "unarchive": "Restore"
       },
       "bulk": {
-        "memberSelection": "{{count}} selected notification members",
-        "loadedSelection": "{{count}} selected · {{loaded}} loaded notifications · {{total}} matching",
-        "unknownSelection": "{{count}} selected · {{loaded}} loaded notifications · total unavailable",
         "markRead": "Mark read",
         "archive": "Archive",
         "restore": "Restore",
@@ -215,7 +201,7 @@
       "empty": {
         "title": "No notifications",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
-        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.",
+        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.",
         "archivedTitle": "No archived notifications",
         "archivedMessage": "Archived notifications will appear here.",
         "cta": "Configure alert rules"
@@ -240,10 +226,6 @@
       "success": "All notifications marked as read"
     },
     "bellPopover": {
-      "sentenceCritical": "critical",
-      "sentenceWarning": "warning",
-      "sentenceInfo": "info",
-      "viewAllSeverity": "See all {{severity}} unread",
       "title": "Notifications",
       "unreadCount": "{{count}} unread",
       "allRead": "All caught up",
@@ -289,37 +271,29 @@
       "emptyMessage": "Related notifications are grouped here when they occur repeatedly."
     },
     "stats": {
-      "sent": "Total sent",
+      "sent": "Total Sent",
       "failed": "Failed",
       "pending": "Pending",
-      "activeChannels": "Active channels",
+      "activeChannels": "Active Channels",
       "loading": "Loading notification statistics",
-      "resource": "notification statistics",
-      "period": "Delivery statistics and current channels",
-      "periodReason": "Delivery counts have no reported time bounds; active channels are the configured enabled/total count.",
-      "brief": {
-        "eyebrow": "Notification delivery",
-        "title": "Delivery channels and recorded outcomes",
-        "available": "Statistics available",
-        "unavailable": "No statistics supplied"
-      }
+      "resource": "notification statistics"
     },
     "channels": {
-      "add": "Add channel",
+      "add": "Add Channel",
       "fields": {
         "signingSecret": "Signing secret"
       },
-      "addTitle": "Add channel",
-      "editTitle": "Edit channel",
+      "addTitle": "Add Channel",
+      "editTitle": "Edit Channel",
       "active": "Active",
       "enabled": "Enabled",
       "disabled": "Disabled",
       "configLabel": "Configuration",
-      "typeLabel": "Channel type",
-      "nameLabel": "Channel name",
+      "typeLabel": "Channel Type",
+      "nameLabel": "Channel Name",
       "namePlaceholderPrefix": "My",
       "nameRequired": "Name is required",
-      "test": "Test connection",
+      "test": "Test Connection",
       "testShort": "Test",
       "testing": "Testing…",
       "testSuccess": "Test notification sent successfully!",
@@ -334,10 +308,10 @@
         "title": "No channels configured",
         "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
       },
-      "testHint": "Save then click \"Send test\" to verify the configuration."
+      "testHint": "Save then click \"Send Test\" to verify the configuration."
     },
     "alertStudio": {
-      "title": "Alert studio",
+      "title": "Alert Studio",
       "subtitle": "Create rules for vehicle signals, computed metrics, system health, and places",
       "placeEvents": {
         "title": "Place arrival and departure alerts",
@@ -428,15 +402,15 @@
         },
         "noSignalTitle": "Choose a signal",
         "noSignalDescription": "Select a telemetry signal before entering a comparison value.",
-        "minValueLabel": "Minimum value",
-        "maxValueLabel": "Maximum value",
-        "textValueLabel": "Text value",
+        "minValueLabel": "Minimum Value",
+        "maxValueLabel": "Maximum Value",
+        "textValueLabel": "Text Value",
         "textValuePlaceholder": "Value to compare",
-        "booleanValueLabel": "Boolean value",
+        "booleanValueLabel": "Boolean Value",
         "anyChangeDescription": "This rule fires whenever the selected signal changes.",
-        "numericValueLabel": "Numeric value",
-        "editTitle": "Edit rule",
-        "newTitle": "New rule",
+        "numericValueLabel": "Numeric Value",
+        "editTitle": "Edit Rule",
+        "newTitle": "New Rule",
         "nameLabel": "Name",
         "namePlaceholder": "My alert rule",
         "enabledLabel": "Status",
@@ -447,7 +421,7 @@
         "vehiclesHelp": "Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later.",
         "vehiclesAllOption": "All vehicles (current + future)",
         "vehiclesEmptyError": "Pick at least one vehicle, or select 'All vehicles'.",
-        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in Settings → Vehicles to use this rule.",
         "vehiclesSummaryAll": "All vehicles",
         "vehiclesSummaryNone": "No vehicles selected",
         "vehiclesSummaryOne": "{{name}}",
@@ -460,11 +434,11 @@
         "signalTypeHint": "{{type}} signal from {{category}}",
         "operatorLabel": "Operator",
         "severityLabel": "Severity",
-        "allowedOperatorsLabel": "Allowed operators",
+        "allowedOperatorsLabel": "Allowed Operators",
         "allowedOperatorsPlaceholder": "Select a signal to see its operators",
-        "typedValueLabel": "Typed value",
+        "typedValueLabel": "Typed Value",
         "cooldownLabel": "Cooldown (minutes)",
-        "alertBehaviorLabel": "Alert behavior",
+        "alertBehaviorLabel": "Alert Behavior",
         "alertBehaviorPlaceholder": "— Choose one —",
         "maxFiresLabel": "Max alerts before condition resolves",
         "maxFiresPlaceholder": "Leave blank for unlimited",
@@ -475,12 +449,10 @@
         "escalationSeverityLabel": "Escalated severity",
         "escalationSeverityPlaceholder": "Select severity…",
         "escalationHint": "Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.",
-        "testMessageLabel": "Test message",
+        "testMessageLabel": "Test Message",
         "signalHint": "Use {{SignalName}}",
         "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
-        "kindLabel": "Rule type",
-        "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
-        "presetTagFilter": "Filter message presets by tag"
+        "kindLabel": "Rule type"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -492,27 +464,27 @@
       },
       "signals": {
         "optionLabel": "{{name}} - {{type}} - {{category}}",
-        "customOptionLabel": "{{name}} - {{type}} - custom"
+        "customOptionLabel": "{{name}} - {{type}} - Custom"
       },
       "boolean": {
         "true": "True",
         "false": "False"
       },
       "test": {
-        "defaultMessage": "Test notification from alert studio"
+        "defaultMessage": "Test notification from Alert Studio"
       },
       "actions": {
         "templates": "Templates",
-        "newRule": "New rule",
+        "newRule": "New Rule",
         "saving": "Saving...",
-        "updateRule": "Update rule",
-        "createRule": "Create rule",
+        "updateRule": "Update Rule",
+        "createRule": "Create Rule",
         "delete": "Delete",
         "test": "Test",
         "reset": "Reset"
       },
       "templates": {
-        "header": "Rule templates - {{count}} pre-built rules",
+        "header": "Rule Templates - {{count}} pre-built rules",
         "searchLabel": "Search templates",
         "searchPlaceholder": "Search templates...",
         "categoryFilter": "Filter templates by category",
@@ -534,7 +506,7 @@
         "cancel": "Cancel snooze"
       },
       "channels": {
-        "testTargetLabel": "Test delivery target",
+        "testTargetLabel": "Test Delivery Target",
         "browserToast": "Browser toast notification (real-time via SSE)",
         "alertHistory": "Alert history (saved to database)",
         "externalChannels": "External channels for test notifications:",
@@ -564,12 +536,12 @@
         "placeHint": "Notify when a vehicle arrives at or departs from a saved place."
       },
       "system": {
-        "telemetry": "Telemetry",
+        "telemetry": "TELEMETRY",
         "mqtt": "MQTT",
-        "database": "Database",
-        "redis": "Redis",
-        "tesla_api": "Tesla API",
-        "worker": "Worker",
+        "database": "DATABASE",
+        "redis": "REDIS",
+        "tesla_api": "TESLA API",
+        "worker": "WORKER",
         "scope": "System health rules monitor a service for the entire fleet.",
         "component": "Service",
         "choose": "Choose a service",
@@ -627,17 +599,7 @@
         "statusQuietSub": "{{count}} window active now",
         "statusActiveSub": "No window active now",
         "alwaysAllow": "Always allowed",
-        "alwaysAllowSub": "Severities that break through",
-        "noWindows": "No configured windows",
-        "noBypass": "No bypass severities configured",
-        "period": "Configured schedules · right now",
-        "periodContext": "Enabled schedules and their bypass severities; current status uses the local weekday and time.",
-        "brief": {
-          "eyebrow": "Quiet-hours policy",
-          "title": "Schedules, delivery status, and bypass policy",
-          "empty": "No schedules",
-          "available": "Schedules loaded"
-        }
+        "alwaysAllowSub": "Severities that break through"
       },
       "guide": {
         "title": "How quiet hours work",
@@ -675,7 +637,7 @@
         "subtitle": "Forward events to any HTTP receiver, signed and verifiable.",
         "stepSign": "Every payload is HMAC-SHA256 signed and sent in the X-TeslaSync-Signature header so receivers can verify authenticity.",
         "stepDeliver": "TeslaSync POSTs a compact JSON envelope on each event; failed deliveries are retried with backoff.",
-        "stepVerify": "Use test on any endpoint to fire a sample event and preview the signature before you rely on it.",
+        "stepVerify": "Use Test on any endpoint to fire a sample event and preview the signature before you rely on it.",
         "referenceTitle": "Delivery reference",
         "refHeader": "Signature header",
         "refAlgo": "Algorithm",
@@ -686,9 +648,6 @@
         "payloadSource": "Always \"teslasync\".",
         "payloadTimestamp": "RFC3339 server time."
       }
-    },
-    "device": {
-      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
     }
   }
 }

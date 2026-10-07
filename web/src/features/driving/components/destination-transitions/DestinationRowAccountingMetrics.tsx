@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { DestinationTransitionResult } from '../../lib/destinationTransitions';
 import {
   DestinationTransitionsMetricGroup,
   type DestinationTransitionsEvidenceMetric,
 } from './DestinationTransitionsMetricGroup';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DestinationRowAccountingMetricsProps {
   model: DestinationTransitionResult;
@@ -15,7 +14,6 @@ interface DestinationRowAccountingMetricsProps {
 export function DestinationRowAccountingMetrics({
   model,
 }: DestinationRowAccountingMetricsProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = model.accounting;
   const metrics: DestinationTransitionsEvidenceMetric[] = [

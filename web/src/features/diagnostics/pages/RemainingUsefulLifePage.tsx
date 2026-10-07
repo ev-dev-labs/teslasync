@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  HeartPulse, TrendingDown, BatteryCharging, Battery,
+  HeartPulse, CalendarClock, TrendingDown, BatteryCharging, Battery,
   Circle, Disc, Wind, Gauge, type LucideIcon,
 } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
@@ -14,18 +14,14 @@ import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
   EmbeddedChart,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useRUL, useComponentRUL, type ComponentRUL, type RULStatus } from '@/api/hooks/useRUL';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
-import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { NextServiceBrief } from '../components/operationalbrief-all/NextServiceBrief';
 
 const DASH = '—';
 
@@ -64,18 +60,14 @@ const COMPONENT_ICON: Record<string, LucideIcon> = {
 };
 
 export default function RemainingUsefulLifePage() {
-  const { fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
-  const { formatDistance } = useUnits();
   const { t } = useTranslation();
-  usePageTitle(t('rul.title', 'Remaining useful life'));
+  usePageTitle(t('rul.title', 'Remaining Useful Life'));
 
   const { vehicleId } = useSelectedVehicle();
   const noVehicle = vehicleId === null;
 
   const boardQuery = useRUL(vehicleId);
-  const { data: board, isLoading: boardLoading, refetch: refetchBoard } = boardQuery;
-  const boardState = useDataState(boardQuery, { provenance: 'inferred' });
-  const boardError = boardState.fatalError;
+  const { data: board, isLoading: boardLoading, error: boardError, refetch: refetchBoard } = boardQuery;
 
   const components = board?.components ?? [];
   const nextService = board?.next_service ?? null;
@@ -90,9 +82,7 @@ export default function RemainingUsefulLifePage() {
   );
 
   const detailQuery = useComponentRUL(vehicleId, activeComponent);
-  const { data: detail, isLoading: detailLoading, refetch: refetchDetail } = detailQuery;
-  const detailState = useDataState(detailQuery, { provenance: 'inferred' });
-  const detailError = detailState.fatalError;
+  const { data: detail, isLoading: detailLoading, error: detailError, refetch: refetchDetail } = detailQuery;
 
   const handleSelect = useCallback((component: string) => setSelected(component), []);
   const onRetryBoard = useCallback(() => { refetchBoard(); }, [refetchBoard]);
@@ -102,18 +92,17 @@ export default function RemainingUsefulLifePage() {
   const remainingText = useCallback((c: ComponentRUL): string => {
     if (c.projected_eol_date != null) {
       if (c.remaining_days >= 365) {
-        return `${fmtNumber(c.remaining_days / 365)} ${t('rul.units.years', 'yr')}`;
+        return `${fmtNumber(c.remaining_days / 365, 1)} ${t('rul.units.years', 'yr')}`;
       }
       return `${fmtInt(c.remaining_days)} ${t('rul.units.days', 'days')}`;
     }
     if (c.status === 'overdue') return t('rul.card.overdueNow', 'Overdue');
     return DASH; // indeterminate — not enough trend to project
-  }, [t, fmtNumber, fmtInt]);
+  }, [t]);
 
-  // The deferred RUL wire contract is kilometres; the display formatter takes SI metres.
-  const remainingDistanceText = useCallback((c: ComponentRUL): string => (
-    c.remaining_km == null ? DASH : formatDistance(c.remaining_km * 1000, { precision: 0 })
-  ), [formatDistance]);
+  const kmText = useCallback((c: ComponentRUL): string => (
+    c.remaining_km == null ? DASH : `${fmtInt(c.remaining_km)} ${t('rul.units.km', 'km')}`
+  ), [t]);
 
   const confLabel = useCallback((conf: number): string => {
     if (conf >= 0.66) return t('rul.confidence.high', 'High');
@@ -144,21 +133,40 @@ export default function RemainingUsefulLifePage() {
   const selectVehicleMsg = t('rul.selectVehicle', 'Select a vehicle to view its component prognostics.');
 
   return (
-    <PageLayout
-      title={t('rul.title', 'Remaining useful life')}
+    <PageContainer
+      title={t('rul.title', 'Remaining Useful Life')}
       subtitle={t('rul.subtitle', 'Predictive end-of-life forecasts for your wear components')}
       query={boardQuery}
     >
-      <StaleRefreshWarning state={boardState} label={t('rul.board.title', 'Component health')} />
       {/* ── 1. Next-service banner ─────────────────────────────────────── */}
       <FadeIn>
-        <NextServiceBrief
-          state={boardState}
-          loading={boardLoading}
-          noVehicle={noVehicle}
-          componentLabel={nextServiceLabel}
-          projectedDate={nextService?.date || null}
-        />
+        <GlassPanel className="p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <CalendarClock className="mt-0.5 h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />
+            <div className="min-w-0">
+              <Text as="p" variant="label">{t('rul.nextService.title', 'Next Service Due')}</Text>
+              {noVehicle ? (
+                <Text as="p" variant="body">{selectVehicleMsg}</Text>
+              ) : boardLoading && !board ? (
+                <Skeleton height={20} width="16rem" className="mt-1" />
+              ) : boardError ? (
+                <Text as="p" variant="body" className="text-rose-300">
+                  {t('rul.nextService.error', 'Unable to load service projection.')}
+                </Text>
+              ) : nextService && nextService.date ? (
+                <Text as="p" variant="body" weight="semibold">
+                  <span className={statusMeta('replace_soon').text}>{nextServiceLabel}</span>
+                  {' — '}
+                  {t('rul.nextService.by', 'projected by')} {nextService.date}
+                </Text>
+              ) : (
+                <Text as="p" variant="body" className="text-emerald-300">
+                  {t('rul.nextService.none', 'No upcoming service projected — all components healthy.')}
+                </Text>
+              )}
+            </div>
+          </div>
+        </GlassPanel>
       </FadeIn>
 
       {/* ── 2. Component health board ──────────────────────────────────── */}
@@ -166,7 +174,7 @@ export default function RemainingUsefulLifePage() {
         <section aria-label={t('rul.board.title', 'Component health')}>
           <PanelTitle className="mb-3 flex items-center gap-2">
             <HeartPulse className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-            {t('rul.board.title', 'Component health')}
+            {t('rul.board.title', 'Component Health')}
           </PanelTitle>
 
           {noVehicle ? (
@@ -211,7 +219,7 @@ export default function RemainingUsefulLifePage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <Icon className={cn('h-4 w-4 shrink-0', meta.text)} aria-hidden="true" />
-                        <Text as="span" variant="subhead" weight="semibold" className="break-words">
+                        <Text as="span" variant="subhead" weight="semibold" className="truncate">
                           {c.label}
                         </Text>
                       </div>
@@ -228,7 +236,7 @@ export default function RemainingUsefulLifePage() {
                         label={t('rul.card.health', 'Health')}
                         color={meta.gauge}
                         size={104}
-                        decimals={displayPrecision}
+                        decimals={0}
                         className="w-32 shrink-0"
                       />
                       <dl className="min-w-0 flex-1 space-y-1.5">
@@ -240,7 +248,7 @@ export default function RemainingUsefulLifePage() {
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.distanceLeft', 'Distance left')}</Text>
-                          <Text as="dd" variant="bodySm" className="tabular-nums">{remainingDistanceText(c)}</Text>
+                          <Text as="dd" variant="bodySm" className="tabular-nums">{kmText(c)}</Text>
                         </div>
                         <div className="flex items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.replaceBy', 'Replace by')}</Text>
@@ -271,10 +279,9 @@ export default function RemainingUsefulLifePage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-1 flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('rul.forecast.title', 'Health forecast')}
+            {t('rul.forecast.title', 'Health Forecast')}
             {detail ? <span className={cn('text-sm font-normal', activeMeta.text)}>· {detail.label}</span> : null}
           </PanelTitle>
-          <StaleRefreshWarning state={detailState} label={t('rul.forecast.title', 'Health forecast')} />
           <Text as="p" variant="caption" className="mb-3">
             {t('rul.forecast.subtitle', 'Projected health decaying to the end-of-life threshold, with a confidence band.')}
           </Text>
@@ -304,7 +311,7 @@ export default function RemainingUsefulLifePage() {
                 {/* chart-legend-audit:skip confidence band is inseparable from projected health line */}
                 {/* chart-a11y:no-table projected health line + confidence band area — composite trace not tabular */}
                 <EmbeddedChart
-                  title={t('rul.forecast.title', 'Health forecast')}
+                  title={t('rul.forecast.title', 'Health Forecast')}
                   ariaLabel={t('rul.forecast.aria', 'Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band')}
                   fluid
                 >
@@ -335,7 +342,7 @@ export default function RemainingUsefulLifePage() {
                           valueFormatter={(v) => (
                             Array.isArray(v)
                               ? `${fmtInt(v[0])}–${fmtInt(v[1])}%`
-                              : `${fmtNumber(v as number)}%`
+                              : `${fmtNumber(v as number, 1)}%`
                           )}
                         />
                       } />
@@ -383,6 +390,6 @@ export default function RemainingUsefulLifePage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

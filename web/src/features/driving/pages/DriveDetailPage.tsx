@@ -2,145 +2,361 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { Button, PrintButton, Text } from '@/components/ui';
-import { DataProvenanceBadge } from '@/components/data-display';
-import { AlertBanner, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { DataProvenanceBadge, DateTime } from '@/components/data-display';
+import { SectionErrorBoundary, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
-import { AIDriveCoaching } from '@/components/ai';
-import { AISpeedProfileInsights } from '@/components/ai';
+import { AIDriveCoaching } from '@/components/ai/AIDriveCoaching';
+import { AISpeedProfileInsights } from '@/components/ai/AISpeedProfileInsights';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useTimezone } from '@/lib/timezone';
 import { useFsdInsightsForDrive } from '@/api/hooks/useAnalytics';
-import { DriveReportContent } from '../components/layout-modernization';
-import { useDriveDetailData, DriveDetailSkeleton } from '../components/drive-detail';
+import {
+  useDriveDetailData,
+  DriveDetailSkeleton,
+  HeroGauges,
+  DrivePhysicsDebriefPanel,
+  DriveTimeline,
+  DriveStatCards,
+  SupervisedDrivingPanel,
+  GearTheaterPanel,
+  SilentCounterPanel,
+  DriveLedgerCompactPanel,
+  MoreDetailsPanel,
+  EnergySummaryPanel,
+  CostSavingsPanel,
+  RouteMapSection,
+  JourneyDetailsPanel,
+  DriveOverviewChart,
+  SocChart,
+  ElevationChart,
+  TemperatureSection,
+  SpeedHistogramChart,
+  PowerProfileChart,
+  TirePressureSection,
+  WhyEndedPanel,
+  RoadAnomalyPanel,
+} from '../components/drive-detail';
 
-/**
- * A drive report, not a second drives workspace.
- *
- * Ownership of facts:
- * - Journey: addresses, endpoint coordinates, timestamps and endpoint SOC.
- * - Overview: aggregate distance / duration / speed / consumption, baselines.
- * - Energy evidence: energy sources, odometer and range endpoints.
- * - Charts: sample statistics, not a second copy of persisted aggregates.
- * - Cost: configured-rate estimates, never a charging invoice.
- * - FSD / physics: their own attribution, uncertainty and missing signals.
- *
- * Each source stays isolated. A failed refresh must not erase a retained
- * historical record; a missing record must not remove the report's sections.
- */
 export default function DriveDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { t } = useTranslation();
-  usePageTitle(t('driveDetail.title', 'Drive detail'));
+  usePageTitle(t('driveDetail.title', 'Drive Detail'));
+
   const {
-    drive, vehicle, isLoading, driveQuery, chartData, stats, routeSource,
-    trail, startPos, endPos, centerPos, speedSegments, speedHistData,
+    drive, vehicle, isLoading, driveQuery,
+    chartData, stats, routeSource, trail, startPos, endPos, centerPos, speedSegments, speedHistData,
   } = useDriveDetailData(id ?? '');
+  /* A drive is an immutable historical record. A failed refresh must not
+   * delete the one the operator is reading — only a first load with nothing
+   * retained may replace the page. */
   const driveState = useDataState(driveQuery, { provenance: 'historical' });
   const timezone = useTimezone('vehicle');
   const fsdQuery = useFsdInsightsForDrive(
-    drive ? String(drive.vehicleId) : undefined, id, timezone, true,
+    drive ? String(drive.vehicleId) : undefined,
+    id,
+    timezone,
+    true,
   );
   const fsdState = useDataState(fsdQuery, { provenance: 'historical' });
-  const contributingDrives = fsdState.data?.drive_analytics?.contributing_drives ?? [];
-  const fsdInsight = contributingDrives.find((candidate) => candidate.drive_id === drive?.id);
+  const fsdInsight = fsdState.data?.drive_analytics?.contributing_drives
+    .find((candidate) => candidate.drive_id === drive?.id);
+
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  // A telemetry-gap notice is additional context, never a reason to remove
-  // panels or display a zero-valued peak. The panel owns its missing values.
+  if (isLoading) return <DriveDetailSkeleton />;
+
+  /**
+   * A drive can be persisted with all-zero aggregate fields when the
+   * underlying signal_log slice contained only gear transitions (no
+   * VehicleSpeed / Odometer / EnergyRemaining samples). In that case
+   * HeroGauges, DriveStatCards, EnergySummaryPanel and MoreDetailsPanel
+   * all render zero-valued metrics that read as "broken vehicle". Detect
+   * that envelope and replace the numeric-summary panels with a single
+   * banner explaining the gap. Charts and route map already gate
+   * themselves internally on an empty chartData / trail.
+   */
   const hasTelemetryRows = (drive?.telemetry?.length ?? 0) > 0
     || (drive?.positions?.length ?? 0) > 0;
   const hasMeaningfulDriveStats = !!drive && (
-    (drive.distanceM ?? 0) > 0 || (stats?.maxSpd ?? 0) > 0
-    || (stats?.energyWh ?? 0) > 0 || hasTelemetryRows
+    (drive.distanceM ?? 0) > 0
+    || ((stats?.maxSpd ?? 0) > 0)
+    || ((stats?.energyWh ?? 0) > 0)
+    || hasTelemetryRows
   );
+
   const routeTitle = drive?.startAddress && drive?.endAddress
     ? `${drive.startAddress} → ${drive.endAddress}`
-    : t('driveDetail.title', 'Drive detail');
-  const reportSections = [
-    { id: 'journey', label: t('driveDetail.journeyDetails', 'Journey details') },
-    { id: 'overview', label: t('driveDetail.report.overview', 'Overview') },
-    { id: 'route', label: t('driveDetail.route', 'Route') },
-    { id: 'telemetry', label: t('driveDetail.report.telemetry', 'Telemetry') },
-    { id: 'energy', label: t('driveDetail.report.energy', 'Energy and cost') },
-    { id: 'supervised', label: t('driveDetail.fsd.title', 'Supervised driving') },
-    { id: 'physics', label: t('driveDetail.debrief.title', 'Post-drive physics') },
-    { id: 'diagnostics', label: t('driveDetail.report.diagnostics', 'Diagnostics') },
-  ];
+    : t('driveDetail.title', 'Drive Detail');
+
+  const vehicleName = vehicle?.display_name || t('driveDetail.vehicle', 'Vehicle');
 
   return (
-    <PageLayout
+    <PageContainer
       title={routeTitle}
-      compactHeader
-      busy={isLoading}
+      error={driveState.fatalError}
+      empty={driveState.fatalError == null && !drive}
+      emptyMessage={t(
+        'driveDetail.notFound',
+        'This drive could not be found. It may have been deleted, or the link is incorrect.',
+      )}
       breadcrumbLabels={{
         '/drives/:id': drive
-          ? routeTitle
+          ? `${drive.startAddress ?? t('driveDetail.title', 'Drive')} → ${drive.endAddress ?? ''}`
           : t('driveDetail.breadcrumbFallback', 'Drive #{{id}}', { id: id ?? '' }),
       }}
-      metadataActions={
-        <DataProvenanceBadge provenance={driveState.provenance} status={driveState.status} updatedAt={driveState.updatedAt} />
-      }
-      secondaryActions={
-        <Link to="/drives">
-          <Button variant="ghost" size="sm" aria-label={t('driveDetail.backToDrives', 'Back to drives')} icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />} />
-        </Link>
-      }
-      primaryAction={id ? (
-        <Link to={`/drives/${id}/replay`}>
-          <Button variant="secondary" size="sm" icon={<Play className="h-4 w-4" aria-hidden="true" />}>
-            {t('driveDetail.replay', 'Replay')}
-          </Button>
-        </Link>
-      ) : undefined}
-      overflowActions={
-        <div data-print-hide className="flex items-center gap-2">
-          {id ? (
-            <Button variant="ghost" size="sm" onClick={() => setShareDialogOpen(true)} icon={<Share2 className="h-4 w-4" aria-hidden="true" />}>
+      actions={
+        <div data-print-hide className="flex flex-wrap items-center gap-2">
+          <DataProvenanceBadge
+            provenance={driveState.provenance}
+            status={driveState.status}
+            updatedAt={driveState.updatedAt}
+          />
+          <Link to="/drives">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label={t('driveDetail.backToDrives', 'Back to drives')}
+              icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
+            />
+          </Link>
+          {id && (
+            <Link to={`/drives/${id}/replay`}>
+              <Button variant="ghost" size="sm" icon={<Play className="h-4 w-4" aria-hidden="true" />}>
+                {t('driveDetail.replay', 'Replay')}
+              </Button>
+            </Link>
+          )}
+          {id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShareDialogOpen(true)}
+              icon={<Share2 className="h-4 w-4" aria-hidden="true" />}
+            >
               {t('driveDetail.share', 'Share')}
             </Button>
-          ) : null}
+          )}
           <PrintButton />
         </div>
       }
     >
-      <Text as="p" variant="caption">
-        {vehicle?.display_name || t('driveDetail.vehicle', 'Vehicle')}
-        {' · '}
-        {t('driveDetail.breadcrumbFallback', 'Drive #{{id}}', { id: id ?? '—' })}
-      </Text>
-      {isLoading ? <DriveDetailSkeleton /> : null}
-      {driveState.fatalError ? (
-        <QueryError error={driveState.fatalError} onRetry={() => { void driveQuery.refetch(); }} />
-      ) : null}
-      {!isLoading && !drive && !driveState.fatalError ? (
-        <AlertBanner variant="info">
-          {t('driveDetail.notFound', 'This drive could not be found. It may have been deleted, or the link is incorrect.')}
-        </AlertBanner>
-      ) : null}
-      <StaleRefreshWarning state={driveState} label={t('driveDetail.title', 'Drive detail')} />
-      <StaleRefreshWarning state={fsdState} label={t('driveDetail.fsd.title', 'Supervised driving')} />
-      {!isLoading && drive && !hasMeaningfulDriveStats ? (
-        <AlertBanner variant="info" title={t('driveDetail.noTelemetryTitle', 'No telemetry recorded for this drive')}>
-          {t('driveDetail.noTelemetryBody', 'Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.')}
-        </AlertBanner>
-      ) : null}
-
-      <DriveReportContent
-        id={id}
-        data={{ drive, stats, chartData, routeSource, trail, startPos, endPos, centerPos, speedSegments, speedHistData }}
-        meaningful={hasMeaningfulDriveStats}
-        sections={reportSections}
-        fsdInsight={fsdInsight}
-        fsdLoading={fsdState.status === 'initial'}
-        fsdError={fsdState.fatalError}
-        speedInsights={<AISpeedProfileInsights driveId={drive ? id : undefined} />}
-        coaching={<AIDriveCoaching driveId={drive ? id : undefined} />}
+      <StaleRefreshWarning
+        state={driveState}
+        label={t('driveDetail.title', 'Drive Detail')}
       />
-      {/* Dialog state is scoped to the routed record, not the example /412. */}
-      {id ? <ShareDriveDialog key={id} driveId={id} open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} /> : null}
-    </PageLayout>
+      <StaleRefreshWarning
+        state={fsdState}
+        label={t('driveDetail.fsd.title', 'Supervised driving')}
+      />
+      {drive && stats && (
+        <>
+          {/* Meta line — vehicle + drive window, replaces the redundant custom
+              header h1 so PageContainer owns the single page-level heading. */}
+          <Text as="p" variant="caption" className="-mt-2">
+            {vehicleName}
+            {' · '}
+            <DateTime value={drive.startTs} variant="date" in="vehicle" />
+            {' · '}
+            <DateTime value={drive.startTs} variant="time" in="vehicle" showTz />
+            {drive.endTs && (
+              <>
+                {' → '}
+                <DateTime value={drive.endTs} variant="time" in="vehicle" />
+              </>
+            )}
+          </Text>
+
+          {!hasMeaningfulDriveStats && (
+            <AlertBanner
+              variant="info"
+              title={t('driveDetail.noTelemetryTitle', 'No telemetry recorded for this drive')}
+            >
+              {t(
+                'driveDetail.noTelemetryBody',
+                'Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.',
+              )}
+            </AlertBanner>
+          )}
+
+          {/* Hero — headline summary of the drive. */}
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:hero-gauges" fallbackTitle={t('driveDetail.section.heroGaugesFailed', 'Hero gauges failed to load')}>
+              <HeroGauges drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
+
+          <SectionErrorBoundary name="drive-detail:physics-debrief" fallbackTitle={t('driveDetail.section.debriefFailed', 'Physics debrief failed to load')}>
+            <DrivePhysicsDebriefPanel
+              stats={stats}
+              chartData={chartData}
+              fsdInsight={fsdInsight}
+            />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary name="drive-detail:timeline" fallbackTitle={t('driveDetail.section.timelineFailed', 'Drive timeline failed to load')}>
+            <DriveTimeline drive={drive} />
+          </SectionErrorBoundary>
+
+          {id && (
+            <SectionErrorBoundary name="drive-detail:road-anomalies" fallbackTitle={t('driveDetail.road.failed', 'Road-surface analysis failed to render')}>
+              <RoadAnomalyPanel driveId={id} />
+            </SectionErrorBoundary>
+          )}
+
+          <SectionErrorBoundary name="drive-detail:gear-theater" fallbackTitle={t('driveDetail.section.theaterFailed', 'Gear theater failed to load')}>
+            <GearTheaterPanel driveId={id} />
+          </SectionErrorBoundary>
+
+          {/* KPI band — full-width responsive stat grid. */}
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:stat-cards" fallbackTitle={t('driveDetail.section.statCardsFailed', 'Drive stats failed to load')}>
+              <DriveStatCards drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
+
+          <SectionErrorBoundary name="drive-detail:fsd" fallbackTitle={t('driveDetail.section.fsdFailed', 'Supervised-driving panel failed to load')}>
+            <SupervisedDrivingPanel
+              insight={fsdInsight}
+              isLoading={fsdState.status === 'initial'}
+              error={fsdState.fatalError}
+              isOngoing={!drive.endTs}
+            />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary name="drive-detail:silent-counter" fallbackTitle={t('driveDetail.section.silentFailed', 'Counter-silent panel failed to load')}>
+            <SilentCounterPanel driveId={id} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary name="drive-detail:energy-ledger" fallbackTitle={t('driveDetail.section.ledgerFailed', 'Energy ledger failed to load')}>
+            <DriveLedgerCompactPanel driveId={id} />
+          </SectionErrorBoundary>
+
+          {/*
+            Per-drive coaching narrative (AI, opt-in). Wrapped in
+            withAiFeature('drive-coaching', …) so it renders ONLY when
+            ai_mode != 'off' AND the drive-coaching toggle is on
+            (ADR-015 §I5 + §I6). When AI is off the wrapper returns null —
+            the surrounding stat-card stack and downstream sections are
+            unaffected, which is the invariant
+            TestDriveCoachingAIOffShowsOnlyBaselineStats verifies.
+          */}
+          <SectionErrorBoundary name="drive-detail:ai-coaching" fallbackTitle={t('driveDetail.section.aiCoachingFailed', 'Helix drive coaching failed to load')}>
+            <AIDriveCoaching driveId={id} />
+          </SectionErrorBoundary>
+
+          {/* Detailed metrics — wide strip of secondary numbers. */}
+          {hasMeaningfulDriveStats && (
+            <SectionErrorBoundary name="drive-detail:more-details" fallbackTitle={t('driveDetail.section.moreDetailsFailed', 'More details failed to load')}>
+              <MoreDetailsPanel drive={drive} stats={stats} />
+            </SectionErrorBoundary>
+          )}
+
+          {/* Energy + cost bento — side-by-side on wide screens. */}
+          {hasMeaningfulDriveStats && (
+            <section
+              aria-label={t('driveDetail.section.energyCost', 'Energy and cost')}
+              className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2"
+            >
+              <SectionErrorBoundary name="drive-detail:energy-summary" fallbackTitle={t('driveDetail.section.energySummaryFailed', 'Energy summary failed to load')}>
+                <EnergySummaryPanel drive={drive} stats={stats} />
+              </SectionErrorBoundary>
+              {stats.energyWh > 0 && (
+                <SectionErrorBoundary name="drive-detail:cost-savings" fallbackTitle={t('driveDetail.section.costSavingsFailed', 'Cost savings panel failed to load')}>
+                  <CostSavingsPanel drive={drive} stats={stats} />
+                </SectionErrorBoundary>
+              )}
+            </section>
+          )}
+
+          {/* Route + journey bento — map hero spans two columns on wide screens,
+              journey summary fills the remaining column. */}
+          <section
+            aria-label={t('driveDetail.section.route', 'Route and journey')}
+            className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-3"
+          >
+            <div className="xl:col-span-2">
+              <SectionErrorBoundary name="drive-detail:route-map" fallbackTitle={t('driveDetail.section.routeMapFailed', 'Route map failed to load')}>
+                <RouteMapSection
+                  drive={drive}
+                  trail={trail}
+                  startPos={startPos}
+                  endPos={endPos}
+                  centerPos={centerPos}
+                  speedSegments={speedSegments}
+                  routePoints={routeSource}
+                  fsdEvidence={fsdInsight?.evidence}
+                />
+              </SectionErrorBoundary>
+            </div>
+            <SectionErrorBoundary name="drive-detail:journey-details" fallbackTitle={t('driveDetail.section.journeyDetailsFailed', 'Journey details failed to load')}>
+              <JourneyDetailsPanel drive={drive} />
+            </SectionErrorBoundary>
+          </section>
+
+          {/*
+            Every chart in this block reads `chartData` from the same
+            `useDriveDetailData` source, so they share row indices. Wrapping in
+            `<ChartTimeRangeProvider>` lets recharts' native syncId mechanism
+            mirror the hover cursor across all charts; the `<ChartBrush>` inside
+            `<DriveOverviewChart>` then zooms every synced chart simultaneously.
+          */}
+          <ChartTimeRangeProvider syncId="drive-detail">
+            <div className="space-y-6">
+              <SectionErrorBoundary name="drive-detail:overview-chart" fallbackTitle={t('driveDetail.section.overviewChartFailed', 'Drive overview chart failed to load')}>
+                <DriveOverviewChart drive={drive} chartData={chartData} />
+              </SectionErrorBoundary>
+
+              {/* Detail charts — 1-col on phone, 2-col on desktop, 4-col on
+                  ultra-wide (1920px+) so the row fills the screen. */}
+              <section
+                aria-label={t('driveDetail.section.detailCharts', 'Detailed drive charts')}
+                className="grid grid-cols-1 gap-4 sm:gap-5 lg:grid-cols-2 3xl:grid-cols-4"
+              >
+                <SectionErrorBoundary name="drive-detail:soc-chart" fallbackTitle={t('driveDetail.section.socChartFailed', 'SOC chart failed to load')}>
+                  <SocChart chartData={chartData} />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="drive-detail:elevation-chart" fallbackTitle={t('driveDetail.section.elevationChartFailed', 'Elevation chart failed to load')}>
+                  <ElevationChart chartData={chartData} stats={stats} />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="drive-detail:temperature" fallbackTitle={t('driveDetail.section.temperatureFailed', 'Temperature section failed to load')}>
+                  <TemperatureSection chartData={chartData} stats={stats} />
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="drive-detail:speed-histogram" fallbackTitle={t('driveDetail.section.speedHistogramFailed', 'Speed histogram failed to load')}>
+                  <SpeedHistogramChart speedHistData={speedHistData} />
+                </SectionErrorBoundary>
+              </section>
+
+              <SectionErrorBoundary name="drive-detail:ai-speed-profile-insights" fallbackTitle={t('driveDetail.section.aiSpeedProfileInsightsFailed', 'Helix speed-profile insights failed to load')}>
+                <AISpeedProfileInsights driveId={id} />
+              </SectionErrorBoundary>
+              <SectionErrorBoundary name="drive-detail:power-profile" fallbackTitle={t('driveDetail.section.powerProfileFailed', 'Power profile chart failed to load')}>
+                <PowerProfileChart chartData={chartData} stats={stats} />
+              </SectionErrorBoundary>
+            </div>
+          </ChartTimeRangeProvider>
+
+          <SectionErrorBoundary name="drive-detail:tire-pressure" fallbackTitle={t('driveDetail.section.tirePressureFailed', 'Tire pressure section failed to load')}>
+            <TirePressureSection chartData={chartData} stats={stats} />
+          </SectionErrorBoundary>
+
+          {id && (
+            <SectionErrorBoundary name="drive-detail:why-ended" fallbackTitle={t('driveDetail.section.whyEndedFailed', 'Why-ended diagnostic failed to load')}>
+              <WhyEndedPanel driveId={id} />
+            </SectionErrorBoundary>
+          )}
+        </>
+      )}
+      {id && (
+        <ShareDriveDialog
+          driveId={id}
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+        />
+      )}
+    </PageContainer>
   );
 }

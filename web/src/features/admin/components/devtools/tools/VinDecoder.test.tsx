@@ -53,7 +53,7 @@ import { VinDecoderTool } from './VinDecoder'
 // A real 17-char Tesla VIN and the exact decode the shared constants produce.
 const FULL_VIN = '5YJ3E1EA1NF000001'
 const HINT = 'Enter at least 11 characters to decode a VIN'
-const VIN_LABEL = 'VIN'
+const VIN_LABEL = 'Vin'
 
 function getVinInput(): HTMLInputElement {
   return screen.getByLabelText(VIN_LABEL) as HTMLInputElement
@@ -75,7 +75,7 @@ describe('VinDecoderTool', () => {
     render(<VinDecoderTool />)
 
     expect(
-      screen.getByRole('heading', { name: 'VIN decoder' }),
+      screen.getByRole('heading', { name: 'Vin Decoder' }),
     ).toBeInTheDocument()
 
     const input = getVinInput()

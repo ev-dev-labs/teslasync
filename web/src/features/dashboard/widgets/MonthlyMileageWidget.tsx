@@ -1,23 +1,23 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, ChartTooltip, EmbeddedChart, useMeasuredAxisWidth } from '@/components/charts';
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
+  chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart,
+} from '@/components/charts';
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { knownNumber } from '@/api/dataState';
-import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { chartTokens } from '@/lib/tokens';
 
 interface BarDatum {
   month: string;
-  distance: number | null;
+  distance: number;
   isCurrent: boolean;
 }
 
@@ -39,8 +39,6 @@ export function currentMonthKey(): string {
 }
 
 export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
-  const { fmtNumber: fmt } = useNumberFormatting();
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? 0;
@@ -54,7 +52,6 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     [distanceUnit],
   );
 
-  const query = useMonthlyMileage(vid > 0 ? String(vid) : '');
   const {
     data,
     isLoading,
@@ -64,8 +61,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     isError,
     dataUpdatedAt,
     refetch,
-  } = query;
-  const trust = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
+  } = useMonthlyMileage(vid > 0 ? String(vid) : '');
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -79,21 +75,19 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
       // Backend `/mileage/monthly` returns `year_month` ('YYYY-MM') and
       // `total_km`. SI-canonical convertDistanceFromSI expects meters.
       month: shortMonth(m.year_month ?? ''),
-      distance: knownNumber(m.total_km) == null ? null : toDistanceDisplay(m.total_km * 1000),
+      distance: toDistanceDisplay((m.total_km ?? 0) * 1000),
       isCurrent: (m.year_month ?? '') === curMonth,
     }));
   }, [data, toDistanceDisplay, curMonth]);
 
   const totalDistance = useMemo(
-    () => chartData.length > 0 && chartData.every(d => d.distance != null)
-      ? chartData.reduce((sum, d) => sum + (d.distance ?? 0), 0)
-      : null,
+    () => chartData.reduce((sum, d) => sum + d.distance, 0),
     [chartData],
   );
 
   const currentMonthDistance = useMemo(() => {
     const cur = chartData.find((d) => d.isCurrent);
-    return cur?.distance ?? null;
+    return cur?.distance ?? 0;
   }, [chartData]);
   const chartTableData = useMemo(
     () => chartData.map(({ month, distance }) => ({ month, distance })),
@@ -102,16 +96,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
-  const hasData = chartData.length > 0;
-  const axisLabels = useMemo(
-    () => [0, ...chartData.map((entry) => entry.distance)]
-      .filter((value): value is number => value != null && Number.isFinite(value))
-      .map((value) => fmt(value)),
-    [chartData, fmt],
-  );
-  const axisWidth = useMeasuredAxisWidth({
-    labels: axisLabels, fontSize: isWide ? 11 : 10, minWidth: 40, padding: 20, enabled: !isCompact,
-  });
+  const hasData = chartData.length > 0 && chartData.some((d) => d.distance > 0);
 
   // Summary stats are identical in the compact and standard layouts, so they
   // are derived once and reused (single source of truth + stable reference).
@@ -120,29 +105,34 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
       hasData
         ? [
             {
-              label: t('widget.monthlyMileage.thisMonth', 'This month'),
-              value: currentMonthDistance == null ? null : fmtInt(currentMonthDistance),
+              label: t('widget.monthlyMileage.thisMonth', 'This Month'),
+              value: fmtInt(currentMonthDistance),
               unit: distanceUnit,
             },
             {
-              label: t('widget.monthlyMileage.total12m', '12-month total'),
-              value: totalDistance == null ? null : fmtInt(totalDistance),
+              label: t('widget.monthlyMileage.total12m', '12-Mo Total'),
+              value: fmtInt(totalDistance),
               unit: distanceUnit,
             },
           ]
         : [],
-    [hasData, currentMonthDistance, totalDistance, distanceUnit, t, fmtInt],
+    [hasData, currentMonthDistance, totalDistance, distanceUnit, t],
   );
 
-  const dataState = data != null || isLoading || isError || error ? trust : undefined;
+  // Only surface a full error panel on a genuine initial-load failure (no data
+  // yet). A background-refetch error that still has cached data must keep the
+  // chart on screen — the freshness indicator conveys the stale/error state.
+  const shellError =
+    isError && !data
+      ? String(error ?? t('widget.monthlyMileage.error', 'Unable to load mileage data'))
+      : null;
 
   // ── Compact (1-col): summary stats only ──
   if (isCompact) {
     return (
       <WidgetShell
-        title={t('widget.monthlyMileage.title', 'Monthly mileage')}
         loading={isLoading}
-        dataState={dataState}
+        error={shellError}
         updatedAt={dataUpdatedAt}
         isFetching={isFetching}
         isStale={isStale}
@@ -166,10 +156,10 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
 
   return (
     <WidgetShell
-      title={t('widget.monthlyMileage.title', 'Monthly mileage')}
+      title={t('widget.monthlyMileage.title', 'Monthly Mileage')}
       icon={<BarChart3 className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      dataState={dataState}
+      error={shellError}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -183,7 +173,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
         stats={summaryStats}
         chart={
           <EmbeddedChart
-            title={t('widget.monthlyMileage.title', 'Monthly mileage')}
+            title={t('widget.monthlyMileage.title', 'Monthly Mileage')}
             ariaLabel={t(
               'widget.monthlyMileage.chartAria',
               'Distance driven by month',
@@ -198,7 +188,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ ...chartMargin, left: 4 }} {...chartAnimation}>
+              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="month"
@@ -210,16 +200,16 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 tick={tick}
                 tickLine={false}
                 axisLine={false}
-                width={axisWidth}
-                tickFormatter={(v: number) => fmt(v)}
+                width={40}
+                tickFormatter={(v: number) => fmt(v, 0)}
               />
               <Tooltip
                 content={<ChartTooltip />}
                 formatter={(value: number) => [
-                  `${fmtNumber(value)} ${distanceUnit}`,
+                  `${fmtNumber(value, 1)} ${distanceUnit}`,
                   t('widget.monthlyMileage.distance', 'Distance'),
                 ]}
-                cursor={{ fill: chartTokens.gridStroke }}
+                cursor={{ fill: 'rgba(255,255,255,0.04)' }}
               />
               <Bar
                 dataKey="distance"
@@ -230,7 +220,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 {chartData.map((entry, idx) => (
                   <Cell
                     key={`bar-${idx}`}
-                    fill={entry.isCurrent ? chartTokens.series[5] : chartTokens.axisStroke}
+                    fill={entry.isCurrent ? '#22d3ee' : 'rgba(255,255,255,0.1)'}
                   />
                 ))}
               </Bar>

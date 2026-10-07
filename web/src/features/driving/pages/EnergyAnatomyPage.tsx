@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Waypoints } from 'lucide-react';
+import { Wind, Zap, Recycle, Waypoints } from 'lucide-react';
 
-import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
-import { HelpTooltip } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
-import type { StatMetric } from '@/components/data-display/stat-reference';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, PanelTitle, Text, HelpTooltip } from '@/components/ui';
+import { RangePicker, VehicleSelect } from '@/components/forms';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -15,13 +15,10 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
 
 import { computeAnatomy, layoutSankey, type SankeyFlow } from '../lib/energyAnatomy';
-import { EnergyFlowDiagram } from '../components/continuation-driving-secondary/EnergyFlowDiagram';
-import { DrivingSummaryBrief } from '../components/operationalbrief-a-m/DrivingSummaryBrief';
 
 const COMPONENT_META: Record<string, { i18nKey: string; fallback: string; color: string }> = {
   aero:    { i18nKey: 'energyAnatomy.aero',    fallback: 'Aero drag',      color: chartTokens.series[5] },
@@ -44,7 +41,6 @@ export default function EnergyAnatomyPage() {
   });
 
   const drivesQuery = useDrives(vehicleIdStr);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const allDrives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
 
   const drives = useMemo<Drive[]>(() => {
@@ -83,48 +79,22 @@ export default function EnergyAnatomyPage() {
     ] as const;
     return entries.reduce((a, b) => (b[1] > a[1] ? b : a));
   }, [anatomy]);
-  const available = drivesState.data != null;
-  const briefMetrics: readonly StatMetric[] = [
-    { metricId: 'energy', occurrenceId: 'used', rawValue: available ? anatomy.totalWh : null,
-      label: t('energyAnatomy.total', 'Energy Used'),
-      description: available
-        ? t('energyAnatomy.driveCount', '{{count}} drives', { count: anatomy.drives })
-        : t('driving.brief.pending', 'Drive evidence is not available yet.'),
-      display: { formatter: (raw) => ({ value: formatEnergy(raw), unit: '' }) } },
-    { metricId: 'text', occurrenceId: 'biggest',
-      rawValue: available && anatomy.totalWh > 0 ? t(COMPONENT_META[biggest[0]]!.i18nKey, COMPONENT_META[biggest[0]]!.fallback) : null,
-      label: t('energyAnatomy.biggest', 'Biggest Consumer'),
-      description: t('energyAnatomy.brief.apportionment', 'Directional physical-model apportionment, not a directly measured component.'),
-      context: share(biggest[1]) },
-    { metricId: 'percent', occurrenceId: 'climate',
-      rawValue: available && anatomy.totalWh > 0 ? Math.round((anatomy.climateWh / anatomy.totalWh) * 100) : null,
-      label: t('energyAnatomy.climateCard', 'Climate Overhead'),
-      description: t('energyAnatomy.brief.climate', 'Modeled climate share of measured traction energy.'),
-      context: available ? formatEnergy(anatomy.climateWh) : undefined,
-      display: { precision: 0 } },
-    { metricId: 'energy', occurrenceId: 'regen', rawValue: available ? anatomy.regenWh : null,
-      label: t('energyAnatomy.regen', 'Regen Credit'),
-      description: t('energyAnatomy.brief.regen', 'Returned regeneration energy; recovery share uses the measured energy-used denominator.'),
-      context: available && anatomy.totalWh > 0
-        ? t('energyAnatomy.regenShare', '{{pct}}% recovered', { pct: Math.round((anatomy.regenWh / anatomy.totalWh) * 100) })
-        : undefined,
-      display: { formatter: (raw) => ({ value: formatEnergy(raw), unit: '' }) } },
-  ];
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('energyAnatomy.title', 'Energy Anatomy')} />;
   }
 
-  const isLoading = drivesState.status === 'initial';
-  const isError = drivesState.fatalError != null;
+  const isLoading = drivesQuery.isLoading;
+  const isError = drivesQuery.isError;
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('energyAnatomy.title', 'Energy Anatomy')}
       subtitle={t('energyAnatomy.subtitle', 'Where a period of traction energy physically went')}
       query={drivesQuery}
-      contextActions={
+      actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}
@@ -134,62 +104,165 @@ export default function EnergyAnatomyPage() {
         </div>
       }
     >
-      <StaleRefreshWarning state={drivesState} label={t('energyAnatomy.title', 'Energy Anatomy')} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
           aria-label={t('energyAnatomy.kpis', 'Energy anatomy summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
-          <DrivingSummaryBrief metrics={briefMetrics}
-            title={t('energyAnatomy.kpis', 'Energy anatomy summary metrics')}
-            description={t('energyAnatomy.brief.description', 'Measured total energy anchors a directional physical split; component estimates are not laboratory-grade measurements.')}
-            scope={t('driving.brief.window', '{{start}}–{{end}}; returned drive subset, not a server-wide aggregate', { start, end })}
-            provenance={t('energyAnatomy.brief.source', 'Returned drive energy and regeneration; modeled aerodynamic, rolling and climate allocation.')}
-            loading={isLoading} error={drivesState.fatalError}
-            retained={drivesState.status === 'stale' || drivesState.refreshError != null}
-            onRetry={() => void drivesQuery.refetch()} />
+          {isError ? (
+            <GlassPanel className="col-span-full p-4 sm:p-5">
+              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
+            </GlassPanel>
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height={96} className="rounded-xl" />
+            ))
+          ) : (
+            <>
+              <MetricCard
+                label={t('energyAnatomy.total', 'Energy Used')}
+                value={formatEnergy(anatomy.totalWh, { precision: 1 })}
+                subtitle={t('energyAnatomy.driveCount', '{{count}} drives', { count: anatomy.drives })}
+                icon={<Zap className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('energyAnatomy.biggest', 'Biggest Consumer')}
+                value={t(COMPONENT_META[biggest[0]]!.i18nKey, COMPONENT_META[biggest[0]]!.fallback)}
+                subtitle={share(biggest[1])}
+                icon={<Wind className="h-5 w-5" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('energyAnatomy.climateCard', 'Climate Overhead')}
+                value={share(anatomy.climateWh)}
+                subtitle={formatEnergy(anatomy.climateWh, { precision: 1 })}
+                icon={<Waypoints className="h-5 w-5" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('energyAnatomy.regen', 'Regen Credit')}
+                value={formatEnergy(anatomy.regenWh, { precision: 1 })}
+                subtitle={
+                  anatomy.totalWh > 0
+                    ? t('energyAnatomy.regenShare', '{{pct}}% recovered', {
+                        pct: Math.round((anatomy.regenWh / anatomy.totalWh) * 100),
+                      })
+                    : undefined
+                }
+                icon={<Recycle className="h-5 w-5" />}
+                color="green"
+              />
+            </>
+          )}
         </section>
       </FadeIn>
 
       {/* 2 — Sankey */}
       <FadeIn delay={0.1}>
-        <LayoutCard
-          title={t('energyAnatomy.sankey', 'Energy Flow')}
-          actions={<>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
             <Waypoints className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('energyAnatomy.sankey', 'Energy Flow')}
             <HelpTooltip
               size="sm"
               i18nKey="help.energyAnatomy.body"
               defaultValue="An approximate physical anatomy of your measured consumption: aerodynamic drag grows with speed squared, rolling resistance with distance, and climate load with temperature deviation and time. The measured total is authoritative — physics only apportions it — so treat the split as directional, not laboratory-grade."
               ariaLabel={t('help.energyAnatomy.iconLabel', 'More info about the anatomy model')}
             />
-          </>}
-        >
-          <SourceContent
-            state={isError ? 'error' : isLoading ? 'loading' : anatomy.totalWh === 0 ? 'empty' : 'ready'}
-            label={t('energyAnatomy.sankey', 'Energy Flow')}
-            error={drivesState.fatalError}
-            errorMessage={t('drivingSecondary.states.historyError', 'Could not load drive history.')}
-            errorRecovery={{ onRetry: () => void drivesQuery.refetch() }}
-            loadingContent={<Skeleton height={300} />}
-            emptyMessage={t('energyAnatomy.noData', 'No drives with energy data in this period.')}
-            emptyContent={<EmptyState
+          </PanelTitle>
+          {isError ? (
+            <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
+          ) : isLoading ? (
+            <Skeleton height={300} />
+          ) : anatomy.totalWh === 0 ? (
+            <EmptyState
               icon={<Waypoints className="h-8 w-8" />}
               message={t('energyAnatomy.noData', 'No drives with energy data in this period.')}
               actionTo={{ label: t('energyAnatomy.browseDrives', 'Browse drives'), to: '/drives' }}
-            />}
-          >
-            <EnergyFlowDiagram
-              sankey={sankey}
-              flows={flows}
-              metadata={COMPONENT_META}
-              totalEnergyWh={anatomy.totalWh}
-              formatEnergy={formatEnergy}
-              share={share}
             />
-          </SourceContent>
-        </LayoutCard>
+          ) : (
+            <div className="overflow-x-auto">
+              <svg
+                viewBox={`0 0 ${sankey.width + 200} ${sankey.height + 20}`}
+                className="min-w-[560px]"
+                role="img"
+                aria-label={t('energyAnatomy.sankey.aria', 'Sankey diagram splitting {{total}} into aero drag, rolling resistance, climate, and other losses', {
+                  total: formatEnergy(anatomy.totalWh, { precision: 1 }),
+                })}
+              >
+                <g transform="translate(90, 10)">
+                  {/* ribbons */}
+                  {sankey.links.map((link) => (
+                    <path
+                      key={link.key}
+                      d={link.path}
+                      fill="none"
+                      stroke={COMPONENT_META[link.key]!.color}
+                      strokeWidth={link.thickness}
+                      strokeOpacity={0.45}
+                    />
+                  ))}
+                  {/* source node */}
+                  <rect
+                    x={sankey.source.x}
+                    y={sankey.source.y}
+                    width={sankey.source.width}
+                    height={sankey.source.height}
+                    rx={3}
+                    fill="var(--text-muted)"
+                  />
+                  <text
+                    x={sankey.source.x - 8}
+                    y={sankey.source.y + sankey.source.height / 2}
+                    textAnchor="end"
+                    dominantBaseline="middle"
+                    fill="var(--text-primary)"
+                    fontSize={12}
+                  >
+                    {t('energyAnatomy.battery', 'Battery')}
+                  </text>
+                  {/* target nodes + labels */}
+                  {sankey.targets.map((node) => {
+                    const meta = COMPONENT_META[node.key]!;
+                    const value = flows.find((f) => f.key === node.key)?.value ?? 0;
+                    return (
+                      <g key={node.key}>
+                        <rect x={node.x} y={node.y} width={node.width} height={node.height} rx={3} fill={meta.color} />
+                        <text
+                          x={node.x + node.width + 8}
+                          y={node.y + node.height / 2}
+                          dominantBaseline="middle"
+                          fill="var(--text-primary)"
+                          fontSize={12}
+                        >
+                          {t(meta.i18nKey, meta.fallback)} · {share(value)}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </g>
+              </svg>
+              <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--border-subtle)] pt-3">
+                {flows.map((f) => (
+                  <li key={f.key} className="flex items-center gap-1.5">
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: COMPONENT_META[f.key]!.color }}
+                      aria-hidden="true"
+                    />
+                    <Text variant="caption">{t(COMPONENT_META[f.key]!.i18nKey, COMPONENT_META[f.key]!.fallback)}</Text>
+                    <Text variant="caption" className="font-mono tabular-nums">
+                      {formatEnergy(f.value, { precision: 1 })}
+                    </Text>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

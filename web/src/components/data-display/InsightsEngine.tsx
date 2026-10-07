@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import { GlassPanel } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { fmtNumber } from '@/lib/numberFormat'
 import { useFormatting } from '@/hooks/useFormatting'
 import { trendColor } from '@/lib/colors'
 import type {
@@ -56,7 +56,7 @@ const TREND_ICON: Record<Trend, { Icon: React.ElementType; color: string }> = {
 
 // ─── Analysis helpers ─────────────────────────────────────────
 
-function analyzeChargingCost(sessions: ChargingSession[], formatCurrency: (amount: number, decimals?: number) => string, { fmtNumber }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeChargingCost(sessions: ChargingSession[], formatCurrency: (amount: number, decimals?: number) => string): Insight | null {
   const withCost = sessions.filter(s => s.cost != null && s.charge_energy_added > 0)
   if (withCost.length < 2) return null
 
@@ -73,14 +73,14 @@ function analyzeChargingCost(sessions: ChargingSession[], formatCurrency: (amoun
   const homeCost = home.length > 0 ? avgCost(home) : null
   const scCost = supercharger.length > 0 ? avgCost(supercharger) : null
 
-  let description = `Your average charging cost is ${formatCurrency(overall)}/kWh.`
+  let description = `Your average charging cost is ${formatCurrency(overall, 2)}/kWh.`
   let trend: Trend = 'neutral'
   let trendGood = true
 
   if (homeCost != null && scCost != null && scCost > 0) {
     const savings = ((scCost - homeCost) / scCost) * 100
     if (savings > 0) {
-      description += ` Home charging saves you ${fmtNumber(savings)}% compared to Supercharging.`
+      description += ` Home charging saves you ${fmtNumber(savings, 0)}% compared to Supercharging.`
       trend = 'up'
     } else {
       description += ` Your home electricity rate is higher than Supercharger rates — consider off-peak charging.`
@@ -100,7 +100,7 @@ function analyzeChargingCost(sessions: ChargingSession[], formatCurrency: (amoun
   }
 }
 
-function analyzeEfficiencyTrend(drives: Drive[], { fmtNumber }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeEfficiencyTrend(drives: Drive[]): Insight | null {
   const valid = drives
     .filter(d => d.distance_m > 0 && d.energy_used_wh != null)
   if (valid.length < 4) return null
@@ -119,7 +119,7 @@ function analyzeEfficiencyTrend(drives: Drive[], { fmtNumber }: ReturnType<typeo
   const changePct = ((older - recent) / older) * 100
 
   const improved = changePct > 0
-  const magnitude = fmtNumber(Math.abs(changePct))
+  const magnitude = fmtNumber(Math.abs(changePct), 1)
 
   return {
     id: 'efficiency-trend',
@@ -134,7 +134,7 @@ function analyzeEfficiencyTrend(drives: Drive[], { fmtNumber }: ReturnType<typeo
   }
 }
 
-function analyzeBatteryHealth(report: BatteryReport, { fmtNumber }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeBatteryHealth(report: BatteryReport): Insight | null {
   if (!report.health_score) return null
 
   const healthPct = report.current_capacity_pct
@@ -162,14 +162,14 @@ function analyzeBatteryHealth(report: BatteryReport, { fmtNumber }: ReturnType<t
     id: 'battery-health',
     icon: Battery,
     title: 'Battery Health',
-    description: `Battery health is at ${fmtNumber(healthPct)}%. Degradation rate is ${fmtNumber(yearlyRate)}% per year — your battery is aging ${agingQuality}.`,
+    description: `Battery health is at ${fmtNumber(healthPct, 1)}%. Degradation rate is ${fmtNumber(yearlyRate, 1)}% per year — your battery is aging ${agingQuality}.`,
     trend: degradation > 8 ? 'down' : 'up',
     trendGood: degradation <= 8,
     severity,
   }
 }
 
-function analyzeOptimalCharging(sessions: ChargingSession[], { fmtNumber }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeOptimalCharging(sessions: ChargingSession[]): Insight | null {
   const withEnd = sessions.filter(s => s.end_battery_level != null)
   if (withEnd.length < 3) return null
 
@@ -177,12 +177,12 @@ function analyzeOptimalCharging(sessions: ChargingSession[], { fmtNumber }: Retu
   const above80 = withEnd.filter(s => s.end_battery_level! > 80).length
   const above80Pct = (above80 / withEnd.length) * 100
 
-  let description = `You charge most often to ${fmtNumber(avgEndLevel)}%.`
+  let description = `You charge most often to ${fmtNumber(avgEndLevel, 0)}%.`
   let severity: Severity = 'info'
   let trendGood = true
 
   if (above80Pct > 50) {
-    description += ` ${fmtNumber(above80Pct)}% of your charges exceed 80%. For battery longevity, consider keeping charges between 20–80%.`
+    description += ` ${fmtNumber(above80Pct, 0)}% of your charges exceed 80%. For battery longevity, consider keeping charges between 20–80%.`
     severity = 'warning'
     trendGood = false
   } else {
@@ -201,15 +201,15 @@ function analyzeOptimalCharging(sessions: ChargingSession[], { fmtNumber }: Retu
   }
 }
 
-function analyzeVampireDrain(stats: VampireDrainStats, { fmtNumber, fmtInt }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeVampireDrain(stats: VampireDrainStats): Insight | null {
   const average = stats.avg_drain_pct_per_day
   if (stats.event_count < 1 || average == null || !Number.isFinite(average)) return null
 
   const elevated = average >= 3
   const p95 = stats.p95_drain_pct_per_day
   const description = p95 != null
-    ? `Average parked drain is ${fmtNumber(average)}% per day; P95 is ${fmtNumber(p95)}% across ${fmtInt(stats.event_count)} observed windows.`
-    : `Average parked drain is ${fmtNumber(average)}% per day across ${fmtInt(stats.event_count)} observed windows.`
+    ? `Average parked drain is ${fmtNumber(average, 2)}% per day; P95 is ${fmtNumber(p95, 2)}% across ${stats.event_count} observed windows.`
+    : `Average parked drain is ${fmtNumber(average, 2)}% per day across ${stats.event_count} observed windows.`
 
   return {
     id: 'vampire-drain',
@@ -222,7 +222,7 @@ function analyzeVampireDrain(stats: VampireDrainStats, { fmtNumber, fmtInt }: Re
   }
 }
 
-function analyzeDrivingPatterns(drives: Drive[], { fmtNumber }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
   if (drives.length < 3) return null
 
   const totalDist = drives.reduce((a, d) => a + d.distance_m, 0)
@@ -250,14 +250,14 @@ function analyzeDrivingPatterns(drives: Drive[], { fmtNumber }: ReturnType<typeo
     id: 'driving-patterns',
     icon: Car,
     title: 'Driving Patterns',
-    description: `You drive an average of ${fmtNumber(avgDaily / 1000)} km/day. Your most active day is ${busiestDay}. Peak driving time: ${peakHour}:00–${peakEnd}:00.`,
+    description: `You drive an average of ${fmtNumber(avgDaily / 1000, 1)} km/day. Your most active day is ${busiestDay}. Peak driving time: ${peakHour}:00–${peakEnd}:00.`,
     trend: 'neutral',
     trendGood: true,
     severity: 'info',
   }
 }
 
-function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number, decimals?: number) => string, { fmtNumber }: ReturnType<typeof useNumberFormatting>): Insight | null {
+function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number, decimals?: number) => string): Insight | null {
   if (energy.total_energy_used_kwh <= 0) return null
 
   // Average gas car: 8.5 L/100km, avg gas price ~$1.50/L
@@ -271,14 +271,14 @@ function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number
     id: 'cost-savings',
     icon: Leaf,
     title: 'EV Cost Savings',
-    description: `You've saved approximately ${formatCurrency(savings)} vs. gasoline based on ${fmtNumber(energy.total_energy_used_kwh)} kWh consumed over ${fmtNumber(energy.total_distance_km)} km. That's also ${fmtNumber(energy.co2_saved_kg)} kg of CO₂ saved!`,
+    description: `You've saved approximately ${formatCurrency(savings, 0)} vs. gasoline based on ${fmtNumber(energy.total_energy_used_kwh, 0)} kWh consumed over ${fmtNumber(energy.total_distance_km, 0)} km. That's also ${fmtNumber(energy.co2_saved_kg, 0)} kg of CO₂ saved!`,
     trend: 'up',
     trendGood: true,
     severity: 'success',
   }
 }
 
-function analyzeRangeOptimization(energy: EnergyStats, { fmtNumber }: ReturnType<typeof useNumberFormatting>, battery?: BatteryReport): Insight | null {
+function analyzeRangeOptimization(energy: EnergyStats, battery?: BatteryReport): Insight | null {
   if (energy.avg_efficiency_wh_km <= 0) return null
 
   const effWhKm = energy.avg_efficiency_wh_km
@@ -294,7 +294,7 @@ function analyzeRangeOptimization(energy: EnergyStats, { fmtNumber }: ReturnType
     id: 'range-optimization',
     icon: Clock,
     title: 'Range Optimization',
-    description: `At your average efficiency of ${fmtNumber(effWhKm)} Wh/km, your effective range is ~${fmtNumber(effectiveRange)} km (${fmtNumber(rangePct)}% of rated range). ${
+    description: `At your average efficiency of ${fmtNumber(effWhKm, 0)} Wh/km, your effective range is ~${fmtNumber(effectiveRange, 0)} km (${fmtNumber(rangePct, 0)}% of rated range). ${
       rangePct < 85
         ? 'Consider preconditioning and reducing highway speed for better range.'
         : 'Your driving style is range-efficient — great work!'
@@ -309,45 +309,44 @@ function analyzeRangeOptimization(energy: EnergyStats, { fmtNumber }: ReturnType
 
 export function InsightsEngine({ data }: { data: InsightData }) {
   const { formatCurrency } = useFormatting()
-  const numbers = useNumberFormatting()
   const insights = useMemo(() => {
     const results: Insight[] = []
 
     if (data.chargingSessions?.length) {
-      const c = analyzeChargingCost(data.chargingSessions, formatCurrency, numbers)
+      const c = analyzeChargingCost(data.chargingSessions, formatCurrency)
       if (c) results.push(c)
     }
     if (data.drives?.length) {
-      const e = analyzeEfficiencyTrend(data.drives, numbers)
+      const e = analyzeEfficiencyTrend(data.drives)
       if (e) results.push(e)
     }
     if (data.batteryReport) {
-      const b = analyzeBatteryHealth(data.batteryReport, numbers)
+      const b = analyzeBatteryHealth(data.batteryReport)
       if (b) results.push(b)
     }
     if (data.chargingSessions?.length) {
-      const o = analyzeOptimalCharging(data.chargingSessions, numbers)
+      const o = analyzeOptimalCharging(data.chargingSessions)
       if (o) results.push(o)
     }
     if (data.vampireDrainStats) {
-      const v = analyzeVampireDrain(data.vampireDrainStats, numbers)
+      const v = analyzeVampireDrain(data.vampireDrainStats)
       if (v) results.push(v)
     }
     if (data.drives?.length) {
-      const p = analyzeDrivingPatterns(data.drives, numbers)
+      const p = analyzeDrivingPatterns(data.drives)
       if (p) results.push(p)
     }
     if (data.energyStats) {
-      const s = analyzeCostSavings(data.energyStats, formatCurrency, numbers)
+      const s = analyzeCostSavings(data.energyStats, formatCurrency)
       if (s) results.push(s)
     }
     if (data.energyStats) {
-      const r = analyzeRangeOptimization(data.energyStats, numbers, data.batteryReport ?? undefined)
+      const r = analyzeRangeOptimization(data.energyStats, data.batteryReport ?? undefined)
       if (r) results.push(r)
     }
 
     return results
-  }, [data, formatCurrency, numbers])
+  }, [data, formatCurrency])
 
   if (insights.length === 0) return null
 
@@ -409,3 +408,4 @@ export function InsightsEngine({ data }: { data: InsightData }) {
     </FadeIn>
   )
 }
+

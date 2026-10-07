@@ -183,7 +183,7 @@ describe('ShareDriveDialog — create mode', () => {
   it('renders the create form with toggles, expiry options and a generate button', async () => {
     renderDialog();
 
-    const dialog = await screen.findByRole('dialog', { name: 'Share drive' });
+    const dialog = await screen.findByRole('dialog', { name: 'Share Drive' });
     expect(within(dialog).getByText(/Generate a public link/i)).toBeInTheDocument();
 
     // Two switches, defaulting to speed-on / telemetry-off.
@@ -266,7 +266,7 @@ describe('ShareDriveDialog — create mode', () => {
     // Result view: the public URL + copy/open affordances.
     expect(await screen.findByDisplayValue(`${ORIGIN}/s/tok_new`)).toBeInTheDocument();
     expect(screen.getByText('Share link created!')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy Link' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open link in a new tab' })).toBeInTheDocument();
 
     // "Create another link" flips back to the form.
@@ -351,7 +351,7 @@ describe('ShareDriveDialog — create mode', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole('button', { name: 'reopen' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Share drive' });
+    const dialog = await screen.findByRole('dialog', { name: 'Share Drive' });
     expect(within(dialog).getByRole('button', { name: /Generate Link/i })).toBeInTheDocument();
     expect(screen.queryByText('Share link created!')).not.toBeInTheDocument();
   });

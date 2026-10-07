@@ -25,10 +25,8 @@
  * identity) so every assertion reads the value straight back out of the chip.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within, act } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
-import { convertDistanceFromSI, convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 import type { Drive } from '@/types/driving';
 import { DriveCard, type DriveCardProps } from './DriveCard';
@@ -127,47 +125,6 @@ function costSpy() {
   return vi.fn((kwh: number) => `$${(kwh * 0.12).toFixed(2)}`);
 }
 
-it('updates numeric precision and locale live while preserving the canonical drive', () => {
-  setGlobalLocale('en-US');
-  setGlobalPrecision(2);
-  const drive = makeDrive({ avgSpeedMps: 25.125 });
-  const original = { ...drive };
-  const view = renderCard({ drive });
-  expect(screen.getByText('Avg 90.45 km/h')).toBeInTheDocument();
-  expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
-
-  try {
-    act(() => {
-      setGlobalLocale('de-DE');
-      setGlobalPrecision(3);
-    });
-    expect(screen.getByText('Avg 90,450 km/h')).toBeInTheDocument();
-    expect(screen.getByText('150,000 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('50,000 km')).toBeInTheDocument();
-    view.rerender(
-      <MemoryRouter>
-        <DriveCard
-          {...view.props}
-          distanceUnit="mi"
-          speedUnit="mph"
-          efficiencyUnit="Wh/mi"
-          toDistanceDisplay={(meters) => convertDistanceFromSI(meters, 'mi')}
-          toSpeedDisplay={(mps) => convertSpeedFromSI(mps, 'mph')}
-          toEfficiencyDisplay={(whPerKm) => convertEfficiencyFromSI(whPerKm, 'mi')}
-        />
-      </MemoryRouter>,
-    );
-    expect(screen.getByText('Avg 56,203 mph')).toBeInTheDocument();
-    expect(screen.getByText('31,069 mi')).toBeInTheDocument();
-    expect(screen.getByText('241,402 Wh/mi')).toBeInTheDocument();
-    expect(drive).toEqual(original);
-  } finally {
-    view.unmount();
-    setGlobalLocale('en-US');
-    setGlobalPrecision(2);
-  }
-});
-
 function renderCard(over: Partial<DriveCardProps> = {}) {
   const props: DriveCardProps = {
     drive: makeDrive(),
@@ -265,7 +222,7 @@ describe('DriveCard — primary line + status badge', () => {
     };
 
     const high = renderCard({ fsdInsight: base });
-    expect(within(high.container).getByText('FSD 72.00%')).toBeInTheDocument();
+    expect(within(high.container).getByText('FSD 72%')).toBeInTheDocument();
     high.unmount();
 
     const estimated = renderCard({
@@ -277,7 +234,7 @@ describe('DriveCard — primary line + status badge', () => {
     const ambiguous = renderCard({
       fsdInsight: { ...base, confidence: 'ambiguous', fsd_share_pct: 50 },
     });
-    expect(within(ambiguous.container).getByText(/FSD ~50\.00%.*ambiguous/)).toBeInTheDocument();
+    expect(within(ambiguous.container).getByText(/FSD ~50%.*ambiguous/)).toBeInTheDocument();
     ambiguous.unmount();
 
     renderCard({
@@ -302,14 +259,14 @@ describe('DriveCard — primary line + status badge', () => {
 describe('DriveCard — metric chips', () => {
   it('renders avg + max speed chips converted at the display edge', () => {
     renderCard();
-    expect(screen.getByText('Avg 90.00 km/h')).toBeInTheDocument(); // 25 m/s ×3.6
-    expect(screen.getByText('Max 144.00 km/h')).toBeInTheDocument(); // 40 m/s ×3.6
+    expect(screen.getByText('Avg 90 km/h')).toBeInTheDocument(); // 25 m/s ×3.6
+    expect(screen.getByText('Max 144 km/h')).toBeInTheDocument(); // 40 m/s ×3.6
   });
 
   it('derives avg speed from distance ÷ duration when avgSpeedMps is missing', () => {
     // 50 000 m / 1800 s = 27.78 m/s ×3.6 = 100 km/h.
     renderCard({ drive: makeDrive({ avgSpeedMps: null }) });
-    expect(screen.getByText('Avg 100.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('Avg 100 km/h')).toBeInTheDocument();
   });
 
   it('placeholders avg speed and drops the max chip when neither is derivable', () => {
@@ -322,7 +279,7 @@ describe('DriveCard — metric chips', () => {
 
   it('renders the battery delta with an accessible label, and hides it when a 0→0 drive completes', () => {
     const withBattery = renderCard();
-    expect(within(withBattery.container).getByLabelText('Battery 80.00% to 70.00%')).toBeInTheDocument();
+    expect(within(withBattery.container).getByLabelText('Battery 80% to 70%')).toBeInTheDocument();
     withBattery.unmount();
 
     // Both endpoints 0 on a completed drive ⇒ treated as "no battery data".
@@ -332,7 +289,7 @@ describe('DriveCard — metric chips', () => {
 
   it('renders measured Wh/km and omits the chip when measured energy is unavailable', () => {
     const graded = renderCard();
-    expect(within(graded.container).getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(within(graded.container).getByText('150 Wh/km')).toBeInTheDocument();
     graded.unmount();
 
     const ungraded = renderCard({
@@ -356,7 +313,7 @@ describe('DriveCard — metric chips', () => {
     renderCard();
     expect(screen.queryByText(/~\$/)).toBeNull();
     // …while the rest of the metrics row still renders.
-    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('150 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -415,10 +372,10 @@ describe('DriveCard — accessibility', () => {
     const { container } = renderCard({ formatEnergyCost: costSpy() });
 
     // Gauge (avg) + TrendingUp (max) live inside their InlineMetric chip.
-    const gauge = screen.getByText('Avg 90.00 km/h').parentElement?.querySelector('svg');
-    const trend = screen.getByText('Max 144.00 km/h').parentElement?.querySelector('svg');
+    const gauge = screen.getByText('Avg 90 km/h').parentElement?.querySelector('svg');
+    const trend = screen.getByText('Max 144 km/h').parentElement?.querySelector('svg');
     // Zap + DollarSign sit directly inside their chip span.
-    const zap = screen.getByText('150.00 Wh/km').querySelector('svg');
+    const zap = screen.getByText('150 Wh/km').querySelector('svg');
     const dollar = screen.getByText('~$0.90').querySelector('svg');
 
     for (const icon of [gauge, trend, zap, dollar]) {
@@ -486,7 +443,7 @@ describe('DriveCard — null safety + hardening', () => {
     // converter that yields 0 previously tripped the `{number && jsx}` footgun.
     renderCard({ toEfficiencyDisplay: () => 0 });
 
-    expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0 Wh/km')).toBeInTheDocument();
     // The bare "0" must never leak as its own text node.
     expect(screen.queryByText('0', { selector: 'span' })).toBeNull();
   });

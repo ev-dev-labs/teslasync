@@ -2,16 +2,14 @@ import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { EvidenceQuality } from '../lib/rootCauseIntelligence';
 import { QualityBadge } from './QualityBadge';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface RootCauseInterpretationPanelProps {
   summary: string;
   limitations: string[];
   quality: EvidenceQuality;
-  focalHistoryAvailable?: boolean;
   hasChosenSignal: boolean;
   isLoading: boolean;
   isError: boolean;
@@ -31,7 +29,6 @@ export function RootCauseInterpretationPanel({
   summary,
   limitations,
   quality,
-  focalHistoryAvailable = true,
   hasChosenSignal,
   isLoading,
   isError,
@@ -39,14 +36,13 @@ export function RootCauseInterpretationPanel({
   onRetry,
   className,
 }: RootCauseInterpretationPanelProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('rootCauseIntelligence.interpretation.title', 'Interpretation & limits')}
+        {t('rootCauseIntelligence.interpretation.title', 'Interpretation & Limits')}
       </PanelTitle>
       {isError ? (
         <QueryError error={error} onRetry={onRetry} />
@@ -65,7 +61,7 @@ export function RootCauseInterpretationPanel({
               {t('rootCauseIntelligence.interpretation.coverage', '{{withEvidence}} of {{considered}} related signals corroborated · {{samples}} focal samples', {
                 withEvidence: quality.candidatesWithEvidence,
                 considered: quality.candidatesConsidered,
-                samples: focalHistoryAvailable ? quality.focalSampleCount : '—',
+                samples: quality.focalSampleCount,
               })}
             </Caption>
           </div>
@@ -85,7 +81,7 @@ export function RootCauseInterpretationPanel({
             </div>
           )}
           <Caption>
-            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore) })}
+            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore, 2) })}
           </Caption>
         </div>
       )}

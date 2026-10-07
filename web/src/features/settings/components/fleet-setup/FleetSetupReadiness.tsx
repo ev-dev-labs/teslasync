@@ -18,18 +18,14 @@ import {
   Text,
 } from '@/components/ui'
 import { KVList } from '@/components/data-display'
-import { SourceContent, type SourceState } from '@/components/layout'
 import { cn } from '@/lib/cn'
 import type { PublicKeyStatus } from '@/api/hooks/useFleetSetup'
 
 interface FleetSetupReadinessProps {
   publicKey: PublicKeyStatus | undefined
-  state?: SourceState
-  error?: unknown
-  onRetry?: () => void
 }
 
-export function FleetSetupReadiness({ publicKey, state = 'ready', error, onRetry }: FleetSetupReadinessProps) {
+export function FleetSetupReadiness({ publicKey }: FleetSetupReadinessProps) {
   const { t } = useTranslation('settings')
   const titleId = useId()
   const configured = publicKey?.configured === true
@@ -52,14 +48,6 @@ export function FleetSetupReadiness({ publicKey, state = 'ready', error, onRetry
         </div>
       </div>
 
-      <SourceContent
-        state={state}
-        label={t('fleetSetup.readiness.title', 'Domain & certificates')}
-        emptyMessage={t('fleetSetup.readiness.unavailable', 'Partner public-key status unavailable.')}
-        errorMessage={t('fleetSetup.readiness.unavailable', 'Partner public-key status unavailable.')}
-        error={error}
-        errorRecovery={{ onRetry }}
-      >
       <div className="flex flex-wrap items-center gap-2">
         {configured ? (
           <Badge variant="success" size="sm" dot>
@@ -71,7 +59,6 @@ export function FleetSetupReadiness({ publicKey, state = 'ready', error, onRetry
           </Badge>
         )}
       </div>
-      </SourceContent>
 
       <KVList
         items={[
@@ -87,7 +74,7 @@ export function FleetSetupReadiness({ publicKey, state = 'ready', error, onRetry
           },
           {
             label: t('fleetSetup.readiness.ca', 'Default telemetry CA'),
-            value: t('fleetSetup.readiness.caValue', 'Let’s encrypt ISRG root X1'),
+            value: t('fleetSetup.readiness.caValue', 'Let’s Encrypt ISRG Root X1'),
           },
         ]}
       />
@@ -110,7 +97,7 @@ export function FleetSetupReadiness({ publicKey, state = 'ready', error, onRetry
 
       <Link
         to="/dev-tools?tab=fleet-api"
-        className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-auto min-h-11 max-w-full whitespace-normal break-words px-4 py-2')}
+        className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-10 px-4 text-sm')}
       >
         <Hammer className="h-4 w-4" aria-hidden="true" />
         {t('fleetSetup.readiness.openDevTools', 'Open Fleet API tools')}

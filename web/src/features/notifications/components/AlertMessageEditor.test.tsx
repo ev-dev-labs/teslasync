@@ -19,7 +19,7 @@
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useState } from 'react'
-import { render, screen, fireEvent, act, within } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import '../../../i18n'
 
@@ -90,33 +90,19 @@ const presets: AlertMessagePreset[] = [
 ]
 
 const previewMutate = vi.fn()
-const formatting = vi.hoisted(() => ({ key: 'en-US:2' }))
-const sourceState = vi.hoisted(() => ({
-  placeholdersError: null as Error | null,
-  presetsError: null as Error | null,
-  retryPlaceholders: vi.fn(),
-  retryPresets: vi.fn(),
-}))
 
 vi.mock('@/components/ai/AIAlertMessageTemplateSuggestion', () => ({
   AIAlertMessageTemplateSuggestion: () => null,
 }))
 
 vi.mock('@/api/hooks/useAlertMessageHelpers', () => ({
-  useAlertMessageFormattingKey: () => formatting.key,
   useAlertMessagePlaceholders: () => ({
     data: placeholders,
     isLoading: false,
-    error: sourceState.placeholdersError,
-    isError: sourceState.placeholdersError != null,
-    refetch: sourceState.retryPlaceholders,
   }),
   useAlertMessagePresets: () => ({
     data: presets,
     isLoading: false,
-    error: sourceState.presetsError,
-    isError: sourceState.presetsError != null,
-    refetch: sourceState.retryPresets,
   }),
   useAlertMessagePreview: () => ({
     mutate: previewMutate,
@@ -166,85 +152,6 @@ function renderEditor(overrides: Partial<React.ComponentProps<typeof AlertMessag
 describe('AlertMessageEditor', () => {
   beforeEach(() => {
     previewMutate.mockClear()
-    formatting.key = 'en-US:2'
-    sourceState.placeholdersError = null
-    sourceState.presetsError = null
-    sourceState.retryPlaceholders.mockClear()
-    sourceState.retryPresets.mockClear()
-  })
-
-  it('retains message presets after refresh failure with pressed tag filters and exact template application', () => {
-    sourceState.presetsError = new Error('preset refresh offline')
-    const { onTemplateChange } = renderEditor()
-    fireEvent.click(screen.getByRole('button', { name: /pick a preset/i }))
-    const filters = screen.getByRole('group', { name: 'Filter message presets by tag' })
-    expect(within(filters).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true')
-    expect(filters).toHaveClass('flex-wrap')
-    expect(filters).not.toHaveClass('overflow-x-auto')
-    fireEvent.click(within(filters).getByRole('button', { name: 'concise' }))
-    expect(within(filters).getByRole('button', { name: 'concise' })).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.queryByRole('button', { name: /\{\{VehicleName\}\}: \{\{Value\}\}/ })).not.toBeInTheDocument()
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
-    expect(sourceState.retryPresets).toHaveBeenCalledOnce()
-    expect(sourceState.retryPlaceholders).not.toHaveBeenCalled()
-    expect(onTemplateChange).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: /\{\{SignalName\}\}=\{\{Value\}\}/ }))
-    expect(onTemplateChange).toHaveBeenLastCalledWith('{{SignalName}}={{Value}}')
-  })
-
-  it('retains placeholder suggestions and keyboard insertion while their refresh fails', () => {
-    sourceState.placeholdersError = new Error('placeholder refresh offline')
-    const { onTemplateChange } = renderEditor()
-    const textarea = screen.getByRole('textbox')
-    fireEvent.change(textarea, { target: { value: '{{Battery', selectionEnd: 9 } })
-    expect(screen.getByRole('button', { name: /BatteryLevel/ })).toBeInTheDocument()
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
-    fireEvent.keyDown(textarea, { key: 'Enter' })
-    expect(onTemplateChange).toHaveBeenLastCalledWith('{{BatteryLevel}}')
-  })
-
-  it('keeps the previous complete preview visible when a later preview fails', async () => {
-    const props = {
-      msgTemplate: '{{Value}}', includeTitle: true,
-      draft: { kind: 'signal' as const, signal_name: 'BatteryLevel', op: '<' as const },
-      onTemplateChange: vi.fn(), onIncludeTitleChange: vi.fn(),
-    }
-    const view = render(<AlertMessageEditor {...props} />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    act(() => previewMutate.mock.calls[0][1].onSuccess({
-      title: 'Full previous preview title',
-      body: 'Complete first line\nComplete second line',
-    }))
-    view.rerender(<AlertMessageEditor {...props} msgTemplate="Changed {{Value}}" />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    act(() => previewMutate.mock.calls[1][1].onError(new Error('preview refresh failed')))
-    expect(screen.getByText('Full previous preview title')).toBeInTheDocument()
-    expect(screen.getByText(/Complete second line/)).toHaveClass('whitespace-pre-line', 'break-words')
-    expect(screen.getByRole('alert')).toHaveTextContent('preview refresh failed')
-    expect(screen.getByText(/The previous preview remains visible/)).toBeInTheDocument()
-    expect(props.onTemplateChange).not.toHaveBeenCalled()
-  })
-
-  it('refreshes backend previews when preferences change and ignores older responses', async () => {
-    const props = {
-      msgTemplate: '{{Value}}',
-      includeTitle: true,
-      draft: { kind: 'signal' as const, signal_name: 'Soc', op: '<' as const },
-      onTemplateChange: vi.fn(),
-      onIncludeTitleChange: vi.fn(),
-    }
-    const view = render(<AlertMessageEditor {...props} />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    const oldCallbacks = previewMutate.mock.calls[0][1]
-    formatting.key = 'de-DE:4'
-    view.rerender(<AlertMessageEditor {...props} />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    expect(previewMutate).toHaveBeenCalledTimes(2)
-    act(() => previewMutate.mock.calls[1][1].onSuccess({ title: 'Battery', body: '18,2345%' }))
-    act(() => oldCallbacks.onSuccess({ title: 'Battery', body: '18.23%' }))
-    expect(screen.getByText('18,2345%')).toBeInTheDocument()
-    expect(screen.queryByText('18.23%')).toBeNull()
   })
 
   it('reflects includeTitle and notifies parent on toggle', () => {
@@ -253,33 +160,6 @@ describe('AlertMessageEditor', () => {
     expect(checkbox.checked).toBe(true)
     fireEvent.click(checkbox)
     expect(onIncludeTitleChange).toHaveBeenCalledWith(false)
-  })
-
-  it('refreshes timestamp previews after time-format and timezone changes', async () => {
-    const props = {
-      msgTemplate: '{{NowDisplay}}',
-      includeTitle: false,
-      draft: { kind: 'signal' as const, signal_name: 'Soc', op: '<' as const },
-      onTemplateChange: vi.fn(),
-      onIncludeTitleChange: vi.fn(),
-    }
-    formatting.key = 'en-US:relative:utc'
-    const view = render(<AlertMessageEditor {...props} />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    act(() => previewMutate.mock.calls[0][1].onSuccess({ title: 'Battery', body: 'just now' }))
-    expect(screen.getByText('just now')).toBeInTheDocument()
-    formatting.key = 'en-US:absolute:utc'
-    view.rerender(<AlertMessageEditor {...props} />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    act(() => previewMutate.mock.calls[1][1].onSuccess({ title: 'Battery', body: 'Nov 1, 2026, 09:30 AM' }))
-    expect(screen.getByText('Nov 1, 2026, 09:30 AM')).toBeInTheDocument()
-    formatting.key = 'en-US:absolute:user:America/Los_Angeles'
-    view.rerender(<AlertMessageEditor {...props} />)
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 180)) })
-    act(() => previewMutate.mock.calls[2][1].onSuccess({ title: 'Battery', body: 'Nov 1, 2026, 01:30 AM' }))
-    expect(screen.getByText('Nov 1, 2026, 01:30 AM')).toBeInTheDocument()
-    expect(previewMutate).toHaveBeenCalledTimes(3)
-    expect(previewMutate.mock.calls[2][0].msg_template).toBe('{{NowDisplay}}')
   })
 
   it('opens autocomplete after typing {{ and inserts the chosen placeholder', async () => {

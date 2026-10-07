@@ -54,7 +54,7 @@ export interface FSMSelectOption<V extends string = string> {
 export const FSM_TYPE_OPTIONS: FSMSelectOption<FSMType>[] = [
   { value: 'all', label: 'All FSMs', i18nKey: 'fsm.typeOption.all' },
   { value: 'vehicle', label: 'Vehicle', i18nKey: 'fsm.typeOption.vehicle' },
-  { value: 'telemetry_connection', label: 'Telemetry connection', i18nKey: 'fsm.typeOption.telemetryConnection' },
+  { value: 'telemetry_connection', label: 'Telemetry Connection', i18nKey: 'fsm.typeOption.telemetryConnection' },
 ]
 
 export const HOURS_OPTIONS: FSMSelectOption[] = [
@@ -66,3 +66,4 @@ export const HOURS_OPTIONS: FSMSelectOption[] = [
   { value: '2160', label: 'Last 90 days', i18nKey: 'fsm.rangeOption.d90' },
   { value: '0', label: 'All time', i18nKey: 'fsm.rangeOption.all' },
 ]
+

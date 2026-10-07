@@ -138,15 +138,10 @@ vi.mock('./shared', async () => {
 // `data` (the derived rows) into the DOM; the axes / tooltip / band / lines push
 // their props so formatters, domains and bindings are directly assertable.
 vi.mock('@/components/charts', async () => {
-  const { useMeasuredAxisWidth } = await import('@/components/charts/useMeasuredAxisWidth');
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  const GridProbe = ({ yAxisId }: { yAxisId?: string }) => (
-    <div data-testid="chart-grid" data-y-axis={yAxisId} />
-  );
   return {
-  useMeasuredAxisWidth,
   ...chartTestDoubles,
-  chartGrid: <GridProbe />,
+  chartGrid: null,
   chartMargin: {},
   chartAnimation: {},
   axisTick: {},
@@ -469,9 +464,9 @@ describe('MotorHistoryWidget — summary stats', () => {
     expect(screen.getByText('Torque')).toBeInTheDocument();
     expect(screen.getByText('Stator')).toBeInTheDocument();
     // Latest non-null torque is T2's 310 (T3's null is skipped).
-    expect(container).toHaveTextContent('310.00Nm');
+    expect(container).toHaveTextContent('310Nm');
     // Latest stator is T3's 45 °C.
-    expect(container).toHaveTextContent('45.00°C');
+    expect(container).toHaveTextContent('45°C');
   });
 
   it('renders an em-dash placeholder when the latest values are null but a row exists', () => {
@@ -487,14 +482,6 @@ describe('MotorHistoryWidget — summary stats', () => {
 // ── Loading, empty & error ───────────────────────────────────────────────────────
 
 describe('MotorHistoryWidget — loading, empty & error states', () => {
-  it('retains the history chart during a failed background refresh', () => {
-    setHistory({ data: [makeSnapshot(T1, { di_torque: 0 })], isError: true });
-    const { container } = renderWidget();
-    expect(screen.getByTestId('composed-chart')).toBeInTheDocument();
-    expect(screen.getByText('0.00')).toBeInTheDocument();
-    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-  });
-
   it('renders only a skeleton (no chart, no empty state) while loading', () => {
     setHistory({ isLoading: true, data: undefined });
     const { container } = renderWidget();
@@ -508,8 +495,7 @@ describe('MotorHistoryWidget — loading, empty & error states', () => {
     setHistory({ data: [] });
     renderWidget();
 
-    expect(screen.getByText('No motor history')).toBeInTheDocument();
-    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByRole('status')).toHaveTextContent('No motor history');
     expect(screen.queryByTestId('composed-chart')).toBeNull();
   });
 
@@ -530,15 +516,12 @@ describe('MotorHistoryWidget — sizing', () => {
 
     expect(screen.queryByTestId('composed-chart')).toBeNull();
     expect(screen.getByText('Torque')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Motor history' })).toBeInTheDocument();
   });
 
   it('draws only the torque and stator lines in the normal (2-col) layout', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     expect(lineKeys()).toEqual(['torque', 'statorTemp']);
-    expect(screen.getByTestId('chart-grid')).toHaveAttribute('data-y-axis', 'torque');
-    expect(cap.lines.find(line => line.dataKey === 'torque')?.yAxisId).toBe('torque');
     expect(screen.queryByTestId('line-lateralG')).toBeNull();
     // No axis labels in the compact-height (non-wide) layout.
     expect(torqueAxis()?.label).toBeUndefined();
@@ -549,7 +532,6 @@ describe('MotorHistoryWidget — sizing', () => {
     renderWidget({ cols: 3, rows: 2 });
 
     expect(lineKeys()).toEqual(['torque', 'statorTemp', 'lateralG', 'longitudinalG']);
-    expect(cap.lines.find(line => line.dataKey === 'torque')?.yAxisId).toBe('torque');
     expect(screen.getByTestId('line-lateralG')).toBeInTheDocument();
     expect(torqueAxis()?.label?.value).toBe('Nm');
     expect(tempAxis()?.label?.value).toBe('°C');
@@ -562,7 +544,7 @@ describe('MotorHistoryWidget — axis, tooltip & reference wiring', () => {
   it('binds the x-axis to time and formats ticks through formatDateTime', () => {
     renderWidget();
 
-    const x = cap.xaxis[cap.xaxis.length - 1];
+    const x = cap.xaxis.at(-1);
     expect(x?.dataKey).toBe('time');
     expect(x?.tickFormatter?.(T1)).toBe(`@${T1}`);
   });
@@ -570,8 +552,8 @@ describe('MotorHistoryWidget — axis, tooltip & reference wiring', () => {
   it('formats the torque and temperature axis ticks', () => {
     renderWidget();
 
-    expect(torqueAxis()?.tickFormatter?.(250)).toBe('250.00');
-    expect(tempAxis()?.tickFormatter?.(120)).toBe('120.00°');
+    expect(torqueAxis()?.tickFormatter?.(250)).toBe('250');
+    expect(tempAxis()?.tickFormatter?.(120)).toBe('120°');
     expect(tempAxis()?.orientation).toBe('right');
   });
 
@@ -587,11 +569,11 @@ describe('MotorHistoryWidget — axis, tooltip & reference wiring', () => {
 
   it('formats each tooltip series with its unit and localises the label', () => {
     renderWidget();
-    const fmt = cap.tooltip[cap.tooltip.length - 1]?.formatter;
-    const labelFmt = cap.tooltip[cap.tooltip.length - 1]?.labelFormatter;
+    const fmt = cap.tooltip.at(-1)?.formatter;
+    const labelFmt = cap.tooltip.at(-1)?.labelFormatter;
 
-    expect(fmt?.(250, 'torque')).toEqual(['250.00 Nm', 'Torque']);
-    expect(fmt?.(45, 'statorTemp')).toEqual(['45.00°C', 'Stator']);
+    expect(fmt?.(250, 'torque')).toEqual(['250 Nm', 'Torque']);
+    expect(fmt?.(45, 'statorTemp')).toEqual(['45°C', 'Stator']);
     expect(fmt?.(0.35, 'lateralG')).toEqual(['0.35 g', 'Lateral G']);
     expect(fmt?.(-0.2, 'longitudinalG')).toEqual(['-0.20 g', 'Long. G']);
     // Unknown series fall through to the raw value + name.
@@ -631,6 +613,6 @@ describe('MotorHistoryWidget — interactions & a11y', () => {
   it('exposes the widget title as a heading in the non-compact layout', () => {
     renderWidget();
 
-    expect(screen.getByRole('heading', { name: /Motor history/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Motor History/i })).toBeInTheDocument();
   });
 });

@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -141,34 +141,6 @@ afterEach(() => {
 });
 
 describe('MQTTInspectorPage — connected happy path', () => {
-  it('opens the real operational review with complete cumulative counters and the rate-versus-delta caveat', () => {
-    renderPage();
-    const summary = screen.getByTestId('mqtt-summary');
-    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('Total signals')).toBeInTheDocument();
-    expect(within(drawer).getByText('Total batches')).toBeInTheDocument();
-    expect(drawer).toHaveTextContent('12,445');
-    expect(drawer).toHaveTextContent('not the throughput chart’s per-poll deltas');
-    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
-  });
-
-  it('uses the canonical strip for broker counters, not throughput deltas, without losing any inspector section', () => {
-    const { container } = renderPage();
-    const summary = screen.getByTestId('mqtt-summary');
-    expect(summary).toHaveAttribute('data-operational-brief');
-    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(within(summary).getByText('Signals / sec').closest('[data-operational-metric]')).toHaveTextContent('Signals / sec');
-    expect(summary).toHaveTextContent('Latest broker status snapshot');
-    expect(summary).toHaveTextContent('not the throughput chart’s per-poll deltas');
-    expect(container.querySelector('[data-role="metric-card"]')).toBeNull();
-    expect(container.querySelector('[data-stat-strip]')).toBeNull();
-    expect(screen.getAllByText('Signal throughput').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('Connection')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle breakdown')).toBeInTheDocument();
-    expect(screen.getByText('Refreshes every 5s')).toBeInTheDocument();
-  });
-
   it('renders the connected badge, connection details, KPI totals, and vehicle count', () => {
     setQuery({ data: makeStatus() });
     renderPage();
@@ -194,7 +166,7 @@ describe('MQTTInspectorPage — connected happy path', () => {
     setQuery({ data: makeStatus() });
     renderPage();
 
-    expect(document.title).toContain('MQTT inspector');
+    expect(document.title).toContain('MQTT Inspector');
 
     // The opt-in AI card is gated off by the global useSettings stub.
     expect(
@@ -223,21 +195,6 @@ describe('MQTTInspectorPage — loading state', () => {
 });
 
 describe('MQTTInspectorPage — error state', () => {
-  it('retains counters, connection, throughput and vehicle details after a failed status refresh', () => {
-    const status = makeStatus();
-    setQuery({ data: status, error: new Error('refresh unavailable') });
-    renderPage();
-    const summary = screen.getByTestId('mqtt-summary');
-    expect(summary).toHaveTextContent('Showing retained measurements');
-    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    expect(screen.getByText('12,445')).toBeInTheDocument();
-    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
-    expect(screen.getByText('Connected')).toBeInTheDocument();
-    expect(screen.getByText(/2 vehicles/i)).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    expect(screen.queryByText(/Unable to load MQTT status/)).toBeNull();
-  });
-
   it('surfaces the top error banner (with the message) and per-panel QueryErrors', () => {
     setQuery({ data: undefined, error: new Error('boom') });
     renderPage();
@@ -262,18 +219,6 @@ describe('MQTTInspectorPage — error state', () => {
 });
 
 describe('MQTTInspectorPage — connected but empty', () => {
-  it('distinguishes absent status from an observed empty broker snapshot', () => {
-    setQuery({ data: undefined });
-    const { unmount } = renderPage();
-    expect(screen.getByTestId('mqtt-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
-    unmount();
-    setQuery({ data: makeStatus({ vehicles: [] }) });
-    renderPage();
-    const summary = screen.getByTestId('mqtt-summary');
-    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-    expect(summary.querySelector('[data-value-state="missing"]')).toBeNull();
-  });
-
   it('renders topic + vehicle empty states without a stale badge', () => {
     setQuery({
       data: makeStatus({ topics: [], vehicles: [] }),

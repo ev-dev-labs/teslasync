@@ -4,11 +4,10 @@ import { Zap, Home } from 'lucide-react';
 import { GlassPanel, PanelTitle, StatusPill, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import { POWERSHARE_SIGNALS, POWER_COLOR, HOURS_COLOR } from './constants';
 import { humanizeEnum, statusDotClass } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RuntimePanelProps {
   status: string | null;
@@ -27,7 +26,6 @@ interface RuntimePanelProps {
 export function RuntimePanel({
   status, shareType, powerKw, hoursLeft, powerPeak, hoursPeak, isLoading, error, onRetry,
 }: RuntimePanelProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const destination = humanizeEnum(shareType, POWERSHARE_SIGNALS.type);
 
@@ -85,7 +83,7 @@ export function RuntimePanel({
               value={power}
               max={Math.max(Number.isFinite(powerPeak) ? powerPeak : 0, power, 1)}
               color={POWER_COLOR}
-              sublabel={`${fmtNumber(power)} kW`}
+              sublabel={`${fmtNumber(power, 2)} kW`}
             />
           )}
 
@@ -95,7 +93,7 @@ export function RuntimePanel({
               value={hours}
               max={Math.max(Number.isFinite(hoursPeak) ? hoursPeak : 0, hours, 1)}
               color={HOURS_COLOR}
-              sublabel={`${fmtNumber(hours)} h`}
+              sublabel={`${fmtNumber(hours, 1)} h`}
             />
           )}
         </div>

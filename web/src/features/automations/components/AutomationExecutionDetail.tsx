@@ -1,21 +1,17 @@
 import { useTranslation } from 'react-i18next';
 import { useAutomationExecutionDetail } from '@/api/hooks/useAutomations';
 import { DateTime } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { QueryError, Skeleton } from '@/components/feedback';
 import { Modal, PanelTitle, Text } from '@/components/ui';
-import { useDataState } from '@/hooks/useDataState';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { formatDurationMs } from '@/lib/dateFormat';
 
 export function AutomationExecutionDetail({ id, onClose }: {
   id: number | null;
   onClose: () => void;
 }) {
-  const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation();
   const query = useAutomationExecutionDetail(id);
   const detail = query.data;
-  const source = useDataState({ ...query, data: detail ?? undefined });
   return (
     <Modal
       open={id != null}
@@ -23,17 +19,16 @@ export function AutomationExecutionDetail({ id, onClose }: {
       size="lg"
       title={t('automations.historyPage.detail', 'Execution details')}
     >
-      <StaleRefreshWarning state={source} label={t('automations.historyPage.detail', 'Execution details')} />
-      {query.isLoading && !source.hasData ? (
+      {query.isLoading ? (
         <Skeleton className="h-48 w-full" />
-      ) : source.fatalError ? (
-        <QueryError error={source.fatalError} onRetry={() => { void query.refetch(); }} />
+      ) : query.isError ? (
+        <QueryError error={query.error} onRetry={() => { void query.refetch(); }} />
       ) : detail ? (
         <div className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Text variant="caption">{t('automations.historyPage.rule', 'Automation')}</Text>
-              <Text className="break-words">{detail.automation_name}</Text>
+              <Text>{detail.automation_name}</Text>
             </div>
             <div>
               <Text variant="caption">{t('automations.historyPage.outcome', 'Outcome')}</Text>
@@ -56,7 +51,7 @@ export function AutomationExecutionDetail({ id, onClose }: {
               <Text>{detail.actions_succeeded}/{detail.actions_total}</Text>
             </div>
           </div>
-          {detail.error && <Text variant="bodySm" className="break-words text-rose-300">{detail.error}</Text>}
+          {detail.error && <Text variant="bodySm" className="text-rose-300">{detail.error}</Text>}
           {detail.actions_executed && detail.actions_executed.length > 0 && (
             <section>
               <PanelTitle>{t('automations.historyPage.actionResults', 'Action results')}</PanelTitle>
@@ -78,18 +73,13 @@ export function AutomationExecutionDetail({ id, onClose }: {
                 {detail.fsm_transitions.map((transition) => (
                   <li key={transition.id} className="rounded-lg bg-[var(--surface-2)] p-3">
                     <DateTime value={transition.ts} in="user" />
-                    <Text variant="bodySm" className="break-words">{transition.fsm_name}: {transition.from_state} → {transition.to_state}</Text>
+                    <Text variant="bodySm">{transition.fsm_name}: {transition.from_state} → {transition.to_state}</Text>
                   </li>
                 ))}
               </ul>
             </section>
           )}
         </div>
-      ) : id != null ? (
-        <EmptyState
-          message={t('automations.historyPage.detailUnavailable', 'Execution details are unavailable.')}
-          action={{ label: t('common.retry', 'Retry'), onClick: () => { void query.refetch(); } }}
-        />
       ) : null}
     </Modal>
   );

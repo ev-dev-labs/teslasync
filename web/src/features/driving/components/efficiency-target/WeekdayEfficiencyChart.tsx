@@ -18,12 +18,11 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type { WeekdayResult } from '../../lib/efficiencyTarget';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WEEKDAYS = [
   ['effTarget.weekday.monday', 'Monday'],
@@ -48,7 +47,6 @@ export function WeekdayEfficiencyChart({
   state,
   className,
 }: WeekdayEfficiencyChartProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     convertEfficiency,
@@ -152,13 +150,13 @@ export function WeekdayEfficiencyChart({
                 tickLine={false}
                 axisLine={false}
                 width={48}
-                tickFormatter={(value) => fmtNumber(value)}
+                tickFormatter={(value) => fmtNumber(value, 0)}
               />
               <Tooltip
                 content={
                   <ChartTooltip
                     valueFormatter={(value) =>
-                      `${fmtNumber(value)} ${efficiencyUnit}`
+                      `${fmtNumber(value, 1)} ${efficiencyUnit}`
                     }
                   />
                 }

@@ -13,12 +13,10 @@
  * `framer-motion` is reduced to a plain element so the infinite "pulse"
  * animation on active vehicles cannot leave an open handle.
  */
-import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting'
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 
 import PollingEnginePanel, {
   formatDuration,
@@ -74,15 +72,9 @@ vi.mock('framer-motion', () => ({
 // Stub the eased counter with a synchronous formatter so numeric assertions are
 // exact instead of racing the requestAnimationFrame tween.
 vi.mock('./AnimatedNumber', () => ({
-  AnimatedNumber: ({ value, formatValue }: { value: number; formatValue: (value: number) => string }) => (
-    <span data-testid="animated-number">{formatValue(value)}</span>
+  AnimatedNumber: ({ value, decimals = 0 }: { value: number; decimals?: number }) => (
+    <span data-testid="animated-number">{Number(value ?? 0).toFixed(decimals)}</span>
   ),
-}))
-vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => {
-    const { fmtNumber } = useNumberFormatting()
-    return { formatCurrency: (value: number) => `$${fmtNumber(value)}` }
-  },
 }))
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -151,8 +143,6 @@ function renderPanel() {
 }
 
 beforeEach(() => {
-  setGlobalPrecision(2)
-  setGlobalLocale('en-US')
   mockedStatus.mockReset()
   mockedSavings.mockReset()
 })
@@ -223,26 +213,6 @@ describe('profileLabel', () => {
 // ── PollingEnginePanel ────────────────────────────────────────────────────────
 
 describe('PollingEnginePanel', () => {
-  it('updates mounted savings and confidence without refetching or changing count/clock output', async () => {
-    mockedStatus.mockResolvedValue({ enabled: true, vehicles: { ABCDEFGH12345678: makeVehicle() } })
-    mockedSavings.mockResolvedValue(zeroSavings)
-    renderPanel()
-    const toggle = await screen.findByRole('button', { name: /toggle polling details for 12345678/i })
-    fireEvent.click(toggle)
-    expect(screen.getByText('$12.50')).toBeInTheDocument()
-    const statusCalls = mockedStatus.mock.calls.length
-    const savingsCalls = mockedSavings.mock.calls.length
-    act(() => setGlobalPrecision(3))
-    expect(screen.getByText('$12.500')).toBeInTheDocument()
-    expect(screen.getByText('76.000%')).toBeInTheDocument()
-    expect(screen.getByText('120')).toBeInTheDocument()
-    expect(screen.getByText('Battery: 74.000%')).toBeInTheDocument()
-    expect(screen.getByText(/90.000% conf/)).toBeInTheDocument()
-    expect(screen.getByText('Interval: 2m')).toBeInTheDocument()
-    expect(screen.getByText('12345678')).toBeInTheDocument()
-    expect(mockedStatus).toHaveBeenCalledTimes(statusCalls)
-    expect(mockedSavings).toHaveBeenCalledTimes(savingsCalls)
-  })
   it('renders nothing while the engine is disabled', async () => {
     mockedStatus.mockResolvedValue({ enabled: false, vehicles: {} })
     mockedSavings.mockResolvedValue(fullSavings)
@@ -267,10 +237,10 @@ describe('PollingEnginePanel', () => {
 
     // Summary labels + deterministic (mocked) AnimatedNumber values.
     expect(screen.getByText('Polls Saved')).toBeInTheDocument()
-    expect(screen.getByText('76.00%')).toBeInTheDocument()
-    expect(screen.getByText('$12.50')).toBeInTheDocument()
+    expect(screen.getByText('76.0')).toBeInTheDocument() // savings_percent, 1 dp
+    expect(screen.getByText('12.50')).toBeInTheDocument() // estimated_savings, 2 dp
     expect(screen.getByText('120')).toBeInTheDocument() // polls_made, 0 dp
-    expect(screen.getByText('$8.00')).toBeInTheDocument()
+    expect(screen.getByText('8.00')).toBeInTheDocument() // remaining_credit, 2 dp
   })
 
   it('shows an empty-state message when the engine is on but tracks no vehicles', async () => {
@@ -354,7 +324,7 @@ describe('PollingEnginePanel', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByText('Interval: 2m')).toBeInTheDocument()
     expect(screen.getByText('Consecutive idle: 3')).toBeInTheDocument()
-    expect(screen.getByText('Battery: 74.00%')).toBeInTheDocument()
+    expect(screen.getByText('Battery: 74%')).toBeInTheDocument()
     expect(screen.getByText('battery stable')).toBeInTheDocument()
     expect(screen.getByText('no recent motion')).toBeInTheDocument()
     // Prediction row (formerly a corrupted emoji) renders real content.
@@ -395,11 +365,12 @@ describe('PollingEnginePanel', () => {
     })
     fireEvent.click(toggle)
 
-    // Missing measurements/counts are unknown, not measured zero.
-    expect(screen.getByText('Consecutive idle: —')).toBeInTheDocument()
-    expect(screen.getByText('Battery: —')).toBeInTheDocument()
+    // Null-safe fallbacks: consec_idle/battery → 0, next_interval_ms → "now".
+    expect(screen.getByText('Consecutive idle: 0')).toBeInTheDocument()
+    expect(screen.getByText('Battery: 0%')).toBeInTheDocument()
     expect(screen.getByText('Interval: now')).toBeInTheDocument()
     // No prediction row for a null prediction.
     expect(screen.queryByText(/^prediction:/i)).not.toBeInTheDocument()
   })
 })
+

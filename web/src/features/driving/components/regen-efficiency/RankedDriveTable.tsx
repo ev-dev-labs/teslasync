@@ -4,10 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { DataTable, Text, type Column } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtPercent } from '@/lib/numberFormat';
 
 import type { RankedRegenDrive } from '../../lib/regenEfficiency';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RankedDriveTableProps {
   rows: RankedRegenDrive[];
@@ -18,7 +17,6 @@ export function RankedDriveTable({
   rows,
   timeZone,
 }: RankedDriveTableProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDate } = useDateFormat();
   const {
@@ -63,7 +61,7 @@ export function RankedDriveTable({
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="body" mono className="text-emerald-300">
-            {formatEnergy(row.regenEnergyWh)}
+            {formatEnergy(row.regenEnergyWh, { precision: 1 })}
           </Text>
         ),
       },
@@ -74,7 +72,7 @@ export function RankedDriveTable({
         visibleOnMobile: true,
         render: (row) => (
           <Text variant="body" mono>
-            {fmtPercent(row.recoveryRatioPct)}
+            {fmtPercent(row.recoveryRatioPct, 1)}
           </Text>
         ),
       },
@@ -84,7 +82,7 @@ export function RankedDriveTable({
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {formatEnergy(row.driveEnergyWh)}
+            {formatEnergy(row.driveEnergyWh, { precision: 1 })}
           </Text>
         ),
       },
@@ -94,7 +92,7 @@ export function RankedDriveTable({
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {formatDistance(row.distanceM)}
+            {formatDistance(row.distanceM, { precision: 1 })}
           </Text>
         ),
       },
@@ -104,7 +102,7 @@ export function RankedDriveTable({
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {formatDuration(row.durationS)}
+            {formatDuration(row.durationS, { precision: 1 })}
           </Text>
         ),
       },
@@ -114,7 +112,7 @@ export function RankedDriveTable({
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {formatSpeed(row.avgSpeedMps)}
+            {formatSpeed(row.avgSpeedMps, { precision: 1 })}
           </Text>
         ),
       },
@@ -124,7 +122,7 @@ export function RankedDriveTable({
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {row.startSocPct != null ? fmtPercent(row.startSocPct) : '—'}
+            {row.startSocPct != null ? fmtPercent(row.startSocPct, 0) : '—'}
           </Text>
         ),
       },
@@ -134,7 +132,7 @@ export function RankedDriveTable({
         align: 'right',
         render: (row) => (
           <Text variant="body" mono>
-            {formatTemperature(row.outsideTempAvgC)}
+            {formatTemperature(row.outsideTempAvgC, { precision: 1 })}
           </Text>
         ),
       },
@@ -147,7 +145,7 @@ export function RankedDriveTable({
       formatSpeed,
       formatTemperature,
       t,
-      timeZone, fmtPercent,
+      timeZone,
     ],
   );
 

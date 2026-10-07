@@ -10,13 +10,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Key, KeyRound, ShieldCheck, Info,
+  Plus, Key, KeyRound, ShieldCheck, XCircle, Crown, Info,
 } from 'lucide-react';
 
-import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
-import { Button, ConfirmDialog, Text, Caption } from '@/components/ui';
-import { MetricBar, type StatMetric } from '@/components/data-display';
-import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, ConfirmDialog, PanelTitle, Text, Caption } from '@/components/ui';
+import { MetricCard, MetricBar } from '@/components/data-display';
 import {
   EmptyState,
   Skeleton,
@@ -25,9 +24,9 @@ import {
 } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useApiKeys, useDeleteApiKey, useRevokeApiKey } from '@/api/hooks/useAdmin';
+import type { NeonColor } from '@/lib/tokens';
 import type { APIKey } from '@/types/admin';
 import {
   ApiKeyCard,
@@ -39,11 +38,10 @@ import {
 
 export default function APIKeysPage() {
   const { t } = useTranslation();
-  usePageTitle(t('apiKeys.title', 'API keys'));
+  usePageTitle(t('apiKeys.title', 'API Keys'));
 
   const keysQuery = useApiKeys();
-  const { data, isLoading, refetch } = keysQuery;
-  const keysState = useDataState(keysQuery);
+  const { data, isLoading, isError, error, refetch } = keysQuery;
   const keys = data ?? [];
 
   const deleteMut = useDeleteApiKey();
@@ -60,29 +58,12 @@ export default function APIKeysPage() {
   }, [operationalMode.canWrite]);
 
   const summary = useMemo(() => summarizeKeys(keys), [keys]);
-  const sourceState = !keysState.hasData
-    ? 'loading' : keysState.status === 'stale' ? 'retained' : keys.length === 0 ? 'empty' : 'ready';
-  const emptyInventory = (
-    // no-action: the page header owns Create key and its read-only guard; do not duplicate an unguarded write CTA here.
-    <EmptyState
-      icon={<Key className="h-10 w-10" aria-hidden="true" />}
-      title={t('apiKeys.empty.title', 'No API keys')}
-      message={t('apiKeys.empty.message', 'Create an API key to enable programmatic access to TeslaSync data and controls.')}
-    />
-  );
-  const emptyPermissions = (
-    // no-action: this is derived usage detail; the page header already offers guarded key creation.
-    <EmptyState
-      icon={<KeyRound className="h-8 w-8" aria-hidden="true" />}
-      message={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
-    />
-  );
 
-  const kpis: StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'total', label: t('apiKeys.kpi.total', 'Total keys'), rawValue: keysState.hasData ? summary.total : undefined },
-    { metricId: 'count', occurrenceId: 'active', label: t('apiKeys.kpi.active', 'Active'), rawValue: keysState.hasData ? summary.active : undefined },
-    { metricId: 'count', occurrenceId: 'expired', label: t('apiKeys.kpi.expired', 'Expired'), rawValue: keysState.hasData ? summary.expired : undefined },
-    { metricId: 'count', occurrenceId: 'admin', label: t('apiKeys.kpi.admin', 'Admin access'), rawValue: keysState.hasData ? summary.admin : undefined },
+  const kpis: { key: string; label: string; value: number; icon: React.ReactNode; color: NeonColor }[] = [
+    { key: 'total', label: t('apiKeys.kpi.total', 'Total Keys'), value: summary.total, icon: <Key className="h-5 w-5" />, color: 'cyan' },
+    { key: 'active', label: t('apiKeys.kpi.active', 'Active'), value: summary.active, icon: <ShieldCheck className="h-5 w-5" />, color: 'green' },
+    { key: 'expired', label: t('apiKeys.kpi.expired', 'Expired'), value: summary.expired, icon: <XCircle className="h-5 w-5" />, color: 'red' },
+    { key: 'admin', label: t('apiKeys.kpi.admin', 'Admin Access'), value: summary.admin, icon: <Crown className="h-5 w-5" />, color: 'purple' },
   ];
 
   const guidancePoints = [
@@ -92,11 +73,11 @@ export default function APIKeysPage() {
   ];
 
   return (
-    <PageLayout
-      title={t('apiKeys.title', 'API keys')}
+    <PageContainer
+      title={t('apiKeys.title', 'API Keys')}
       subtitle={t('apiKeys.subtitle', 'Manage programmatic access to TeslaSync')}
       query={keysQuery}
-      primaryAction={
+      actions={
         <Button
           variant="primary"
           size="sm"
@@ -105,7 +86,7 @@ export default function APIKeysPage() {
           disabled={!operationalMode.canWrite}
           title={operationalMode.writeBlockReason ?? undefined}
         >
-          {t('apiKeys.createKey', 'Create key')}
+          {t('apiKeys.createKey', 'Create Key')}
         </Button>
       }
     >
@@ -115,117 +96,126 @@ export default function APIKeysPage() {
 
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <AdminSummary metrics={kpis} testId="api-keys-summary"
-          eyebrow={t('apiKeys.title', 'API keys')} title={t('apiKeys.kpi.aria', 'API key summary')}
-          description={t('apiKeys.summary.source', 'Counts are derived from the loaded API key inventory, including active, expired and administrator-access keys.')}
-          scope={t('apiKeys.summary.scope', 'Loaded inventory snapshot; the response does not report an observation time.')}
-          sourceStatus={keysState.status === 'stale' ? 'stale' : keysState.isRefreshing ? 'refreshing' : keysState.status}
-          loading={isLoading && !keysState.hasData} />
+        <section
+          aria-label={t('apiKeys.kpi.aria', 'API key summary')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+        >
+          {isLoading
+            ? Array.from({ length: kpis.length }).map((_, i) => (
+                <Skeleton key={i} height={84} className="rounded-xl" />
+              ))
+            : kpis.map((k) => (
+                // On error the query holds no data — surface the em-dash
+                // placeholder instead of a fabricated "0" so the KPI band
+                // never reports counts that don't actually exist.
+                <MetricCard
+                  key={k.key}
+                  label={k.label}
+                  value={isError ? '—' : k.value}
+                  icon={k.icon}
+                  color={k.color}
+                />
+              ))}
+        </section>
       </FadeIn>
 
       {/* 2 — Bento: hero key grid (col-span-2) + access-levels/guidance column */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           {/* Hero — the key inventory */}
-          <div className="min-w-0 xl:col-span-2">
-            <LayoutCard
-              title={t('apiKeys.keysPanel', 'Your API keys')}
-              actions={
-                <div className="flex items-center gap-2">
-                  <Key className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  {keysState.hasData && summary.total > 0 && (
-                    <Caption>{t('apiKeys.count', '{{count}} total', { count: summary.total })}</Caption>
-                  )}
-                </div>
-              }
-            >
-              {keysState.fatalError ? (
-                <QueryError
-                  error={keysState.fatalError}
-                  onRetry={() => refetch()}
-                  resourceName={t('apiKeys.resource', 'API key')}
-                />
-              ) : (
-                <SourceContent
-                  state={sourceState}
-                  label={t('apiKeys.keysPanel', 'Your API keys')}
-                  emptyMessage={t('apiKeys.empty.message', 'Create an API key to enable programmatic access to TeslaSync data and controls.')}
-                  errorMessage={t('error.loadFailed', 'Failed to load data')}
-                  errorRecovery={{ onRetry: () => { void refetch(); } }}
-                  emptyContent={emptyInventory}
-                  loadingContent={
-                    <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                      {[0, 1, 2, 3].map((i) => <Skeleton key={i} height={128} className="rounded-xl" />)}
-                    </div>
-                  }
-                >
-                  {keys.length === 0 ? emptyInventory : (
-                    <StaggerContainer className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                      {keys.map((k) => (
-                        <StaggerItem key={k.id}>
-                          <ApiKeyCard
-                            apiKey={k}
-                            onRevoke={(id) => revokeMut.mutate(id)}
-                            onDelete={setDeleteTarget}
-                            revoking={revokeMut.isPending && revokeMut.variables === k.id}
-                            actionsDisabled={!operationalMode.canWrite}
-                            actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
-                          />
-                        </StaggerItem>
-                      ))}
-                    </StaggerContainer>
-                  )}
-                </SourceContent>
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <PanelTitle className="flex items-center gap-2">
+                <Key className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('apiKeys.keysPanel', 'Your API Keys')}
+              </PanelTitle>
+              {!isLoading && !isError && summary.total > 0 && (
+                <Caption>{t('apiKeys.count', '{{count}} total', { count: summary.total })}</Caption>
               )}
-            </LayoutCard>
-          </div>
+            </div>
+
+            {isLoading ? (
+              <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                {[0, 1, 2, 3].map((i) => (
+                  <Skeleton key={i} height={128} className="rounded-xl" />
+                ))}
+              </div>
+            ) : isError ? (
+              <QueryError
+                error={error}
+                onRetry={() => refetch()}
+                resourceName={t('apiKeys.resource', 'API key')}
+              />
+            ) : keys.length === 0 ? (
+              <EmptyState /* no-action: transient empty state — the Create Key toolbar button is the recovery action */
+                icon={<Key className="h-10 w-10" aria-hidden="true" />}
+                title={t('apiKeys.empty.title', 'No API keys')}
+                message={t(
+                  'apiKeys.empty.message',
+                  'Create an API key to enable programmatic access to TeslaSync data and controls.',
+                )}
+              />
+            ) : (
+              <StaggerContainer className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
+                {keys.map((k) => (
+                  <StaggerItem key={k.id}>
+                    <ApiKeyCard
+                      apiKey={k}
+                      onRevoke={(id) => revokeMut.mutate(id)}
+                      onDelete={setDeleteTarget}
+                      revoking={revokeMut.isPending && revokeMut.variables === k.id}
+                      actionsDisabled={!operationalMode.canWrite}
+                      actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
+                    />
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+            )}
+          </GlassPanel>
 
           {/* Supporting column — access levels + guidance */}
           <div className="space-y-4">
-            <LayoutCard
-              title={t('apiKeys.accessLevels', 'Access levels')}
-              actions={<KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            >
-              {keysState.fatalError ? (
-                <QueryError error={keysState.fatalError} onRetry={() => refetch()} />
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('apiKeys.accessLevels', 'Access Levels')}
+              </PanelTitle>
+              {isLoading ? (
+                <Skeleton height={160} />
+              ) : isError ? (
+                <QueryError error={error} onRetry={() => refetch()} />
+              ) : summary.total === 0 ? (
+                <EmptyState /* no-action: transient — populated once keys exist */
+                  icon={<KeyRound className="h-8 w-8" aria-hidden="true" />}
+                  message={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
+                />
               ) : (
-                <SourceContent
-                  state={sourceState}
-                  label={t('apiKeys.accessLevels', 'Access levels')}
-                  emptyMessage={t('apiKeys.accessLevelsEmpty', 'Permission usage appears once you create a key.')}
-                  errorMessage={t('error.loadFailed', 'Failed to load data')}
-                  errorRecovery={{ onRetry: () => { void refetch(); } }}
-                  loadingContent={<Skeleton height={160} />}
-                  emptyContent={emptyPermissions}
-                >
-                  {summary.total === 0 ? emptyPermissions : (
-                    <div className="space-y-4">
-                      {PERMISSION_ORDER.map((perm) => {
-                        const meta = permissionMeta(perm);
-                        const count = summary.byPermission[perm] ?? 0;
-                        return (
-                          <div key={perm} className="space-y-1">
-                            <MetricBar
-                              label={t(meta.labelKey, meta.labelFallback)}
-                              value={count}
-                              max={summary.total || 1}
-                              color={meta.barColor}
-                              sublabel={String(count)}
-                            />
-                            <Caption>{t(meta.descKey, meta.descFallback)}</Caption>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </SourceContent>
+                <div className="space-y-4">
+                  {PERMISSION_ORDER.map((perm) => {
+                    const meta = permissionMeta(perm);
+                    const count = summary.byPermission[perm] ?? 0;
+                    return (
+                      <div key={perm} className="space-y-1">
+                        <MetricBar
+                          label={t(meta.labelKey, meta.labelFallback)}
+                          value={count}
+                          max={summary.total || 1}
+                          color={meta.barColor}
+                          sublabel={String(count)}
+                        />
+                        <Caption>{t(meta.descKey, meta.descFallback)}</Caption>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-            </LayoutCard>
+            </GlassPanel>
 
-            <LayoutCard
-              title={t('apiKeys.guidance.title', 'About API keys')}
-              actions={<Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            >
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('apiKeys.guidance.title', 'About API Keys')}
+              </PanelTitle>
               <ul className="space-y-2">
                 {guidancePoints.map((point, i) => (
                   <li key={i} className="flex items-start gap-2">
@@ -234,7 +224,7 @@ export default function APIKeysPage() {
                   </li>
                 ))}
               </ul>
-            </LayoutCard>
+            </GlassPanel>
           </div>
         </section>
       </FadeIn>
@@ -245,7 +235,7 @@ export default function APIKeysPage() {
       {/* Delete confirmation */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        title={t('apiKeys.deleteTitle', 'Delete API key')}
+        title={t('apiKeys.deleteTitle', 'Delete API Key')}
         message={t('apiKeys.deleteConfirm', 'Are you sure you want to permanently delete the key "{{name}}"?', {
           name: deleteTarget?.name,
         })}
@@ -258,6 +248,6 @@ export default function APIKeysPage() {
         }
         onCancel={() => setDeleteTarget(null)}
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -52,8 +52,8 @@ function useTimelineLabels() {
       case 'lock':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.lock.positive', 'Vehicle locked')
-            : t('admin.security.timeline.lock.negative', 'Vehicle unlocked'),
+            ? t('admin.security.timeline.lock.positive', 'Vehicle Locked')
+            : t('admin.security.timeline.lock.negative', 'Vehicle Unlocked'),
           subtitle: ev.variant === 'positive'
             ? t('admin.security.timeline.lock.positiveDesc', 'Doors secured')
             : t('admin.security.timeline.lock.negativeDesc', 'Doors accessible'),
@@ -61,8 +61,8 @@ function useTimelineLabels() {
       case 'sentry':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.sentry.positive', 'Sentry mode activated')
-            : t('admin.security.timeline.sentry.negative', 'Sentry mode deactivated'),
+            ? t('admin.security.timeline.sentry.positive', 'Sentry Mode Activated')
+            : t('admin.security.timeline.sentry.negative', 'Sentry Mode Deactivated'),
           subtitle: ev.variant === 'positive'
             ? t('admin.security.timeline.sentry.positiveDesc', 'Camera surveillance enabled')
             : t('admin.security.timeline.sentry.negativeDesc', 'Camera surveillance disabled'),
@@ -70,8 +70,8 @@ function useTimelineLabels() {
       case 'door':
         return {
           title: ev.variant === 'positive'
-            ? t('admin.security.timeline.door.positive', 'Doors closed')
-            : t('admin.security.timeline.door.negative', 'Door opened'),
+            ? t('admin.security.timeline.door.positive', 'Doors Closed')
+            : t('admin.security.timeline.door.negative', 'Door Opened'),
           subtitle: ev.detail || (ev.variant === 'positive'
             ? t('admin.security.closed', 'Closed')
             : t('admin.security.open', 'Open')),
@@ -82,7 +82,7 @@ function useTimelineLabels() {
         // `undefined` and crashing the whole panel when the caller
         // destructures `{ title, subtitle }`.
         return {
-          title: t('admin.security.timeline.unknown', 'State change'),
+          title: t('admin.security.timeline.unknown', 'State Change'),
           subtitle: t('admin.security.timeline.unknownDesc', 'Vehicle state updated'),
         };
     }
@@ -105,7 +105,7 @@ export function EventTimeline({ timelineEvents, isLoading, error, onRetry, class
   const { t } = useTranslation();
   const getLabels = useTimelineLabels();
   const events = timelineEvents ?? [];
-  const panelTitle = t('admin.security.timeline.title', 'Security event timeline');
+  const panelTitle = t('admin.security.timeline.title', 'Security Event Timeline');
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>

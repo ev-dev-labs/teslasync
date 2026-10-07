@@ -78,10 +78,10 @@ export function KioskSettingsModal({
 
   const clockPositionOptions = useMemo(
     () => [
-      { value: 'top-left', label: t('kiosk.clockTopLeft', 'Top left') },
-      { value: 'top-right', label: t('kiosk.clockTopRight', 'Top right') },
-      { value: 'bottom-left', label: t('kiosk.clockBottomLeft', 'Bottom left') },
-      { value: 'bottom-right', label: t('kiosk.clockBottomRight', 'Bottom right') },
+      { value: 'top-left', label: t('kiosk.clockTopLeft', 'Top Left') },
+      { value: 'top-right', label: t('kiosk.clockTopRight', 'Top Right') },
+      { value: 'bottom-left', label: t('kiosk.clockBottomLeft', 'Bottom Left') },
+      { value: 'bottom-right', label: t('kiosk.clockBottomRight', 'Bottom Right') },
     ],
     [t],
   );
@@ -110,13 +110,13 @@ export function KioskSettingsModal({
   }, [selectedIds, onUpdateConfig, onClose, onEnterKiosk]);
 
   return (
-    <Modal open={open} onClose={onClose} title={t('kiosk.settings', 'Kiosk settings')} size="lg">
+    <Modal open={open} onClose={onClose} title={t('kiosk.settings', 'Kiosk Settings')} size="lg">
       <div className="space-y-4">
         {/* Rotation */}
-        <FormSection title={t('kiosk.rotation', 'Dashboard rotation')}>
+        <FormSection title={t('kiosk.rotation', 'Dashboard Rotation')}>
           <div className="space-y-3">
             <UiSelect
-              label={t('kiosk.rotationInterval', 'Rotation interval')}
+              label={t('kiosk.rotationInterval', 'Rotation Interval')}
               options={rotationOptions}
               value={String(cfg.rotateInterval)}
               onChange={(e) => onUpdateConfig({ rotateInterval: Number(e.target.value) })}
@@ -125,7 +125,7 @@ export function KioskSettingsModal({
             {cfg.rotateInterval > 0 && safeDashboards.length > 1 && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-[var(--text-secondary)]">
-                  {t('kiosk.dashboardsToRotate', 'Dashboards to rotate')}
+                  {t('kiosk.dashboardsToRotate', 'Dashboards to Rotate')}
                 </label>
                 <div className="space-y-1.5 max-h-40 overflow-y-auto">
                   {safeDashboards.map((d) => (
@@ -159,13 +159,13 @@ export function KioskSettingsModal({
             {/* Cursor auto-hide */}
             <div className="space-y-2">
               <Toggle
-                label={t('kiosk.hideCursor', 'Auto-hide cursor')}
+                label={t('kiosk.hideCursor', 'Auto-hide Cursor')}
                 checked={cfg.hideCursor}
                 onChange={(v) => onUpdateConfig({ hideCursor: v })}
               />
               {cfg.hideCursor && (
                 <UiSelect
-                  label={t('kiosk.cursorTimeout', 'Hide after')}
+                  label={t('kiosk.cursorTimeout', 'Hide After')}
                   options={cursorTimeoutOptions}
                   value={String(cfg.cursorTimeout)}
                   onChange={(e) => onUpdateConfig({ cursorTimeout: Number(e.target.value) })}
@@ -176,14 +176,14 @@ export function KioskSettingsModal({
             {/* Screen dimming */}
             <div className="space-y-2">
               <UiSelect
-                label={t('kiosk.dimAfter', 'Dim screen after')}
+                label={t('kiosk.dimAfter', 'Dim Screen After')}
                 options={dimAfterOptions}
                 value={String(cfg.dimAfter)}
                 onChange={(e) => onUpdateConfig({ dimAfter: Number(e.target.value) })}
               />
               {cfg.dimAfter > 0 && (
                 <Slider
-                  label={t('kiosk.brightness', 'Dimmed brightness')}
+                  label={t('kiosk.brightness', 'Dimmed Brightness')}
                   formatValue={(n) => `${Math.round(n)}%`}
                   min={30}
                   max={90}
@@ -196,13 +196,13 @@ export function KioskSettingsModal({
             {/* Clock */}
             <div className="space-y-2">
               <Toggle
-                label={t('kiosk.showClock', 'Show clock')}
+                label={t('kiosk.showClock', 'Show Clock')}
                 checked={cfg.showClock}
                 onChange={(v) => onUpdateConfig({ showClock: v })}
               />
               {cfg.showClock && (
                 <UiSelect
-                  label={t('kiosk.clockPosition', 'Clock position')}
+                  label={t('kiosk.clockPosition', 'Clock Position')}
                   options={clockPositionOptions}
                   value={cfg.clockPosition}
                   onChange={(e) =>
@@ -225,7 +225,7 @@ export function KioskSettingsModal({
           {/* Widget panel opacity */}
           <div className="space-y-1.5">
             <Slider
-              label={t('kiosk.widgetOpacity', 'Widget opacity')}
+              label={t('kiosk.widgetOpacity', 'Widget Opacity')}
               formatValue={(n) => `${Math.round(n)}%`}
               min={30}
               max={100}
@@ -242,7 +242,7 @@ export function KioskSettingsModal({
           {/* Background opacity */}
           <div className="space-y-1.5 mt-4">
             <Slider
-              label={t('kiosk.bgOpacity', 'Background opacity')}
+              label={t('kiosk.bgOpacity', 'Background Opacity')}
               formatValue={(n) => `${Math.round(n)}%`}
               min={0}
               max={100}
@@ -289,7 +289,7 @@ export function KioskSettingsModal({
           </UiButton>
           <UiButton size="sm" onClick={handleEnter}>
             <Maximize2 className="h-4 w-4 mr-2" />
-            {t('kiosk.enter', 'Enter kiosk mode')}
+            {t('kiosk.enter', 'Enter Kiosk Mode')}
           </UiButton>
         </div>
       </div>

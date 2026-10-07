@@ -223,7 +223,7 @@ describe('DataRepairPage', () => {
     mockApi(buildReport(), EMPTY_STALE);
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Data repair', level: 1 })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Data Repair', level: 1 })).toBeInTheDocument();
     expect(
       screen.getByText(
         'Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections.',
@@ -238,9 +238,9 @@ describe('DataRepairPage', () => {
     await openDiagnostics();
 
     const kpi = await screen.findByRole('region', { name: 'Repair summary' });
-    expect(within(kpi).getByText('Suggested repairs')).toBeInTheDocument();
-    expect(within(kpi).getByText('Drive boundaries')).toBeInTheDocument();
-    expect(within(kpi).getByText('Charging boundaries')).toBeInTheDocument();
+    expect(within(kpi).getByText('Suggested Repairs')).toBeInTheDocument();
+    expect(within(kpi).getByText('Drive Boundaries')).toBeInTheDocument();
+    expect(within(kpi).getByText('Charging Boundaries')).toBeInTheDocument();
     expect(within(kpi).getByText('Blocked')).toBeInTheDocument();
 
     // Both suggestion sections state the truth: nothing contradicts the data.
@@ -295,8 +295,8 @@ describe('DataRepairPage', () => {
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
     // Panel scaffolding is visible during load — never a blank page.
-    expect(screen.getByRole('heading', { name: /Drive boundaries/ })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Charging boundaries/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Drive Boundaries/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Charging Boundaries/ })).toBeInTheDocument();
     expect(screen.queryByText('No contradicted drive boundaries')).not.toBeInTheDocument();
   });
 

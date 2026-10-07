@@ -156,7 +156,7 @@ describe('QueueJobDrawer', () => {
 
     expect(screen.getByTestId('queue-job-drawer-error')).toBeInTheDocument()
     expect(
-      screen.getByText(/Could not load Recent jobs/i),
+      screen.getByText(/Could not load recent jobs/i),
     ).toBeInTheDocument()
     expect(
       screen.queryByTestId('queue-job-drawer-list'),
@@ -167,7 +167,7 @@ describe('QueueJobDrawer', () => {
     renderDrawer({ testHookOverride: makeQuery({ data: jobsData([]) }) })
 
     expect(screen.getByTestId('queue-job-drawer-empty')).toBeInTheDocument()
-    expect(screen.getByText(/No Recent jobs to show/i)).toBeInTheDocument()
+    expect(screen.getByText(/No recent jobs to show/i)).toBeInTheDocument()
   })
 
   it('renders one row per job with status-tone classes and an unknown-status fallback', () => {

@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 
 import { DriveDnaMethodologyCards } from './DriveDnaMethodologyCards';
 import type { DriveDnaSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DriveDnaMethodologyProps {
   state: DriveDnaSectionState;
@@ -22,7 +21,6 @@ export function DriveDnaMethodology({
   historyReturned,
   capReached,
 }: DriveDnaMethodologyProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const listStatus = state.list.isLoading
     ? t('driveDna.method.listLoading', 'Selector history loading')

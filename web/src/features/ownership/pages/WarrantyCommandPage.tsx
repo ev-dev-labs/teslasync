@@ -11,7 +11,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -20,7 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type {
   ClaimStatus,
   ReadinessCheck,
@@ -35,10 +35,9 @@ import {
   MutationError,
   OwnershipPanel,
   SiNumberInput,
+  StatGrid,
   VerdictBadge,
 } from '../components';
-import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
-import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   daysToSeconds,
   formatCurrencyMinor,
@@ -47,7 +46,6 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KINDS: WarrantyKind[] = [
   'basic',
@@ -77,7 +75,6 @@ function severityTone(severity: string): 'danger' | 'warning' | 'neutral' {
 }
 
 function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: string }) {
-  useNumberFormatting();
   const clamped = Math.min(100, Math.max(0, pct));
   const tone = clamped >= 90 ? 'bg-rose-400/70' : clamped >= 70 ? 'bg-amber-400/70' : 'bg-cyan-400/70';
   return (
@@ -87,7 +84,7 @@ function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: stri
           {label}
         </Text>
         <span className="tabular-nums text-xs text-[var(--text-secondary)]">
-          {formatPct(clamped)}
+          {formatPct(clamped, 0)}
         </span>
       </div>
       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
@@ -101,7 +98,6 @@ function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: stri
 }
 
 export default function WarrantyCommandPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -127,7 +123,7 @@ export default function WarrantyCommandPage() {
     evidence_note: '',
   });
 
-  usePageTitle(t('ownership.warranty.navTitle', 'Warranty command'));
+  usePageTitle(t('ownership.warranty.navTitle', 'Warranty Command'));
 
   const overviewQuery = useWarrantyOverview(vehicleId);
   const warrantiesQuery = useWarranties(vehicleId);
@@ -261,8 +257,6 @@ export default function WarrantyCommandPage() {
     {
       key: 'title',
       header: t('ownership.warranty.claim.title', 'Claim'),
-      filterValue: (row) => row.id,
-      filterValueLabel: (_value, row) => `${row.title} · ${row.warrantyLabel}`,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -277,13 +271,10 @@ export default function WarrantyCommandPage() {
     {
       key: 'status',
       header: t('ownership.warranty.claim.status', 'Status'),
-      filterValue: (row) => row.status,
       render: (row) => <VerdictBadge value={row.status} />,
     },
     {
       key: 'opened',
-      filterValue: (row) => row.opened_at,
-      filterValueLabel: (_value, row) => formatDateTime(row.opened_at),
       header: t('ownership.warranty.claim.opened', 'Opened'),
       render: (row) => (
         <Text as="span" variant="caption">
@@ -295,9 +286,6 @@ export default function WarrantyCommandPage() {
     {
       key: 'amount',
       header: t('ownership.warranty.claim.amount', 'Amount'),
-      align: 'right',
-      filterValue: (row) => row.amount_minor,
-      filterValueLabel: (_value, row) => formatCurrencyMinor(row.amount_minor, currency, units.unitPrefs.locale),
       render: (row) => (
         <span className="tabular-nums">
           {formatCurrencyMinor(row.amount_minor, currency, units.unitPrefs.locale)}
@@ -319,8 +307,6 @@ export default function WarrantyCommandPage() {
     {
       key: 'label',
       header: t('ownership.warranty.row.label', 'Coverage'),
-      filterValue: (row) => row.id,
-      filterValueLabel: (_value, row) => `${row.label} · ${row.provider}`,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -334,8 +320,6 @@ export default function WarrantyCommandPage() {
     },
     {
       key: 'start',
-      filterValue: (row) => row.start_at,
-      filterValueLabel: (_value, row) => formatDateTime(row.start_at),
       header: t('ownership.warranty.row.start', 'Starts'),
       render: (row) => (
         <div>
@@ -350,7 +334,6 @@ export default function WarrantyCommandPage() {
     },
     {
       key: 'term',
-      align: 'right',
       header: t('ownership.warranty.row.term', 'Term'),
       render: (row) => (
         <div>
@@ -365,18 +348,12 @@ export default function WarrantyCommandPage() {
     },
     {
       key: 'floor',
-      align: 'right',
-      filterValue: (row) => row.capacity_floor_pct,
-      filterValueLabel: (_value, row) => row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct) : '—',
       header: t('ownership.warranty.row.floor', 'Capacity floor'),
       render: (row) =>
-        row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct) : '—',
+        row.capacity_floor_pct != null ? formatPct(row.capacity_floor_pct, 0) : '—',
     },
     {
       key: 'deductible',
-      align: 'right',
-      filterValue: (row) => `${row.currency}:${row.deductible_minor}`,
-      filterValueLabel: (_value, row) => formatCurrencyMinor(row.deductible_minor, row.currency, units.unitPrefs.locale),
       header: t('ownership.warranty.row.deductible', 'Deductible'),
       render: (row) => (
         <span className="tabular-nums">
@@ -442,7 +419,7 @@ export default function WarrantyCommandPage() {
                   : 'text-rose-300'
             }`}
           >
-            {fmtNumber(coverage.readiness_score)}/100
+            {fmtNumber(coverage.readiness_score, 0)}/100
           </p>
         </div>
       </div>
@@ -530,13 +507,14 @@ export default function WarrantyCommandPage() {
   );
 
   return (
-    <PageLayout
-      title={t('ownership.warranty.title', 'Warranty coverage & claim readiness')}
+    <PageContainer
+      title={t('ownership.warranty.title', 'Warranty Coverage & Claim Readiness')}
       subtitle={t(
         'ownership.warranty.subtitle',
         'Track which limit actually ends each coverage — calendar or odometer — at your real measured pace, and know before you call whether your evidence would survive a claim review.',
       )}
-      query={[overviewQuery, warrantiesQuery]}
+      loading={overviewQuery.isLoading}
+      error={overviewQuery.error as Error | null}
     >
       <AlertBanner
         variant="warning"
@@ -549,46 +527,41 @@ export default function WarrantyCommandPage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.warranty.summary.title', 'Coverage posture')}
-          source={overviewQuery} sourceEnabled={vehicleId != null} empty={!overview} preserveSummary>
-          <OwnershipBrief
-            title={t('ownership.warranty.brief.title', 'Recorded warranty coverage and expiry')}
-            description={t('ownership.warranty.notice.body', 'TeslaSync does not know your contract. Enter the term as written on your paperwork; every projection below is then computed from your own driving and battery data.')}
-            scope={t('ownership.warranty.brief.scope', 'Selected vehicle and recorded coverage terms; expiry projections use recorded driving')}
-            source={overviewQuery} enabled={vehicleId != null}
-            observedAt={overview?.as_of}
-            metrics={[
+        <OwnershipPanel title={t('ownership.warranty.summary.title', 'Coverage posture')}>
+          <StatGrid
+            stats={[
               {
-                occurrenceId: 'active', metricId: 'count',
+                key: 'active',
                 label: t('ownership.warranty.stat.active', 'Active coverages'),
-                rawValue: overview?.active_count,
-                display: specialistDisplay(fmtInt),
+                value: fmtNumber(overview?.active_count ?? 0, 0),
                 tone: 'positive',
               },
               {
-                occurrenceId: 'expiring', metricId: 'count',
+                key: 'expiring',
                 label: t('ownership.warranty.stat.expiring', 'Expiring within 90 days'),
-                rawValue: overview?.expiring_soon_count,
-                display: specialistDisplay(fmtInt),
+                value: fmtNumber(overview?.expiring_soon_count ?? 0, 0),
                 tone: (overview?.expiring_soon_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                occurrenceId: 'next', metricId: 'text',
+                key: 'next',
                 label: t('ownership.warranty.stat.next', 'Next expiry'),
-                rawValue: overview?.next_expiry_at ? formatDateTime(overview.next_expiry_at) : null,
+                value: overview?.next_expiry_at ? formatDateTime(overview.next_expiry_at) : '—',
               },
               {
-                occurrenceId: 'odometer', metricId: 'distance',
+                key: 'odometer',
                 label: t('ownership.warranty.stat.odometer', 'Odometer'),
-                rawValue: overview?.odometer_m,
-                display: specialistDisplay(units.formatDistance),
-                context: t('ownership.warranty.stat.odometerHint', 'Derived from recorded drives'),
+                value:
+                  overview?.odometer_m != null ? units.formatDistance(overview.odometer_m) : '—',
+                hint: t('ownership.warranty.stat.odometerHint', 'Derived from recorded drives'),
               },
               {
-                occurrenceId: 'claimed', metricId: 'currency',
+                key: 'claimed',
                 label: t('ownership.warranty.stat.claimed', 'Total claimed'),
-                rawValue: overview?.total_claimed_minor,
-                display: specialistDisplay((raw) => formatCurrencyMinor(raw, currency, units.unitPrefs.locale)),
+                value: formatCurrencyMinor(
+                  overview?.total_claimed_minor,
+                  currency,
+                  units.unitPrefs.locale,
+                ),
               },
             ]}
           />
@@ -598,8 +571,6 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.warranty.coverages.title', 'Coverage burn-down')}
-          source={overviewQuery}
-          sourceEnabled={vehicleId != null}
           empty={coverages.length === 0}
           emptyMessage={t(
             'ownership.warranty.coverages.empty',
@@ -613,8 +584,6 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.warranty.readiness.title', 'Claim readiness checklist')}
-          source={overviewQuery}
-          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.warranty.readiness.subtitle',
             'Each requirement is evaluated against data already on this server, so you know what a reviewer would find.',
@@ -638,9 +607,6 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.warranty.list.title', 'Recorded coverages')}
-          source={warrantiesQuery}
-          sourceEnabled={vehicleId != null}
-          editing={formOpen}
           empty={warranties.length === 0 && !formOpen}
           emptyMessage={t('ownership.warranty.list.empty', 'No warranties recorded yet.')}
           actions={
@@ -784,7 +750,6 @@ export default function WarrantyCommandPage() {
 
           <DataTable
             columns={warrantyColumns}
-            enableValueFilters
             mobileColumns={['label', 'start', 'term']}
             data={warranties}
             keyExtractor={(row) => row.id}
@@ -798,9 +763,6 @@ export default function WarrantyCommandPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.warranty.claims.title', 'Claim ledger')}
-          source={overviewQuery}
-          sourceEnabled={vehicleId != null}
-          editing={claimFor != null}
           description={t(
             'ownership.warranty.claims.subtitle',
             'Record what you asked for and what came back, so the next claim starts from a known history.',
@@ -869,7 +831,6 @@ export default function WarrantyCommandPage() {
 
           <DataTable
             columns={claimColumns}
-            enableValueFilters
             mobileColumns={['title', 'status', 'opened']}
             data={allClaims}
             keyExtractor={(row) => row.id}
@@ -880,8 +841,7 @@ export default function WarrantyCommandPage() {
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <OwnershipPanel title={t('ownership.warranty.bundle.title', 'Evidence bundle')}
-          source={overviewQuery} sourceEnabled={vehicleId != null} empty={!overview}>
+        <OwnershipPanel title={t('ownership.warranty.bundle.title', 'Evidence bundle')}>
           <Text as="p" variant="caption">
             {t(
               'ownership.warranty.bundle.body',
@@ -896,8 +856,6 @@ export default function WarrantyCommandPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
-          source={overviewQuery}
-          sourceEnabled={vehicleId != null}
           quality={overview?.quality}
           evidence={overview?.evidence}
           unsupported={[
@@ -913,6 +871,6 @@ export default function WarrantyCommandPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageLayout>
+    </PageContainer>
   );
 }

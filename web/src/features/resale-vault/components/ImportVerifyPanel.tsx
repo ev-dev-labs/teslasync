@@ -11,11 +11,10 @@
  * (and whether it's since been revoked) — a trust signal, not a
  * cryptographic requirement.
  */
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { getErrorMessage } from '@/lib/errorMessage';
-import { Badge, Input, HelperText } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, Badge, Input } from '@/components/ui';
+import { PanelTitle, HelperText } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { FileCheck2, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
 import { verifyReport } from '../lib/reportVerifier';
@@ -43,10 +42,8 @@ export function ImportVerifyPanel() {
   const [result, setResult] = useState<VerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const importAttempt = useRef(0);
 
   const handleFile = async (file: File) => {
-    const attempt = ++importAttempt.current;
     setError(null);
     setResult(null);
     setImported(null);
@@ -54,7 +51,6 @@ export function ImportVerifyPanel() {
     setIsVerifying(true);
     try {
       const text = await file.text();
-      if (attempt !== importAttempt.current) return;
       const parsed: unknown = JSON.parse(text);
       if (!isSignedVaultReportShape(parsed)) {
         setError(
@@ -67,7 +63,6 @@ export function ImportVerifyPanel() {
       }
       setImported(parsed);
       const verification = await verifyReport(parsed);
-      if (attempt !== importAttempt.current) return;
       setResult(verification);
       await recordAuditEvent('report_imported', `Imported report ${parsed.report?.report_id ?? 'unknown'} from file "${file.name}".`);
       await recordAuditEvent(
@@ -75,16 +70,15 @@ export function ImportVerifyPanel() {
         `Verified imported report ${parsed.report?.report_id ?? 'unknown'}: ${verification.valid ? 'valid' : 'INVALID'}.`,
       );
     } catch (err) {
-      if (attempt !== importAttempt.current) return;
       if (err instanceof CryptoUnavailableError) {
         setError(err.message);
       } else if (err instanceof SyntaxError) {
         setError(t('resaleVault.import.badJson', 'This file is not valid JSON.'));
       } else {
-        setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));
+        setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
-      if (attempt === importAttempt.current) setIsVerifying(false);
+      setIsVerifying(false);
     }
   };
 
@@ -95,8 +89,11 @@ export function ImportVerifyPanel() {
   };
 
   return (
-    <LayoutCard title={t('resaleVault.import.title', 'Import & verify a report')}
-      actions={<FileCheck2 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
+    <GlassPanel padding="lg" className="space-y-4">
+      <div className="flex items-center justify-between">
+        <PanelTitle>{t('resaleVault.import.title', 'Import & Verify a Report')}</PanelTitle>
+        <FileCheck2 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
+      </div>
 
       <HelperText>
         {t(
@@ -112,7 +109,7 @@ export function ImportVerifyPanel() {
           onChange={onInputChange}
           label={t('resaleVault.import.chooseFile', 'Choose report file')}
         />
-        {fileName && <HelperText className="ms-2 break-words">{fileName}</HelperText>}
+        {fileName && <span className="ml-2 text-xs text-[var(--text-muted)]">{fileName}</span>}
       </div>
 
       {isVerifying && <HelperText>{t('resaleVault.import.verifying', 'Verifying…')}</HelperText>}
@@ -160,7 +157,7 @@ export function ImportVerifyPanel() {
           </div>
 
           {result.errors.length > 0 && (
-            <ul className="list-disc space-y-1 ps-4 text-[var(--text-secondary)]">
+            <ul className="list-disc space-y-1 pl-4 text-[var(--text-secondary)]">
               {result.errors.map((message, index) => (
                 <li key={index}>{message}</li>
               ))}
@@ -187,6 +184,6 @@ export function ImportVerifyPanel() {
       <InlineCallout variant="info" icon={<ShieldAlert />}>
         {LOCAL_ATTESTATION_NOTE}
       </InlineCallout>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

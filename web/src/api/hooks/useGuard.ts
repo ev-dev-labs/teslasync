@@ -62,21 +62,10 @@ interface SetConfigResponse {
   arm_results: Record<string, string>;
 }
 
-/** Mirrors GuardPanicResult in internal/api/guard/handler.go.
- * Successful commands omit error; failures retain the upstream error string. */
-export interface GuardPanicResult {
-  command: string;
-  ok: boolean;
-  error?: string;
-}
-
-/** Successful PANIC response, also emitted by the backend with HTTP 502 on
- * partial command failure. request() rejects non-2xx responses; this type
- * does not make partial failure a successful mutation. */
-export interface GuardPanicResponse {
-  vehicle_id: number;
-  vin: string;
-  results: GuardPanicResult[];
+interface PanicResponse {
+  command_results: Record<string, string>;
+  notified_channels: string[];
+  event_id: number;
 }
 
 // ── Query Keys ──────────────────────────────────────────────────────────
@@ -89,15 +78,15 @@ export const guardKeys = {
 // ── Hooks ───────────────────────────────────────────────────────────────
 
 /**
- * Subscribes to saved guard policy (`GET /vehicles/{id}/guard/config`).
+ * Subscribes to the guard config (`GET /vehicles/{id}/guard`).
  *
- *  Returns null until a policy is saved. GET /guard remains observed Sentry
- *  telemetry, not configuration; see internal/api/guard/handler.go.
+ *  Backed by `guard_repo` over `security_events`; see
+ *  `internal/api/guard_handler.go` and `internal/api/router.go:820-823`.
  */
 export function useGuardConfig(vehicleId: number) {
   return useQuery({
     queryKey: guardKeys.config(vehicleId),
-    queryFn: ({ signal }) => request<GuardConfig | null>(`/vehicles/${vehicleId}/guard/config`, { signal }),
+    queryFn: ({ signal }) => request<GuardConfig>(`/vehicles/${vehicleId}/guard`, { signal }),
     enabled: vehicleId > 0,
     staleTime: STALE_TIMES.REALTIME,
     refetchInterval: INTERVALS.REALTIME,
@@ -148,10 +137,7 @@ export function useSetGuardConfig() {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Guard configuration updated');
     },
-    onError: (err: Error, { vehicleId }) => {
-      // Arming can fail after the policy is persisted; re-read it even on 502.
-      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.config(vehicleId) });
-      invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
+    onError: (err: Error) => {
       toast.error(`Failed to update guard config: ${err.message}`);
     },
   });
@@ -163,7 +149,7 @@ export function useGuardPanic() {
   const toast = useToast();
   return useMutation({
     mutationFn: (vehicleId: number) =>
-      request<GuardPanicResponse>(`/vehicles/${vehicleId}/guard/panic`, {
+      request<PanicResponse>(`/vehicles/${vehicleId}/guard/panic`, {
         method: 'POST',
         requiresLiveMode: true,
       }),
@@ -187,7 +173,7 @@ export function useAcknowledgeGuardEvent() {
   const toast = useToast();
   return useMutation({
     mutationFn: ({ vehicleId, eventId }: { vehicleId: number; eventId: number }) =>
-      request<GuardEvent>(`/vehicles/${vehicleId}/guard/events/${eventId}/acknowledge`, {
+      request<{ status: string }>(`/vehicles/${vehicleId}/guard/events/${eventId}/acknowledge`, {
         method: 'POST',
         requiresLiveMode: true,
       }),

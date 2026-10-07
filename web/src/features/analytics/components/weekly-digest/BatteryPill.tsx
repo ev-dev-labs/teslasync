@@ -1,10 +1,9 @@
 import { memo } from 'react';
 import { Battery } from 'lucide-react';
 import { GlassPanel, Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { STATUS_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPillProps {
   level: number;
@@ -13,7 +12,6 @@ interface BatteryPillProps {
 }
 
 function BatteryPillComponent({ level, label, className }: BatteryPillProps) {
-  const { fmtInt } = useNumberFormatting();
   // `level` is typed `number` but arrives from API/aggregation code that can
   // hand us `undefined`/`NaN` at runtime. Coerce to a finite value before any
   // arithmetic so the width never becomes `NaN%` and the color thresholds stay

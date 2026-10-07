@@ -11,16 +11,14 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function DrainEventProfile({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const aggregates = analysis.events.aggregates;
 

@@ -56,11 +56,11 @@ export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('gas.priceTrend', 'Price trend')}
+        {t('gas.priceTrend', 'Price Trend')}
       </PanelTitle>
 
       <EmbeddedChart
-        title={t('gas.priceTrend', 'Price trend')}
+        title={t('gas.priceTrend', 'Price Trend')}
         ariaLabel={t('gas.priceTrendAria', 'Line chart of historical gas prices over time')}
         loading={isLoading && rows.length === 0}
         error={isError ? error : undefined}

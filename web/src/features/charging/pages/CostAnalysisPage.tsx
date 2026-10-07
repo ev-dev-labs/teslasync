@@ -1,12 +1,11 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
 
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
-import { AICostForecastNarration } from '@/components/ai';
+import { AICostForecastNarration } from '@/components/ai/AICostForecastNarration';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { useUnits } from '@/hooks/useUnits';
@@ -14,27 +13,22 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
-import { useDataState } from '@/hooks/useDataState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { PAGINATION } from '@/lib/constants';
 import { DEFAULT_GAS_PRICE, DEFAULT_MPG, DEFAULT_ELECTRICITY_RATE } from '../components/cost-analysis/constants';
 import { useCostAnalysisData } from '../components/cost-analysis/useCostAnalysisData';
 import {
+  CostSummaryCards,
   MonthlyCostChart,
   CostPerKwhChart,
-  MonthlyCostTable,
-} from '../components/cost-analysis';
-import {
-  CostSummaryCards,
   ChargerTypeBreakdown,
   SavingsCalculator,
+  MonthlyCostTable,
   TimeOfUseAnalysis,
   CostForecastSection,
   LifetimeSummary,
   EnvironmentalImpact,
   BillVarianceCard,
-  useReturnedSessionPeriod,
-} from '../components/stat-modernization';
+} from '../components/cost-analysis';
 
 export default function CostAnalysisPage() {
   const { t } = useTranslation();
@@ -59,7 +53,6 @@ export default function CostAnalysisPage() {
     persistKey: 'cost-analysis.range',
     defaultPresetId: '1y',
   });
-  const returnedSessionPeriod = useReturnedSessionPeriod(startDate, endDate, PAGINATION.MAX_LIMIT);
 
   // ── Gas calculator inputs ────────────────────────────────────────────
   const [gasPrice, setGasPrice] = useState(DEFAULT_GAS_PRICE);
@@ -68,22 +61,16 @@ export default function CostAnalysisPage() {
 
   // ── Data ─────────────────────────────────────────────────────────────
   const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
-    limit: PAGINATION.MAX_LIMIT,
+    limit: 5000,
     start: startDate,
     end: endDate,
   });
-  const { data: sessions } = sessionsQuery;
-  const sessionsState = useDataState(sessionsQuery, { provenance: 'historical' });
-  const sessionsLoading = sessionsQuery.isLoading && !sessionsState.hasData;
-  const sessionsError = sessionsState.fatalError;
+  const { data: sessions, isLoading: sessionsLoading, error: sessionsError } = sessionsQuery;
   const retrySessions = useCallback(() => { void sessionsQuery.refetch(); }, [sessionsQuery]);
 
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const forecastQuery = useCostForecast(vehicleIdStr);
-  const { data: forecastData } = forecastQuery;
-  const forecastState = useDataState(forecastQuery, { provenance: 'historical' });
-  const forecastLoading = forecastQuery.isLoading && !forecastState.hasData;
-  const forecastError = forecastState.fatalError;
+  const { data: forecastData, isLoading: forecastLoading, error: forecastError } = forecastQuery;
   const retryForecast = useCallback(() => { void forecastQuery.refetch(); }, [forecastQuery]);
 
   const {
@@ -105,24 +92,16 @@ export default function CostAnalysisPage() {
   );
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('costAnalysis.title', 'Cost Analysis')}
       subtitle={t('costAnalysis.subtitle', 'Electricity cost trends, gas savings, and charging economics')}
-      overflowActions={actions}
-      query={[sessionsQuery, forecastQuery]}
-      busy={sessionsState.isRefreshing || forecastState.isRefreshing}
-      dataSources={[
-        { id: 'sessions', label: t('charging.curve.resource', 'Charging sessions'), query: sessionsQuery },
-        { id: 'forecast', label: t('costAnalysis.forecast.title', 'Cost Forecast'), query: forecastQuery },
-      ]}
+      actions={actions}
+      query={sessionsQuery}
     >
-      <StaleRefreshWarning state={sessionsState} label={t('charging.curve.resource', 'Charging sessions')} />
-      <StaleRefreshWarning state={forecastState} label={t('costAnalysis.forecast.title', 'Cost Forecast')} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section data-tour="cost-analysis" aria-label={t('costAnalysis.kpis', 'Cost summary metrics')}>
           <CostSummaryCards
-            period={returnedSessionPeriod}
             coreStats={coreStats}
             gasPrice={gasPrice}
             distanceUnit={distanceUnit}
@@ -167,7 +146,6 @@ export default function CostAnalysisPage() {
       {/* 3 — Charger-type economics */}
       <FadeIn delay={0.1}>
         <ChargerTypeBreakdown
-          period={returnedSessionPeriod}
           data={chargerTypeData}
           totalCost={coreStats?.totalCost ?? 1}
           isLoading={sessionsLoading}
@@ -179,7 +157,6 @@ export default function CostAnalysisPage() {
       {/* 4 — Gas vs EV savings calculator */}
       <FadeIn delay={0.1}>
         <SavingsCalculator
-          period={returnedSessionPeriod}
           gasComparison={gasComparison}
           gasPrice={gasPrice}
           mpg={mpg}
@@ -207,7 +184,6 @@ export default function CostAnalysisPage() {
       {/* 6 — Time-of-use analysis */}
       <FadeIn delay={0.1}>
         <TimeOfUseAnalysis
-          period={returnedSessionPeriod}
           hourlyData={hourlyData}
           touInsights={touInsights}
           isLoading={sessionsLoading}
@@ -236,7 +212,6 @@ export default function CostAnalysisPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <LifetimeSummary
-            period={returnedSessionPeriod}
             lifetimeMetrics={lifetimeMetrics}
             coreStats={coreStats}
             isLoading={sessionsLoading}
@@ -244,7 +219,6 @@ export default function CostAnalysisPage() {
             onRetry={retrySessions}
           />
           <EnvironmentalImpact
-            period={returnedSessionPeriod}
             coreStats={coreStats}
             isLoading={sessionsLoading}
             error={sessionsError}
@@ -252,6 +226,6 @@ export default function CostAnalysisPage() {
           />
         </section>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

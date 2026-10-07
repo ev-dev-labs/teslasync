@@ -62,7 +62,7 @@ export function LiveTelemetryPanels({
             <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500" />
           </span>
           <h2 className="text-xl font-bold tracking-tight text-[var(--text-primary)]">
-            {t('common.liveTelemetry', 'Live telemetry')}
+            {t('common.liveTelemetry', 'Live Telemetry')}
           </h2>
         </div>
       </FadeIn>

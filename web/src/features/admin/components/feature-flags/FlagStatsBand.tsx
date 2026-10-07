@@ -96,12 +96,12 @@ export function FlagStatsBand({
       className={GRID}
     >
       <MetricCard
-        label={t('admin.flags.stats.total', 'Total flags')}
+        label={t('admin.flags.stats.total', 'Total Flags')}
         value={stats.total}
         icon={<Flag className="h-5 w-5" />}
       />
       <MetricCard
-        label={t('admin.flags.stats.boolean', 'Boolean toggles')}
+        label={t('admin.flags.stats.boolean', 'Boolean Toggles')}
         value={stats.booleanCount}
         icon={<ToggleRight className="h-5 w-5" />}
         color="green"
@@ -113,7 +113,7 @@ export function FlagStatsBand({
         color="purple"
       />
       <MetricCard
-        label={t('admin.flags.stats.changes', 'Recent changes')}
+        label={t('admin.flags.stats.changes', 'Recent Changes')}
         value={stats.changeCount}
         icon={<History className="h-5 w-5" />}
         color="cyan"

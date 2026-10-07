@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
+import { FolderSearch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import {
   DataTable,
+  GlassPanel,
+  PanelTitle,
   type Column,
 } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
 import type { ShareCardRepresentativeDrive } from '../../lib/shareCard';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
@@ -21,7 +23,6 @@ export function ShareCardRepresentativeDirectory({
     () => [
       {
         key: 'rank',
-        align: 'right',
         header: t('shareCard.directory.rank', 'Rank'),
         render: (drive) => t('shareCard.directory.rankValue', '#{{rank}}', {
           rank: drive.rank,
@@ -75,7 +76,11 @@ export function ShareCardRepresentativeDirectory({
       data-testid="share-card-representative-directory"
       aria-label={t('shareCard.directory.aria', 'Privacy-aware representative drive directory')}
     >
-      <LayoutCard title={t('shareCard.directory.title', 'Representative drive directory')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <FolderSearch className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('shareCard.directory.title', 'Representative drive directory')}
+        </PanelTitle>
         <ShareCardSectionBody state={state}>
           <AlertBanner variant="info" className="mb-4">
             {t(
@@ -102,7 +107,7 @@ export function ShareCardRepresentativeDirectory({
             />
           )}
         </ShareCardSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

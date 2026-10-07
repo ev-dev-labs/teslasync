@@ -9,7 +9,7 @@ import {
   useSyncVehicles,
   useVehicles,
 } from '@/api/hooks/useVehicles';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { VisuallyHidden } from '@/components/a11y';
 import {
   Badge,
@@ -26,8 +26,7 @@ import {
 } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner, LiveStaleDataBanner, Skeleton, StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { AlertBanner, LiveStaleDataBanner, Skeleton } from '@/components/feedback';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -234,7 +233,7 @@ function DashboardMoreMenu({
 
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
-  usePageTitle(t('title', 'Fleet operations'));
+  usePageTitle(t('title', 'Fleet Operations'));
   const queryClient = useQueryClient();
 
   /* ——— Dashboard layout state ——— */
@@ -391,8 +390,7 @@ export default function DashboardPage() {
 
   /* ——— Core data queries (shared TanStack hooks) ——— */
   const vehiclesQuery = useVehicles();
-  const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
-  const vehiclesState = useDataState(vehiclesQuery);
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
   const {
     vehicleId: selectedVehicleId,
   } = useSelectedVehicle();
@@ -543,18 +541,21 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}
-            aria-label={t('dashboard.addWidget', 'Add widget')}>
+            aria-label={t('dashboard.addWidget', 'Add Widget')}>
             <Icons.add className="h-3.5 w-3.5 sm:me-1" />
-            <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add widget')}</span>
+            <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}
-            aria-label={t('dashboard.autoArrange', 'Auto arrange')}>
+            aria-label={t('dashboard.autoArrange', 'Auto Arrange')}>
             <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
-            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto arrange')}</span>
+            <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => void handleResetRequest()}>
             <Icons.undo className="h-3.5 w-3.5 sm:me-1" />
             {t('dashboard.reset', 'Reset')}
+          </Button>
+          <Button size="sm" onClick={() => setEditMode(false)}>
+            {t('dashboard.done', 'Done')}
           </Button>
         </>
       ) : (
@@ -569,74 +570,45 @@ export default function DashboardPage() {
             <Icons.refresh className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" />
             <span>{t('dashboard.refreshShort', 'Refresh')}</span>
           </Button>
+          {vehicleList.length > 0 && (
+            <>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setEditMode(true)}
+                data-tour="edit-mode-btn"
+              >
+                <Icons.settings className="h-4 w-4" aria-hidden="true" />
+                <span>{t('dashboard.customize', 'Customize')}</span>
+              </Button>
+              <DashboardMoreMenu
+                onExport={() => setShowExportModal(true)}
+                onImport={() => {
+                  setImportJson(null);
+                  setShowImportModal(true);
+                }}
+                onKiosk={() => setShowKioskSettings(true)}
+              />
+            </>
+          )}
         </>
       )}
     </div>
   );
 
   return (
-    <PageLayout
-      title={t('title', 'Fleet operations')}
+    <PageContainer
+      title={t('title', 'Fleet Operations')}
       subtitle={t(
         'subtitle',
         'Monitor readiness, investigate exceptions, and act from one workspace',
       )}
-      contextActions={dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading ? (
-        <section aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')} className="min-w-0">
-          <LayoutSwitcher
-            dashboards={dashboards}
-            activeId={activeId}
-            dirty={dirty}
-            editMode={editMode}
-            onSwitch={switchDashboard}
-            onCreate={(name) => createDashboard(name)}
-            onDuplicate={duplicateDashboard}
-            onReset={resetToDefault}
-            onPinToVehicle={pinToVehicle}
-            onToggleEdit={() => setEditMode((value) => !value)}
-            onRename={renameDashboard}
-            onDelete={deleteDashboard}
-            onReorder={reorderDashboards}
-            onOpenTemplates={openTemplates}
-            onOpenSettings={(id) => setShowDashSettings(id)}
-          />
-        </section>
-      ) : undefined}
-      secondaryActions={headerActions}
-      primaryAction={editMode ? (
-        <Button size="sm" onClick={() => setEditMode(false)}>
-          {t('dashboard.done', 'Done')}
-        </Button>
-      ) : vehicleList.length > 0 ? (
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={() => setEditMode(true)}
-          data-tour="edit-mode-btn"
-        >
-          <Icons.settings className="h-4 w-4" aria-hidden="true" />
-          <span>{t('dashboard.customize', 'Customize')}</span>
-        </Button>
-      ) : undefined}
-      overflowActions={!editMode && vehicleList.length > 0 ? (
-        <DashboardMoreMenu
-          onExport={() => setShowExportModal(true)}
-          onImport={() => {
-            setImportJson(null);
-            setShowImportModal(true);
-          }}
-          onKiosk={() => setShowKioskSettings(true)}
-        />
-      ) : undefined}
+      actions={headerActions}
       query={vehiclesQuery}
-      error={!authLoading && auth?.authenticated !== false ? vehiclesState.fatalError : null}
+      error={!authLoading && auth?.authenticated !== false ? vehiclesError : null}
     >
       <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-start">
       <div className="min-w-0 flex-1 space-y-6">
-        <StaleRefreshWarning
-          state={vehiclesState}
-          label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}
-        />
         {/* Transient banner cluster — first-run theme prompt, live-pipe
             stale warning, customize hint, load error, and Tesla auth
             warning. Each child self-hides when its condition is inactive. */}
@@ -689,6 +661,45 @@ export default function DashboardPage() {
               </AlertBanner>
             )}
           </div>
+        )}
+
+        {/* Layout switcher + manager — shown whenever saved dashboards exist. */}
+        {dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading && (
+          <FadeIn delay={0.05}>
+            <section
+              aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')}
+              className="space-y-3 border-t border-[var(--border-default)] pt-5"
+            >
+              <div>
+                <Caption className="font-semibold uppercase tracking-[0.1em]">
+                  {t('dashboard.personalWorkspace', 'Personal workspace')}
+                </Caption>
+                <Text as="p" variant="caption" className="mt-1">
+                  {t(
+                    'dashboard.personalWorkspaceHelp',
+                    'Arrange the live modules your team checks most often.',
+                  )}
+                </Text>
+              </div>
+              <LayoutSwitcher
+                dashboards={dashboards}
+                activeId={activeId}
+                dirty={dirty}
+                editMode={editMode}
+                onSwitch={switchDashboard}
+                onCreate={(name) => createDashboard(name)}
+                onDuplicate={duplicateDashboard}
+                onReset={resetToDefault}
+                onPinToVehicle={pinToVehicle}
+                onToggleEdit={() => setEditMode((value) => !value)}
+                onRename={renameDashboard}
+                onDelete={deleteDashboard}
+                onReorder={reorderDashboards}
+                onOpenTemplates={openTemplates}
+                onOpenSettings={(id) => setShowDashSettings(id)}
+              />
+            </section>
+          </FadeIn>
         )}
 
         {/* Primary surface — the customizable widget bento (hero). Owns its
@@ -853,7 +864,7 @@ export default function DashboardPage() {
         document.body,
       )}
       {resetDialogProps && <ConfirmDialog {...resetDialogProps} />}
-    </PageLayout>
+    </PageContainer>
   );
 }
 
@@ -974,7 +985,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
         </div>
 
         <aside className="border-t border-[var(--border-default)] bg-[var(--surface-2)] p-6 sm:p-8 xl:border-s xl:border-t-0">
-          <Caption className="font-semibold tracking-[0.08em]">
+          <Caption className="font-semibold uppercase tracking-[0.08em]">
             {t('onboarding.progress.label', 'Setup progress')}
           </Caption>
           <ol className="mt-5 space-y-5">

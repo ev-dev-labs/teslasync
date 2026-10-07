@@ -5,7 +5,6 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDecimal, formatIntensityWhPerM, formatSignedIntensityWhPerMPerYear, supportBandLabel } from './formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalComponentDiagnostics({
   analysis,
@@ -13,7 +12,6 @@ export function SeasonalComponentDiagnostics({
   locale,
   units,
 }: SeasonalSectionProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const rows = [
     [t('seasonalEfficiency.diagnostics.annual', 'Annual component amplitude'), formatIntensityWhPerM(analysis.diagnostics.annualComponentAmplitudeWhPerM, units.unitPrefs)],
@@ -22,7 +20,7 @@ export function SeasonalComponentDiagnostics({
     [t('seasonalEfficiency.diagnostics.rmse', 'Weighted RMSE'), formatIntensityWhPerM(analysis.diagnostics.weightedRmseWhPerM, units.unitPrefs)],
     [t('seasonalEfficiency.diagnostics.mae', 'Weighted MAE'), formatIntensityWhPerM(analysis.diagnostics.weightedMaeWhPerM, units.unitPrefs)],
     [t('seasonalEfficiency.diagnostics.trend', 'Trend coefficient'), formatSignedIntensityWhPerMPerYear(analysis.trendWhPerMPerYear, units.unitPrefs)],
-    [t('seasonalEfficiency.diagnostics.ratio', 'Samples / parameters'), formatDecimal(analysis.fit.sampleToParameterRatio, locale)],
+    [t('seasonalEfficiency.diagnostics.ratio', 'Samples / parameters'), formatDecimal(analysis.fit.sampleToParameterRatio, locale, 1)],
     [t('seasonalEfficiency.diagnostics.support', 'Support band'), supportBandLabel(analysis.support.band, t)],
   ];
   return (

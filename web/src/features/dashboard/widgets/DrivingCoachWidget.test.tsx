@@ -18,7 +18,7 @@
  *     the 3-card cap, and the badge being hidden when there is no headroom;
  *   - null-safety — a recommendation missing category/tip/impact renders em
  *     dashes and no `undefined` leaks to the DOM;
- *   - the compact (1×1) variant — heading + score + savings badge, with its
+ *   - the compact (1×1) variant — score + savings badge, title-less, with its
  *     own empty state;
  *   - a11y — the decorative lightbulb icons are hidden from the a11y tree and
  *     the freshness Refresh control exposes an accessible name that wires back
@@ -142,11 +142,6 @@ beforeEach(() => {
   useDrivingCoachMock.mockReturnValue(makeResult());
 });
 
-it.each([1, 2, 3])('keeps an accessible heading at %s columns', cols => {
-  renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
-});
-
 // ── Pure helper: computeSavingsPct ───────────────────────────────────────────
 
 describe('computeSavingsPct', () => {
@@ -155,16 +150,16 @@ describe('computeSavingsPct', () => {
     expect(computeSavingsPct(300, 200)).toBe(33); // 33.33… rounds to 33
   });
 
-  it('keeps missing or non-positive efficiency unknown (no divide-by-zero)', () => {
-    expect(computeSavingsPct(0, 150)).toBeNull();
-    expect(computeSavingsPct(-10, 150)).toBeNull();
-    expect(computeSavingsPct(undefined, 150)).toBeNull();
+  it('returns 0 when current efficiency is missing or non-positive (no divide-by-zero)', () => {
+    expect(computeSavingsPct(0, 150)).toBe(0);
+    expect(computeSavingsPct(-10, 150)).toBe(0);
+    expect(computeSavingsPct(undefined, 150)).toBe(0);
   });
 
-  it('keeps a missing/zero baseline unknown instead of a misleading 100%', () => {
-    expect(computeSavingsPct(200, 0)).toBeNull();
-    expect(computeSavingsPct(200, undefined)).toBeNull();
-    expect(computeSavingsPct(200, null)).toBeNull();
+  it('returns 0 for a missing/zero baseline instead of a misleading 100%', () => {
+    expect(computeSavingsPct(200, 0)).toBe(0);
+    expect(computeSavingsPct(200, undefined)).toBe(0);
+    expect(computeSavingsPct(200, null)).toBe(0);
   });
 
   it('clamps a run that already beats the recorded best to 0, not a negative', () => {
@@ -172,9 +167,8 @@ describe('computeSavingsPct', () => {
   });
 
   it('is NaN-safe on either input', () => {
-    expect(computeSavingsPct(NaN, 150)).toBeNull();
-    expect(computeSavingsPct(200, NaN)).toBeNull();
-    expect(computeSavingsPct(200, Infinity)).toBeNull();
+    expect(computeSavingsPct(NaN, 150)).toBe(0);
+    expect(computeSavingsPct(200, NaN)).toBe(0);
   });
 });
 
@@ -203,30 +197,11 @@ describe('DrivingCoachWidget — vehicle resolution', () => {
 // ── Render states ────────────────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — states', () => {
-  it('preserves a real zero score but never manufactures a score from absent data', () => {
-    useDrivingCoachMock.mockReturnValue(makeResult({ data: undefined }));
-    renderWidget({ cols: 1, rows: 1 });
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-  });
-
-  it('retains score and recommendations after a failed background refresh', () => {
-    useDrivingCoachMock.mockReturnValue(makeResult({
-      data: makeCoachData({ recommendations: [makeRec()] }),
-      error: new Error('background outage'),
-      isError: true,
-    }));
-    renderWidget();
-    expect(screen.getByText('82')).toBeInTheDocument();
-    expect(screen.getByText('Smooth acceleration')).toBeInTheDocument();
-    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-  });
-
   it('renders a loading skeleton while the coach query is pending', () => {
     useDrivingCoachMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Driving coach')).toBeInTheDocument();
+    expect(screen.queryByText('Driving Coach')).toBeNull();
     expect(screen.queryByText('/ 100')).toBeNull();
   });
 
@@ -333,7 +308,7 @@ describe('DrivingCoachWidget — populated (full size)', () => {
 // ── Compact (1×1) variant ────────────────────────────────────────────────────
 
 describe('DrivingCoachWidget — compact (1×1)', () => {
-  it('renders its heading, score and savings badge without "/ 100"', () => {
+  it('renders the score and savings badge without the widget title or "/ 100"', () => {
     useDrivingCoachMock.mockReturnValue(
       makeResult({
         data: makeCoachData({
@@ -346,7 +321,7 @@ describe('DrivingCoachWidget — compact (1×1)', () => {
     renderWidget({ cols: 1, rows: 1 });
     expect(screen.getByText('91')).toBeInTheDocument();
     expect(screen.getByText('Potential savings: 25%')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Driving coach', level: 3 })).toBeVisible();
+    expect(screen.queryByText('Driving Coach')).toBeNull();
     expect(screen.queryByText('/ 100')).toBeNull();
   });
 

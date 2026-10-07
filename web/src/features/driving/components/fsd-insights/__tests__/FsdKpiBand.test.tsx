@@ -72,7 +72,6 @@ function prefsFor(distance: DistanceUnitPref): UnitPref {
     duration: 'h',
     power: 'kW',
     locale: 'en-US',
-    precision: 2,
   };
 }
 
@@ -110,24 +109,24 @@ describe('FsdKpiBand', () => {
 
     expect(screen.getByText('Supervised self-driving distance')).toBeInTheDocument();
     // 16 093.44 m → 16.1 km at 1 dp.
-    expect(screen.getByText('16.09 km')).toBeInTheDocument();
-    expect(screen.getByText('25.00%')).toBeInTheDocument();
+    expect(screen.getByText('16.1 km')).toBeInTheDocument();
+    expect(screen.getByText('25.0%')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('of 28 measured days')).toBeInTheDocument();
     // Best day: 8 046.72 m → 8.0 km.
-    expect(screen.getByText('8.05 km')).toBeInTheDocument();
+    expect(screen.getByText('8.0 km')).toBeInTheDocument();
   });
 
   it('converts SI meters to the operator display unit (km ↔ mi)', () => {
     const { unmount } = renderBand(<FsdKpiBand insights={fsdInsights()} state={state()} />);
-    expect(screen.getByText('16.09 km')).toBeInTheDocument();
+    expect(screen.getByText('16.1 km')).toBeInTheDocument();
     unmount();
 
     unitsMock.mockReturnValue(useUnitsValue('mi'));
     renderBand(<FsdKpiBand insights={fsdInsights()} state={state()} />);
     // 16 093.44 m is exactly 10 miles.
-    expect(screen.getByText('10.00 mi')).toBeInTheDocument();
-    expect(screen.queryByText('16.09 km')).not.toBeInTheDocument();
+    expect(screen.getByText('10.0 mi')).toBeInTheDocument();
+    expect(screen.queryByText('16.1 km')).not.toBeInTheDocument();
   });
 
   it('shows an em dash and the reason when the share denominator is unavailable', () => {
@@ -143,7 +142,7 @@ describe('FsdKpiBand', () => {
 
     expect(screen.getByText('Observed-driving counter not reported')).toBeInTheDocument();
     // The distance KPI is unaffected — only the share is unknown.
-    expect(screen.getByText('16.09 km')).toBeInTheDocument();
+    expect(screen.getByText('16.1 km')).toBeInTheDocument();
   });
 
   it('does not divide standalone distances accumulated over different spans', () => {
@@ -158,7 +157,7 @@ describe('FsdKpiBand', () => {
     expect(
       screen.getByText('Counter spans do not align for a trustworthy share'),
     ).toBeInTheDocument();
-    expect(screen.getByText('16.09 km')).toBeInTheDocument();
+    expect(screen.getByText('16.1 km')).toBeInTheDocument();
   });
 
   it('never formats a zero when the self-driving counter did not report', () => {
@@ -167,8 +166,8 @@ describe('FsdKpiBand', () => {
     // self-driving — a measurement the telemetry never supported.
     renderBand(<FsdKpiBand insights={fsdDrivingOnlyInsights()} state={state()} />);
 
-    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
-    expect(screen.queryByText('0.00 mi')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0 mi')).not.toBeInTheDocument();
     expect(
       screen.getByText('Self-driving counter not reported in this period'),
     ).toBeInTheDocument();
@@ -202,8 +201,8 @@ describe('FsdKpiBand', () => {
 
     renderBand(<FsdKpiBand insights={insights} state={state()} />);
 
-    expect(screen.getByText('0.00 km')).toBeInTheDocument();
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.0%')).toBeInTheDocument();
     expect(screen.getByText('of 30 measured days')).toBeInTheDocument();
     expect(
       screen.queryByText('Self-driving counter not reported in this period'),

@@ -61,20 +61,20 @@ describe('PrivacyGuaranteesPanel', () => {
     render(<PrivacyGuaranteesPanel />)
 
     const region = screen.getByRole('region', {
-      name: /How TeslaSync handles this data/i,
+      name: /how teslasync handles this data/i,
     })
     expect(region).toBeInTheDocument()
 
     const heading = screen.getByRole('heading', {
       level: 2,
-      name: /How TeslaSync handles this data/i,
+      name: /how teslasync handles this data/i,
     })
     // The section is labelled *by* that heading — the aria-labelledby target
     // must exist and match the heading's id, or the landmark name breaks.
     expect(heading).toHaveAttribute('id', 'privacy-about-heading')
     expect(region).toHaveAttribute(
       'aria-labelledby',
-      heading.getAttribute('ID'),
+      heading.getAttribute('id'),
     )
   })
 
@@ -97,7 +97,7 @@ describe('PrivacyGuaranteesPanel', () => {
       screen.getByText(/never uploaded to the server/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/no effect on your Other devices/i),
+      screen.getByText(/no effect on your other devices/i),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/take effect immediately and update every open tab/i),

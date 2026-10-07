@@ -111,7 +111,7 @@ describe('UserImpersonateButton', () => {
     renderButton({ subject: 'alice' })
     fireEvent.click(screen.getByTestId('user-impersonate-button-alice'))
     const dialog = screen.getByRole('dialog')
-    const confirm = within(dialog).getByRole('button', { name: /Start impersonation/i })
+    const confirm = within(dialog).getByRole('button', { name: /start impersonation/i })
     fireEvent.click(confirm)
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith(

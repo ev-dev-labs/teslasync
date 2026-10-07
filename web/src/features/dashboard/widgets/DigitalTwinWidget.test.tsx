@@ -40,7 +40,7 @@
  * because the widget renders `<Link>` and `EmptyState` renders a `<Link>`.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { SecurityEvent, ChargingTelemetry, Vehicle, VehicleState } from '@/api/types';
@@ -78,9 +78,7 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (_key: string, fallback?: string, options?: Record<string, unknown>) =>
-        (fallback ?? _key).replace(/{{(\w+)}}/g, (match, name: string) =>
-          options?.[name] == null ? match : String(options[name])),
+      t: (_key: string, fallback?: string) => fallback ?? _key,
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -266,12 +264,12 @@ describe('DigitalTwinWidget — loading & empty states', () => {
     expect(screen.queryByText('Locked')).toBeNull();
   });
 
-  it('retains available telemetry while the vehicle state is loading', () => {
+  it('renders a skeleton while the vehicle state is loading', () => {
     setState({ isLoading: true });
     const { container } = renderWidget(SMALL);
 
-    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(screen.getByTestId('vehicle-twin')).toBeInTheDocument();
+    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.queryByTestId('vehicle-twin')).toBeNull();
   });
 
   it('shows the "No vehicle data" empty state (not a twin) when no vehicle exists', () => {
@@ -287,205 +285,6 @@ describe('DigitalTwinWidget — loading & empty states', () => {
 
     expect(screen.getByTestId('vehicle-twin')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).toBeNull();
-  });
-});
-
-describe('DigitalTwinWidget — independent source failures', () => {
-  function query<T>(data: T | undefined) {
-    return {
-      data,
-      error: null as Error | null,
-      isLoading: false,
-      isFetching: false,
-      isError: false,
-      dataUpdatedAt: Date.parse(NOW),
-      refetch: vi.fn(),
-    };
-  }
-
-  function sources() {
-    const queries = {
-      vehicles: query([makeVehicle()]),
-      state: query({ state: makeVehicleState({ state: 'driving', is_locked: undefined, sentry_mode: undefined }), live: false }),
-      security: query(makeSecurity({ locked: false, windows_open: 'closed', sentry_mode: true })),
-      charging: query(makeCharging({ charging_state: 'Charging' })),
-    };
-    vehiclesMock.mockImplementation(() => queries.vehicles);
-    stateMock.mockImplementation(() => queries.state);
-    securityMock.mockImplementation(() => queries.security);
-    chargingMock.mockImplementation(() => queries.charging);
-    return queries;
-  }
-
-  function expectRetainedScene() {
-    expect(screen.getByTestId('vehicle-twin')).toBeInTheDocument();
-    expect(screen.getByText('Model Y')).toBeInTheDocument();
-    expect(screen.getByText('Unlocked')).toBeInTheDocument();
-    expect(screen.getByText('Windows closed')).toBeInTheDocument();
-    expect(screen.getByText('Driving')).toBeInTheDocument();
-    expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('Sentry')).toBeInTheDocument();
-    expect(twinPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({
-      vehicleId: 7,
-      exteriorColor: 'DeepBlue',
-      locked: false,
-      windowFD: 'closed',
-      windowFP: 'closed',
-      windowRD: 'closed',
-      windowRP: 'closed',
-      isDriving: true,
-      isCharging: true,
-      sentryMode: true,
-    }));
-  }
-
-  it.each(['state', 'security', 'charging'] as const)(
-    'keeps independently measured siblings partial when %s fails its first load',
-    (source) => {
-      const queries = sources();
-      queries[source].data = undefined;
-      queries[source].isError = true;
-      queries[source].error = new Error(`${source} unavailable`);
-      const { container } = renderWidget();
-
-      expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-      expect(screen.getByTestId('vehicle-twin')).toBeInTheDocument();
-      const failure = screen.getByRole('alert');
-      expect(within(failure).getByText(`${source === 'state' ? 'Vehicle' : source === 'security' ? 'Security' : 'Charging'} state unavailable`)).toBeInTheDocument();
-      fireEvent.click(within(failure).getByRole('button', { name: 'Retry' }));
-      expect(queries[source].refetch).toHaveBeenCalledOnce();
-      queries[source].refetch.mockClear();
-      expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-      expect(twinPropsSpy).toHaveBeenLastCalledWith(expect.objectContaining({
-        vehicleId: 7,
-        locked: source === 'security' ? null : false,
-        windowFD: source === 'security' ? null : 'closed',
-        sentryMode: source === 'security' ? null : true,
-        isDriving: source !== 'state',
-        isCharging: source !== 'charging',
-      }));
-      expect(screen.getByText(source === 'security' ? 'Lock unknown' : 'Unlocked')).toBeInTheDocument();
-      expect(screen.getByText(source === 'security' ? 'Windows unknown' : 'Windows closed')).toBeInTheDocument();
-      if (source !== 'state') expect(screen.getByText('Driving')).toBeInTheDocument();
-      else expect(screen.queryByText('Driving')).not.toBeInTheDocument();
-      if (source !== 'charging') expect(screen.getByText('Charging')).toBeInTheDocument();
-      else expect(screen.queryByText('Charging')).not.toBeInTheDocument();
-
-      const warning = screen.getByTestId('stale-refresh-warning');
-      expect(warning).toHaveAttribute('role', 'status');
-      expect(warning).toHaveAttribute('aria-live', 'polite');
-      expect(warning).toHaveAttribute('data-data-state', 'partial');
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
-      for (const query of Object.values(queries)) expect(query.refetch).toHaveBeenCalledOnce();
-    },
-  );
-
-  it.each(['state', 'security', 'charging'] as const)(
-    'retains actual twin props and chips when %s fails a refresh, then recovers',
-    (source) => {
-      const queries = sources();
-      const view = renderWidget();
-      expectRetainedScene();
-      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-
-      queries[source].isError = true;
-      queries[source].error = new Error(`${source} refresh failed`);
-      view.rerender(<MemoryRouter><DigitalTwinWidget size={SMALL} /></MemoryRouter>);
-
-      expectRetainedScene();
-      expect(view.container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-      const warning = screen.getByTestId('stale-refresh-warning');
-      expect(warning).toHaveAttribute('role', 'status');
-      expect(warning).toHaveAttribute('aria-live', 'polite');
-      expect(warning).toHaveTextContent('Previously loaded data remains visible');
-      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
-      for (const query of Object.values(queries)) expect(query.refetch).toHaveBeenCalledOnce();
-
-      queries[source].isError = false;
-      queries[source].error = null;
-      view.rerender(<MemoryRouter><DigitalTwinWidget size={SMALL} /></MemoryRouter>);
-      expectRetainedScene();
-      expect(view.container.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
-      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    },
-  );
-
-  it('withholds the twin and retries telemetry when every telemetry source fails its first load', () => {
-    const queries = sources();
-    for (const source of ['state', 'security', 'charging'] as const) {
-      queries[source].data = undefined;
-      queries[source].isError = true;
-      queries[source].error = new Error(`${source} unavailable`);
-    }
-    const { container } = renderWidget();
-
-    expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByTestId('vehicle-twin')).not.toBeInTheDocument();
-    expect(twinPropsSpy).not.toHaveBeenCalled();
-    expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
-    for (const source of ['state', 'security', 'charging'] as const) {
-      expect(queries[source].refetch).toHaveBeenCalledOnce();
-    }
-  });
-
-  it('distinguishes failed vehicle discovery from an empty fleet without fabricating a twin', () => {
-    const queries = sources();
-    for (const query of Object.values(queries)) query.data = undefined;
-    queries.vehicles.isError = true;
-    queries.vehicles.error = new Error('Vehicle discovery unavailable');
-    const { container } = renderWidget();
-
-    expect(container.querySelector('[data-data-state="initialFailure"]')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('vehicle-twin')).not.toBeInTheDocument();
-    expect(twinPropsSpy).not.toHaveBeenCalled();
-  });
-
-  it('retains measured twin props and chips with a nonblocking warning when vehicle discovery refresh fails', () => {
-    const queries = sources();
-    const view = renderWidget();
-    expectRetainedScene();
-    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-
-    queries.vehicles.isError = true;
-    queries.vehicles.error = new Error('Vehicle discovery refresh failed');
-    view.rerender(<MemoryRouter><DigitalTwinWidget size={SMALL} /></MemoryRouter>);
-
-    expectRetainedScene();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    const warning = screen.getByTestId('stale-refresh-warning');
-    expect(warning).toHaveAttribute('role', 'status');
-    expect(warning).toHaveAttribute('aria-live', 'polite');
-    expect(warning).toHaveAttribute('data-data-state', 'stale');
-    expect(warning).toHaveTextContent('Previously loaded data remains visible');
-    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
-    expect(queries.vehicles.refetch).toHaveBeenCalledOnce();
-
-    queries.vehicles.isError = false;
-    queries.vehicles.error = null;
-    view.rerender(<MemoryRouter><DigitalTwinWidget size={SMALL} /></MemoryRouter>);
-    expectRetainedScene();
-    expect(view.container.querySelector('[data-data-state="ok"]')).toBeInTheDocument();
-    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-  });
-
-  it('retries vehicle discovery itself after an initial fatal discovery failure', () => {
-    const queries = sources();
-    for (const query of Object.values(queries)) query.data = undefined;
-    queries.vehicles.isError = true;
-    queries.vehicles.error = new Error('Vehicle discovery unavailable');
-    renderWidget();
-
-    const alert = screen.getByRole('alert');
-    expect(screen.queryByTestId('vehicle-twin')).not.toBeInTheDocument();
-    expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
-    expect(twinPropsSpy).not.toHaveBeenCalled();
-    fireEvent.click(within(alert).getByRole('button', { name: 'Retry' }));
-    expect(queries.vehicles.refetch).toHaveBeenCalledOnce();
   });
 });
 
@@ -577,25 +376,18 @@ describe('DigitalTwinWidget — lock badge', () => {
     setState({ state: makeVehicleState({ is_locked: undefined }) });
     renderWidget(SMALL);
 
-    expect(screen.getByText('Lock unknown')).toBeInTheDocument();
+    expect(screen.getByText('Lock Unknown')).toBeInTheDocument();
   });
 });
 
 // ── Window badge ─────────────────────────────────────────────────────────────────
 
 describe('DigitalTwinWidget — window badge', () => {
-  it('does not call partially reported closed windows fully closed', () => {
-    setSecurity(makeSecurity({ fd_window: 'Closed', windows_open: null }));
-    renderWidget(SMALL);
-    expect(screen.queryByText('Windows closed')).not.toBeInTheDocument();
-    expect(screen.getByText('Windows unknown')).toBeInTheDocument();
-  });
-
   it('shows "Windows Closed" when the windows summary reports all closed', () => {
     setSecurity(makeSecurity({ locked: true, windows_open: 'closed' }));
     renderWidget(SMALL);
 
-    expect(screen.getByText('Windows closed')).toBeInTheDocument();
+    expect(screen.getByText('Windows Closed')).toBeInTheDocument();
   });
 
   it('shows the open-window count when a window is open', () => {
@@ -603,14 +395,14 @@ describe('DigitalTwinWidget — window badge', () => {
     renderWidget(SMALL);
 
     expect(screen.getByText('1 Open')).toBeInTheDocument();
-    expect(screen.queryByText('Windows closed')).toBeNull();
+    expect(screen.queryByText('Windows Closed')).toBeNull();
   });
 
   it('shows "Windows Unknown" when the window state is absent', () => {
     setSecurity(makeSecurity({ locked: true, windows_open: null }));
     renderWidget(SMALL);
 
-    expect(screen.getAllByText('Windows unknown').length).toBeGreaterThan(0);
+    expect(screen.getByText('Windows Unknown')).toBeInTheDocument();
   });
 });
 
@@ -643,7 +435,7 @@ describe('DigitalTwinWidget — status chips', () => {
     renderWidget(SMALL);
 
     expect(screen.getByText('Sentry')).toBeInTheDocument();
-    expect(screen.getByText('Lights on')).toBeInTheDocument();
+    expect(screen.getByText('Lights On')).toBeInTheDocument();
     expect(screen.getByText('Hazards')).toBeInTheDocument();
   });
 
@@ -661,9 +453,9 @@ describe('DigitalTwinWidget — status chips', () => {
     );
     renderWidget(SMALL);
 
-    expect(screen.getByText('2 Doors open')).toBeInTheDocument();
-    expect(screen.getByText('Frunk open')).toBeInTheDocument();
-    expect(screen.getByText('Trunk open')).toBeInTheDocument();
+    expect(screen.getByText('2 Doors Open')).toBeInTheDocument();
+    expect(screen.getByText('Frunk Open')).toBeInTheDocument();
+    expect(screen.getByText('Trunk Open')).toBeInTheDocument();
   });
 
   it('hides every optional chip when the vehicle is idle and buttoned up', () => {
@@ -675,11 +467,11 @@ describe('DigitalTwinWidget — status chips', () => {
     expect(screen.queryByText('Driving')).toBeNull();
     expect(screen.queryByText('Charging')).toBeNull();
     expect(screen.queryByText('Sentry')).toBeNull();
-    expect(screen.queryByText('Lights on')).toBeNull();
+    expect(screen.queryByText('Lights On')).toBeNull();
     expect(screen.queryByText('Hazards')).toBeNull();
-    expect(screen.queryByText(/^\d+ Doors open$/)).toBeNull();
-    expect(screen.queryByText('Frunk open')).toBeNull();
-    expect(screen.queryByText('Trunk open')).toBeNull();
+    expect(screen.queryByText(/Doors Open$/)).toBeNull();
+    expect(screen.queryByText('Frunk Open')).toBeNull();
+    expect(screen.queryByText('Trunk Open')).toBeNull();
   });
 });
 
@@ -731,6 +523,6 @@ describe('DigitalTwinWidget — interactions & a11y', () => {
   it('exposes the widget title as a heading', () => {
     renderWidget(SMALL);
 
-    expect(screen.getByRole('heading', { name: /Digital twin/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Digital Twin/i })).toBeInTheDocument();
   });
 });

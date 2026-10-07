@@ -6,13 +6,16 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
+  Cog,
+  Filter,
   ListChecks,
   PlayCircle,
+  Power,
   Save,
   X,
   Zap,
 } from 'lucide-react';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
@@ -24,23 +27,19 @@ import {
   Toggle,
   Textarea as UiTextarea,
 } from '@/components/ui';
-import { OperationalBrief } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { MetricCard } from '@/components/data-display';
 import {
   AlertBanner,
   DraftRecoveryBanner,
   EmptyState,
   EditConflictBanner,
   OperationalWriteNotice,
-  StaleRefreshWarning,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
-import { AINLAutomationBuilder } from '@/components/ai';
-import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai';
+import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
+import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai/AIGeofenceAwareAutomationSuggestions';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
@@ -316,19 +315,17 @@ export default function AutomationBuilderPage() {
 
   usePageTitle(
     isEdit
-      ? t('automations.builder.editTitle', 'Edit automation')
+      ? t('automations.builder.editTitle', 'Edit Automation')
       : presetId
-        ? t('automations.builder.presetTitle', 'Install preset')
-        : t('automations.builder.createTitle', 'Create automation'),
+        ? t('automations.builder.presetTitle', 'Install Preset')
+        : t('automations.builder.createTitle', 'Create Automation'),
   );
 
-  const automationQuery = useAutomation(automationId);
-  const automationState = useDataState(automationQuery);
   const {
     data: existingAutomation,
     isLoading: isLoadingAutomation,
-  } = automationQuery;
-  const loadError = automationState.fatalError;
+    error: loadError,
+  } = useAutomation(automationId);
   const { data: vehicles } = useVehicles();
   const { data: channels } = useNotificationChannels();
   const { data: preset } = useAutomationPreset(presetId);
@@ -472,7 +469,7 @@ export default function AutomationBuilderPage() {
       }),
     }));
     return [
-      { value: '', label: t('automations.builder.allVehicles', 'All vehicles') },
+      { value: '', label: t('automations.builder.allVehicles', 'All Vehicles') },
       ...options,
     ];
   }, [t, vehicles]);
@@ -513,15 +510,6 @@ export default function AutomationBuilderPage() {
     && triggerReady
     && actionsReady
     && !form.conditions.some(conditionNeedsPlace);
-  const draftContext = t('automations.builder.brief.context', 'Current editor draft only. Publishing still requires validation and an explicit save.');
-  const rawMetrics: readonly StatMetric[] = [
-    { metricId: 'text', occurrenceId: 'trigger', rawValue: selectedTriggerLabel, label: t('automations.builder.summaryTrigger', 'Trigger'), description: draftContext },
-    { metricId: 'count', occurrenceId: 'conditions', rawValue: conditionCount, label: t('automations.builder.summaryConditions', 'Conditions'), description: t('automations.builder.onlyIfDesc', 'Optional checks that must pass before actions run.') },
-    { metricId: 'count', occurrenceId: 'actions', rawValue: actionCount, label: t('automations.builder.summaryActions', 'Actions'), description: t('automations.builder.thenDesc', 'Actions are executed in order.') },
-    { metricId: 'status', occurrenceId: 'status', rawValue: form.enabled ? t('automations.builder.statusEnabled', 'Enabled') : t('automations.builder.statusDisabled', 'Disabled'),
-      label: t('automations.builder.summaryStatus', 'Status'), description: draftContext },
-  ];
-  const briefMetrics = useOperationalMetrics(rawMetrics);
 
   const readinessItems = useMemo(
     () => [
@@ -636,55 +624,55 @@ export default function AutomationBuilderPage() {
     }
   }, [automationId, savedId, testRunMutation]);
 
-  if (isEdit && isLoadingAutomation && !automationState.hasData) {
+  if (isEdit && isLoadingAutomation) {
     return (
-      <PageLayout
-        title={t('automations.builder.editTitle', 'Edit automation')}
+      <PageContainer
+        title={t('automations.builder.editTitle', 'Edit Automation')}
         loading
         breadcrumbLabels={breadcrumbLabels}
       >
         <div />
-      </PageLayout>
+      </PageContainer>
     );
   }
 
   if (isEdit && loadError) {
     return (
-      <PageLayout
-        title={t('automations.builder.editTitle', 'Edit automation')}
+      <PageContainer
+        title={t('automations.builder.editTitle', 'Edit Automation')}
         error={loadError instanceof Error ? loadError : new Error(String(loadError))}
         breadcrumbLabels={breadcrumbLabels}
       >
         <div />
-      </PageLayout>
+      </PageContainer>
     );
   }
 
   if (isEdit && !existingAutomation && !isLoadingAutomation) {
     return (
-      <PageLayout
-        title={t('automations.builder.editTitle', 'Edit automation')}
+      <PageContainer
+        title={t('automations.builder.editTitle', 'Edit Automation')}
         breadcrumbLabels={breadcrumbLabels}
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<AlertTriangle className="h-8 w-8" />}
           message={t('automations.builder.notFound', 'Automation not found')}
         />
-      </PageLayout>
+      </PageContainer>
     );
   }
 
   return (
-    <PageLayout
+    <PageContainer
       title={isEdit
-        ? t('automations.builder.editTitle', 'Edit automation')
-        : t('automations.builder.createTitle', 'Create automation')}
+        ? t('automations.builder.editTitle', 'Edit Automation')
+        : t('automations.builder.createTitle', 'Create Automation')}
       subtitle={t(
         'automations.builder.subtitle',
         'Configure supported typed triggers, conditions, and actions for your automation.',
       )}
       breadcrumbLabels={breadcrumbLabels}
-      secondaryActions={(
+      actions={(
         <UiButton
           type="button"
           variant="ghost"
@@ -692,13 +680,12 @@ export default function AutomationBuilderPage() {
           onClick={handleBackToList}
           className="min-h-11 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           icon={<ArrowLeft className="h-4 w-4" />}
-          aria-label={t('automations.builder.backToList', 'Back to automations')}
+          aria-label={t('automations.builder.backToList', 'Back to Automations')}
         >
-          {t('automations.builder.backToList', 'Back to automations')}
+          {t('automations.builder.backToList', 'Back to Automations')}
         </UiButton>
       )}
     >
-      <StaleRefreshWarning state={automationState} label={t('automations.builder.editTitle', 'Edit automation')} />
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -731,25 +718,39 @@ export default function AutomationBuilderPage() {
           />
         )}
 
-        {/* 1 — Draft summary; the typed editors remain the source of truth */}
+        {/* 1 — Summary KPI band: reflows from 2 → 4 columns, fills the width */}
         <FadeIn>
-          <div>
-            <OperationalBrief
-              compact
-              testId="automation-builder-brief"
-              eyebrow={t('automations.builder.brief.eyebrow', 'Automation draft')}
-              title={t('automations.builder.summary', 'Automation summary')}
-              description={draftContext}
-              statusLabel={allReady ? t('automations.builder.readyToSave', 'Ready to save')
-                : t('automations.builder.notReady', 'Not ready yet')}
-              statusTone="neutral"
-              metrics={briefMetrics}
-              scope={t('automations.builder.brief.scope', 'Editor configuration; not execution history')}
-              freshness={dirty ? t('automations.builder.brief.unsaved', 'Local changes not published')
-                : t('automations.builder.brief.editor', 'Current editor state')}
-              provenance={draftContext}
+          <section
+            aria-label={t('automations.builder.summary', 'Automation summary')}
+            className="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:gap-5"
+          >
+            <MetricCard
+              label={t('automations.builder.summaryTrigger', 'Trigger')}
+              value={selectedTriggerLabel}
+              icon={<Zap className="h-5 w-5" />}
+              color="cyan"
             />
-          </div>
+            <MetricCard
+              label={t('automations.builder.summaryConditions', 'Conditions')}
+              value={conditionCount}
+              icon={<Filter className="h-5 w-5" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('automations.builder.summaryActions', 'Actions')}
+              value={actionCount}
+              icon={<Cog className="h-5 w-5" />}
+              color="green"
+            />
+            <MetricCard
+              label={t('automations.builder.summaryStatus', 'Status')}
+              value={form.enabled
+                ? t('automations.builder.statusEnabled', 'Enabled')
+                : t('automations.builder.statusDisabled', 'Disabled')}
+              icon={<Power className="h-5 w-5" />}
+              color={form.enabled ? 'green' : 'amber'}
+            />
+          </section>
         </FadeIn>
 
         {/* 2 — Two-pane bento: build canvas (hero) + assist rail */}
@@ -762,7 +763,7 @@ export default function AutomationBuilderPage() {
                   label={t('automations.builder.name', 'Name')}
                   value={form.name}
                   onChange={(event) => update('name', event.target.value)}
-                  placeholder={t('automations.builder.namePlaceholder', 'Morning commute prep')}
+                  placeholder={t('automations.builder.namePlaceholder', 'Morning Commute Prep')}
                   required
                 />
                 <UiTextarea
@@ -797,14 +798,14 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.05}>
               <div data-tour="automation-builder">
                 <FormSection
-                  title={t('automations.builder.when', 'When (trigger)')}
+                  title={t('automations.builder.when', 'When (Trigger)')}
                   description={t(
                     'automations.builder.whenDesc',
                     'Choose the supported typed contract that starts this automation.',
                   )}
                 >
                   <UiSelect
-                    label={t('automations.builder.triggerType', 'Trigger type')}
+                    label={t('automations.builder.triggerType', 'Trigger Type')}
                     help={{
                       i18nKey: 'help.fields.automations.triggerType',
                       content: 'Decides when this automation starts: signal change, geofence enter/exit, time of day, charging event, or another automation completing.',
@@ -837,7 +838,7 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.1}>
               <div data-tour="automation-conditions">
                 <FormSection
-                  title={t('automations.builder.onlyIf', 'Only if (conditions)')}
+                  title={t('automations.builder.onlyIf', 'Only If (Conditions)')}
                   description={t(
                     'automations.builder.onlyIfDesc',
                     'Optional checks that must pass before actions run.',
@@ -854,7 +855,7 @@ export default function AutomationBuilderPage() {
             <FadeIn delay={0.15}>
               <div data-tour="automation-actions">
                 <FormSection
-                  title={t('automations.builder.then', 'Then (actions)')}
+                  title={t('automations.builder.then', 'Then (Actions)')}
                   description={t(
                     'automations.builder.thenDesc',
                     'Actions are executed in order.',
@@ -966,7 +967,7 @@ export default function AutomationBuilderPage() {
           <AlertBanner
             variant="danger"
             icon={<AlertTriangle className="h-4 w-4" />}
-            title={t('automations.builder.saveError', 'Save error')}
+            title={t('automations.builder.saveError', 'Save Error')}
           >
             {saveError}
           </AlertBanner>
@@ -999,7 +1000,7 @@ export default function AutomationBuilderPage() {
                   className="min-h-11"
                 >
                   <PlayCircle className="mr-2 h-4 w-4" />
-                  {t('automations.builder.testRun', 'Test run')}
+                  {t('automations.builder.testRun', 'Test Run')}
                 </UiButton>
               )}
               <UiButton
@@ -1023,6 +1024,6 @@ export default function AutomationBuilderPage() {
         </FadeIn>
       </form>
       {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -112,7 +112,9 @@ export function ColdStartOpportunities({
                     </Text>
                     <Text as="p" variant="caption">
                       {t('coldStart.opportunities.gapValue', '{{gap}} preceding gap', {
-                        gap: formatDuration(opportunity.precedingGapS),
+                        gap: formatDuration(opportunity.precedingGapS, {
+                          precision: 1,
+                        }),
                       })}
                     </Text>
                   </div>
@@ -127,19 +129,23 @@ export function ColdStartOpportunities({
                   <div>
                     <MetricLabel>{t('coldStart.opportunities.distance', 'Distance')}</MetricLabel>
                     <Text as="p" variant="bodySm" mono className="mt-1">
-                      {formatDistance(opportunity.distanceM)}
+                      {formatDistance(opportunity.distanceM, { precision: 1 })}
                     </Text>
                   </div>
                   <div>
                     <MetricLabel>{t('coldStart.opportunities.temperature', 'Temperature')}</MetricLabel>
                     <Text as="p" variant="bodySm" mono className="mt-1">
-                      {formatTemperature(opportunity.outsideTempAvgC)}
+                      {formatTemperature(opportunity.outsideTempAvgC, {
+                        precision: 1,
+                      })}
                     </Text>
                   </div>
                   <div className="text-right">
                     <MetricLabel>{t('coldStart.opportunities.energy', 'Above baseline')}</MetricLabel>
                     <MetricValue className="mt-1 text-base">
-                      {formatEnergy(opportunity.estimatedAvoidableWh)}
+                      {formatEnergy(opportunity.estimatedAvoidableWh, {
+                        precision: 2,
+                      })}
                     </MetricValue>
                   </div>
                 </div>

@@ -3,14 +3,16 @@ package drivingcoach
 import (
 	"context"
 	"fmt"
-	"math"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 const (
-	coachingMinimumDistanceM = 804.672
+	driveStatsMetersPerMile = 1609.344
+	driveStatsMpsPerMph     = 0.44704
 
 	// coachingQueryTimeout bounds the analytics scan of the drives table.
 	// The pool already enforces a per-connection statement_timeout, but a
@@ -31,34 +33,33 @@ func newDBDriveCoachingRepo(db *database.DB) *dbDriveCoachingRepo {
 }
 
 // CoachingDrives returns the drives for one vehicle since the given instant,
-// newest first. The existing coaching contract uses km, km/h and kW.
-// Efficiency comparisons require positive recorded energy; missing energy is
-// never inferred from SOC or an assumed battery capacity.
+// newest first, with distance/speed/power projected from SI back to the legacy
+// display units (mi/mph/kW) the coaching math is calibrated against. The SI→
+// legacy conversion happens at the SQL boundary so the downstream thresholds
+// (expressed in mph/kW/mi/°C) remain untouched per the covenant. Drives shorter
+// than half a mile are excluded as noise.
 func (r *dbDriveCoachingRepo) CoachingDrives(ctx context.Context, vehicleID int64, since time.Time) ([]driveAnalysis, error) {
 	ctx, cancel := context.WithTimeout(ctx, coachingQueryTimeout)
 	defer cancel()
 
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, started_at,
-		       distance_m / 1000.0,
-		       max_speed_mps * 3.6,
-		       avg_speed_mps * 3.6,
-		       avg_power_w / 1000.0,
+		       distance_m / $3 AS distance_mi_calc,
+		       COALESCE(max_speed_mps, 0) / $4 AS max_speed_mph_calc,
+		       COALESCE(avg_speed_mps, 0) / $4 AS avg_speed_mph_calc,
+		       COALESCE(avg_power_w, 0) / 1000.0 AS avg_power_kw_calc,
 		       NULL::double precision,
-		       energy_used_wh / (distance_m / 1000.0),
-		       ambient_temp_c_avg
+		       COALESCE(start_soc_pct, 0)::float8,
+		       COALESCE(end_soc_pct, 0)::float8,
+		       COALESCE(ambient_temp_c_avg, 20)
 		FROM drives
 		WHERE vehicle_id = $1
 		  AND started_at >= $2
-		  AND ended_at IS NOT NULL
-		  AND distance_m > $3
-		  AND energy_used_wh > 0
-		  AND max_speed_mps IS NOT NULL
-		  AND avg_speed_mps IS NOT NULL
-		  AND avg_power_w IS NOT NULL
-		  AND ambient_temp_c_avg IS NOT NULL
+		  AND distance_m > $5
 		ORDER BY started_at DESC`,
-		vehicleID, since, coachingMinimumDistanceM)
+		vehicleID, since,
+		driveStatsMetersPerMile, driveStatsMpsPerMph,
+		0.5*driveStatsMetersPerMile)
 	if err != nil {
 		return nil, fmt.Errorf("query coaching drives for vehicle %d: %w", vehicleID, err)
 	}
@@ -70,13 +71,9 @@ func (r *dbDriveCoachingRepo) CoachingDrives(ctx context.Context, vehicleID int6
 		var powerMinPtr *float64
 		if err := rows.Scan(&d.id, &d.date, &d.distance,
 			&d.speedMax, &d.speedAvg, &d.powerMax, &powerMinPtr,
-			&d.efficiency, &d.outsideTemp); err != nil {
-			return nil, fmt.Errorf("scan coaching drive for vehicle %d: %w", vehicleID, err)
-		}
-		for _, value := range []float64{d.distance, d.speedMax, d.speedAvg, d.powerMax, d.outsideTemp, d.efficiency} {
-			if math.IsNaN(value) || math.IsInf(value, 0) {
-				return nil, fmt.Errorf("coaching drive %d has non-finite recorded measurements", d.id)
-			}
+			&d.socStart, &d.socEnd, &d.outsideTemp); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("driving-coach: scan error")
+			continue
 		}
 		if powerMinPtr != nil {
 			d.powerMin = *powerMinPtr

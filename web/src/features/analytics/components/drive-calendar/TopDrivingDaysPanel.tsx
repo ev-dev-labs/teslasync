@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { LayoutCard, SourceContent } from '@/components/layout';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import {
   Caption,
+  GlassPanel,
   MetricValue,
+  PanelTitle,
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -32,25 +33,29 @@ export function TopDrivingDaysPanel({
   const { formatDistance, unitPrefs } = useUnits();
 
   return (
-    <div className={cn('h-full', className)}>
-    <LayoutCard title={t('driveCalendar.topDays.title', 'Top driving days')}
-      description={t(
+    <GlassPanel className={cn('h-full p-4 sm:p-5', className)}>
+      <div className="mb-4">
+        <PanelTitle className="flex items-center gap-2">
+          <Trophy className="h-4 w-4 text-amber-300" aria-hidden="true" />
+          {t('driveCalendar.topDays.title', 'Top driving days')}
+        </PanelTitle>
+        <Caption className="mt-1 block">
+          {t(
             'driveCalendar.topDays.subtitle',
             'Highest-distance days in the selected period',
           )}
-    >
-      <SourceContent
-        state={error ? 'error' : isLoading ? 'loading' : days.length === 0 ? 'empty' : 'ready'}
-        label={t('driveCalendar.topDays.title', 'Top driving days')}
-        emptyMessage={t('driveCalendar.topDays.noData', 'No active driving days to rank yet.')}
-        errorMessage={t('error.loadFailed', 'Failed to load data')} error={error}
-        errorRecovery={{ onRetry }} loadingContent={(
+        </Caption>
+      </div>
+
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton key={index} height={52} />
           ))}
         </div>
-        )} emptyContent={(
+      ) : days.length === 0 ? (
         <EmptyState
           icon={<Trophy className="h-8 w-8" aria-hidden="true" />}
           message={t('driveCalendar.topDays.noData', 'No active driving days to rank yet.')}
@@ -59,8 +64,7 @@ export function TopDrivingDaysPanel({
             to: '/drives',
           }}
         />
-        )}
-      >
+      ) : (
         <ol className="space-y-2">
           {days.map((day, index) => (
             <li
@@ -76,7 +80,7 @@ export function TopDrivingDaysPanel({
                 </Text>
               </div>
               <div className="min-w-0 flex-1">
-                <Text weight="semibold" color="primary" className="block break-words">
+                <Text weight="semibold" color="primary" className="block truncate">
                   {formatDayKey(day.date, {
                     style: 'long',
                     locale: unitPrefs.locale,
@@ -89,13 +93,12 @@ export function TopDrivingDaysPanel({
                 </Caption>
               </div>
               <MetricValue className="shrink-0 text-lg">
-                {formatDistance(day.distanceM)}
+                {formatDistance(day.distanceM, { precision: 1 })}
               </MetricValue>
             </li>
           ))}
         </ol>
-      </SourceContent>
-    </LayoutCard>
-    </div>
+      )}
+    </GlassPanel>
   );
 }

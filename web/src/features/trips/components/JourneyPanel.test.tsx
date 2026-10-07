@@ -11,8 +11,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
-import { ToastProvider } from '@/components/feedback';
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -142,9 +140,7 @@ function renderPanel(vehicleId: number | null = 7) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ToastProvider>
-          <JourneyPanel vehicleId={vehicleId} />
-        </ToastProvider>
+        <JourneyPanel vehicleId={vehicleId} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -171,28 +167,6 @@ beforeEach(() => {
 });
 
 describe('JourneyPanel', () => {
-  it.each([
-    { status: 'planned', mounted: ['Leave now?'], absent: ['Live trip', 'Replan', 'Arrival', 'Trip report'] },
-    { status: 'active', mounted: ['Live trip', 'Replan', 'Arrival'], absent: ['Leave now?', 'Trip report'] },
-    { status: 'paused', mounted: ['Live trip', 'Replan', 'Arrival'], absent: ['Leave now?', 'Trip report'] },
-    { status: 'completed', mounted: ['Trip report'], absent: ['Leave now?', 'Live trip', 'Replan', 'Arrival'] },
-    { status: 'aborted', mounted: ['Trip report'], absent: ['Leave now?', 'Live trip', 'Replan', 'Arrival'] },
-  ])('preserves $status lifecycle presenters and both independent preparation panels', ({ status, mounted, absent }) => {
-    mockDetail.mockReturnValue(idle({
-      data: { ...detail, session: { ...detail.session, status }, next_statuses: [] },
-    }));
-    renderPanel();
-    for (const title of ['Score stops', 'When to leave', 'Ready to roll', ...mounted]) {
-      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
-    }
-    for (const title of absent) {
-      expect(screen.queryByRole('heading', { name: title })).not.toBeInTheDocument();
-    }
-    expect(mockDeparture).toHaveBeenCalledWith(1, expect.any(String), expect.any(String), { enabled: false });
-    expect(mockChecklist).toHaveBeenCalledWith(1);
-    expect(mockTransition.mock.results[0].value.mutate).not.toHaveBeenCalled();
-  });
-
   it('lists sessions with routes and statuses', () => {
     renderPanel();
     expect(mockList).toHaveBeenCalledWith(7, '');
@@ -217,7 +191,7 @@ describe('JourneyPanel', () => {
     const mutate = vi.fn();
     mockCreate.mockReturnValue({ mutate, isPending: false });
     renderPanel();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Plan journey' })[0]);
+    fireEvent.click(screen.getByText('Plan journey'));
     fireEvent.change(screen.getByLabelText(/Journey name/), {
       target: { value: 'Vegas weekend' },
     });
@@ -258,28 +232,6 @@ describe('JourneyPanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
-  });
-
-  it('keeps retained sessions, plan versions and server transitions during refresh failures', () => {
-    mockList.mockReturnValue(idle({ data: sessions, isError: true, error: new Error('list refresh failed') }));
-    mockDetail.mockReturnValue(idle({ data: detail, isError: true, error: new Error('detail refresh failed') }));
-    renderPanel();
-
-    expect(screen.getByText('Home → Tahoe')).toBeInTheDocument();
-    expect(screen.getByText(/v1 · initial/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Start' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Abort' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Pause' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-  });
-
-  it('surfaces an initial detail failure instead of the misleading selection-empty state', () => {
-    const refetch = vi.fn();
-    mockDetail.mockReturnValue(idle({ isError: true, error: new Error('detail failed'), refetch }));
-    renderPanel();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(refetch).toHaveBeenCalledOnce();
-    expect(screen.queryByText('Select a journey to manage its lifecycle and plans.')).not.toBeInTheDocument();
   });
 
   it('renders when Go sends null slices on a planned journey', () => {

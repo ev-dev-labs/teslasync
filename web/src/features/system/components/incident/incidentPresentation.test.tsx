@@ -215,10 +215,10 @@ describe('useIncidentStatusLabel — i18n status resolver', () => {
   it('resolves every known status to its translated label', () => {
     const { result } = renderHook(() => useIncidentStatusLabel())
     const label = result.current
-    expect(label('Investigating')).toBe('Investigating')
-    expect(label('Identified')).toBe('Identified')
-    expect(label('Monitoring')).toBe('Monitoring')
-    expect(label('Resolved')).toBe('Resolved')
+    expect(label('investigating')).toBe('Investigating')
+    expect(label('identified')).toBe('Identified')
+    expect(label('monitoring')).toBe('Monitoring')
+    expect(label('resolved')).toBe('Resolved')
   })
 
   it('falls back to the raw value for an unknown status (never renders blank)', () => {

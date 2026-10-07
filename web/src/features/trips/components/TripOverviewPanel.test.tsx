@@ -2,7 +2,7 @@
  * `<TripOverviewPanel>` — behaviour + hardening coverage.
  *
  * The panel is a self-sufficient presentational section: it owns a single
- * LayoutCard whose title ("Overview") is ALWAYS visible, and it selects one
+ * GlassPanel whose title ("Overview") is ALWAYS visible, and it selects one
  * of four bodies from the `{ trip, isLoading, isError, error, onRetry }`
  * contract — a skeleton (first load), a branched `<QueryError>` (failure), an
  * `<EmptyState>` (no record), or the metadata `<KVList>` (ready). Those four
@@ -19,7 +19,8 @@
  *
  * Covered facets:
  *   - INVARIANT: the "Overview" heading renders in every state (loading /
- *     error / empty / ready), and its accessible name is exactly "Overview".
+ *     error / empty / ready), and its accessible name excludes the decorative
+ *     icon (aria-hidden).
  *   - READY (complete trip): every KVList row maps correctly, timestamps carry
  *     the canonical ISO in their `title`, and the Notes row appears.
  *   - READY (in-progress + null-safety): "In progress" for a missing end date,
@@ -157,11 +158,13 @@ describe('TripOverviewPanel — panel shell invariant', () => {
     }
   });
 
-  it('exposes exactly "Overview" as the shared heading accessible name', () => {
+  it('keeps the decorative icon out of the heading accessible name', () => {
     renderPanel({ trip: makeTrip() });
     const heading = screen.getByRole('heading', { name: 'Overview' });
-    expect(heading).toHaveAccessibleName('Overview');
-    expect(heading).toHaveTextContent(/^Overview$/);
+    // The lucide <Info> icon is aria-hidden, so the title reads exactly
+    // "Overview" and the svg is not exposed to assistive tech.
+    expect(heading).toHaveTextContent('Overview');
+    expect(heading.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
   });
 });
 

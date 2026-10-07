@@ -1,8 +1,10 @@
+import { Activity, CalendarDays, Gauge, Route, Timer, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { ShareCardBrief } from '../operationalbrief-all/ShareCardBrief';
+import { Grid } from '@/components/layout';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -12,53 +14,77 @@ export function ShareCardEvidenceLedger({
   display,
 }: ShareCardSectionProps) {
   const { t } = useTranslation();
-  const hasReturnedData = state.enabled && state.hasData;
-  const supportingRows = (count: number) => hasReturnedData
-    ? t('shareCard.evidence.supportRows', '{{count}} supporting rows', { count })
-    : t('shareCard.states.pending', 'Source availability has not resolved yet.');
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'returned', rawValue: hasReturnedData ? analysis.returnedRows : null,
-      label: t('shareCard.evidence.returned', 'Returned rows'),
-      description: t('shareCard.evidence.returnedHint', 'Before runtime validation'),
-      display: { formatter: (raw) => ({ value: display.formatNumber(raw), unit: '' }) } },
-    { metricId: 'count', occurrenceId: 'eligible', rawValue: hasReturnedData ? analysis.eligibleRows : null,
-      label: t('shareCard.evidence.eligible', 'Eligible drives'),
-      description: t('shareCard.evidence.eligibleHint', 'Unique ID and in-window timestamp'),
-      display: { formatter: (raw) => ({ value: display.formatNumber(raw), unit: '' }) } },
-    { metricId: 'distance', occurrenceId: 'distance', rawValue: hasReturnedData ? analysis.aggregates.distanceM.value : null,
-      label: t('shareCard.evidence.distance', 'Measured distance'),
-      description: supportingRows(analysis.aggregates.distanceM.supportRows),
-      display: { formatter: (raw) => ({ value: display.formatDistance(raw), unit: '' }) } },
-    { metricId: 'duration', occurrenceId: 'duration', rawValue: hasReturnedData ? analysis.aggregates.durationS.value : null,
-      label: t('shareCard.evidence.duration', 'Measured duration'),
-      description: supportingRows(analysis.aggregates.durationS.supportRows),
-      display: { formatter: (raw) => ({ value: display.formatDuration(raw), unit: '' }) } },
-    { metricId: 'energy', occurrenceId: 'energy', rawValue: hasReturnedData ? analysis.aggregates.energyUsedWh.value : null,
-      label: t('shareCard.evidence.energy', 'Measured drive energy'),
-      description: supportingRows(analysis.aggregates.energyUsedWh.supportRows),
-      display: { formatter: (raw) => ({ value: display.formatEnergy(raw), unit: '' }) } },
-    { metricId: 'count', occurrenceId: 'activeDays', rawValue: hasReturnedData ? analysis.activeDays : null,
-      label: t('shareCard.evidence.activeDays', 'Active vehicle days'),
-      description: t('shareCard.evidence.requestedDays', '{{value}} requested calendar days', {
-        value: analysis.window.requestedCalendarDays ?? '—',
-      }),
-      display: { formatter: (raw) => ({ value: display.formatNumber(raw), unit: '' }) } },
-  ];
+  const hasReturnedData = state.hasData;
 
   return (
     <section
       data-testid="share-card-evidence-ledger"
-      aria-label={t('shareCard.evidence.aria', 'Share card KPI and evidence ledger')}
+      aria-label={t('shareCard.evidence.aria', 'Share Card KPI and evidence ledger')}
     >
-      <ShareCardBrief
-        analysis={analysis}
-        state={state}
-        display={display}
-        metrics={metrics}
-        title={t('shareCard.evidence.title', 'KPI and evidence ledger')}
-        description={t('shareCard.brief.description', 'Only returned, runtime-validated selected-window evidence supports these measurements; field coverage and the query cap remain explicit.')}
-      />
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Activity className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('shareCard.evidence.title', 'KPI and evidence ledger')}
+        </PanelTitle>
         <ShareCardSectionBody state={state} showCachedStatus>
+          <Grid cols={{ default: 1, sm: 2, xl: 6 }} gap={3}>
+            <MetricCard
+              label={t('shareCard.evidence.returned', 'Returned rows')}
+              value={hasReturnedData
+                ? display.formatNumber(analysis.returnedRows, 0)
+                : '—'}
+              subtitle={t('shareCard.evidence.returnedHint', 'Before runtime validation')}
+              icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+              color="blue"
+            />
+            <MetricCard
+              label={t('shareCard.evidence.eligible', 'Eligible drives')}
+              value={hasReturnedData
+                ? display.formatNumber(analysis.eligibleRows, 0)
+                : '—'}
+              subtitle={t('shareCard.evidence.eligibleHint', 'Unique ID and in-window timestamp')}
+              icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('shareCard.evidence.distance', 'Measured distance')}
+              value={display.formatDistance(analysis.aggregates.distanceM.value)}
+              subtitle={t('shareCard.evidence.supportRows', '{{count}} supporting rows', {
+                count: analysis.aggregates.distanceM.supportRows,
+              })}
+              icon={<Route className="h-5 w-5" aria-hidden="true" />}
+              color="green"
+            />
+            <MetricCard
+              label={t('shareCard.evidence.duration', 'Measured duration')}
+              value={display.formatDuration(analysis.aggregates.durationS.value)}
+              subtitle={t('shareCard.evidence.supportRows', '{{count}} supporting rows', {
+                count: analysis.aggregates.durationS.supportRows,
+              })}
+              icon={<Timer className="h-5 w-5" aria-hidden="true" />}
+              color="purple"
+            />
+            <MetricCard
+              label={t('shareCard.evidence.energy', 'Measured drive energy')}
+              value={display.formatEnergy(analysis.aggregates.energyUsedWh.value)}
+              subtitle={t('shareCard.evidence.supportRows', '{{count}} supporting rows', {
+                count: analysis.aggregates.energyUsedWh.supportRows,
+              })}
+              icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('shareCard.evidence.activeDays', 'Active vehicle days')}
+              value={hasReturnedData
+                ? display.formatNumber(analysis.activeDays, 0)
+                : '—'}
+              subtitle={t('shareCard.evidence.requestedDays', '{{value}} requested calendar days', {
+                value: analysis.window.requestedCalendarDays ?? '—',
+              })}
+              icon={<CalendarDays className="h-5 w-5" aria-hidden="true" />}
+              color="blue"
+            />
+          </Grid>
           {analysis.returnedRows === 0 ? (
             <AlertBanner className="mt-4" variant="info">
               {t(
@@ -75,6 +101,7 @@ export function ShareCardEvidenceLedger({
             </AlertBanner>
           ) : null}
         </ShareCardSectionBody>
+      </GlassPanel>
     </section>
   );
 }

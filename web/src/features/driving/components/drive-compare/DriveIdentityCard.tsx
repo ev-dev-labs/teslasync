@@ -32,16 +32,16 @@ export function DriveIdentityCard({ side, drive, state }: DriveIdentityCardProps
       ? t('driveCompare.identity.completed', 'Completed')
       : t('driveCompare.identity.statusUnknown', 'Status unavailable');
   const conditions = drive?.outsideTempAvgC != null
-    ? `${formatTemperature(drive.outsideTempAvgC)} · ${status}`
+    ? `${formatTemperature(drive.outsideTempAvgC, { precision: 0 })} · ${status}`
     : status;
   const facts = drive ? [
     {
       label: t('driveCompare.m.distance', 'Distance'),
-      value: formatDistance(drive.distanceM),
+      value: formatDistance(drive.distanceM, { precision: 1 }),
     },
     {
       label: t('driveCompare.m.duration', 'Duration'),
-      value: formatDuration(drive.durationS),
+      value: formatDuration(drive.durationS, { precision: 0 }),
     },
     { label: t('driveCompare.identity.battery', 'Battery'), value: battery },
     { label: t('driveCompare.identity.conditions', 'Conditions'), value: conditions },

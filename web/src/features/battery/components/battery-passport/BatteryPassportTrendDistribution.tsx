@@ -2,15 +2,14 @@ import { BarChart3, BetweenHorizontalStart, Sigma } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { MetricBar, MetricCard } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout';
-
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import type {
   BatteryPassportAnalysis,
   BatteryPassportDistributionBin,
 } from '../../lib/batteryPassportAnalysis';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type { BatteryPassportQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryPassportTrendDistributionProps {
   analysis: BatteryPassportAnalysis;
@@ -54,19 +53,28 @@ export function BatteryPassportTrendDistribution({
   analysis,
   state,
 }: BatteryPassportTrendDistributionProps) {
-  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const diagnostics = analysis.trend.diagnostics;
 
   return (
     <section data-testid="battery-passport-trend-distribution">
-      <LayoutCard title={t(
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <BarChart3
+            className="h-4 w-4 text-cyan-300"
+            aria-hidden="true"
+          />
+          {t(
             'batteryPassport.distribution.title',
             'Trend distribution and range bands',
-          )} description={t(
+          )}
+        </PanelTitle>
+        <Text as="p" variant="caption" className="mb-4">
+          {t(
             'batteryPassport.distribution.subtitle',
             'Counts and shares of included certificate points in fixed SoH bands; no normal distribution is assumed.',
-          )} actions={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )}
+        </Text>
         <BatteryPassportSectionBody state={state}>
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="space-y-3">
@@ -82,7 +90,7 @@ export function BatteryPassportTrendDistribution({
                         'batteryPassport.distribution.binValue',
                         '{{share}} · {{count}} points',
                         {
-                          share: fmtPercent(bin.share * 100),
+                          share: fmtPercent(bin.share * 100, 1),
                           count: bin.count,
                         },
                       )
@@ -97,7 +105,7 @@ export function BatteryPassportTrendDistribution({
                   'Observed minimum',
                 )}
                 value={diagnostics.minimumSohPct != null
-                  ? fmtPercent(diagnostics.minimumSohPct)
+                  ? fmtPercent(diagnostics.minimumSohPct, 1)
                   : '—'}
                 subtitle={t(
                   'batteryPassport.distribution.includedOnly',
@@ -112,7 +120,7 @@ export function BatteryPassportTrendDistribution({
                   'Observed maximum',
                 )}
                 value={diagnostics.maximumSohPct != null
-                  ? fmtPercent(diagnostics.maximumSohPct)
+                  ? fmtPercent(diagnostics.maximumSohPct, 1)
                   : '—'}
                 subtitle={t(
                   'batteryPassport.distribution.includedOnly',
@@ -133,6 +141,7 @@ export function BatteryPassportTrendDistribution({
                       {
                         value: fmtNumber(
                           diagnostics.rangePctPoints,
+                          2,
                         ),
                       },
                     )
@@ -157,6 +166,7 @@ export function BatteryPassportTrendDistribution({
                         {
                           value: fmtNumber(
                             diagnostics.interquartileRangePctPoints,
+                            2,
                           ),
                         },
                       )
@@ -172,7 +182,7 @@ export function BatteryPassportTrendDistribution({
             </div>
           </div>
         </BatteryPassportSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

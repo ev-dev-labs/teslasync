@@ -1,20 +1,17 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigation, MapPin, Clock, Zap, Route } from 'lucide-react';
-import { Badge, Caption, Subhead, Text } from '@/components/ui';
+import { Badge } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useTrips } from '@/api/hooks/useTrips';
-import { knownNumber } from '@/api/dataState';
-import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationRange } from '@/lib/dateFormat';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid } from './shared';
 import type { WidgetProps } from './types';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Resolve a human-readable trip label. A trip can arrive with a `null`,
@@ -27,15 +24,13 @@ function tripName(name: string | null | undefined, fallback: string): string {
 }
 
 export default function TripSummaryWidget({ size }: WidgetProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const { formatDateShort: formatDate } = useDateFormat();
 
-  const query = useTrips({ limit: 5 });
-  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
-  const trust = useDataState({ ...query, data: data ?? undefined }, { provenance: 'historical' });
+  const { data, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } =
+    useTrips({ limit: 5 });
 
   const trips = useMemo(() => data ?? [], [data]);
   const lastTrip = trips[0] ?? null;
@@ -43,18 +38,15 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  const displayDist = (meters: number | null | undefined) => {
-    const value = knownNumber(meters);
-    return value == null ? '—' : `${fmtNumber(convertDistanceFromSI(value, distanceUnit))} ${distanceUnit}`;
-  };
-  const count = (value: unknown) => knownNumber(value) == null ? '—' : fmtInt(knownNumber(value));
+  const displayDist = (meters: number | null | undefined) =>
+    convertDistanceFromSI(meters ?? 0, distanceUnit);
 
   return (
     <WidgetShell
-      title={t('widget.tripSummary', 'Trip summary')}
+      title={t('widget.tripSummary', 'Trip Summary')}
       icon={<Navigation className="h-3.5 w-3.5 text-neon-cyan" />}
       loading={isLoading}
-      dataState={data != null || isLoading || isError || error ? trust : undefined}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -67,70 +59,86 @@ export default function TripSummaryWidget({ size }: WidgetProps) {
           message={t('widget.noTrips', 'No trips recorded yet')}
         />
       ) : (
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-col gap-3 h-full">
           {/* Last trip summary */}
           {lastTrip && (
-            <div className="min-w-0 space-y-2">
+            <div className="rounded-lg bg-white/[0.03] p-3">
               <div className="flex items-center gap-1.5 mb-2">
                 <Badge className="text-2xs">
-                  {t('widget.lastTrip', 'Last trip')}
+                  {t('widget.lastTrip', 'Last Trip')}
                 </Badge>
-                <Caption>
+                <span className="text-2xs text-[var(--text-muted)]">
                   {formatDate(lastTrip.start_date)}
-                </Caption>
+                </span>
               </div>
 
               {/* Start → End */}
-              <Text as="p" variant="bodySm" className="font-semibold [overflow-wrap:anywhere]">
+              <p className="text-xs text-[var(--text-secondary)] truncate mb-2">
                 {tripName(lastTrip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
-              </Text>
+              </p>
 
               {/* Stats grid */}
-              <WidgetStatGrid cols={isCompact ? 2 : 4} stats={[
-                { label: t('widget.distance', 'Distance'), value: displayDist(lastTrip.total_distance_m), icon: <MapPin className="h-3 w-3" /> },
-                { label: t('widget.duration', 'Duration'), value: formatDurationRange(lastTrip.start_date, lastTrip.end_date), icon: <Clock className="h-3 w-3" /> },
-                { label: t('widget.drives', 'Drives'), value: count(lastTrip.drive_count), icon: <Route className="h-3 w-3" /> },
-                { label: t('widget.chargeStops', 'Charge stops'), value: count(lastTrip.charge_count), icon: <Zap className="h-3 w-3" /> },
-              ]} />
+              <div className={isCompact ? 'grid grid-cols-2 gap-2' : 'grid grid-cols-4 gap-2'}>
+                <StatCard
+                  label={t('widget.distance', 'Distance')}
+                  value={`${fmtNumber(displayDist(lastTrip.total_distance_m), 1)} ${distanceUnit}`}
+                  icon={<MapPin className="h-3 w-3" />}
+                />
+                <StatCard
+                  label={t('widget.duration', 'Duration')}
+                  value={formatDurationRange(lastTrip.start_date, lastTrip.end_date)}
+                  icon={<Clock className="h-3 w-3" />}
+                />
+                <StatCard
+                  label={t('widget.drives', 'Drives')}
+                  value={fmtInt(lastTrip.drive_count ?? 0)}
+                  icon={<Route className="h-3 w-3" />}
+                />
+                <StatCard
+                  label={t('widget.chargeStops', 'Charge Stops')}
+                  value={fmtInt(lastTrip.charge_count ?? 0)}
+                  icon={<Zap className="h-3 w-3" />}
+                />
+              </div>
             </div>
           )}
 
           {/* Recent trips list */}
           {recentTrips.length > 1 && (
-            <div className="min-w-0 space-y-1.5">
-              <Subhead>
-                {t('widget.recentTrips', 'Recent trips')}
-              </Subhead>
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5">
+              <h4 className="text-2xs font-medium text-[var(--text-muted)] uppercase tracking-wider">
+                {t('widget.recentTrips', 'Recent Trips')}
+              </h4>
               {recentTrips.slice(1).map((trip) => (
                 <div
                   key={trip.id}
-                  className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--border-subtle)] py-2"
+                  className="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] hover:bg-white/[0.04] transition-colors min-h-[44px]"
                 >
                   <div className="flex-1 min-w-0">
-                    <Text as="p" variant="bodySm" className="[overflow-wrap:anywhere]">
+                    <p className="text-xs text-[var(--text-secondary)] truncate">
                       {tripName(trip.name, t('widget.tripUnnamed', 'Unnamed trip'))}
-                    </Text>
-                    <Caption className="block">
+                    </p>
+                    <p className="text-2xs text-[var(--text-muted)]">
                       {formatDate(trip.start_date)}
-                    </Caption>
+                    </p>
                   </div>
                   {!isCompact && (
-                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
-                      <Text variant="bodySm" className="tabular-nums">
-                        {displayDist(trip.total_distance_m)}
-                      </Text>
-                      <Caption className="tabular-nums">
+                    <div className="flex items-center gap-3 flex-shrink-0 ml-2">
+                      <span className="text-xs text-[var(--text-secondary)] tabular-nums">
+                        {fmtNumber(displayDist(trip.total_distance_m), 1)} {distanceUnit}
+                      </span>
+                      <span className="text-2xs text-[var(--text-muted)] tabular-nums">
                         {formatDurationRange(trip.start_date, trip.end_date)}
-                      </Caption>
+                      </span>
                       <Badge className="text-2xs">
-                        {count(trip.drive_count)} {t('widget.drivesShort', 'drv')}
+                        {fmtInt(trip.drive_count ?? 0)} {t('widget.drivesShort', 'drv')}
                       </Badge>
                     </div>
                   )}
                   {isCompact && (
-                    <Text variant="bodySm" className="tabular-nums min-w-0 ms-2">
-                      {displayDist(trip.total_distance_m)}
-                    </Text>
+                    <span className="text-xs text-[var(--text-secondary)] tabular-nums flex-shrink-0 ml-2">
+                      {fmtNumber(displayDist(trip.total_distance_m), 1)} {distanceUnit}
+                    </span>
                   )}
                 </div>
               ))}

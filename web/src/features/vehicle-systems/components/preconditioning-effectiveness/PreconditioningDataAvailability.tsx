@@ -1,17 +1,21 @@
-import { DatabaseZap } from 'lucide-react';
+import { ClipboardCheck, DatabaseZap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { Badge, MetricLabel, Text } from '@/components/ui';
-
+import { Grid } from '@/components/layout';
+import {
+  Badge,
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
+import { fmtInt } from '@/lib/numberFormat';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type {
   PreconditioningQueryState,
   PreconditioningSourceQueryState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 
 interface PreconditioningDataAvailabilityProps {
   summary: PreconditioningSummary;
@@ -22,14 +26,13 @@ interface AvailabilityItem {
   key: string;
   label: string;
   available: boolean;
-  support: number | string;
+  support: string;
 }
 
 export function PreconditioningDataAvailability({
   summary,
   state,
 }: PreconditioningDataAvailabilityProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const result = (
     label: string,
@@ -68,55 +71,55 @@ export function PreconditioningDataAvailability({
       key: 'climate',
       label: t('preconditioningEffectiveness.availability.climateRows', 'Climate endpoint rows'),
       available: summary.climateRows.returnedRows > 0,
-      support: summary.climateRows.returnedRows,
+      support: fmtInt(summary.climateRows.returnedRows),
     },
     {
       key: 'drives',
       label: t('preconditioningEffectiveness.availability.driveRows', 'Drive endpoint rows'),
       available: summary.driveRows.returnedRows > 0,
-      support: summary.driveRows.returnedRows,
+      support: fmtInt(summary.driveRows.returnedRows),
     },
     {
       key: 'timestamps',
       label: t('preconditioningEffectiveness.availability.timeline', 'Unique climate timeline'),
       available: summary.climateRows.uniqueTimestampRows > 0,
-      support: summary.climateRows.uniqueTimestampRows,
+      support: fmtInt(summary.climateRows.uniqueTimestampRows),
     },
     {
       key: 'overlap',
       label: t('preconditioningEffectiveness.availability.overlap', 'Temporal window overlap'),
       available: summary.coverage.overlappingDriveWindows > 0,
-      support: summary.coverage.overlappingDriveWindows,
+      support: fmtInt(summary.coverage.overlappingDriveWindows),
     },
     {
       key: 'window',
       label: t('preconditioningEffectiveness.availability.windowRows', 'Pre-drive window rows'),
       available: summary.windowSupport.departuresWithWindowRows > 0,
-      support: summary.windowSupport.departuresWithWindowRows,
+      support: fmtInt(summary.windowSupport.departuresWithWindowRows),
     },
     {
       key: 'thermal',
       label: t('preconditioningEffectiveness.availability.thermal', 'Distinct-state join support'),
       available: summary.windowSupport.departuresWithThermalSupport > 0,
-      support: summary.windowSupport.departuresWithThermalSupport,
+      support: fmtInt(summary.windowSupport.departuresWithThermalSupport),
     },
     {
       key: 'classified',
       label: t('preconditioningEffectiveness.availability.classified', 'Classified departures'),
       available: summary.joinedDepartures > 0,
-      support: summary.joinedDepartures,
+      support: fmtInt(summary.joinedDepartures),
     },
     {
       key: 'active',
       label: t('preconditioningEffectiveness.availability.active', 'Observed HVAC-active group'),
       available: summary.conditionedDepartures > 0,
-      support: summary.conditionedDepartures,
+      support: fmtInt(summary.conditionedDepartures),
     },
     {
       key: 'control',
       label: t('preconditioningEffectiveness.availability.control', 'Explicitly HVAC-off control group'),
       available: summary.unconditionedDepartures > 0,
-      support: summary.unconditionedDepartures,
+      support: fmtInt(summary.unconditionedDepartures),
     },
     {
       key: 'comparison',
@@ -130,7 +133,14 @@ export function PreconditioningDataAvailability({
 
   return (
     <section data-testid="preconditioning-availability">
-      <LayoutCard title={t('preconditioningEffectiveness.availability.title', 'Data availability and query state')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <ClipboardCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t(
+            'preconditioningEffectiveness.availability.title',
+            'Data availability and query state',
+          )}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.availability.subtitle',
@@ -156,21 +166,26 @@ export function PreconditioningDataAvailability({
           state={state}
           className="mt-3"
         >
-          <VehicleOperationalBrief embedded id="preconditioning-availability-summary"
-            title={t('preconditioningEffectiveness.availability.title', 'Data availability and query state')}
-            retained={Boolean(state.climate.refreshError) || Boolean(state.drives.refreshError)}
-            period={{ kind: 'unknown', label: t('preconditioningEffectiveness.coverage.title', 'Source and temporal coverage'),
-              reason: t('preconditioningEffectiveness.availability.subtitle', 'Query transport state is separate from analytical availability, and cached evidence remains visible after a refresh failure.') }}
-            metrics={items.map(item => ({
-              metricId: typeof item.support === 'number' ? 'count' as const : 'status' as const,
-              occurrenceId: item.key, label: item.label, rawValue: item.support,
-              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
-              context: <Badge variant={item.available ? 'success' : 'neutral'}>
-                {item.available ? t('preconditioningEffectiveness.availability.available', 'Available')
-                  : t('preconditioningEffectiveness.availability.withheld', 'Withheld')}
-              </Badge>,
-            }))}
-          />
+          <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3}>
+            {items.map((item) => (
+              <div
+                key={item.key}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <MetricLabel>{item.label}</MetricLabel>
+                  <Badge variant={item.available ? 'success' : 'neutral'}>
+                    {item.available
+                      ? t('preconditioningEffectiveness.availability.available', 'Available')
+                      : t('preconditioningEffectiveness.availability.withheld', 'Withheld')}
+                  </Badge>
+                </div>
+                <Text as="p" variant="caption" className="mt-2">
+                  {item.support}
+                </Text>
+              </div>
+            ))}
+          </Grid>
           <div className="mt-4 flex items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-3">
             <DatabaseZap className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
             <Text as="p" variant="caption">
@@ -181,7 +196,7 @@ export function PreconditioningDataAvailability({
             </Text>
           </div>
         </PreconditioningSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

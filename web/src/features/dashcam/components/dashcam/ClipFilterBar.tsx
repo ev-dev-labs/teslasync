@@ -4,7 +4,6 @@ import { useActiveFilterChips, type ChipConfigRecord } from '@/hooks/useActiveFi
 import type { ClipRecord } from '../../lib/types';
 import type { ClipFilterState } from '../../lib/clipFilter';
 import { buildCameraPills, buildEventTypePills, buildSourcePills } from './helpers';
-import { CAMERA_LABELS, EVENT_TYPE_LABELS, SOURCE_LABELS } from './constants';
 
 export interface ClipFilterBarProps {
   clips: ClipRecord[];
@@ -17,21 +16,14 @@ export function ClipFilterBar({ clips, filters, onChange }: ClipFilterBarProps) 
   const { t } = useTranslation();
   const allLabel = t('dashcam.filters.all', 'All');
 
-  const cameraPills = buildCameraPills(clips, allLabel).map((item) => ({
-    ...item, label: item.key === 'all' ? allLabel : t(`dashcam.camera.${item.key}`, item.label),
-  }));
-  const sourcePills = buildSourcePills(clips, allLabel).map((item) => ({
-    ...item, label: item.key === 'all' ? allLabel : t(`dashcam.source.${item.key}`, item.label),
-  }));
-  const eventTypePills = buildEventTypePills(clips, allLabel).map((item) => ({
-    ...item, label: item.key === 'all' ? allLabel : t(`dashcam.events.type.${item.key}`, item.label),
-  }));
+  const cameraPills = buildCameraPills(clips, allLabel);
+  const sourcePills = buildSourcePills(clips, allLabel);
+  const eventTypePills = buildEventTypePills(clips, allLabel);
 
   const pillLabel = (
     items: ReadonlyArray<{ key: string; label: string }>,
     key: string,
-    fallback: string,
-  ): string => items.find((item) => item.key === key)?.label ?? fallback;
+  ): string => items.find((item) => item.key === key)?.label ?? key;
 
   // `'all'` is this page's "no filter applied" sentinel rather than an empty
   // string, so every facet needs an explicit isEmpty override.
@@ -42,19 +34,19 @@ export function ClipFilterBar({ clips, filters, onChange }: ClipFilterBarProps) 
     },
     camera: {
       label: t('dashcam.filters.camera', 'Camera'),
-      format: (value) => pillLabel(cameraPills, String(value), filters.camera === 'all' ? allLabel : t(`dashcam.camera.${filters.camera}`, CAMERA_LABELS[filters.camera])),
+      format: (value) => pillLabel(cameraPills, String(value)),
       isEmpty: (value) => value === 'all',
       setter: () => onChange({ ...filters, camera: 'all' }),
     },
     source: {
       label: t('dashcam.filters.source', 'Source folder'),
-      format: (value) => pillLabel(sourcePills, String(value), filters.source === 'all' ? allLabel : t(`dashcam.source.${filters.source}`, SOURCE_LABELS[filters.source])),
+      format: (value) => pillLabel(sourcePills, String(value)),
       isEmpty: (value) => value === 'all',
       setter: () => onChange({ ...filters, source: 'all' }),
     },
     eventType: {
       label: t('dashcam.filters.eventType', 'Event type'),
-      format: (value) => pillLabel(eventTypePills, String(value), filters.eventType === 'all' ? allLabel : t(`dashcam.events.type.${filters.eventType}`, EVENT_TYPE_LABELS[filters.eventType])),
+      format: (value) => pillLabel(eventTypePills, String(value)),
       isEmpty: (value) => value === 'all',
       setter: () => onChange({ ...filters, eventType: 'all' }),
     },
@@ -73,27 +65,18 @@ export function ClipFilterBar({ clips, filters, onChange }: ClipFilterBarProps) 
         />
         <div className="space-y-2">
           <PillFilterBar
-            semanticMode="filters"
-            scrollable={false}
-            className="flex-wrap"
             ariaLabel={t('dashcam.filters.camera', 'Camera')}
             items={cameraPills}
             activeKey={filters.camera}
             onChange={(key) => onChange({ ...filters, camera: key as ClipFilterState['camera'] })}
           />
           <PillFilterBar
-            semanticMode="filters"
-            scrollable={false}
-            className="flex-wrap"
             ariaLabel={t('dashcam.filters.source', 'Source folder')}
             items={sourcePills}
             activeKey={filters.source}
             onChange={(key) => onChange({ ...filters, source: key as ClipFilterState['source'] })}
           />
           <PillFilterBar
-            semanticMode="filters"
-            scrollable={false}
-            className="flex-wrap"
             ariaLabel={t('dashcam.filters.eventType', 'Event type')}
             items={eventTypePills}
             activeKey={filters.eventType}

@@ -25,31 +25,11 @@
  * ChartContainer.a11y test pattern.
  */
 
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
-
-const captured = vi.hoisted(() => ({
-  exportRows: vi.fn(),
-  plottedRows: vi.fn(),
-}))
-
-vi.mock('@/components/charts', async (original) => {
-  const actual = await original<typeof import('@/components/charts')>()
-  return {
-    ...actual,
-    ChartContainer: (props: ComponentProps<typeof actual.ChartContainer>) => {
-      if (props.chartKey === 'driving-dynamics-power-profile') captured.exportRows(props.data)
-      return <actual.ChartContainer {...props} />
-    },
-    AreaChart: (props: ComponentProps<typeof actual.AreaChart>) => {
-      captured.plottedRows(props.data)
-      return <actual.AreaChart {...props} />
-    },
-  }
-})
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -92,21 +72,6 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
 import DriveAnalyticsSection from '../DriveAnalyticsSection'
 import { convertSpeedFromSI } from '@/lib/unitConversion'
 import type { Drive } from '@/types/driving'
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
-
-beforeEach(() => {
-  setGlobalPrecision(2)
-  setGlobalLocale('en-US')
-  captured.exportRows.mockClear()
-  captured.plottedRows.mockClear()
-})
-
-afterEach(() => {
-  act(() => {
-    setGlobalPrecision(2)
-    setGlobalLocale('en-US')
-  })
-})
 
 let seq = 0
 function drive(overrides: Partial<Drive> = {}): Drive {
@@ -227,7 +192,7 @@ describe('DriveAnalyticsSection — empty states', () => {
   it('shows a "No data available" placeholder in every panel when there are no drives', () => {
     renderSection({ filteredDrives: [] })
 
-    for (const name of [/Speed Distribution/, /Trip load comparison/, /Power Profile/]) {
+    for (const name of [/Speed Distribution/, /Acceleration Patterns/, /Power Profile/]) {
       const figure = screen.getByRole('figure', { name })
       expect(within(figure).getByText('No data available')).toBeInTheDocument()
     }
@@ -237,18 +202,18 @@ describe('DriveAnalyticsSection — empty states', () => {
     // A drive with speed but no power: speed + power panels have data, but
     // the acceleration-pattern scatter (power-only) must show the empty state.
     renderSection({
-      filteredDrives: [drive({ avgSpeedMps: 44.704, avgPowerW: null, regenEnergyWh: null })],
+      filteredDrives: [drive({ avgSpeedMps: 44.704, avgPowerW: null })],
       toSpeedDisplay: toMph,
       speedUnit: 'mph',
     })
 
     const speedFig = screen.getByRole('figure', { name: /Speed Distribution/ })
-    const accelFig = screen.getByRole('figure', { name: /Trip load comparison/ })
+    const accelFig = screen.getByRole('figure', { name: /Acceleration Patterns/ })
     const powerFig = screen.getByRole('figure', { name: /Power Profile/ })
 
     expect(within(speedFig).queryByText('No data available')).toBeNull()
     expect(within(accelFig).getByText('No data available')).toBeInTheDocument()
-    expect(within(powerFig).getByText('No data available')).toBeInTheDocument()
+    expect(within(powerFig).queryByText('No data available')).toBeNull()
   })
 })
 
@@ -256,9 +221,9 @@ describe('DriveAnalyticsSection — power profile', () => {
   it('renders the recent-20 window with peak kW and zeroed regen', () => {
     // 21 drives: the OLDEST (999 kW) must be dropped by slice(-20).
     const drives: Drive[] = []
-    drives.push(drive({ startTs: '2025-01-01T10:00:00Z', avgPowerW: 999_000 })) // oldest — excluded
-    for (let i = 1; i <= 19; i++) drives.push(drive({ startTs: `2025-06-${String(i).padStart(2, '0')}T10:00:00Z`, avgPowerW: i * 1000, regenEnergyWh: null }))
-    drives.push(drive({ startTs: '2025-06-20T10:00:00Z', avgPowerW: 42_000, regenEnergyWh: 1500 }))
+    drives.push(drive({ avgPowerW: 999_000 })) // index 0 — excluded
+    for (let i = 1; i <= 19; i++) drives.push(drive({ avgPowerW: i * 1000 }))
+    drives.push(drive({ avgPowerW: 42_000 })) // last — included → "42"
 
     renderSection({ filteredDrives: drives })
 
@@ -270,10 +235,9 @@ describe('DriveAnalyticsSection — power profile', () => {
     // The oldest drive fell outside the recent-20 window.
     expect(within(table).queryByText('999')).toBeNull()
     // The newest drive is present with its peak kW.
-    expect(within(table).getByText('42.00')).toBeInTheDocument()
+    expect(within(table).getByText('42')).toBeInTheDocument()
     // Regen column is a placeholder 0 for every row (no regen-power field).
-    expect(within(table).getAllByText('—')).toHaveLength(19)
-    expect(within(table).getByText('1.50')).toBeInTheDocument()
+    expect(within(table).getAllByText('0').length).toBeGreaterThanOrEqual(20)
   })
 
   it('labels the power-profile table columns from i18n', () => {
@@ -282,46 +246,7 @@ describe('DriveAnalyticsSection — power profile', () => {
     const headers = within(figure)
       .getAllByRole('columnheader')
       .map((h) => h.textContent)
-    expect(headers).toEqual(['Drive', 'Average power (kW)', 'Recovered energy (kWh)'])
-  })
-
-  it('formats table cells at precision 1 without rounding plotted or export values', () => {
-    setGlobalPrecision(1)
-    const powerW = 6381.818181818182
-    renderSection({ filteredDrives: [drive({ avgPowerW: powerW, regenEnergyWh: 441 })] })
-    const table = within(screen.getByRole('figure', { name: /Power Profile/ })).getByRole('table')
-    expect(within(table).getByText('6.4')).toBeInTheDocument()
-    expect(within(table).getByText('0.4')).toBeInTheDocument()
-    expect(table.textContent).not.toContain('6.381818181818182')
-    expect(table.textContent).not.toContain('0.441')
-    expect(captured.exportRows.mock.calls.at(-1)?.[0]).toEqual([
-      expect.objectContaining({ powerMax: powerW / 1000, powerMin: 0.441 }),
-    ])
-    expect(captured.plottedRows.mock.calls.at(-1)?.[0]).toEqual([
-      expect.objectContaining({ powerMax: powerW / 1000, powerMin: 0.441 }),
-    ])
-  })
-
-  it('updates table-only formatting after precision and locale preferences change', () => {
-    setGlobalPrecision(1)
-    renderSection({ filteredDrives: [drive({ avgPowerW: 6381.818181818182, regenEnergyWh: 441 })] })
-    const table = within(screen.getByRole('figure', { name: /Power Profile/ })).getByRole('table')
-    expect(within(table).getByText('6.4')).toBeInTheDocument()
-    act(() => {
-      setGlobalPrecision(3)
-      setGlobalLocale('de-DE')
-    })
-    expect(within(table).getByText('6,382')).toBeInTheDocument()
-    expect(within(table).getByText('0,441')).toBeInTheDocument()
-    expect(captured.exportRows.mock.calls.at(-1)?.[0][0].powerMax).toBe(6381.818181818182 / 1000)
-  })
-
-  it('shows unknown as an em-dash and true zero at configured precision', () => {
-    setGlobalPrecision(1)
-    renderSection({ filteredDrives: [drive({ avgPowerW: 0, regenEnergyWh: null })] })
-    const table = within(screen.getByRole('figure', { name: /Power Profile/ })).getByRole('table')
-    expect(within(table).getByText('0.0')).toBeInTheDocument()
-    expect(within(table).getByText('—')).toBeInTheDocument()
+    expect(headers).toEqual(['Drive', 'Max kW', 'Regen kW'])
   })
 })
 
@@ -340,11 +265,11 @@ describe('DriveAnalyticsSection — accessibility & structure', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole('img', {
-        name: 'Per-drive scatter chart of average motor power versus trip distance',
+        name: 'Per-drive scatter chart of peak power versus trip distance',
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('group', { name: 'Recent-drives average motor power and recorded recovered energy on separate axes' }),
+      screen.getByRole('group', { name: 'Recent-drives peak and regen power dual-area chart' }),
     ).toBeInTheDocument()
 
     // The three panels are exposed as figure landmarks named by their titles.

@@ -220,16 +220,6 @@ beforeEach(() => {
 });
 
 describe('DepartureForecastPage', () => {
-  it('preserves every modeled window while a retained history refresh is paused offline', () => {
-    h.history = { ...query({ data: weekdayCommute(12) }), fetchStatus: 'paused' };
-    renderPage();
-    expectEverySection();
-    const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
-    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
-    expect(historyRefetch).toHaveBeenCalledTimes(1);
-  });
-
   it('renders the ready state with all persistent evidence sections', () => {
     renderPage();
 

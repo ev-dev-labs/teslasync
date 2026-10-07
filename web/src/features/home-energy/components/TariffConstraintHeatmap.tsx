@@ -1,7 +1,6 @@
 import { Fragment, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Caption } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
 import { formatTime } from '@/lib/dateFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
@@ -61,7 +60,7 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
       key: 'tariff',
       label: t('homeEnergy.heatmap.tariff', 'Import tariff'),
       ratio: (s) => s.importPricePerKwh / maxImportPrice,
-      format: (s) => `${formatCurrency(s.importPricePerKwh)}/kWh`,
+      format: (s) => `${formatCurrency(s.importPricePerKwh, 2)}/kWh`,
     },
     {
       key: 'gridImport',
@@ -94,7 +93,8 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
   ];
 
   return (
-    <LayoutCard title={t('homeEnergy.heatmap.title', 'Tariff & constraint heatmap')}>
+    <GlassPanel className="p-4 sm:p-5">
+      <PanelTitle className="mb-3">{t('homeEnergy.heatmap.title', 'Tariff & Constraint Heatmap')}</PanelTitle>
       {slots.length === 0 ? (
         <Caption>{t('homeEnergy.heatmap.empty', 'No plan slots to display yet.')}</Caption>
       ) : (
@@ -127,6 +127,6 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
         ))}
         <Caption>{t('homeEnergy.heatmap.more', 'More')}</Caption>
       </div>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

@@ -183,11 +183,6 @@ if (!window.matchMedia) {
 
 import { SocChart } from './SocChart';
 
-vi.mock('@/components/layout', async () => {
-  const charts = await import('@/components/charts');
-  return { ChartCard: charts.ChartContainer };
-});
-
 // Minimal per-sample fixture — SocChart only reads `time` (X) and `battery`
 // (the SOC series); the remaining ChartDataPoint fields are irrelevant here.
 function point(overrides: Partial<ChartDataPoint> = {}): ChartDataPoint {
@@ -233,13 +228,13 @@ describe('SocChart — ready state', () => {
   it('renders the titled, labelled chart figure at the fixed 220px drive-detail height', () => {
     render(<SocChart chartData={twoSamples()} />);
 
-    expect(screen.getByRole('heading', { name: 'SOC % over time' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'SOC % Over Time' })).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'State of charge percent over time area chart' }),
     ).toBeInTheDocument();
     const container = screen.getByTestId('chart-container');
     expect(container).toHaveAttribute('data-height', '220');
-    expect(container.parentElement).toHaveClass('h-full');
+    expect(container).toHaveClass('h-full');
   });
 
   it('feeds every sample to the area chart and wires the SOC series to the battery field', () => {

@@ -14,10 +14,9 @@ import { GlassPanel } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import { Skeleton, QueryError } from '@/components/feedback';
 import { type NeonColor } from '@/lib/tokens';
-
+import { fmtNumber, fmtInt, formatBytes } from '@/lib/numberFormat';
 import { avgRowsPerVehicle, type SectionState } from './helpers';
 import type { VehicleCostTotals } from '@/types/admin-operator-confidence';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FleetCostKpisProps extends SectionState {
   totals: VehicleCostTotals | undefined;
@@ -44,7 +43,6 @@ export function FleetCostKpis({
   error,
   onRetry,
 }: FleetCostKpisProps) {
-  const { fmtInt, formatBytes, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Backend totals are operational counters (counts / bytes / rates); coerce
@@ -80,7 +78,7 @@ export function FleetCostKpis({
       {
         key: 'rate',
         label: t('admin.vehicleCost.totalRate', 'Rate (rows/min, 24h)'),
-        value: fmtNumber(rate),
+        value: fmtNumber(rate, 1),
         icon: <Gauge className="h-5 w-5" />,
         color: 'green',
         subtitle: t('admin.vehicleCost.rateSub', 'Across all vehicles'),
@@ -110,7 +108,7 @@ export function FleetCostKpis({
         subtitle: t('admin.vehicleCost.avgSub', 'Fleet baseline'),
       },
     ],
-    [t, rows, bytes, rate, failures, vehicleCount, windowDays, fmtInt, formatBytes, fmtNumber],
+    [t, rows, bytes, rate, failures, vehicleCount, windowDays],
   );
 
   if (error) {

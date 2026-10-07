@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ComposedChart,
@@ -15,7 +16,6 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -66,9 +66,7 @@ export function ShareCardMonthlyTrend({
       data-testid="share-card-monthly-trend"
       aria-label={t('shareCard.monthly.sectionAria', 'Selected-window monthly trend section')}
     >
-      <ChartCard
-        size="standard"
-        toolbar
+      <ChartContainer
         title={t('shareCard.monthly.title', 'Monthly distance, energy, and count trend')}
         subtitle={t(
           analysis.historyCapReached
@@ -127,7 +125,7 @@ export function ShareCardMonthlyTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value)}
+                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -136,7 +134,7 @@ export function ShareCardMonthlyTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value)}
+                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
                   />
                   <YAxis yAxisId="count" hide />
                   <Tooltip
@@ -144,14 +142,14 @@ export function ShareCardMonthlyTrend({
                       <ChartTooltip
                         valueFormatter={(value, name) =>
                           name === countSeries
-                            ? display.formatNumber(Number(value))
+                            ? display.formatNumber(Number(value), 0)
                             : name === energySeries
                               ? t('shareCard.units.energyDisplay', '{{value}} {{unit}}', {
-                                value: display.formatNumber(Number(value)),
+                                value: display.formatNumber(Number(value), 1),
                                 unit: display.energyUnit,
                               })
                               : t('shareCard.units.distanceDisplay', '{{value}} {{unit}}', {
-                                value: display.formatNumber(Number(value)),
+                                value: display.formatNumber(Number(value), 1),
                                 unit: display.distanceUnit,
                               })}
                       />
@@ -197,7 +195,7 @@ export function ShareCardMonthlyTrend({
             )}
           </ShareCardSectionBody>
         )}
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

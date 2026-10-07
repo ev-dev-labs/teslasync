@@ -6,7 +6,6 @@ import { setGlobalPrecision, setGlobalLocale } from '../lib/numberFormat'
 import { resolveLocale } from '../lib/locale'
 import { subscribe } from '../lib/broadcast'
 import { TOPICS } from '../lib/broadcastTopics'
-import { useDataState } from './useDataState'
 
 // Re-export per-channel notification sound preferences so callers can
 // import everything settings-related from `@/hooks/useSettings`. The
@@ -73,22 +72,18 @@ function sanitizePrecision(v: number | null | undefined): number {
 /**
  * React hook providing application settings.
  *
- * Fetches settings from the API (cached for 5 min, revalidated on mount) and returns settings state
+ * Fetches settings from the API (cached for 5 min) and returns settings state
  * plus non-conversion settings-derived flags/labels. Measurement display
  * conversion lives in `useUnits`; currency/cost formatting lives in
  * `useFormatting`.
  */
 export function useSettings() {
-  const query = useQuery({
+  const { data: settings, refetch } = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
     staleTime: 5 * 60 * 1000,
-    refetchOnMount: 'always',
     retry: 1,
   })
-  const { data: settings, refetch } = query
-  const settingsState = useDataState(query)
-  const settingsUnavailable = !settingsState.hasData || settings == null
 
   // Backend may return `locale: ''` when the column has never been
   // written. `??` does NOT catch empty strings, so any consumer that
@@ -131,9 +126,6 @@ export function useSettings() {
     const rangeType: 'rated' | 'ideal' = s.preferred_range === 'ideal' ? 'ideal' : 'rated'
     return {
       settings: s,
-      settingsState,
-      settingsUnavailable,
-      refetch,
       isMiles: s.unit_of_length === 'mi',
       isFahrenheit: s.unit_of_temp === 'F',
       isPSI: (s.unit_of_pressure ?? 'bar') === 'psi',
@@ -142,5 +134,5 @@ export function useSettings() {
       density,
       rangeType,
     }
-  }, [s, decimals, locale, settingsState, settingsUnavailable, refetch])
+  }, [s, decimals, locale])
 }

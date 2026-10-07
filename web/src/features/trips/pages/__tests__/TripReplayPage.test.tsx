@@ -35,7 +35,7 @@
  * consistent with the other page tests.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 
@@ -131,16 +131,6 @@ vi.mock('@/components/charts', async () => {
   };
 });
 
-vi.mock('@/features/trips/components/TripReplayElevation', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    TripReplayElevation: (props: CapturedElevation) => {
-      captured.elevation = props;
-      return React.createElement('div', { 'data-testid': 'elevation-profile' });
-    },
-  };
-});
-
 // Keep StatCard / MetricCard REAL (they render the summary + stat text we
 // assert on); stub only PlaybackControls (its scrubber DOM needs layout
 // measurements jsdom can't supply) and capture its transport props.
@@ -167,7 +157,7 @@ import {
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import type { Drive, DriveDetail, DrivePosition } from '@/types/driving';
 import type { TripReplayChartPoint } from '@/features/trips/components/TripReplayCharts';
-import type { TripReplayElevationPoint } from '../../components/TripReplayElevation';
+import type { ElevationDataPoint } from '@/components/charts';
 
 /* ── Captured-prop shapes ─────────────────────────────────────────── */
 
@@ -176,7 +166,7 @@ interface CapturedMap {
   currentIndex: number;
   onSeekToIndex: (i: number) => void;
   reduceMotion?: boolean;
-  height?: number | string;
+  height?: number;
 }
 interface CapturedCharts {
   data: TripReplayChartPoint[];
@@ -185,7 +175,7 @@ interface CapturedCharts {
   onSeekToIndex: (i: number) => void;
 }
 interface CapturedElevation {
-  data: TripReplayElevationPoint[];
+  data: ElevationDataPoint[];
   currentIndex: number;
   onClickIndex: (i: number) => void;
   distanceUnit: string;
@@ -198,9 +188,6 @@ interface CapturedPlayback {
   getPreviewAt: (n: number) => unknown;
   onSeek: (p: number) => void;
   onPlay: () => void;
-  onRestart: () => void;
-  onStop: () => void;
-  framed: boolean;
 }
 
 /* ── Unit-preference bags ─────────────────────────────────────────── */
@@ -422,22 +409,9 @@ describe('TripReplayPage postures', () => {
 /* ── Specs: populated page orchestration ──────────────────────────── */
 
 describe('TripReplayPage populated', () => {
-  it('keeps back navigation a single keyboard-reachable link rather than a nested button', () => {
-    renderPage();
-    const back = screen.getByRole('link', { name: 'Back to Drive' });
-    expect(back).toHaveAttribute('href', '/drives/7');
-    expect(back.querySelector('button')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Back to Drive' })).not.toBeInTheDocument();
-  });
-
   it('renders every summary + current-position section (no hidden panels)', () => {
     renderPage();
 
-    const context = screen.getByText(/Home → Office/);
-    expect(context).toBeVisible();
-    expect(context.closest('[data-action-group="metadata"]')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Refresh replay data' })
-      .closest('[data-action-group="secondary"]')).not.toBeNull();
     for (const label of ['Distance', 'Duration', 'Avg Speed', 'Max Speed', 'Efficiency', 'Elevation Gain', 'Elevation Loss']) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
@@ -456,9 +430,9 @@ describe('TripReplayPage populated', () => {
     renderPage();
 
     // distance 12000 m → 12 km ; avg 20 m/s → 72 km/h ; max 30 m/s → 108 km/h.
-    expect(screen.getByText(`${fmtNumber(convertDistanceFromSI(12_000, 'km'))} km`)).toBeInTheDocument();
-    expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(20, 'km/h'))} km/h`)).toBeInTheDocument();
-    expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(30, 'km/h'))} km/h`)).toBeInTheDocument();
+    expect(screen.getByText(fmtNumber(convertDistanceFromSI(12_000, 'km')))).toBeInTheDocument();
+    expect(screen.getByText(fmtNumber(convertSpeedFromSI(20, 'km/h')))).toBeInTheDocument();
+    expect(screen.getByText(fmtNumber(convertSpeedFromSI(30, 'km/h')))).toBeInTheDocument();
     // durationS 3660 → 61 min → "1h 1m" ; battery band "90% → 70%".
     expect(screen.getByText('1h 1m')).toBeInTheDocument();
     expect(screen.getByText('90% → 70%')).toBeInTheDocument();
@@ -467,8 +441,8 @@ describe('TripReplayPage populated', () => {
   it('sums positive/negative elevation deltas for the summary band', () => {
     renderPage();
     // 100→130 (+30), 130→120 (−10), 120→160 (+40) ⇒ gain 70, loss 10.
-    expect(screen.getByText('70 m')).toBeInTheDocument();
-    expect(screen.getByText('10 m')).toBeInTheDocument();
+    expect(screen.getByText('70')).toBeInTheDocument();
+    expect(screen.getByText('10')).toBeInTheDocument();
   });
 
   it('feeds SI-converted, timestamp-indexed series to the elevation + timeline charts', () => {
@@ -488,58 +462,6 @@ describe('TripReplayPage populated', () => {
     expect(elevation.data.map((d) => d.elevation)).toEqual([100, 130, 120, 160]);
     // Cumulative haversine distance is monotonically non-decreasing.
     expect(elevation.data[3].distance).toBeGreaterThan(elevation.data[1].distance);
-  });
-
-  it('keeps unobserved elevation, power and speed as gaps instead of invented zeros', () => {
-    driveMock.mockReturnValue(makeDriveQuery({
-      data: makeDrive({ positions: [makePosition(0), makePosition(1)] }),
-    }));
-    renderPage();
-    expect((captured.charts as CapturedCharts).data.map(point => point.power)).toEqual([null, null]);
-    expect((captured.charts as CapturedCharts).data.map(point => point.speed)).toEqual([null, null]);
-    expect((captured.elevation as CapturedElevation).data.map(point => point.elevation)).toEqual([null, null]);
-  });
-
-  it('uses measured drive energy for efficiency rather than a battery-percentage proxy', () => {
-    renderPage();
-    const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    expect(summary).toHaveTextContent(`${fmtNumber(3000 / 12)} Wh/km`);
-  });
-
-  it('opens the real raw-source review without disrupting the replay stage or cursor', () => {
-    renderPage();
-    const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
-    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText(`${fmtNumber(convertDistanceFromSI(12000, 'km'))} km`)).toBeInTheDocument();
-    expect(within(drawer).getByText('90% → 70%')).toBeInTheDocument();
-    expect(within(drawer).getByText('70 m')).toBeInTheDocument();
-    expect(within(drawer).getByText('10 m')).toBeInTheDocument();
-    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
-    expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
-    expect((captured.map as CapturedMap).currentIndex).toBe(0);
-  });
-
-  it('distinguishes a measured zero battery endpoint from missing or invalid paired endpoints', () => {
-    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startBatteryPct: 0, endBatteryPct: 0 }) }));
-    const view = renderPage();
-    expect(within(screen.getByRole('region', { name: 'Drive Summary' })).getByText('0% → 0%')).toBeInTheDocument();
-    view.unmount();
-    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive({ startBatteryPct: 0, endBatteryPct: Number.NaN }) }));
-    renderPage();
-    const summary = screen.getByRole('region', { name: 'Drive Summary' });
-    expect(summary.querySelector('[data-operational-metric="battery"]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(summary).not.toHaveTextContent('NaN');
-  });
-
-  it('places the live readouts and playback in the same outer map surface without metric panels', () => {
-    renderPage();
-    const stage = screen.getByRole('region', { name: 'Route map and live position' });
-    expect(stage).toContainElement(screen.getByTestId('trip-replay-map'));
-    expect(stage).toContainElement(screen.getByTestId('playback-controls'));
-    expect(stage).toContainElement(screen.getByTestId('replay-current-stats'));
-    expect(screen.getByTestId('replay-current-stats').querySelectorAll('[data-print-card]')).toHaveLength(0);
   });
 
   it('hands the map its SI trail + initial playhead + resolved motion preference', () => {
@@ -563,34 +485,6 @@ describe('TripReplayPage populated', () => {
     expect(Array.isArray(pb.markers)).toBe(true);
     expect(typeof pb.getPreviewAt).toBe('function');
     expect(typeof pb.onSeek).toBe('function');
-    expect(pb.framed).toBe(false);
-  });
-
-  it('rewinds without pausing on restart, while stop rewinds and pauses', () => {
-    renderPage();
-    act(() => {
-      (captured.playback as CapturedPlayback).onPlay();
-      (captured.playback as CapturedPlayback).onSeek(0.5);
-    });
-    expect((captured.playback as CapturedPlayback).isPlaying).toBe(true);
-    act(() => (captured.playback as CapturedPlayback).onRestart());
-    expect((captured.playback as CapturedPlayback).progress).toBe(0);
-    expect((captured.playback as CapturedPlayback).isPlaying).toBe(true);
-    act(() => {
-      (captured.playback as CapturedPlayback).onSeek(0.5);
-      (captured.playback as CapturedPlayback).onStop();
-    });
-    expect((captured.playback as CapturedPlayback).progress).toBe(0);
-    expect((captured.playback as CapturedPlayback).isPlaying).toBe(false);
-  });
-
-  it('keeps summary, map, transport and charts during a retained-data refresh failure', () => {
-    driveMock.mockReturnValue(makeDriveQuery({ data: makeDrive(), error: new Error('refresh failed') }));
-    renderPage();
-    expect(screen.getByRole('region', { name: 'Drive Summary' })).toBeInTheDocument();
-    expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
-    expect(screen.getByTestId('playback-controls')).toBeInTheDocument();
-    expect(screen.getByTestId('trip-replay-charts')).toBeInTheDocument();
   });
 
   it('re-derives every figure when the unit preference flips to mph / mi', () => {
@@ -605,7 +499,7 @@ describe('TripReplayPage populated', () => {
     expect(elevation.distanceUnit).toBe('mi');
 
     // Summary distance now reads in miles (12000 m → ~7.46 mi).
-    expect(screen.getByText(`${fmtNumber(convertDistanceFromSI(12_000, 'mi'))} mi`)).toBeInTheDocument();
+    expect(screen.getByText(fmtNumber(convertDistanceFromSI(12_000, 'mi')))).toBeInTheDocument();
   });
 
   it('shares one seek handler so a map click moves the charts + live stats in lockstep', () => {
@@ -634,7 +528,7 @@ describe('TripReplayPage populated', () => {
 
     const p0 = POSITIONS[0];
     expect(screen.getByText(`${fmtNumber(convertSpeedFromSI(p0.speed!, 'km/h'))} km/h`)).toBeInTheDocument();
-    expect(screen.getByText(`${fmtNumber(p0.power!)} kW`)).toBeInTheDocument();
+    expect(screen.getByText(`${fmtNumber(p0.power!, 1)} kW`)).toBeInTheDocument();
     expect(screen.getByText(`${fmtInt(p0.batteryLevel)}%`)).toBeInTheDocument();
     expect(screen.getByText(`${fmtInt(p0.elevation!)} m`)).toBeInTheDocument();
     expect(

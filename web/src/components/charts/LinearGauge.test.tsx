@@ -10,29 +10,16 @@
  *     scale still states its range while a 0–100 % one does not;
  *   - offset (interval) scales measure from `min`, so a converted temperature
  *     draws the same bar in °C and °F;
- *   - missing readings remain unknown, distinct from a measured zero.
+ *   - non-finite / nullish runtime values degrade to a finite empty bar rather
+ *     than `width: NaN%`.
  */
 
-import { beforeEach, describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { createRef } from 'react';
-import { act, render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup } from '@testing-library/react';
 import { LinearGauge } from './LinearGauge';
 import { gaugeTone, resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
-import { getFormatterPreferences, setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
-
-let previousPreferences: ReturnType<typeof getFormatterPreferences>;
-
-beforeEach(() => {
-  previousPreferences = getFormatterPreferences();
-  setGlobalPrecision(2);
-  setGlobalLocale('en-US');
-});
-
-afterEach(() => {
-  cleanup();
-  setGlobalPrecision(previousPreferences.precision);
-  setGlobalLocale(previousPreferences.locale);
-});
+import { setGlobalPrecision } from '@/lib/numberFormat';
 
 /** The gauge renders exactly one width-driven fill element inside the track. */
 const fill = (c: HTMLElement) => c.querySelector<HTMLElement>('[style*="width"]');
@@ -41,21 +28,10 @@ const fillPct = (c: HTMLElement) => fill(c)?.style.width ?? '';
 const marker = (c: HTMLElement) => c.querySelector<HTMLElement>('[data-testid="gauge-marker"]');
 
 describe('LinearGauge — rendering & content', () => {
-  it('updates a mounted fractional reading without changing meter values or geometry', () => {
-    setGlobalPrecision(2);
-    const { container } = render(<LinearGauge value={12.3456} max={100} label="Reading" />);
-    const width = fillPct(container);
-    expect(screen.getByText('12.35')).toBeInTheDocument();
-    act(() => setGlobalPrecision(3));
-    expect(screen.getByText('12.346')).toBeInTheDocument();
-    expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '12.3456');
-    expect(fillPct(container)).toBe(width);
-    act(() => setGlobalPrecision(2));
-  });
   it('renders the value, the unit, and the label as distinct text nodes', () => {
     render(<LinearGauge value={72} max={100} label="Battery" unit="%" />);
 
-    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('72')).toBeInTheDocument();
     expect(screen.getByText('%')).toBeInTheDocument();
     expect(screen.getByText('Battery')).toBeInTheDocument();
   });
@@ -80,7 +56,7 @@ describe('LinearGauge — ARIA meter semantics', () => {
     expect(meter).toHaveAttribute('aria-valuenow', '72');
     expect(meter).toHaveAttribute('aria-valuemin', '0');
     expect(meter).toHaveAttribute('aria-valuemax', '100');
-    expect(meter).toHaveAttribute('aria-valuetext', '72.00%');
+    expect(meter).toHaveAttribute('aria-valuetext', '72%');
   });
 
   it('announces the clamped value, matching what the bar actually draws', () => {
@@ -149,40 +125,18 @@ describe('LinearGauge — offset scales (min prop)', () => {
 });
 
 describe('LinearGauge — robustness against non-finite runtime values', () => {
-  it('renders unknown rather than a zero meter for an undefined value', () => {
+  it('renders an empty track (not NaN) for an undefined value', () => {
     const { container } = render(
-      <LinearGauge value={undefined} max={100} label="X" />,
+      <LinearGauge value={undefined as unknown as number} max={100} label="X" />,
     );
-    expect(fill(container)).toBeNull();
-    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'X' })).toHaveAccessibleDescription(/unknown/i);
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(container.textContent).not.toContain('NaN');
-  });
-
-  it('renders unknown rather than a zero meter for a NaN value', () => {
-    const { container } = render(<LinearGauge value={NaN} max={100} label="X" />);
-    expect(fill(container)).toBeNull();
-    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
-    expect(container.textContent).not.toContain('NaN');
-  });
-
-  it.each([null, Infinity, -Infinity])('keeps %s unknown without numeric ARIA values', (value) => {
-    const { container } = render(<LinearGauge value={value} min={32} max={122} label="Temperature" unit="°F" />);
-    const unknown = screen.getByRole('group', { name: 'Temperature' });
-    expect(unknown).not.toHaveAttribute('aria-valuenow');
-    expect(unknown).not.toHaveAttribute('aria-valuemin');
-    expect(unknown).not.toHaveAttribute('aria-valuemax');
-    expect(unknown).toHaveAccessibleDescription(/unknown/i);
-    expect(fill(container)).toBeNull();
-    expect(screen.getByText('—')).toBeInTheDocument();
-  });
-
-  it('keeps a genuine zero as a measured value', () => {
-    const { container } = render(<LinearGauge value={0} max={100} label="Battery" unit="%" />);
-    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
     expect(fillPct(container)).toBe('0%');
+    expect(container.textContent).not.toContain('NaN');
+  });
+
+  it('renders an empty track (not NaN) for a NaN value', () => {
+    const { container } = render(<LinearGauge value={NaN} max={100} label="X" />);
+    expect(fillPct(container)).toBe('0%');
+    expect(container.textContent).not.toContain('NaN');
   });
 
   it('survives a zero max without dividing by zero', () => {
@@ -199,6 +153,8 @@ describe('LinearGauge — robustness against non-finite runtime values', () => {
 });
 
 describe('LinearGauge — decimals', () => {
+  afterEach(() => setGlobalPrecision(1));
+
   it('honours an explicit decimals override', () => {
     render(<LinearGauge value={12.3456} max={100} label="X" decimals={2} />);
     expect(screen.getByText('12.35')).toBeInTheDocument();
@@ -216,7 +172,7 @@ describe('LinearGauge — printed scale caption', () => {
   // full gauge meant. Every non-percentage scale must state where it ends.
   it('prints the range for a non-percentage scale', () => {
     render(<LinearGauge value={120} max={250} label="Power" unit=" kW" />);
-    expect(screen.getByText('0.00 – 250.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('0 – 250 kW')).toBeInTheDocument();
   });
 
   it('omits the caption for a 0–100 percentage, which is self-describing', () => {
@@ -226,7 +182,7 @@ describe('LinearGauge — printed scale caption', () => {
 
   it('captions a 0–100 scale whose unit is NOT a percentage', () => {
     render(<LinearGauge value={55} max={100} label="Motor" unit="°C" />);
-    expect(screen.getByText('0.00 – 100.00°C')).toBeInTheDocument();
+    expect(screen.getByText('0 – 100°C')).toBeInTheDocument();
   });
 
   it('omits the caption for a bare 0–100 gauge, which reads as a percentage', () => {
@@ -236,7 +192,7 @@ describe('LinearGauge — printed scale caption', () => {
 
   it('includes a non-zero min so offset scales state both ends', () => {
     render(<LinearGauge value={40} min={-20} max={150} label="Motor" unit="°C" />);
-    expect(screen.getByText('-20.00 – 150.00°C')).toBeInTheDocument();
+    expect(screen.getByText('-20 – 150°C')).toBeInTheDocument();
   });
 
   it('honours hideScale for callers that already print the ceiling themselves', () => {
@@ -379,7 +335,7 @@ describe('LinearGauge — accessible naming', () => {
 
     const meter = screen.getByRole('meter', { name: 'Backup Reserve' });
     expect(meter).toHaveAttribute('aria-valuenow', '20');
-    expect(meter).toHaveAttribute('aria-valuetext', '20.00%');
+    expect(meter).toHaveAttribute('aria-valuetext', '20%');
     // ...and the name is not duplicated as visible text.
     expect(screen.queryByText('Backup Reserve')).toBeNull();
   });
@@ -459,7 +415,7 @@ describe('LinearGauge — semantic tones', () => {
       <LinearGauge value={120} max={250} label="Power" unit=" kW" tone="warning" />,
     );
     expect(fillPct(container)).toBe('48%');
-    expect(screen.getByText('0.00 – 250.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('0 – 250 kW')).toBeInTheDocument();
     expect(screen.getByRole('meter', { name: 'Power' })).toHaveAttribute('aria-valuenow', '120');
   });
 });

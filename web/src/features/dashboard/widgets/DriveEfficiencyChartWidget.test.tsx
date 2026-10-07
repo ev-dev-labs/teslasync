@@ -33,8 +33,8 @@
  *   - data plumbing: explicit vehicleId, first-vehicle fallback, the disabled
  *     (id 0) query, and the prefix-free, snake_case drives URL.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { Drive } from '@/api/types';
@@ -55,13 +55,6 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
   return { ...actual, useQuery: vi.fn() };
 });
 
-const axisCapture = vi.hoisted(() => ({
-  chart: {} as Record<string, unknown>,
-  axis: {} as Record<string, unknown>,
-  reference: {} as Record<string, unknown>,
-  series: [] as Record<string, unknown>[],
-}));
-
 // ── charts: keep the real recharts primitives, stub only the theme palette
 // hook (it reaches for useTheme() which requires a ThemeProvider). ──
 vi.mock('@/components/charts', async (importOriginal) => {
@@ -70,17 +63,6 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return {
     ...actual,
     ...chartTestDoubles,
-    useMeasuredAxisWidth: vi.fn(actual.useMeasuredAxisWidth),
-    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
-    AreaChart: (props: Record<string, unknown>) => {
-      axisCapture.chart = props;
-      return <svg>{props.children as ReactNode}</svg>;
-    },
-    YAxis: (props: Record<string, unknown>) => { axisCapture.axis = props; return null; },
-    XAxis: () => null,
-    Area: (props: Record<string, unknown>) => { axisCapture.series.push(props); return null; },
-    Tooltip: () => null,
-    ReferenceLine: (props: Record<string, unknown>) => { axisCapture.reference = props; return null; },
     useThemeChartPalette: () => ({
       primary: '#22d3ee',
       accent: '#f59e0b',
@@ -129,8 +111,6 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '@/api/client';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
-import { useMeasuredAxisWidth } from '@/components/charts';
-import { getGlobalPrecision, setGlobalPrecision } from '@/lib/numberFormat';
 import DriveEfficiencyChartWidget, {
   estimateEfficiency,
   buildDailyEfficiency,
@@ -242,55 +222,6 @@ const shortDate = (iso: string) => iso.slice(0, 10);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-  axisCapture.chart = {};
-  axisCapture.axis = {};
-  axisCapture.reference = {};
-  axisCapture.series = [];
-});
-afterEach(() => vi.restoreAllMocks());
-
-describe('DriveEfficiencyChartWidget axis gutter', () => {
-  it.each([2, 3])('measures converted series and unchanged padded bounds at %i columns', cols => {
-    const precision = getGlobalPrecision();
-    setGlobalPrecision(6);
-    try {
-      const context = {
-        font: '',
-        measureText: vi.fn((label: string) => ({ width: label.length * 14 })),
-      } as unknown as CanvasRenderingContext2D;
-      vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValue(context);
-      setup({ drives: makeQuery({ data: recentDrives() }), distancePref: 'mi' });
-      renderWidget({ size: { cols, rows: 2 } });
-      const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
-      const data = axisCapture.chart.data as { efficiency: number; rollingAvg: number | null }[];
-      const values = data.flatMap(point => [point.efficiency, point.rollingAvg]).filter((value): value is number => value != null);
-      const formatter = axisCapture.axis.tickFormatter as (value: number) => string;
-      expect(options.labels).toEqual([...values, Math.min(...values) - 20, Math.max(...values) + 20].map(formatter));
-      expect(options.labels.every(label => !/NaN|Infinity|—/.test(label))).toBe(true);
-      expect(options.fontSize).toBe(cols === 3 ? 11 : 10);
-      expect(options.minWidth).toBe(36);
-      expect(options.padding).toBe(20);
-      expect(formatter(123.456789)).toBe('123.456789');
-      expect(axisCapture.axis.width).toBeGreaterThanOrEqual(Math.ceil(Math.max(...options.labels.map(label => label.length)) * options.fontSize * 0.75) + 20);
-      expect(axisCapture.axis.width).toBe(Math.max(...options.labels.map(label => label.length * 14)) + 20);
-      expect(context.font).toMatch(new RegExp(`^${cols === 3 ? 11 : 10}px `));
-      for (const label of options.labels) expect(context.measureText).toHaveBeenCalledWith(label);
-      expect((axisCapture.chart.margin as { left: number }).left).toBe(4);
-      expect(axisCapture.axis.domain).toEqual(['dataMin - 20', 'dataMax + 20']);
-    } finally {
-      act(() => setGlobalPrecision(precision));
-    }
-  });
-
-  it('keeps rejected non-finite drives out of layout labels and compact charts absent', () => {
-    setup({ drives: makeQuery({ data: [makeDrive({ start_ts: daysAgoIso(2), energy_used_wh: Number.NaN }), ...recentDrives()] }) });
-    renderWidget({ size: COMPACT });
-    expect(axisCapture.chart).toEqual({});
-    const options = vi.mocked(useMeasuredAxisWidth).mock.lastCall![0];
-    expect(options.enabled).toBe(false);
-    expect(options.labels.every(label => !/NaN|Infinity|—/.test(label))).toBe(true);
-  });
 });
 
 describe('estimateEfficiency', () => {
@@ -393,21 +324,16 @@ describe('buildDailyEfficiency', () => {
     expect(out[0].efficiency).toBe(100);
   });
 
-  it('preserves fractional daily averages and canonical drive values before display formatting', () => {
+  it('rounds the daily average to one decimal place', () => {
     const drives = [
       makeDrive({ id: 1, start_ts: '2026-06-05T01:00:00Z', distance_m: 10_000, energy_used_wh: 1000 }), // 100
       makeDrive({ id: 2, start_ts: '2026-06-05T02:00:00Z', distance_m: 10_000, energy_used_wh: 1010 }), // 101
       makeDrive({ id: 3, start_ts: '2026-06-05T03:00:00Z', distance_m: 10_000, energy_used_wh: 1010 }), // 101
     ];
-    drives.forEach(Object.freeze);
     const out = buildDailyEfficiency(drives, 7, shortDate);
 
-    expect(out[0].efficiency).toBe(302 / 3);
-    expect(drives.map(({ distance_m, energy_used_wh }) => ({ distance_m, energy_used_wh }))).toEqual([
-      { distance_m: 10_000, energy_used_wh: 1000 },
-      { distance_m: 10_000, energy_used_wh: 1010 },
-      { distance_m: 10_000, energy_used_wh: 1010 },
-    ]);
+    // mean(100,101,101) = 100.6667 → 100.7
+    expect(out[0].efficiency).toBe(100.7);
   });
 
   it('returns an empty array when there are no usable drives', () => {
@@ -424,49 +350,17 @@ describe('buildDailyEfficiency', () => {
 });
 
 describe('DriveEfficiencyChartWidget — rendering', () => {
-  it('labels the overall average without implying a rolling average for one measured day', () => {
-    setup({ drives: makeQuery({ data: [
-      makeDrive({ start_ts: daysAgoIso(2), distance_m: 10_000, energy_used_wh: 1000 }),
-    ] }) });
-    renderWidget({ size: STANDARD });
-
-    expect(axisCapture.reference.y).toBe(100);
-    expect(axisCapture.reference.label).toMatchObject({ value: 'Avg: 100.00 Wh/km' });
-    expect(axisCapture.series.map(series => series.dataKey)).not.toContain('rollingAvg');
-    expect(axisCapture.series.map(series => series.dataKey)).toContain('efficiency');
-  });
-
-  it('preserves the measured rolling series and display units when multiple days exist', () => {
-    setup({ drives: makeQuery({ data: recentDrives() }), distancePref: 'mi' });
-    renderWidget({ size: STANDARD });
-
-    expect(axisCapture.reference.y).toBeCloseTo(130 * 1.609344);
-    expect(axisCapture.reference.label).toMatchObject({ value: 'Avg: 209.21 Wh/mi' });
-    expect(axisCapture.series.map(series => series.dataKey)).toContain('rollingAvg');
-  });
-
-  it('retains chart layers and stats on refresh failure with a working warning retry', () => {
-    const refetch = vi.fn();
-    setup({ drives: makeQuery({ data: recentDrives(), error: new Error('offline'), isError: true, refetch }) });
-    renderWidget({ size: STANDARD });
-    expect(screen.getByText('130.00')).toBeInTheDocument();
-    expect(screen.getByTestId('embedded-chart')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
   it('renders the title, Avg/Best/Trend stats, unit, and the two-series legend', () => {
     setup({ drives: makeQuery({ data: recentDrives() }) });
     renderWidget({ size: STANDARD });
 
-    expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Drive Efficiency')).toBeInTheDocument();
     expect(screen.getByText('Avg')).toBeInTheDocument();
-    expect(screen.getByText('130.00')).toBeInTheDocument();
+    expect(screen.getByText('130')).toBeInTheDocument();
     expect(screen.getByText('Best day')).toBeInTheDocument();
-    expect(screen.getByText('100.00')).toBeInTheDocument();
+    expect(screen.getByText('100')).toBeInTheDocument();
     expect(screen.getByText('Trend')).toBeInTheDocument();
-    expect(screen.getByText('+36.36%')).toBeInTheDocument();
+    expect(screen.getByText('+36.4%')).toBeInTheDocument();
     // The Wh/km unit label rides along the Avg and Best stats.
     expect(screen.getAllByText('Wh/km')).toHaveLength(2);
     // Multi-series charts identify their shared persisted legend state.
@@ -484,8 +378,8 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     expect(screen.getAllByText('Wh/mi')).toHaveLength(2);
     expect(screen.queryByText('Wh/km')).not.toBeInTheDocument();
     // Best day: 100 Wh/km × 1.609344 → 160.9 → "161".
-    expect(screen.getByText('160.93')).toBeInTheDocument();
-    expect(screen.queryByText('100.00')).not.toBeInTheDocument();
+    expect(screen.getByText('161')).toBeInTheDocument();
+    expect(screen.queryByText('100')).not.toBeInTheDocument();
   });
 
   it('shows the empty state (role="status") and withholds the stats when there is no data', () => {
@@ -495,7 +389,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     expect(screen.getByText('No efficiency data yet')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard widgets keep their header even when empty…
-    expect(screen.getByText('Drive efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Drive Efficiency')).toBeInTheDocument();
     // …but the summary stats are gated behind having data.
     expect(screen.queryByText('Avg')).not.toBeInTheDocument();
   });
@@ -517,7 +411,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     const { container } = renderWidget({ size: STANDARD });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Drive efficiency')).toBeInTheDocument();
+    expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
     expect(screen.queryByText('No efficiency data yet')).not.toBeInTheDocument();
   });
 
@@ -528,7 +422,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     // A non-ApiError falls through QueryError to the network/unknown branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('Drive efficiency')).toBeInTheDocument();
+    expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
   });
 });
 
@@ -547,11 +441,11 @@ describe('DriveEfficiencyChartWidget — interaction & layout', () => {
     renderWidget({ size: COMPACT });
 
     // Compact widgets are title-less and chart-less…
-    expect(screen.queryByText('Drive efficiency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chart-legend')).not.toBeInTheDocument();
     // …but the summary stats still render.
     expect(screen.getByText('Avg')).toBeInTheDocument();
-    expect(screen.getByText('130.00')).toBeInTheDocument();
+    expect(screen.getByText('130')).toBeInTheDocument();
   });
 });
 

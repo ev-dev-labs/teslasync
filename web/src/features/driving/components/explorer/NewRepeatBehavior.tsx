@@ -13,12 +13,11 @@ import {
 } from '@/components/ui';
 import { CHART_COLORS } from '@/components/charts';
 import { cn } from '@/lib/cn';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { ExplorerSummary } from '../../lib/explorer';
 import { ExplorerSectionBody } from './ExplorerSectionBody';
 import type { ExplorerSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface NewRepeatBehaviorProps {
   summary: ExplorerSummary;
@@ -31,7 +30,6 @@ export function NewRepeatBehavior({
   state,
   className,
 }: NewRepeatBehaviorProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const behavior = summary.repeatBehavior;
   const newPercent = (behavior.newShare ?? 0) * 100;
@@ -118,7 +116,7 @@ export function NewRepeatBehavior({
                   sublabel={t(
                     'explorer.behavior.percentValue',
                     '{{value}}%',
-                    { value: fmtNumber(newPercent) },
+                    { value: fmtNumber(newPercent, 0) },
                   )}
                 />
                 <MetricBar
@@ -132,7 +130,7 @@ export function NewRepeatBehavior({
                   sublabel={t(
                     'explorer.behavior.percentValue',
                     '{{value}}%',
-                    { value: fmtNumber(repeatPercent) },
+                    { value: fmtNumber(repeatPercent, 0) },
                   )}
                 />
               </div>

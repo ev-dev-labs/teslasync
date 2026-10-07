@@ -16,8 +16,8 @@
  *   2. Gas-savings regression: `gasEquivalent` derives from SI meters converted
  *      to miles for the configured MPG model (200 km → $19.88), NOT raw meters
  *      × 0.12 (which produced a ~$24,000 "equivalent" after the SI cutover).
- *   3. Loading — named source sections remain while drive stats are in flight;
- *      independent charging rows and BMS lifetime values remain visible.
+ *   3. Loading — the dedicated skeleton replaces the page while stats are
+ *      in flight, never a half-populated dashboard.
  *   4. Error — a failed stats query surfaces a retryable <QueryError> banner
  *      while the independent sessions table still renders (graceful degrade),
  *      and Retry re-fires the stats request.
@@ -35,7 +35,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -339,7 +339,7 @@ describe('EnergyPage', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Energy intelligence' }),
+      await screen.findByRole('heading', { level: 1, name: 'Energy Intelligence' }),
     ).toBeInTheDocument()
 
     // KPI band derived at the SI→display boundary: 200_000 m → "200 km",
@@ -367,7 +367,7 @@ describe('EnergyPage', () => {
     // Recent-sessions table renders real rows with per-type badges. 'CCS' is
     // the raw type echoed only in the table; 'Supercharger' also appears in the
     // charger-breakdown legend.
-    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
+    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getAllByText('Supercharger').length).toBeGreaterThan(0)
   })
@@ -408,37 +408,16 @@ describe('EnergyPage', () => {
     expect(screen.queryByText('Electric operation remains cost-favorable')).not.toBeInTheDocument()
   })
 
-  it('keeps the named source outline and independent charging/BMS content while energy stats are in flight', async () => {
+  it('shows the loading skeleton while energy stats are in flight', async () => {
     install({ statsPending: true })
-    const { container } = renderPage()
+    renderPage()
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Energy intelligence' })).toBeVisible()
-    for (const name of [
-      'Key energy metrics', 'Energy overview', 'Cost savings versus gas',
-      'Daily energy trends', 'Charging patterns',
-    ]) expect(screen.getByRole('region', { name })).toBeInTheDocument()
-    for (const name of [
-      'Efficiency driver investigation', 'Efficiency & cost overview', 'Lifetime metrics',
-      'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
-      'Charger type breakdown', 'Recent charging sessions',
-    ]) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
-
-    // Keep the visibility guarantee: asynchronous independent requests and
-    // the real FadeIn entrances must settle while the drive request stays pending.
-    const overview = screen.getByRole('region', { name: 'Energy overview' })
-    await waitFor(() => {
-      expect(within(overview).getByText('54,321.00')).toBeVisible()
-      expect(screen.getByText('CCS')).toBeVisible()
-      expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeVisible()
-    }, { timeout: 2_000 })
-    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
-    expect(energyCallCount()).toBeGreaterThanOrEqual(1)
-    expect(screen.getByRole('button', { name: 'Saved views' })).toBeVisible()
-    // Workspace selection belongs to the shell's VehiclePicker, whose
-    // combobox is named "Select vehicle". Table pagination is not a duplicate.
-    expect(within(container).queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument()
-    expect(container.querySelector('[data-role="vehicle-picker-control"]')).not.toBeInTheDocument()
-    expect(within(container).getByRole('combobox', { name: 'Rows per page' })).toBeVisible()
+    // Once the fleet loads and the vehicle is auto-selected, the stats query is
+    // enabled and the page short-circuits to its dedicated skeleton.
+    expect(await screen.findByTestId('energy-page-skeleton')).toBeInTheDocument()
+    // The real dashboard chrome is withheld during loading.
+    expect(screen.queryByRole('heading', { level: 1, name: 'Energy Intelligence' })).toBeNull()
+    expect(screen.queryByText('Recent Charging Sessions')).toBeNull()
   })
 
   it('surfaces a retryable error banner and still degrades gracefully when stats fail', async () => {
@@ -489,7 +468,7 @@ describe('EnergyPage', () => {
     expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent(
       'Unavailable sources: idle-drain history.',
     )
-    expect(screen.getByText('Recent charging sessions')).toBeInTheDocument()
+    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
     expect(screen.getByText('CCS')).toBeInTheDocument()
     expect(screen.getByText('Not measured')).toBeInTheDocument()
   })
@@ -516,20 +495,16 @@ describe('EnergyPage', () => {
 
     // Charger buckets resolve to all three human-readable family labels once the
     // sessions query settles (this also anchors the section assertions below).
-    const chargerHeading = await screen.findByRole('heading', { name: 'Charger type breakdown' })
-    const chargerCard = chargerHeading.closest('[data-card]')
-    if (!(chargerCard instanceof HTMLElement)) throw new Error('Missing charger breakdown card')
-    expect(await within(chargerCard).findByText('DC fast', { selector: 'span' })).toBeInTheDocument()
-    expect(within(chargerCard).getByText('Home/AC', { selector: 'span' })).toBeInTheDocument()
+    expect(await screen.findByText('DC Fast')).toBeInTheDocument()
+    expect(screen.getByText('Home/AC')).toBeInTheDocument()
 
     // All four chart panels + hero + lifetime are present — nothing stubbed out.
-    for (const title of [
-      'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
-      'Charger type breakdown', 'Efficiency & cost overview', 'Lifetime metrics',
-    ]) {
-      expect(screen.getByRole('heading', { name: title, exact: true }))
-        .toHaveAttribute('data-card-title', 'true')
-    }
+    expect(screen.getByText('Energy & Cost Daily')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument()
+    expect(screen.getByText('Charging by Time of Day')).toBeInTheDocument()
+    expect(screen.getByText('Charger Type Breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency & Cost Overview')).toBeInTheDocument()
+    expect(screen.getByText('Lifetime Metrics')).toBeInTheDocument()
 
     // Landmark regions expose their accessible names for screen-reader nav.
     expect(screen.getByRole('region', { name: 'Energy overview' })).toBeInTheDocument()

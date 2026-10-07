@@ -1,7 +1,7 @@
 import { Database } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, Code, PanelTitle, Table, Text } from '@/components/ui';
+import { GlassPanel, Code, PanelTitle, Text } from '@/components/ui';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
 
@@ -60,7 +60,7 @@ export function TrueCostSourceScopeLedger({
   return (
     <section
       data-testid="tco-source-scope"
-      aria-label={t('tco.source.aria', 'True cost source filter and scope ledger')}
+      aria-label={t('tco.source.aria', 'True Cost source filter and scope ledger')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4 flex items-center gap-2">
@@ -68,22 +68,18 @@ export function TrueCostSourceScopeLedger({
           {t('tco.source.title', 'Source, filter, and scope ledger')}
         </PanelTitle>
         <TrueCostSectionBody state={state}>
-          <Table aria-label={t('tco.source.title', 'Source, filter, and scope ledger')}>
-
-            <tbody>
+          <div className="grid gap-3 md:grid-cols-2">
             {rows.map((row) => (
-              <tr
+              <div
                 key={row.label}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <th scope="row"><Text as="p" variant="metricLabel">{row.label}</Text></th>
-                <td>
+                <Text as="p" variant="metricLabel">{row.label}</Text>
                 <Code className="mt-1 block">{row.value}</Code>
                 <Text as="p" variant="caption" className="mt-1">{row.detail}</Text>
-                </td>
-              </tr>
+              </div>
             ))}
-            </tbody>
-          </Table>
+          </div>
         </TrueCostSectionBody>
       </GlassPanel>
     </section>

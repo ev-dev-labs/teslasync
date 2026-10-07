@@ -27,10 +27,10 @@ export const PRIMARY_GROUP_TITLES = [
 
 /** Intentional parking spots for advanced / privileged destinations. */
 export const ADVANCED_GROUP_TITLES = [
-  'Advanced intelligence',
+  'Advanced Intelligence',
   'Administration',
   'Developer',
-  'Settings & account',
+  'Settings & Account',
 ] as const
 
 /** Canonical order of the compact groups. Also the default render order. */
@@ -59,7 +59,7 @@ export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<
 > = {
   Home: 'Overview',
   Vehicles: 'Vehicles',
-  'Tesla physics': 'Advanced intelligence',
+  'Tesla Physics': 'Advanced Intelligence',
   Service: 'Operations',
   Cabin: 'Energy',
   Commands: 'Operations',
@@ -72,14 +72,14 @@ export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<
   Automation: 'Operations',
   Notifications: 'Operations',
   Security: 'Operations',
-  'Advanced intelligence': 'Advanced intelligence',
-  'Ownership intelligence': 'Advanced intelligence',
+  'Advanced Intelligence': 'Advanced Intelligence',
+  'Ownership Intelligence': 'Advanced Intelligence',
   Data: 'Administration',
   Diagnostics: 'Developer',
-  Account: 'Settings & account',
-  Settings: 'Settings & account',
-  Integrations: 'Settings & account',
-  About: 'Settings & account',
+  Account: 'Settings & Account',
+  Settings: 'Settings & Account',
+  Integrations: 'Settings & Account',
+  About: 'Settings & Account',
 }
 
 export interface CompactNavItemLike {

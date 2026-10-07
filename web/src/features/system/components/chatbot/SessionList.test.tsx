@@ -101,7 +101,7 @@ describe('SessionList', () => {
     const { onNewChat } = renderList({ sessions: [] });
 
     expect(screen.getByText('Sessions')).toBeInTheDocument();
-    const newChat = screen.getByRole('button', { name: 'New chat' });
+    const newChat = screen.getByRole('button', { name: 'New Chat' });
     fireEvent.click(newChat);
     expect(onNewChat).toHaveBeenCalledTimes(1);
   });

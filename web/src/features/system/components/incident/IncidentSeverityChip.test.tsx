@@ -116,7 +116,7 @@ describe('IncidentSeverityChip', () => {
     expect(chip).toHaveClass('mt-4')
     expect(chip).toHaveClass('shrink-0')
     expect(chip.className).toContain('rounded-full')
-    expect(chip).not.toHaveClass('uppercase', 'capitalize')
+    expect(chip.className).toContain('uppercase')
   })
 
   it('falls back to the minor tone but surfaces the raw value for an unknown severity', () => {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -10,9 +10,7 @@ import {
 } from '@/components/ui';
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
-import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
-import { UnitInput, WeekdaySelect } from '@/components/forms';
-import { useSettings } from '@/hooks/useSettings';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
 import {
   Clock,
   Zap,
@@ -44,7 +42,7 @@ export const TRIGGER_TYPES: TriggerTypeOption[] = [
   {
     value: 'trigger_event',
     labelKey: 'automations.builder.triggerEvent',
-    fallback: 'Vehicle event',
+    fallback: 'Vehicle Event',
     icon: Zap,
   },
   {
@@ -56,21 +54,21 @@ export const TRIGGER_TYPES: TriggerTypeOption[] = [
   {
     value: 'trigger_signal',
     labelKey: 'automations.builder.triggerSignal',
-    fallback: 'Signal threshold',
+    fallback: 'Signal Threshold',
     icon: Activity,
   },
 ];
 
 const VEHICLE_EVENTS: { value: AutomationEventType; labelKey: string; fallback: string }[] = [
-  { value: 'drive_start', labelKey: 'automations.events.driveStart', fallback: 'Drive starts' },
-  { value: 'drive_end', labelKey: 'automations.events.driveEnd', fallback: 'Drive ends' },
-  { value: 'charge_start', labelKey: 'automations.events.chargeStart', fallback: 'Charging starts' },
-  { value: 'charge_end', labelKey: 'automations.events.chargeEnd', fallback: 'Charging ends' },
-  { value: 'sleep_start', labelKey: 'automations.events.sleepStart', fallback: 'Sleep starts' },
-  { value: 'sleep_end', labelKey: 'automations.events.sleepEnd', fallback: 'Sleep ends' },
-  { value: 'online', labelKey: 'automations.events.online', fallback: 'Comes online' },
-  { value: 'offline', labelKey: 'automations.events.offline', fallback: 'Goes offline' },
-  { value: 'sentry_alert', labelKey: 'automations.events.sentryAlert', fallback: 'Sentry alert' },
+  { value: 'drive_start', labelKey: 'automations.events.driveStart', fallback: 'Drive Starts' },
+  { value: 'drive_end', labelKey: 'automations.events.driveEnd', fallback: 'Drive Ends' },
+  { value: 'charge_start', labelKey: 'automations.events.chargeStart', fallback: 'Charging Starts' },
+  { value: 'charge_end', labelKey: 'automations.events.chargeEnd', fallback: 'Charging Ends' },
+  { value: 'sleep_start', labelKey: 'automations.events.sleepStart', fallback: 'Sleep Starts' },
+  { value: 'sleep_end', labelKey: 'automations.events.sleepEnd', fallback: 'Sleep Ends' },
+  { value: 'online', labelKey: 'automations.events.online', fallback: 'Comes Online' },
+  { value: 'offline', labelKey: 'automations.events.offline', fallback: 'Goes Offline' },
+  { value: 'sentry_alert', labelKey: 'automations.events.sentryAlert', fallback: 'Sentry Alert' },
 ];
 
 const GEOFENCE_EVENTS: { value: AutomationGeofenceEvent; labelKey: string; fallback: string }[] = [
@@ -91,8 +89,8 @@ const SIGNAL_OPERATORS: {
   { value: '>', labelKey: 'automations.operators.greaterThan', fallback: '>' },
   { value: '>=', labelKey: 'automations.operators.greaterThanOrEqual', fallback: '>=' },
   { value: 'changed', labelKey: 'automations.operators.changed', fallback: 'Changed' },
-  { value: 'crossed_above', labelKey: 'automations.operators.crossedAbove', fallback: 'Crossed above' },
-  { value: 'crossed_below', labelKey: 'automations.operators.crossedBelow', fallback: 'Crossed below' },
+  { value: 'crossed_above', labelKey: 'automations.operators.crossedAbove', fallback: 'Crossed Above' },
+  { value: 'crossed_below', labelKey: 'automations.operators.crossedBelow', fallback: 'Crossed Below' },
 ];
 
 interface TriggerConfiguratorProps {
@@ -177,13 +175,12 @@ function signalValueFromInput(
     kind: 'trigger_signal',
     signal: trigger.signal,
     op: trigger.op,
-    value_num: value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined,
+    value_num: Number.parseFloat(value) || 0,
   };
 }
 
 export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorProps) {
   const { t } = useTranslation();
-  const { settings } = useSettings();
   const { data: geofences, isLoading: geofencesLoading, isError: geofencesError, refetch: refetchGeofences } = useGeofences();
   const [advancedMode, setAdvancedMode] = useState(false);
 
@@ -219,7 +216,17 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
     [t],
   );
 
-  const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t, settings), [t, settings]);
+  const signalFieldOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+
+  const handleDayToggle = useCallback((days: number[], day: number) => {
+    if (days.length === 0) {
+      return DAYS.map((_, index) => index).filter((index) => index !== day);
+    }
+    const next = days.includes(day)
+      ? days.filter((current) => current !== day)
+      : [...days, day].sort();
+    return next.length === 7 ? [] : next;
+  }, []);
 
   switch (trigger.kind) {
     case 'trigger_schedule': {
@@ -257,26 +264,33 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                 <Text as="span" variant="subhead">
                   {t('automations.builder.days', 'Days')}
                 </Text>
-                <WeekdaySelect
-                  className="mt-1"
-                  ariaLabel={t('automations.builder.days', 'Days')}
-                  options={DAYS.map((label, id) => ({
-                    id,
-                    label: t(`common.days.short.${id}`, label),
-                    ariaLabel: t(`common.days.short.${id}`, label),
-                  }))}
-                  selectedIds={selectedDays.length === 0 ? DAYS.map((_, id) => id) : selectedDays}
-                  onChange={(days) => updateCron(
-                    hour,
-                    minute,
-                    days.length > selectedDays.length ? days.sort((a, b) => a - b) : days,
-                  )}
-                />
+                <div className="mt-1 flex gap-2">
+                  {DAYS.map((label, index) => {
+                    const active = selectedDays.length === 0 || selectedDays.includes(index);
+                    return (
+                      <UiButton
+                        key={label}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-pressed={active}
+                        className={`!h-10 !w-10 !rounded-lg !p-0 text-xs font-medium ${
+                          active
+                            ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
+                            : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
+                        }`}
+                        onClick={() => updateCron(hour, minute, handleDayToggle(selectedDays, index))}
+                      >
+                        {t(`common.days.short.${index}`, label)}
+                      </UiButton>
+                    );
+                  })}
+                </div>
               </div>
             </>
           ) : (
             <UiInput
-              label={t('automations.builder.cronExpr', 'Cron expression')}
+              label={t('automations.builder.cronExpr', 'Cron Expression')}
               help={{
                 i18nKey: 'help.fields.automations.cronExpr',
                 content: 'Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.',
@@ -384,7 +398,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           />
           {trigger.event === 'dwell' && (
             <UiInput
-              label={t('automations.builder.dwellMinutes', 'Dwell minutes')}
+              label={t('automations.builder.dwellMinutes', 'Dwell Minutes')}
               help={{
                 i18nKey: 'help.fields.automations.dwellMinutes',
                 content: 'How many minutes the vehicle must stay inside the geofence before this dwell trigger fires.',
@@ -410,7 +424,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
         ? String(trigger.value_bool ?? true)
         : trigger.signal === 'state'
           ? (trigger.value_text ?? 'online')
-          : String(trigger.value_num ?? '');
+          : String(trigger.value_num ?? 20);
 
       return (
         <div className="space-y-4">
@@ -452,30 +466,15 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                 value={value}
                 onChange={(event) => onChange(signalValueFromInput(trigger, event.target.value))}
               />
-            ) : trigger.signal === 'state' ? (
+            ) : (
               <UiInput
                 label={t('automations.builder.value', 'Value')}
-                type="text"
+                type={trigger.signal === 'state' ? 'text' : 'number'}
                 value={value}
                 onChange={(event) => onChange(signalValueFromInput(trigger, event.target.value))}
                 placeholder={trigger.signal === 'state'
                   ? t('automations.builder.statePlaceholder', 'online')
                   : undefined}
-              />
-            ) : (
-              <UnitInput
-                key={trigger.signal}
-                label={t('automations.builder.value', 'Value')}
-                unit={unitKindForSignal(trigger.signal)}
-                value={trigger.value_num ?? null}
-                commitOnChange
-                onChange={(next) => onChange({
-                  kind: 'trigger_signal',
-                  signal: trigger.signal,
-                  op: trigger.op,
-                  value_num: next ?? undefined,
-                })}
-                required
               />
             )
           )}

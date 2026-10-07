@@ -51,7 +51,7 @@ const ROOT = 'src';
 // reviewers from silently dropping the comment in a refactor.
 const TARGETS = [
   {
-    path: join(ROOT, 'features', 'driving', 'hooks', 'useDrivesListPageFilters.ts'),
+    path: join(ROOT, 'features', 'driving', 'pages', 'DrivesListPage.tsx'),
     rowComponent: 'DriveCard',
     rowComponentPath: join(ROOT, 'features', 'driving', 'components', 'DriveCard.tsx'),
   },

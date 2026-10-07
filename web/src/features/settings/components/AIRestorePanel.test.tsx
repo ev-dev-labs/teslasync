@@ -91,15 +91,15 @@ describe('AIRestorePanel', () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/you previously had these Features enabled/i),
+      screen.getByText(/you previously had these features enabled/i),
     ).toBeInTheDocument()
 
     // Both controls are reachable by their visible accessible name.
     expect(
-      screen.getByRole('button', { name: /Restore selection/i }),
+      screen.getByRole('button', { name: /restore selection/i }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /No thanks/i }),
+      screen.getByRole('button', { name: /no thanks/i }),
     ).toBeInTheDocument()
 
     // Nothing is invoked merely by mounting.
@@ -150,7 +150,7 @@ describe('AIRestorePanel', () => {
     // Panel + primary action still render — never a blank/absent panel.
     expect(screen.getByTestId('ai-restore-panel')).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: /Restore selection/i }),
+      screen.getByRole('button', { name: /restore selection/i }),
     ).toBeInTheDocument()
 
     // ...but the feature list is omitted entirely.

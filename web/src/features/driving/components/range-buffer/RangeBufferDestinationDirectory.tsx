@@ -12,7 +12,7 @@ import {
   type Column,
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type {
   RangeBufferDestinationProfile,
   RangeBufferResult,
@@ -26,7 +26,6 @@ import type {
   RangeBufferDistanceFormatter,
   RangeBufferQueryState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferDestinationDirectoryProps {
   result: RangeBufferResult;
@@ -43,13 +42,11 @@ export function RangeBufferDestinationDirectory({
   timeZone,
   formatDistance,
 }: RangeBufferDestinationDirectoryProps) {
-  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const columns = useMemo<Column<RangeBufferDestinationProfile>[]>(
     () => [
       {
         key: 'destination',
-        filterValue: (row) => row.label ?? null,
         header: t(
           'rangeBuffer.destinations.destination',
           'Destination',
@@ -79,8 +76,6 @@ export function RangeBufferDestinationDirectory({
       },
       {
         key: 'samples',
-        filterValue: (row) => row.samples ?? null,
-        filterValueLabel: (_, row) => fmtInt(row.samples),
         header: t('rangeBuffer.columns.arrivals', 'Arrivals'),
         align: 'right',
         sortable: true,
@@ -93,8 +88,6 @@ export function RangeBufferDestinationDirectory({
       },
       {
         key: 'activeDays',
-        filterValue: (row) => row.activeLocalDays ?? null,
-        filterValueLabel: (_, row) => fmtInt(row.activeLocalDays),
         header: t(
           'rangeBuffer.destinations.activeDays',
           'Active days',
@@ -108,8 +101,6 @@ export function RangeBufferDestinationDirectory({
       },
       {
         key: 'p10',
-        filterValue: (row) => row.p10Pct ?? null,
-        filterValueLabel: (_, row) => rangeBufferPercent(row.p10Pct, locale),
         header: t('rangeBuffer.destinations.p10', 'p10'),
         align: 'right',
         render: (row) => (
@@ -120,8 +111,6 @@ export function RangeBufferDestinationDirectory({
       },
       {
         key: 'median',
-        filterValue: (row) => row.medianPct ?? null,
-        filterValueLabel: (_, row) => rangeBufferPercent(row.medianPct, locale),
         header: t('rangeBuffer.destinations.median', 'Median'),
         align: 'right',
         visibleOnMobile: true,
@@ -133,8 +122,6 @@ export function RangeBufferDestinationDirectory({
       },
       {
         key: 'below',
-        filterValue: (row) => row.belowThresholdShare ?? null,
-        filterValueLabel: (_, row) => rangeBufferShare(row.belowThresholdShare, locale),
         header: t(
           'rangeBuffer.destinations.below',
           'Below threshold',
@@ -148,8 +135,6 @@ export function RangeBufferDestinationDirectory({
       },
       {
         key: 'distance',
-        filterValue: (row) => row.medianDistanceM ?? null,
-        filterValueLabel: (_, row) => formatDistance(row.medianDistanceM),
         header: t(
           'rangeBuffer.destinations.distance',
           'Median distance',
@@ -157,14 +142,12 @@ export function RangeBufferDestinationDirectory({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatDistance(row.medianDistanceM)}
+            {formatDistance(row.medianDistanceM, { precision: 1 })}
           </Text>
         ),
       },
       {
         key: 'latest',
-        filterValue: (row) => row.latestArrivalMs ?? null,
-        filterValueLabel: (_, row) => formatDateTime(new Date(row.latestArrivalMs), { locale, tz: timeZone }),
         header: t(
           'rangeBuffer.destinations.latest',
           'Latest arrival',
@@ -179,12 +162,12 @@ export function RangeBufferDestinationDirectory({
         ),
       },
     ],
-    [formatDistance, locale, t, timeZone, fmtInt, displayPrecision, displayLocale],
+    [formatDistance, locale, t, timeZone],
   );
 
   return (
     <section data-testid="range-buffer-destinations">
-      <GlassPanel className="min-w-0 p-4 sm:p-5">
+      <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <MapPinned
             className="h-4 w-4 text-cyan-300"
@@ -207,7 +190,6 @@ export function RangeBufferDestinationDirectory({
           requirement="destinations"
         >
           <DataTable
-            enableValueFilters
             tableId="driving:range-buffer-destinations"
             columns={columns}
             data={result.destinationProfiles}

@@ -1,15 +1,14 @@
-import { LayoutCard } from '@/components/layout';
+import { ListTree } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalCandidateRow } from './CabinThermalCandidateRow';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalCandidateDirectoryProps {
   summary: CabinThermalSummary;
@@ -28,13 +27,16 @@ export function CabinThermalCandidateDirectory({
   formatTemperature,
   formatDuration,
 }: CabinThermalCandidateDirectoryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.candidateDirectory;
 
   return (
     <section data-testid="cabin-thermal-candidate-directory">
-      <LayoutCard title={t('cabinThermal.directory.title', 'Candidate-window directory')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('cabinThermal.directory.title', 'Candidate-window directory')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-1">
           {t(
             'cabinThermal.directory.subtitle',
@@ -67,7 +69,7 @@ export function CabinThermalCandidateDirectory({
             ))}
           </ol>
         </CabinThermalSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

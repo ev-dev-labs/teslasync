@@ -17,12 +17,4 @@ Sidebar group **Battery**. In the app, expand this section in the left nav (or s
 | Battery Care | `/battery-care` | Turn battery behavior into practical longevity recommendations. | Empty until telemetry (and for billing pages, Tesla charging history) has ingested sessions. |
 | Charge Advisor | `/charge-advisor` | Recommend charging limits and timing for battery care. | Renders an empty state when no data is available — the page is not hidden. |
 
-Battery Health uses consistent section gaps and card padding across its
-overview, gauges, charts, comparisons, insights, and charging analysis.
-Thermal metrics use wider, wrapping cards so maximum and minimum module
-temperatures remain distinguishable on phones.
-Missing capacity measurements do not imply zero pack health or a service
-warning; a supported zero-health measurement still retains its warning.
-Charging-energy chart values remain unrounded until display formatting.
-
 [← All groups](./catalogue.md)

@@ -3,12 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import { Grid } from '@/components/layout';
 import { GlassPanel, Badge, PanelTitle, Caption, Text } from '@/components/ui';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 import type { Drive } from '@/types/driving';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function shiftColor(shift: string | null | undefined): string {
   switch (shift) {
@@ -52,7 +51,6 @@ function SpeedStat({ label, value, unit }: { label: string; value: string; unit:
 }
 
 export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDisplay, speedUnit }: SpeedGearPanelProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Shares the ['motor-latest', vehicleId] cache entry with LiveMotorStatus —
@@ -71,16 +69,14 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDispl
   // because the surrounding code had already moved to "convert at the
   // boundary" semantics but these two reductions kept the legacy "convert
   // eagerly, render verbatim" assumption from the old in-line code.
-  const averages = (filteredDrives ?? []).flatMap((drive) => drive.avgSpeedMps != null ? [drive.avgSpeedMps] : []);
-  const peaks = (filteredDrives ?? []).flatMap((drive) => drive.maxSpeedMps != null ? [drive.maxSpeedMps] : []);
   const avgDriveSpeedMps =
-    averages.length > 0
-      ? averages.reduce((sum, speed) => sum + speed, 0) / averages.length
+    filteredDrives.length > 0
+      ? filteredDrives.reduce((s, d) => s + (d.avgSpeedMps ?? 0), 0) / filteredDrives.length
       : null;
 
   const topDriveSpeedMps =
-    peaks.length > 0
-      ? Math.max(...peaks)
+    filteredDrives.length > 0
+      ? Math.max(...filteredDrives.map((d) => d.maxSpeedMps ?? 0))
       : null;
 
   return (
@@ -89,9 +85,6 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDispl
         <Gauge className="h-4 w-4 text-emerald-300" aria-hidden="true" />
         {t('dynamics.speedGear', 'Speed & Gear')}
       </PanelTitle>
-      <Text as="p" variant="caption" className="mb-4">
-        {t('dynamics.review.speedGearScope', 'Gear and motor power: latest vehicle signals. Average and top speed: loaded trips in the date range, not just the selected ride.')}
-      </Text>
       <Grid cols={{ default: 2, md: 4 }} gap={6}>
         <div className="flex flex-col items-center justify-center gap-2">
           <Text as="span" weight="bold" className={cn('text-5xl tabular-nums', shiftColor(motorLatest?.shift_state))}>
@@ -108,12 +101,12 @@ export default function SpeedGearPanel({ vehicleId, filteredDrives, toSpeedDispl
         />
         <SpeedStat
           label={t('dynamics.avgDriveSpeed', 'Avg Drive Speed')}
-          value={avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps)) : '—'}
+          value={avgDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(avgDriveSpeedMps), 0) : '—'}
           unit={speedUnit}
         />
         <SpeedStat
           label={t('dynamics.topDriveSpeed', 'Top Drive Speed')}
-          value={topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps)) : '—'}
+          value={topDriveSpeedMps != null ? fmtNumber(toSpeedDisplay(topDriveSpeedMps), 0) : '—'}
           unit={speedUnit}
         />
       </Grid>

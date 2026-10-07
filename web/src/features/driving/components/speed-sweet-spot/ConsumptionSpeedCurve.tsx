@@ -12,7 +12,6 @@ import {
 } from './ConsumptionSpeedPlot';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ConsumptionSpeedCurveProps {
   summary: SweetSpotResult;
@@ -23,7 +22,6 @@ export function ConsumptionSpeedCurve({
   summary,
   state,
 }: ConsumptionSpeedCurveProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const {
     convertBandSpeed,

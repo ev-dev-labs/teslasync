@@ -1,5 +1,9 @@
-import { formatDurationClock } from '@/lib/dateFormat';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import {
+  formatDurationMs,
+  formatDurationMsLong,
+  formatDurationMsCompact,
+  formatDurationClock,
+} from '@/lib/dateFormat';
 
 export type DurationVariant = 'short' | 'long' | 'compact' | 'clock';
 
@@ -20,7 +24,7 @@ interface DurationProps {
 
 /**
  * Duration renderer that wraps the existing `formatDuration*` helpers and
- * formats the millisecond hover title using the user's numeric preferences.
+ * exposes the raw millisecond value via `title`.
  *
  * The shared helpers are the single source of truth for empty handling: they
  * already return the em-dash placeholder for null/undefined/NaN/±Infinity and
@@ -30,7 +34,6 @@ interface DurationProps {
  * "no data" em-dash never carries a misleading "0 ms"/"-100 ms" hover tooltip.
  */
 export function Duration({ ms, variant = 'short', className }: DurationProps) {
-  const { fmtWithUnit, formatDurationMs, formatDurationMsLong, formatDurationMsCompact } = useNumberFormatting();
   let display: string;
   switch (variant) {
     case 'long':
@@ -53,7 +56,7 @@ export function Duration({ ms, variant = 'short', className }: DurationProps) {
   }
 
   return (
-    <span className={className} title={fmtWithUnit(ms, 'ms')}>
+    <span className={className} title={`${ms} ms`}>
       {display}
     </span>
   );

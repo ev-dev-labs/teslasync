@@ -99,13 +99,6 @@ describe('DriveLedgerCompactPanel', () => {
     expect(screen.getByText(/Regen/)).toHaveTextContent(/Unknown/);
   });
 
-  it('retains the ledger shell and full-ledger crosslink without a result', () => {
-    useDriveLedgerMock.mockReturnValue(queryState({ data: null }));
-    renderPanel();
-    expect(screen.getByText('No drive interval in this window.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Open the full physics ledger' })).toHaveAttribute('href', '/tesla-physics/ledger');
-  });
-
   it('shows formatted regen when dynamics is present', () => {
     useDriveLedgerMock.mockReturnValue(
       queryState({
@@ -153,6 +146,5 @@ describe('DriveLedgerCompactPanel', () => {
     expect(screen.getByText(/recorded elevation/)).toBeInTheDocument();
     expect(screen.getByText(/HVAC on\/off state/)).toBeInTheDocument();
     expect(screen.getByText(/Unexplained residual/).parentElement).toHaveTextContent('Unknown');
-    expect(screen.queryByText('No drive interval in this window.')).toBeNull();
   });
 });

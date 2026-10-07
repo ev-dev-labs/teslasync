@@ -3,8 +3,9 @@
  *
  * DriveScorePage default-exports the page plus a set of pure helpers that are
  * unit-tested directly (the scoring algorithm, grade mapping, tip/achievement
- * builders, and `computePeriodStats`). The extracted presentation components
- * and all nine render bands are exercised transitively through the full page.
+ * builders, and `computePeriodStats`). The page's file-local sub-components
+ * (CategoryGaugeCard, the nine render bands) are exercised transitively through
+ * the full page render.
  *
  * What is covered:
  *   1. READY   — every section landmark, KPI card, panel title, best/worst
@@ -13,8 +14,8 @@
  *      client-side average (overall + grade + trend), and the "Based on N
  *      drives" caption surfaces the server drive count.
  *   3. LOADING — every panel shows a skeleton and no ready values leak.
- *   4. ERROR   — fatal history errors stay in their source panels; resolved
- *      server scores and locally scored history survive independent failures.
+ *   4. ERROR   — the KPI band AND every data section surface QueryError and
+ *      the Retry action is wired to the query's refetch (failure + interaction).
  *   5. EMPTY   — each section shows its own EmptyState (never a blank panel)
  *      and no achievements / insights leak.
  *   6. FILTER  — a header-owned out-of-range URL window empties every section.
@@ -30,11 +31,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { Drive } from '@/types/driving';
@@ -110,33 +110,7 @@ import DriveScorePage, {
   computePeriodStats,
   type ComputedScore,
   type ScoredDrive,
-  type HistoryRow,
 } from './DriveScorePage';
-import * as scoreDomain from '../components/score-orchestrator/scoreDomain';
-import { buildTips as extractedBuildTips } from '../components/score-orchestrator/scoreTips';
-import { buildAchievements as extractedBuildAchievements } from '../components/score-orchestrator/scoreAchievements';
-import { computePeriodStats as extractedComputePeriodStats } from '../components/score-orchestrator/scorePeriodStats';
-import { createHistoryColumns } from '../components/score-orchestrator/scoreHistoryColumns';
-
-function HistoryColumnHarness({
-  row, formatDistance, formatEfficiency,
-}: {
-  row: HistoryRow;
-  formatDistance: (distanceM: number) => string;
-  formatEfficiency: (whPerKm: number) => string;
-}) {
-  const { t } = useTranslation();
-  const columns = createHistoryColumns(t, formatDistance, formatEfficiency);
-  return (
-    <div>
-      {columns.map((column) => (
-        <div key={column.key} data-testid={`score-column-${column.key}`}>
-          {column.render(row)}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion via FadeIn). The
 // chart/observer polyfills already live in test-setup.ts.
@@ -382,9 +356,8 @@ describe('DriveScorePage', () => {
 
     renderPage();
 
-    // Fatal history stays source-local inside the persistent page outline.
+    // The KPI band plus every data section degrade to a QueryError banner.
     expect(screen.getAllByText(/Can't reach server/i).length).toBeGreaterThanOrEqual(10);
-    expect(screen.getAllByText('Drive score evidence could not be loaded').length).toBeGreaterThanOrEqual(10);
 
     const retryButtons = screen.getAllByRole('button', { name: /^Retry$/i });
     expect(retryButtons.length).toBeGreaterThanOrEqual(10);
@@ -395,7 +368,7 @@ describe('DriveScorePage', () => {
 
   it('renders a per-section EmptyState (never a blank panel) when no drives are in range', () => {
     h.drives = makeQuery({ data: [] });
-    h.score = makeQuery({ data: null, refetch: scoreRefetchMock });
+    h.score = makeQuery({ data: undefined, refetch: scoreRefetchMock });
 
     renderPage();
 
@@ -406,7 +379,7 @@ describe('DriveScorePage', () => {
     expect(screen.getByText('No drives found for the selected period.')).toBeInTheDocument();
     expect(screen.getByText('Tips appear once drives are scored')).toBeInTheDocument();
     expect(screen.getByText('Achievements unlock as you complete scored drives')).toBeInTheDocument();
-    expect(screen.getAllByText('No weekly/monthly averages available yet')).toHaveLength(6);
+    expect(screen.getByText('No weekly/monthly averages available yet')).toBeInTheDocument();
 
     // The KPI band still renders its labels (never hidden), and no insight leaks.
     expect(screen.getByText('Avg Score')).toBeInTheDocument();
@@ -461,120 +434,6 @@ describe('DriveScorePage', () => {
 
     expect(refetchMock).toHaveBeenCalledTimes(1);
   });
-
-  it('retains every band, ranked drive and history row when both refreshes fail', () => {
-    h.drives = makeQuery({ data: [driveGreat, driveBad, driveMid], isError: true, error: new Error('history refresh') });
-    h.score = makeQuery({ data: apiScore, isError: true, error: new Error('score refresh'), refetch: scoreRefetchMock });
-    renderPage();
-
-    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
-    expect(screen.getByText('Grade: A')).toBeInTheDocument();
-    expect(screen.getByText('Outstanding energy efficiency — minimal energy wasted!')).toBeInTheDocument();
-    expect(screen.getByText('High energy consumption — possibly high speeds or cold weather.')).toBeInTheDocument();
-    expect(within(screen.getByRole('region', { name: 'Drive History' })).getAllByText('Home → Office')).toHaveLength(2);
-    expect(screen.queryByText('Drive score evidence could not be loaded')).not.toBeInTheDocument();
-    expect(screen.getByText('First Drive')).toBeInTheDocument();
-  });
-
-  it.each(['loading', 'fatal'] as const)('keeps a resolved server score independent of %s history', (status) => {
-    h.drives = makeQuery({
-      isLoading: status === 'loading',
-      isFetching: status === 'loading',
-      isError: status === 'fatal',
-      error: status === 'fatal' ? new Error('history unavailable') : null,
-      dataUpdatedAt: 0,
-    });
-    h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
-    renderPage();
-
-    expect(screen.getByText('Grade: A')).toBeInTheDocument();
-    expect(screen.getByText('Based on 42 drives')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '88');
-    expect(screen.getByText('— drives in period')).toBeInTheDocument();
-    expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Drive History' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Achievements' })).toBeInTheDocument();
-    if (status === 'fatal') {
-      expect(screen.getByText('Drive history is unavailable; the server drive score remains visible')).toBeInTheDocument();
-    }
-  });
-
-  it('uses scored history while a failed server score has its own retry', () => {
-    h.score = makeQuery({ isError: true, error: new Error('score unavailable'), refetch: scoreRefetchMock });
-    renderPage();
-    const notice = screen.getByTestId('drive-score-server-unavailable');
-    expect(notice).toHaveAttribute('role', 'status');
-    expect(screen.getByText('First Drive')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toBeInTheDocument();
-    fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
-    expect(scoreRefetchMock).toHaveBeenCalledOnce();
-    expect(refetchMock).not.toHaveBeenCalled();
-  });
-
-  it('keeps an unresolved server score loading independently of a resolved empty history', () => {
-    h.drives = makeQuery({ data: [] });
-    h.score = makeQuery({ data: undefined, isLoading: true, isFetching: true, refetch: scoreRefetchMock });
-    renderPage();
-    const overall = within(screen.getByRole('region', { name: 'Overall Score' }));
-    expect(overall.getAllByRole('status').length).toBeGreaterThanOrEqual(1);
-    expect(overall.queryByText('Not enough drives in the selected period to calculate a score.')).not.toBeInTheDocument();
-    expect(screen.getByText('No drives found for the selected period.')).toBeInTheDocument();
-  });
-
-  it('shows unknown local KPI values instead of zero when only the server score exists', () => {
-    h.drives = makeQuery({ data: [] });
-    h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
-    renderPage();
-    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
-    expect(kpis.getAllByText('—')).toHaveLength(3);
-    expect(screen.getByRole('meter', { name: 'Efficiency' })).toHaveAttribute('aria-valuenow', '34');
-    expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
-  });
-
-  it('does not turn a null history response into a measured zero drive count', () => {
-    h.drives = makeQuery({ data: null });
-    h.score = makeQuery({ data: apiScore, refetch: scoreRefetchMock });
-    renderPage();
-    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
-    expect(kpis.getAllByText('—')).toHaveLength(4);
-    expect(screen.getByText('— drives in period')).toBeInTheDocument();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '88');
-  });
-
-  it('keeps measured zero scores numeric rather than converting them to unknown', () => {
-    h.drives = makeQuery({ data: [] });
-    h.score = makeQuery({
-      data: { ...apiScore, overall: 0, efficiency: 0, smoothness: 0, speedDiscipline: 0, grade: 'F' },
-      refetch: scoreRefetchMock,
-    });
-    renderPage();
-    expect(screen.getByRole('meter', { name: 'Overall Score' })).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.getByRole('meter', { name: 'Efficiency' })).toHaveAttribute('aria-valuenow', '0');
-    expect(screen.getByText('Grade: F')).toBeInTheDocument();
-  });
-
-  it('does not create numeric meters from nonfinite server readings', () => {
-    h.drives = makeQuery({ data: [] });
-    h.score = makeQuery({
-      data: { ...apiScore, overall: Number.NaN, efficiency: Number.NaN, smoothness: Number.POSITIVE_INFINITY, speedDiscipline: Number.NaN },
-      refetch: scoreRefetchMock,
-    });
-    renderPage();
-    expect(screen.queryByRole('meter', { name: 'Overall Score' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('meter', { name: 'Efficiency' })).not.toBeInTheDocument();
-    expect(screen.getByText('Tips appear once drives are scored')).toBeInTheDocument();
-  });
-
-  it('does not leave disabled no-vehicle queries in perpetual loading', () => {
-    h.vehicleId = null;
-    h.drives = makeQuery({ data: undefined });
-    h.score = makeQuery({ data: undefined, refetch: scoreRefetchMock });
-    renderPage();
-    expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(screen.getByText('Select a vehicle in the header to load drive score evidence.')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Drive History' })).toBeInTheDocument();
-    expect(screen.queryByRole('meter', { name: 'Overall Score' })).not.toBeInTheDocument();
-  });
 });
 
 describe('scoreDrive', () => {
@@ -618,59 +477,6 @@ describe('scoreDrive', () => {
     expect(score?.total).toBeLessThan(15);
     expect(score?.speed).toBeGreaterThan(0);
     expect(score?.speed).toBeLessThan(30);
-  });
-});
-
-describe('DriveScorePage extraction contracts', () => {
-  it('keeps the public helper exports bound to the extracted domain implementations', () => {
-    expect(scoreDrive).toBe(scoreDomain.scoreDrive);
-    expect(gradeFromScore).toBe(scoreDomain.gradeFromScore);
-    expect(gradeVariant).toBe(scoreDomain.gradeVariant);
-    expect(gradeColor).toBe(scoreDomain.gradeColor);
-    expect(buildTips).toBe(extractedBuildTips);
-    expect(buildAchievements).toBe(extractedBuildAchievements);
-    expect(computePeriodStats).toBe(extractedComputePeriodStats);
-  });
-
-  it('keeps the extracted history columns at the SI display boundary and retains unknown duration', () => {
-    const formatDistance = vi.fn((distanceM: number) => `${distanceM} distance`);
-    const formatEfficiency = vi.fn((whPerKm: number) => `${whPerKm} consumption`);
-    const row: HistoryRow = {
-      id: 42,
-      ts: recentIso(1),
-      route: 'Home → Office',
-      distanceM: 100_000,
-      durationS: null,
-      whPerKm: 130,
-      total: 95,
-      grade: 'A+',
-      efficiency: 40,
-      smoothness: 25,
-      speed: 30,
-    };
-    const { rerender } = render(
-      <HistoryColumnHarness row={row} formatDistance={formatDistance} formatEfficiency={formatEfficiency} />,
-    );
-
-    expect(formatDistance).toHaveBeenCalledWith(100_000);
-    expect(formatEfficiency).toHaveBeenCalledWith(130);
-    expect(screen.getByTestId('score-column-distance')).toHaveTextContent('100000 distance');
-    expect(screen.getByTestId('score-column-duration')).toHaveTextContent('—');
-    expect(screen.getByTestId('score-column-route')).toHaveTextContent('Home → Office');
-    expect(screen.getByTestId('score-column-score')).toHaveTextContent('95/100');
-    expect(screen.getByTestId('score-column-grade')).toHaveTextContent('A+');
-    expect(screen.getByTestId('score-column-breakdown')).toHaveTextContent('40/25/30');
-
-    rerender(
-      <HistoryColumnHarness
-        row={{ ...row, durationS: 0, total: 0, grade: 'F' }}
-        formatDistance={formatDistance}
-        formatEfficiency={formatEfficiency}
-      />,
-    );
-    expect(screen.getByTestId('score-column-duration')).not.toHaveTextContent('—');
-    expect(screen.getByTestId('score-column-score')).toHaveTextContent('0/100');
-    expect(screen.getByTestId('score-column-grade')).toHaveTextContent('F');
   });
 });
 

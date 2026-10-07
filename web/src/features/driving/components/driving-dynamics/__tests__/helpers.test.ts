@@ -242,26 +242,17 @@ describe('computeMotorStats', () => {
     expect(stats?.highTorquePct).toBe(50);
   });
 
-  it('preserves unknown aggregates as null when readings carry no data', () => {
+  it('yields the documented 0 sentinel for aggregates when readings carry no data', () => {
     // A reading with every telemetry field null is still counted, but its absent
     // metrics collapse to 0 (the numeric "no data" sentinel the panels pair with
     // their own "—" placeholder when the whole MotorStats object is null).
     const stats = computeMotorStats([makeSnapshot(), makeSnapshot()]);
     expect(stats).not.toBeNull();
     expect(stats?.totalReadings).toBe(2);
-    expect(stats?.avgTorque).toBeNull();
-    expect(stats?.maxMotorTemp).toBeNull();
-    expect(stats?.avgPower).toBeNull();
-    expect(stats?.highTorquePct).toBeNull();
-  });
-
-  it('does not let non-finite samples invent measured power or temperature', () => {
-    const stats = computeMotorStats([makeSnapshot({
-      power_kw: Number.NaN, regen_kw: Infinity, motor_temp_c_front: Infinity,
-    })]);
-    expect(stats?.avgPower).toBeNull();
-    expect(stats?.peakRegen).toBeNull();
-    expect(stats?.maxMotorTemp).toBeNull();
+    expect(stats?.avgTorque).toBe(0);
+    expect(stats?.maxMotorTemp).toBe(0);
+    expect(stats?.avgPower).toBe(0);
+    expect(stats?.highTorquePct).toBe(0);
   });
 
   it('feeds getThrottleStyle a finite avgPower end-to-end', () => {

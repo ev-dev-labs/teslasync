@@ -217,28 +217,6 @@ describe('SignalSparklinePreview', () => {
     expect(screen.queryByTitle('No samples in last hour')).toBeNull();
   });
 
-  it.each(['error', 'paused'] as const)('keeps the original plotted history with an explicit retained-source notice when refresh is %s', reason => {
-    h.query = makeQuery({
-      data: historyData([envelope(10), envelope(20), envelope(15)]),
-      ...(reason === 'error'
-        ? { isError: true, error: new Error('refresh failed') }
-        : { fetchStatus: 'paused' }),
-    });
-    renderPreview();
-    expect(screen.getByRole('img', { name: 'battery_level trend, 3 samples in the last hour' })).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Trend may be out of date');
-    expect(screen.queryByRole('img', { name: 'Failed to load trend' })).toBeNull();
-    expect(h.calls).toEqual([{ vehicleId: 7, signal: 'battery_level', range: { hours: 1, limit: 30 } }]);
-  });
-
-  it('keeps an insufficient cached series distinct from failed initial history', () => {
-    h.query = makeQuery({ data: historyData([envelope(10)]), isError: true, error: new Error('refresh failed') });
-    renderPreview();
-    expect(screen.getByTitle('No samples in last hour')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Trend may be out of date');
-    expect(screen.queryByRole('img')).toBeNull();
-  });
-
   it('coerces boolean history samples into a plottable 1/0 series', () => {
     // bool is numeric-eligible: two boolean samples collapse to [1, 0] and plot.
     h.query = makeQuery({

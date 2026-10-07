@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
-import { LayoutCard } from '@/components/layout';
+import { FlaskConical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   Line,
@@ -14,7 +14,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { chartTokens } from '@/lib/tokens';
 import {
@@ -80,7 +80,11 @@ export function CabinThermalPredictionScenario({
 
   return (
     <section data-testid="cabin-thermal-prediction">
-      <LayoutCard title={t('cabinThermal.prediction.title', 'Accepted-fit worked scenario')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <FlaskConical className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('cabinThermal.prediction.title', 'Accepted-fit worked scenario')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-3">
           {t(
             'cabinThermal.prediction.subtitle',
@@ -98,17 +102,17 @@ export function CabinThermalPredictionScenario({
                     direction: scenario.direction === 'cooling'
                       ? t('cabinThermal.direction.cooling', 'Cooling')
                       : t('cabinThermal.direction.warming', 'Warming'),
-                    start: formatTemperature(scenario.startC),
-                    ambient: formatTemperature(scenario.ambientC),
-                    tau: formatDuration(scenario.tauMin * 60),
-                    target: formatTemperature(scenario.targetC),
+                    start: formatTemperature(scenario.startC, { precision: 0 }),
+                    ambient: formatTemperature(scenario.ambientC, { precision: 0 }),
+                    tau: formatDuration(scenario.tauMin * 60, { precision: 1 }),
+                    target: formatTemperature(scenario.targetC, { precision: 0 }),
                     time: targetMinutes != null
-                      ? formatDuration(targetMinutes * 60)
+                      ? formatDuration(targetMinutes * 60, { precision: 1 })
                       : t('cabinThermal.prediction.unreachable', 'not passively reachable'),
                   },
                 )}
               </Text>
-              <EmbeddedChart toolbar exportable size="standard"
+              <ChartContainer
                 className="border-0 bg-transparent p-0 shadow-none"
                 title={t('cabinThermal.prediction.plotTitle', 'Passive-soak curve')}
                 ariaLabel={t(
@@ -137,11 +141,11 @@ export function CabinThermalPredictionScenario({
                     </LineChart>
                   </ResponsiveContainer>
                 )}
-              </EmbeddedChart>
+              </ChartContainer>
             </>
           ) : null}
         </CabinThermalSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

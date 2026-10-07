@@ -20,13 +20,11 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    unitPrefs: { energy: 'kWh', power: 'kW', duration: 'h' },
     formatPower: (value: number) => `${(value / 1000).toFixed(2)} kW`,
     formatEnergy: (value: number) => `${(value / 1000).toFixed(2)} kWh`,
     formatDuration: (value: number) => `${(value / 3600).toFixed(2)} h`,
   }),
 }));
-vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
 
 vi.mock('@/lib/dateFormat', () => ({
   formatDateTime: (iso?: string | Date | null) => iso ? `dt(${String(iso)})` : '—',
@@ -42,7 +40,7 @@ const STATS: ChargeRateStats = {
 };
 
 function metricByLabel(label: string): HTMLElement {
-  const panel = screen.getByText(label).closest('[data-operational-metric]');
+  const panel = screen.getByText(label).closest('[data-print-card]');
   if (!panel) throw new Error(`No metric panel found for "${label}"`);
   return panel as HTMLElement;
 }

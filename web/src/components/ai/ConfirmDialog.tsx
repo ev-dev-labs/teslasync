@@ -102,7 +102,7 @@ export function AiConfirmDialog({
         <p className="text-sm text-[var(--text-primary)]">{intro}</p>
 
         <div className="space-y-1">
-          <div className="text-xs tracking-wide text-[var(--text-muted)]">{toolLabel}</div>
+          <div className="text-xs uppercase tracking-wide text-[var(--text-muted)]">{toolLabel}</div>
           <div className="font-mono text-sm text-[var(--text-primary)]" data-testid="ai-confirm-tool-name">
             {tool.name}
           </div>
@@ -112,7 +112,7 @@ export function AiConfirmDialog({
         </div>
 
         <div className="space-y-1">
-          <div className="text-xs tracking-wide text-[var(--text-muted)]">{argsLabel}</div>
+          <div className="text-xs uppercase tracking-wide text-[var(--text-muted)]">{argsLabel}</div>
           <pre
             data-testid="ai-confirm-args"
             className="overflow-auto rounded-md border border-[var(--border-strong)] bg-[var(--surface-2)] p-3 text-xs text-[var(--text-primary)] font-mono"

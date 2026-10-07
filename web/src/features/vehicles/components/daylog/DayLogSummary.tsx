@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { StatStrip } from '@/components/data-display';
+import { Grid } from '@/components/layout';
+import { StatCard } from '@/components/data-display';
 import { EmptyState, QueryError, StatSkeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { useUnits } from '@/hooks/useUnits';
@@ -12,6 +13,8 @@ export interface DayLogSummaryProps {
   error: unknown;
   onRetry: () => void;
 }
+
+const SUMMARY_GRID = { default: 2, sm: 3, lg: 6 } as const;
 
 /**
  * Section 2 — day totals. Counts are exact; SI sums render through
@@ -35,7 +38,7 @@ export function DayLogSummary({ summary, isLoading, error, onRetry }: DayLogSumm
           <QueryError error={error} onRetry={onRetry} resourceName={t('dayLog.summary.title', 'Day summary')} />
         ) : (
           <>
-            {summary != null && !hasSessions && (
+            {!hasSessions && (
               <EmptyState
                 className="py-6"
                 icon={<Icons.activity className="h-8 w-8" />}
@@ -50,21 +53,38 @@ export function DayLogSummary({ summary, isLoading, error, onRetry }: DayLogSumm
                 }}
               />
             )}
-            <StatStrip id="day-log-summary" variant="embedded"
-              period={{ kind: 'unknown', label: t('dayLog.summary.period', 'Selected vehicle day') }}
-              metrics={[
-                { metricId: 'count', occurrenceId: 'drives', label: t('dayLog.summary.drives', 'Drives'), rawValue: summary?.drive_count ?? null },
-                { metricId: 'count', occurrenceId: 'charges', label: t('dayLog.summary.charges', 'Charges'), rawValue: summary?.charge_count ?? null },
-                { metricId: 'text', occurrenceId: 'drive-time', label: t('dayLog.summary.driveTime', 'Drive time'),
-                  rawValue: summary?.drive_duration_s == null ? null : formatDuration(summary.drive_duration_s) },
-                { metricId: 'text', occurrenceId: 'distance', label: t('dayLog.summary.distance', 'Distance'),
-                  rawValue: summary?.drive_distance_m == null ? null : formatDistance(summary.drive_distance_m) },
-                { metricId: 'text', occurrenceId: 'energy-added', label: t('dayLog.summary.energyAdded', 'Energy added'),
-                  rawValue: summary?.energy_added_wh == null ? null : formatEnergy(summary.energy_added_wh) },
-                { metricId: 'text', occurrenceId: 'energy-used', label: t('dayLog.summary.energyUsed', 'Energy used'),
-                  rawValue: summary?.energy_used_wh == null ? null : formatEnergy(summary.energy_used_wh) },
-              ]}
+            <Grid cols={SUMMARY_GRID} gap={4}>
+              <StatCard
+                label={t('dayLog.summary.drives', 'Drives')}
+                value={summary?.drive_count ?? 0}
+                icon={<Icons.drive className="h-4 w-4" />}
               />
+              <StatCard
+                label={t('dayLog.summary.charges', 'Charges')}
+                value={summary?.charge_count ?? 0}
+                icon={<Icons.charging className="h-4 w-4" />}
+              />
+              <StatCard
+                label={t('dayLog.summary.driveTime', 'Drive time')}
+                value={formatDuration(summary?.drive_duration_s)}
+                icon={<Icons.clock className="h-4 w-4" />}
+              />
+              <StatCard
+                label={t('dayLog.summary.distance', 'Distance')}
+                value={formatDistance(summary?.drive_distance_m)}
+                icon={<Icons.navigation className="h-4 w-4" />}
+              />
+              <StatCard
+                label={t('dayLog.summary.energyAdded', 'Energy added')}
+                value={formatEnergy(summary?.energy_added_wh)}
+                icon={<Icons.batteryCharging className="h-4 w-4" />}
+              />
+              <StatCard
+                label={t('dayLog.summary.energyUsed', 'Energy used')}
+                value={formatEnergy(summary?.energy_used_wh)}
+                icon={<Icons.bolt className="h-4 w-4" />}
+              />
+            </Grid>
           </>
         )}
       </div>

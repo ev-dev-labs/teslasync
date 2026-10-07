@@ -73,7 +73,7 @@ export function trendFor(
   const isUp = diff > 0;
   return {
     direction: isUp ? 'up' : 'down',
-    value: `${isUp ? '+' : ''}${fmtNumber(pct)}%`,
+    value: `${isUp ? '+' : ''}${fmtNumber(pct, 1)}%`,
     positive: invertPositive ? !isUp : isUp,
   };
 }

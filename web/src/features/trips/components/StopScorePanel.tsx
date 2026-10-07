@@ -5,9 +5,8 @@ import { useScoreStops, type JourneySession } from '@/api/hooks/useJourney';
 import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { useDataState } from '@/hooks/useDataState';
 import { Badge, Button, Checkbox, Input, Text } from '@/components/ui';
-import { LayoutCard, SourceContent } from '@/components/layout';
-import { FormSection, UnitInput } from '@/components/forms';
-import { EmptyState, ErrorDisplay, ListSkeleton } from '@/components/feedback';
+import { UnitInput } from '@/components/forms';
+import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { StopScoreTable } from './StopScoreTable';
 import { safeArray } from '@/lib/safeArray';
 
@@ -42,13 +41,6 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
 
   const score = useScoreStops();
   const result = score.data ?? null;
-  const emptySites = (
-    <EmptyState
-      icon={<Icons.location className="h-10 w-10" aria-hidden="true" />}
-      message={t('journey.scoring.noSites', 'No fleet-known sites yet. Sync charging history to nominate stops.')}
-      actionTo={{ label: t('journey.scoring.openHistory', 'Open charging history'), to: '/tesla-charging-history' }}
-    />
-  );
 
   const hasCoords =
     session.origin_lat != null &&
@@ -81,34 +73,42 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
 
   if (!hasCoords) {
     return (
-      <LayoutCard title={t('journey.scoring.title', 'Score stops')}>
-      <Text as="p" variant="bodySm">
+      <Text as="p" size="sm" color="secondary">
         {t(
           'journey.scoring.noCoords',
           'Add origin and destination coordinates to score stops along the corridor.',
         )}
       </Text>
-      </LayoutCard>
     );
   }
 
   return (
-    <LayoutCard title={t('journey.scoring.title', 'Score stops')}>
-      <SourceContent
-        state={sitesState.fatalError ? 'error' : sitesQuery.isLoading && !sitesState.hasData
-          ? 'loading' : sitesState.status === 'stale' ? 'retained' : sites.length === 0 ? 'empty' : 'ready'}
-        label={t('journey.scoring.candidates', 'Candidate stops')}
-        emptyMessage={t('journey.scoring.noSites', 'No fleet-known sites yet. Sync charging history to nominate stops.')}
-        errorMessage={t('journey.scoring.loadFailed', 'Candidate stops could not be loaded.')}
-        error={sitesState.fatalError}
-        errorRecovery={{ onRetry: sitesState.retry ?? undefined }}
-        loadingContent={<ListSkeleton label={t('journey.scoring.loadingSites', 'Loading candidate sites…')} />}
-        emptyContent={emptySites}
-      >
-        {sites.length === 0 ? emptySites : (
-        <FormSection title={t('journey.scoring.candidates', 'Candidate stops')}>
+    <div className="space-y-4">
+      <Text as="p" variant="label" className="flex items-center gap-2">
+        <Icons.compass className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+        {t('journey.scoring.title', 'Score stops')}
+      </Text>
+
+      {sitesQuery.isLoading ? (
+        <ListSkeleton label={t('journey.scoring.loadingSites', 'Loading candidate sites…')} />
+      ) : sitesState.fatalError ? (
+        <QueryError error={sitesState.fatalError} onRetry={() => sitesState.retry?.()} />
+      ) : sites.length === 0 ? (
+        <EmptyState
+          icon={<Icons.location className="h-10 w-10" aria-hidden="true" />}
+          message={t(
+            'journey.scoring.noSites',
+            'No fleet-known sites yet. Sync charging history to nominate stops.',
+          )}
+          actionTo={{
+            label: t('journey.scoring.openHistory', 'Open charging history'),
+            to: '/tesla-charging-history',
+          }}
+        />
+      ) : (
+        <div className="grid gap-3">
           <div
-            className="grid max-h-48 min-w-0 gap-1 overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2 sm:grid-cols-2"
+            className="grid max-h-48 gap-1 overflow-y-auto rounded-lg border border-white/[0.07] bg-white/[0.02] p-2 sm:grid-cols-2"
             role="group"
             aria-label={t('journey.scoring.candidates', 'Candidate stops')}
           >
@@ -136,7 +136,6 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
               onChange={(v) => setChargeNeed(v ?? 0)}
             />
             <Button
-              wrapLabel
               onClick={submit}
               loading={score.isPending}
               disabled={selected.length === 0 || toIsoOrNull(arrival) == null || chargeNeed <= 0}
@@ -144,18 +143,14 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
               {t('journey.scoring.submit', 'Score {{count}} stops', { count: selected.length })}
             </Button>
           </div>
-        </FormSection>
-        )}
-      </SourceContent>
+        </div>
+      )}
 
-      {score.error ? (
-        <ErrorDisplay compact error={score.error} message={t('journey.scoring.scoreFailed', 'Stops could not be scored. Review the candidates and try again.')} />
-      ) : null}
-      {score.isPending && !result ? (
+      {score.isPending ? (
         <ListSkeleton label={t('journey.scoring.scoring', 'Scoring stops…')} />
       ) : result ? (
         <div className="space-y-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <Badge variant="success">
               {t('journey.scoring.winner', '{{site}} wins', { site: result.winner })}
             </Badge>
@@ -166,6 +161,6 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
           <StopScoreTable stops={safeArray(result.stops)} tableId="journey-stop-scores" />
         </div>
       ) : null}
-    </LayoutCard>
+    </div>
   );
 }

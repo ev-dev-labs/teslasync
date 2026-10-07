@@ -1,16 +1,16 @@
 import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
 import { useGhostDrives } from '@/api/hooks/useOwnership';
-import { AlertBanner } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { AlertBanner, QueryError } from '@/components/feedback';
 import { Badge, Button, DataTable, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { GhostDrive } from '@/types/ownership';
 import { OwnershipPanel } from './OwnershipPanel';
 import { formatPct, formatSpan } from '../formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface GhostDrivesPanelProps {
   vehicleId: number | null;
@@ -28,10 +28,10 @@ function scoreTone(score: number): 'warning' | 'info' {
  * labelling a drive here re-anchors the cluster everywhere else.
  */
 export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrivesPanelProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const units = useUnits();
   const ghostsQuery = useGhostDrives(vehicleId, windowDays);
+  const ghostsState = useDataState(ghostsQuery);
 
   const ghosts = ghostsQuery.data?.ghosts ?? [];
   const scanned = ghostsQuery.data?.scanned ?? 0;
@@ -53,7 +53,6 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
     },
     {
       key: 'score',
-      align: 'right',
       header: t('ownership.ghost.col.score', 'Ghost score'),
       render: (row) => (
         <div className="flex min-w-[7rem] items-center gap-2">
@@ -63,14 +62,13 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
               style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
             />
           </div>
-          <Badge variant={scoreTone(row.score)}>{fmtNumber(row.score)}</Badge>
+          <Badge variant={scoreTone(row.score)}>{fmtNumber(row.score, 0)}</Badge>
         </div>
       ),
       sortable: true,
     },
     {
       key: 'trip',
-      align: 'right',
       header: t('ownership.ghost.col.trip', 'Trip'),
       render: (row) => (
         <div>
@@ -83,18 +81,17 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
     },
     {
       key: 'deviation',
-      align: 'right',
       header: t('ownership.ghost.col.deviation', 'Deviation'),
       render: (row) => (
         <div>
           <span className="tabular-nums">
             {t('ownership.ghost.ratio', '{{ratio}}× typical', {
-              ratio: fmtNumber(row.distance_ratio),
+              ratio: fmtNumber(row.distance_ratio, 1),
             })}
           </span>
           <Text as="p" variant="caption">
             {t('ownership.ghost.confidence', '{{pct}} confidence', {
-              pct: formatPct(row.confidence_pct),
+              pct: formatPct(row.confidence_pct, 0),
             })}
           </Text>
         </div>
@@ -123,12 +120,10 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
 
   return (
     <OwnershipPanel
-      source={ghostsQuery}
-      sourceEnabled={vehicleId != null}
       title={t('ownership.ghost.title', 'Ghost-driver alerts')}
       description={t(
         'ownership.ghost.subtitle',
-        'Recent drives that match no named driver and behave unlike the rest. confirm who was driving — or investigate.',
+        'Recent drives that match no named driver and behave unlike the rest. Confirm who was driving — or investigate.',
       )}
       actions={
         ghosts.length > 0 ? (
@@ -138,7 +133,11 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
           </Badge>
         ) : undefined
       }
-      empty={ghosts.length === 0}
+      empty={
+        !ghostsState.fatalError &&
+        !ghostsQuery.isError &&
+        (ghostsQuery.isLoading || ghosts.length === 0)
+      }
       emptyMessage={
         ghostsQuery.isLoading
           ? t('ownership.ghost.scanning', 'Scanning recent drives…')
@@ -148,6 +147,9 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
             )
       }
     >
+      {ghostsState.fatalError ? (
+        <QueryError error={ghostsState.fatalError} onRetry={() => ghostsState.retry?.()} />
+      ) : null}
       {ghosts.length > 0 ? (
         <div className="mb-4">
           <AlertBanner

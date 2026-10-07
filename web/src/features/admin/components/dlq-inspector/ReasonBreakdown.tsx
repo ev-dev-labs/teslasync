@@ -17,10 +17,9 @@ import { ListX } from 'lucide-react';
 
 import { MetricBar } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ReasonBreakdownProps {
   rows: DLQEntrySummary[];
@@ -36,7 +35,6 @@ interface ReasonBucket {
 }
 
 export function ReasonBreakdown({ rows, loading, error, onRetry }: ReasonBreakdownProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const { buckets, total } = useMemo(() => {
@@ -87,6 +85,7 @@ export function ReasonBreakdown({ rows, loading, error, onRetry }: ReasonBreakdo
             color={bucket.color}
             sublabel={`${fmtInt(bucket.count)} · ${fmtPercent(
               total > 0 ? (bucket.count / total) * 100 : 0,
+              0,
             )}`}
           />
         </li>

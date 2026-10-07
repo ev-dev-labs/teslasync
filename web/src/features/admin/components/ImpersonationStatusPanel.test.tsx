@@ -72,7 +72,7 @@ describe('ImpersonationStatusPanel', () => {
   it('always renders the panel heading regardless of state', () => {
     renderPanel({ status: { mode: 'inactive' } })
     expect(
-      screen.getByRole('heading', { name: 'Session status' }),
+      screen.getByRole('heading', { name: 'Session Status' }),
     ).toBeInTheDocument()
   })
 

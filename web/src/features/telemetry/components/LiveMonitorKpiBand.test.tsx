@@ -2,12 +2,13 @@
  * LiveMonitorKpiBand contract tests.
  *
  * The KPI band is a pure, prop-driven presentational strip that summarises the
- * live SSE firehose through the actual six-metric OperationalBrief. Coverage:
+ * live SSE firehose as a six-card metric grid. The behaviour locked in here:
  *
  *   1. Layout & a11y — the strip is exposed as a named landmark region and all
- *      six labelled metrics render, so the band never disappears.
- *   2. Connection state — the first metric preserves Connected / Disconnected
- *      separately from retained-data status.
+ *      six labelled cards always render, each with a decorative (aria-hidden)
+ *      icon, so the band never disappears.
+ *   2. Connection state — the first card swaps its copy (Connected /
+ *      Disconnected) and its glyph (Wifi / WifiOff) off the `connected` flag.
  *   3. Value surfacing — rate / buffer / unique / numeric / categorical counts
  *      pass through `fmtInt` (locale separators included) and the buffer card's
  *      subtitle reports capacity + a whole-percent fill.
@@ -15,18 +16,18 @@
  *      [0, 100]: an over-capacity count caps at 100%, a negative count floors at
  *      0% (never "-5%"), and a zero/negative capacity falls back to `/ 1` so the
  *      division can never yield Infinity/NaN.
- *   5. Null-safety — missing and invalid numeric inputs remain distinguishable
- *      from measured zero; the existing fill caption remains finite.
+ *   5. Null-safety — a partial/malformed prop bag with missing numeric fields
+ *      collapses each affected card to `0` and still prints a finite `0%` fill
+ *      subtitle rather than `NaN%`.
  *
  * react-i18next is stubbed to echo the English fallback so the copy asserted on
- * is decoupled from the locale bundle. The actual numerical bridge and
- * OperationalBrief render for real; only preference providers are isolated.
+ * is decoupled from the locale bundle. <MetricCard> renders for real — it is a
+ * stable shared primitive with its own tests — so the assertions exercise the
+ * true label → value → subtitle → icon wiring end-to-end.
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
-import './operationalbrief-all/metricPreferencesTestSetup';
+import { render, screen } from '@testing-library/react';
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -67,33 +68,12 @@ function renderBand(overrides: Partial<LiveMonitorKpiBandProps> = {}) {
   return render(<LiveMonitorKpiBand {...props} />);
 }
 
-it('reacts to live precision and locale changes without decimalizing counts', () => {
-  setGlobalLocale('en-US');
-  setGlobalPrecision(2);
-  const view = renderBand({ bufferCount: 1234, bufferMax: 2000, uniqueSignals: 1001 });
-  expect(screen.getByText('/ 2,000 · 61.70%')).toBeInTheDocument();
-  expect(screen.getByText('1,234')).toBeInTheDocument();
-  try {
-    act(() => {
-      setGlobalPrecision(3);
-      setGlobalLocale('de-DE');
-    });
-    expect(screen.getByText('/ 2.000 · 61,700%')).toBeInTheDocument();
-    expect(screen.getByText('1.234')).toBeInTheDocument();
-    expect(screen.getByText('1.001')).toBeInTheDocument();
-  } finally {
-    view.unmount();
-    setGlobalLocale('en-US');
-    setGlobalPrecision(2);
-  }
-});
-
 /** Assert every card label is on screen regardless of the underlying values. */
 function expectAllSixLabels() {
   expect(screen.getByText('Connection')).toBeInTheDocument();
   expect(screen.getByText('Signals / sec')).toBeInTheDocument();
-  expect(screen.getByText('Buffer size')).toBeInTheDocument();
-  expect(screen.getByText('Unique signals')).toBeInTheDocument();
+  expect(screen.getByText('Buffer Size')).toBeInTheDocument();
+  expect(screen.getByText('Unique Signals')).toBeInTheDocument();
   expect(screen.getByText('Numeric')).toBeInTheDocument();
   expect(screen.getByText('Categorical')).toBeInTheDocument();
 }
@@ -109,49 +89,36 @@ describe('LiveMonitorKpiBand — layout & accessibility', () => {
     ).toBeInTheDocument();
   });
 
-  it('renders all six labelled measurements and a decorative review icon', () => {
+  it('renders all six labelled cards, each with a decorative icon', () => {
     const { container } = renderBand();
 
     expectAllSixLabels();
     // Every card glyph is aria-hidden so a screen reader announces the
     // label + value, never the decorative icon.
     const icons = container.querySelectorAll('svg[aria-hidden="true"]');
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(icons).toHaveLength(1);
-  });
-
-  it('uses the shared allocation-safe grid without dropping any buffered metric', () => {
-    const { container } = renderBand({ connected: false, bufferCount: 123, uniqueSignals: 21 });
-    const grid = container.querySelector('[data-operational-brief] [role="list"]');
-    expect(grid).not.toBeNull();
-    expect(grid).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3');
-    expectAllSixLabels();
-    expect(screen.getByText('123')).toBeInTheDocument();
-    expect(screen.getByText('21')).toBeInTheDocument();
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(icons).toHaveLength(6);
   });
 });
 
 // ── Connection state ──────────────────────────────────────────────────────────
 
 describe('LiveMonitorKpiBand — connection state', () => {
-  it('shows connected transport status without inventing a health glyph', () => {
+  it('shows the connected copy and the Wifi glyph when connected', () => {
     const { container } = renderBand({ connected: true });
 
-    expect(screen.getAllByText('Connected')).toHaveLength(2);
+    expect(screen.getByText('Connected')).toBeInTheDocument();
     expect(screen.queryByText('Disconnected')).toBeNull();
     // The "on" glyph is present; the "off" glyph is not.
-    expect(container.querySelector('[data-operational-metric="connection"]')).toHaveAttribute('data-value-state', 'value');
+    expect(container.querySelector('.lucide-wifi')).not.toBeNull();
     expect(container.querySelector('.lucide-wifi-off')).toBeNull();
   });
 
-  it('shows disconnected transport status and retained buffer context', () => {
+  it('shows the disconnected copy and the WifiOff glyph when disconnected', () => {
     const { container } = renderBand({ connected: false });
 
     expect(screen.getByText('Disconnected')).toBeInTheDocument();
     expect(screen.queryByText('Connected')).toBeNull();
-    expect(screen.getByTestId('live-monitor-summary')).toHaveTextContent('Retained source data');
-    expect(container.querySelector('[data-operational-metric="connection"]')).toHaveAttribute('data-value-state', 'value');
+    expect(container.querySelector('.lucide-wifi-off')).not.toBeNull();
     expect(container.querySelector('.lucide-wifi')).toBeNull();
   });
 });
@@ -180,7 +147,7 @@ describe('LiveMonitorKpiBand — value surfacing', () => {
 
     // 50 / 200 = 25%.
     expect(
-      screen.getByText(bufferSubtitle('200', '25.00%')),
+      screen.getByText(bufferSubtitle('200', '25%')),
     ).toBeInTheDocument();
   });
 });
@@ -193,19 +160,18 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
 
     expect(screen.getByText('500')).toBeInTheDocument(); // raw count preserved
     expect(
-      screen.getByText(bufferSubtitle('200', '100.00%')),
+      screen.getByText(bufferSubtitle('200', '100%')),
     ).toBeInTheDocument();
   });
 
   it('floors the fill at 0% for a negative count (never a negative percent)', () => {
     renderBand({ bufferCount: -10, bufferMax: 200 });
 
-    // The raw invalid count is retained by the bridge, never reported as a measured negative count.
-    expect(screen.getByText('Buffer size').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
-    expect(screen.queryByText('-10')).toBeNull();
-    expect(screen.getByText(bufferSubtitle('200', '0.00%'))).toBeInTheDocument();
+    // The raw (nonsensical) count is still shown, but the fill is clamped to 0%.
+    expect(screen.getByText('-10')).toBeInTheDocument();
+    expect(screen.getByText(bufferSubtitle('200', '0%'))).toBeInTheDocument();
     // The pre-hardening "-5%" must never surface.
-    expect(screen.queryByText(bufferSubtitle('200', '-5.00%'))).toBeNull();
+    expect(screen.queryByText(bufferSubtitle('200', '-5%'))).toBeNull();
   });
 
   it('falls back to /1 capacity when bufferMax is zero (no Infinity/NaN)', () => {
@@ -213,14 +179,14 @@ describe('LiveMonitorKpiBand — buffer fill clamping', () => {
 
     expect(screen.getByText('3')).toBeInTheDocument();
     // 3 / 1 → clamped to 100%, and the capacity reads "1", never "0".
-    expect(screen.getByText(bufferSubtitle('1', '100.00%'))).toBeInTheDocument();
+    expect(screen.getByText(bufferSubtitle('1', '100%'))).toBeInTheDocument();
   });
 });
 
 // ── Null-safety ───────────────────────────────────────────────────────────────
 
 describe('LiveMonitorKpiBand — null-safety', () => {
-  it('keeps missing numeric fields unknown and preserves the finite capacity caption', () => {
+  it('collapses missing numeric fields to 0 and keeps a finite fill subtitle', () => {
     // A partial/malformed prop bag: rate, bufferCount and uniqueSignals are
     // absent at runtime. The `?? 0` guards must render "0" for each of those
     // cards while the well-formed fields render their real values — and the
@@ -238,12 +204,12 @@ describe('LiveMonitorKpiBand — null-safety', () => {
 
     expectAllSixLabels();
     // rate, buffer count and unique signals each collapse to "0".
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getAllByText('0')).toHaveLength(3);
     // Surviving fields keep their values.
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     // The fill is a finite 0%, proving the NaN guard on the division.
-    expect(screen.getByText(bufferSubtitle('100', '0.00%'))).toBeInTheDocument();
+    expect(screen.getByText(bufferSubtitle('100', '0%'))).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
   });
 });

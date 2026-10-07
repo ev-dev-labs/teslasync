@@ -5,9 +5,8 @@ import { GlassPanel } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat'
 import type { MotorSnapshot } from '@/api/types'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Symmetric ± window (kW) the power bar + accessible meter visualise. The
@@ -29,7 +28,6 @@ interface PowertrainPanelProps {
 }
 
 export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { formatTemperature } = useUnits()
 
@@ -64,7 +62,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           {/* Shift state badge */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.shiftState', 'Shift state')}
+              {t('telemetry.shiftState', 'Shift State')}
             </span>
             <span
               className={cn(
@@ -146,12 +144,12 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           {/* Torque split */}
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
-              label={t('telemetry.torqueFront', 'Front torque')}
+              label={t('telemetry.torqueFront', 'Front Torque')}
               value={motorData.torque_nm_front != null ? fmtNumber(motorData.torque_nm_front) : '—'}
               subtitle="Nm"
             />
             <MetricCard
-              label={t('telemetry.torqueRear', 'Rear torque')}
+              label={t('telemetry.torqueRear', 'Rear Torque')}
               value={motorData.torque_nm_rear != null ? fmtNumber(motorData.torque_nm_rear) : '—'}
               subtitle="Nm"
             />
@@ -160,7 +158,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           {/* Temperatures */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.motorTemp', 'Motor temp (peak)')}
+              {t('telemetry.motorTemp', 'Motor Temp (peak)')}
             </span>
             <span
               className={cn(
@@ -173,7 +171,7 @@ export function PowertrainPanel({ motorData }: PowertrainPanelProps) {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-[var(--text-muted)]">
-              {t('telemetry.inverterTemp', 'Inverter temp')}
+              {t('telemetry.inverterTemp', 'Inverter Temp')}
             </span>
             <span className="text-sm font-mono text-[var(--text-primary)]">
               {formatTemperature(motorData.inverter_temp_c)}

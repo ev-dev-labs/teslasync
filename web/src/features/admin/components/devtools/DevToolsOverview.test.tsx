@@ -76,11 +76,11 @@ describe('DevToolsOverview', () => {
     expect(band).toBeInTheDocument()
 
     for (const label of [
-      'Telemetry errors',
+      'Telemetry Errors',
       'Vehicles',
-      'Fleet API endpoints',
-      'Telemetry signals',
-      'Reference docs',
+      'Fleet API Endpoints',
+      'Telemetry Signals',
+      'Reference Docs',
     ]) {
       expect(within(band).getByText(label)).toBeInTheDocument()
     }
@@ -90,17 +90,17 @@ describe('DevToolsOverview', () => {
     render(<DevToolsOverview errorVinCount={2} vehicleCount={5} />)
 
     expect(
-      within(getCard('Fleet API endpoints')).getByText(
+      within(getCard('Fleet API Endpoints')).getByText(
         String(TESLA_ENDPOINTS.length),
       ),
     ).toBeInTheDocument()
     expect(
-      within(getCard('Telemetry signals')).getByText(
+      within(getCard('Telemetry Signals')).getByText(
         String(EXPECTED_SIGNAL_COUNT),
       ),
     ).toBeInTheDocument()
     expect(
-      within(getCard('Reference docs')).getByText(
+      within(getCard('Reference Docs')).getByText(
         String(REFERENCE_LINKS.length),
       ),
     ).toBeInTheDocument()
@@ -113,7 +113,7 @@ describe('DevToolsOverview', () => {
   it('renders truthful live counts once both sources have resolved', () => {
     render(<DevToolsOverview errorVinCount={7} vehicleCount={12} />)
 
-    expect(within(getCard('Telemetry errors')).getByText('7')).toBeInTheDocument()
+    expect(within(getCard('Telemetry Errors')).getByText('7')).toBeInTheDocument()
     expect(within(getCard('Vehicles')).getByText('12')).toBeInTheDocument()
     // No placeholder anywhere when the live data is present.
     expect(screen.queryAllByText('—')).toHaveLength(0)
@@ -124,14 +124,14 @@ describe('DevToolsOverview', () => {
 
     // Exactly the two live KPIs are unknown — the static catalogs are not.
     expect(screen.getAllByText('—')).toHaveLength(2)
-    expect(within(getCard('Telemetry errors')).getByText('—')).toBeInTheDocument()
+    expect(within(getCard('Telemetry Errors')).getByText('—')).toBeInTheDocument()
     expect(within(getCard('Vehicles')).getByText('—')).toBeInTheDocument()
     // The concrete live counts must not leak through the placeholder.
-    expect(within(getCard('Telemetry errors')).queryByText('7')).toBeNull()
+    expect(within(getCard('Telemetry Errors')).queryByText('7')).toBeNull()
 
     // Static catalog KPIs stay truthful even while live sources load.
     expect(
-      within(getCard('Fleet API endpoints')).getByText(
+      within(getCard('Fleet API Endpoints')).getByText(
         String(TESLA_ENDPOINTS.length),
       ),
     ).toBeInTheDocument()
@@ -149,7 +149,7 @@ describe('DevToolsOverview', () => {
   it('tones the Telemetry Errors icon red when there are errors', () => {
     render(<DevToolsOverview errorVinCount={3} vehicleCount={9} />)
 
-    const card = getCard('Telemetry errors')
+    const card = getCard('Telemetry Errors')
     const icon = card.querySelector('[data-role="metric-icon"]')
     expect(icon).toHaveAttribute('data-color', 'red')
   })
@@ -157,7 +157,7 @@ describe('DevToolsOverview', () => {
   it('tones the Telemetry Errors icon green when there are zero errors', () => {
     render(<DevToolsOverview errorVinCount={0} vehicleCount={9} />)
 
-    const card = getCard('Telemetry errors')
+    const card = getCard('Telemetry Errors')
     const icon = card.querySelector('[data-role="metric-icon"]')
     expect(icon).toHaveAttribute('data-color', 'green')
   })
@@ -167,7 +167,7 @@ describe('DevToolsOverview', () => {
     // (green) or alarmed (red) fleet behind the "—" placeholder.
     render(<DevToolsOverview errorVinCount={4} vehicleCount={9} loading />)
 
-    const card = getCard('Telemetry errors')
+    const card = getCard('Telemetry Errors')
     const icon = card.querySelector('[data-role="metric-icon"]')
     expect(icon).toHaveAttribute('data-color', 'cyan')
   })
@@ -182,7 +182,7 @@ describe('DevToolsOverview', () => {
       />,
     )
 
-    expect(within(getCard('Telemetry errors')).getByText('0')).toBeInTheDocument()
+    expect(within(getCard('Telemetry Errors')).getByText('0')).toBeInTheDocument()
     expect(within(getCard('Vehicles')).getByText('0')).toBeInTheDocument()
     expect(screen.queryByText('NaN')).toBeNull()
   })
@@ -193,21 +193,5 @@ describe('DevToolsOverview', () => {
     const icon = getCard('Vehicles').querySelector('svg')
     expect(icon).not.toBeNull()
     expect(icon).toHaveAttribute('aria-hidden', 'true')
-  })
-
-  it('keeps the fleet count when only telemetry is unresolved without implying a healthy zero', () => {
-    render(<DevToolsOverview errorVinCount={0} vehicleCount={9} telemetryUnknown vehiclesUnknown={false} />)
-    expect(within(getCard('Telemetry errors')).getByText('—')).toBeInTheDocument()
-    expect(within(getCard('Telemetry errors')).queryByText('0')).toBeNull()
-    expect(getCard('Telemetry errors').querySelector('[data-role="metric-icon"]')).toHaveAttribute('data-color', 'cyan')
-    expect(within(getCard('Vehicles')).getByText('9')).toBeInTheDocument()
-    expect(within(getCard('Reference docs')).getByText(String(REFERENCE_LINKS.length))).toBeInTheDocument()
-  })
-
-  it('keeps the telemetry count when only the vehicle source is unresolved', () => {
-    render(<DevToolsOverview errorVinCount={7} vehicleCount={0} telemetryUnknown={false} vehiclesUnknown />)
-    expect(within(getCard('Telemetry errors')).getByText('7')).toBeInTheDocument()
-    expect(within(getCard('Vehicles')).getByText('—')).toBeInTheDocument()
-    expect(within(getCard('Vehicles')).queryByText('0')).toBeNull()
   })
 })

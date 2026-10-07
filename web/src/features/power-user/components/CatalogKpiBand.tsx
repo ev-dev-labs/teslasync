@@ -6,8 +6,7 @@
 import { Columns3, Database, Ruler, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { OperationalBrief, type StatMetric } from '@/components/data-display';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { MetricCard } from '@/components/data-display';
 
 export interface CatalogKpiBandProps {
   tableCount: number;
@@ -15,8 +14,11 @@ export interface CatalogKpiBandProps {
 }
 
 /**
- * Retained count-normalization utility. The Brief deliberately bypasses this
- * coercion so malformed source values remain invalid rather than measured zero.
+ * Clamp a raw count to a safe, user-presentable non-negative integer. The KPI
+ * counts are derived from a `.length` / `reduce` over the static catalog, so in
+ * the happy path this is a no-op. The coercion is a defensive guard: a caller
+ * passing `NaN` (an empty `reduce`), a negative, or a fractional value must
+ * never surface as "NaN"/"-3"/"3.5 tables" in the band.
  */
 export function safeCount(value: number | null | undefined): number {
   if (value == null || !Number.isFinite(value) || value < 0) return 0;
@@ -26,51 +28,42 @@ export function safeCount(value: number | null | undefined): number {
 export function CatalogKpiBand({ tableCount, columnCount }: CatalogKpiBandProps) {
   const { t } = useTranslation();
 
-  const metrics = useOperationalMetrics([
-    {
-      metricId: 'count', occurrenceId: 'tables', rawValue: tableCount,
-      label: t('powerSql.kpi.tables', 'Catalog tables'),
-      description: t('powerSql.kpi.tablesSub', 'read-only surfaces'),
-      context: <Database className="h-4 w-4" aria-hidden="true" />,
-    },
-    {
-      metricId: 'count', occurrenceId: 'columns', rawValue: columnCount,
-      label: t('powerSql.kpi.columns', 'Documented columns'),
-      description: t('powerSql.kpi.columnsSub', 'across all tables'),
-      context: <Columns3 className="h-4 w-4" aria-hidden="true" />,
-    },
-    {
-      metricId: 'status', occurrenceId: 'access',
-      rawValue: t('powerSql.kpi.readonly', 'Read-only'),
-      label: t('powerSql.kpi.access', 'Access mode'),
-      description: t('powerSql.kpi.accessSub', 'no writes possible'),
-      context: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
-    },
-    {
-      metricId: 'text', occurrenceId: 'units',
-      rawValue: t('powerSql.kpi.si', 'SI units'),
-      label: t('powerSql.kpi.units', 'Storage units'),
-      description: t('powerSql.kpi.unitsSub', 'm · s · Wh'),
-      context: <Ruler className="h-4 w-4" aria-hidden="true" />,
-    },
-  ] satisfies readonly StatMetric[]);
-  const invalidCounts = metrics.some((metric) => metric.valueState !== 'value');
+  const tables = safeCount(tableCount);
+  const columns = safeCount(columnCount);
 
   return (
-    <OperationalBrief
-      compact
-      eyebrow={t('powerSql.brief.eyebrow', 'SQL reference')}
-      title={t('powerSql.kpi.label', 'Catalog overview')}
-      description={t('powerSql.brief.description', 'Counts describe the bundled curated schema, not database rows or query results. Queries never execute in the browser.')}
-      statusLabel={invalidCounts
-        ? t('powerSql.brief.invalid', 'Invalid catalog counts')
-        : t('powerSql.brief.status', 'Static reference')}
-      statusTone={invalidCounts ? 'warning' : 'neutral'}
-      scope={t('powerSql.brief.scope', 'Bundled schema catalog · all entries')}
-      freshness={t('powerSql.brief.freshness', 'Reference data · no live measurement')}
-      provenance={t('powerSql.brief.provenance', 'Table and column counts come from the bundled curated SQL catalog. Read-only composing and SI storage are reference properties; no query has been executed.')}
-      metrics={metrics}
-      testId="power-sql-catalog-brief"
-    />
+    <section
+      aria-label={t('powerSql.kpi.label', 'Catalog overview')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
+    >
+      <MetricCard
+        label={t('powerSql.kpi.tables', 'Catalog tables')}
+        value={tables}
+        icon={<Database className="h-5 w-5" aria-hidden="true" />}
+        color="cyan"
+        subtitle={t('powerSql.kpi.tablesSub', 'read-only surfaces')}
+      />
+      <MetricCard
+        label={t('powerSql.kpi.columns', 'Documented columns')}
+        value={columns}
+        icon={<Columns3 className="h-5 w-5" aria-hidden="true" />}
+        color="blue"
+        subtitle={t('powerSql.kpi.columnsSub', 'across all tables')}
+      />
+      <MetricCard
+        label={t('powerSql.kpi.access', 'Access mode')}
+        value={t('powerSql.kpi.readonly', 'Read-only')}
+        icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+        color="green"
+        subtitle={t('powerSql.kpi.accessSub', 'no writes possible')}
+      />
+      <MetricCard
+        label={t('powerSql.kpi.units', 'Storage units')}
+        value={t('powerSql.kpi.si', 'SI units')}
+        icon={<Ruler className="h-5 w-5" aria-hidden="true" />}
+        color="purple"
+        subtitle={t('powerSql.kpi.unitsSub', 'm · s · Wh')}
+      />
+    </section>
   );
 }

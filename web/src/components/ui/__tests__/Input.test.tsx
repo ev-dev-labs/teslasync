@@ -18,9 +18,8 @@ describe('Input — required indicator', () => {
   it('renders a paired <label> when label= is provided', () => {
     render(<Input label="Email" />);
     const input = screen.getByRole('textbox');
-    expect(input.id).toMatch(/^input-/);
-    const label = screen.getByText('Email').closest('label');
-    expect(label).toHaveAttribute('for', input.id);
+    expect(input.id).toBe('email');
+    const label = document.querySelector('label[for="email"]');
     expect(label).not.toBeNull();
     expect(label?.textContent).toBe('Email');
   });
@@ -48,7 +47,7 @@ describe('Input — required indicator', () => {
     const star = screen.getByText('*');
     expect(star.getAttribute('aria-hidden')).toBe('true');
     // The asterisk must live inside the Label so it visually pairs.
-    const label = screen.getByRole('textbox').closest('.space-y-1')?.querySelector('label');
+    const label = document.querySelector('label[for="email"]');
     expect(label?.contains(star)).toBe(true);
   });
 
@@ -57,7 +56,7 @@ describe('Input — required indicator', () => {
     // Asserted via label textContent rather than the visually-hidden CSS
     // class — the audit:sr-only gate forbids spelling the class name
     // outside the VisuallyHidden implementation.
-    const label = screen.getByRole('textbox').closest('.space-y-1')?.querySelector('label');
+    const label = document.querySelector('label[for="email"]');
     expect(label?.textContent ?? '').toMatch(/required/i);
   });
 
@@ -79,13 +78,13 @@ describe('Input — required indicator', () => {
   it('does NOT render the asterisk or visually-hidden "required" when required is unset', () => {
     render(<Input label="Email" />);
     expect(screen.queryByText('*')).toBeNull();
-    const label = screen.getByText('Email').closest('label');
+    const label = document.querySelector('label[for="email"]');
     expect(label?.textContent ?? '').toBe('Email');
   });
 
   it('preserves the existing label styling via className passthrough', () => {
     render(<Input label="Email" required />);
-    const label = screen.getByRole('textbox').closest('.space-y-1')?.querySelector('label');
+    const label = document.querySelector('label[for="email"]');
     expect(label?.className).toMatch(/text-sm/);
     expect(label?.className).toMatch(/font-medium/);
   });
@@ -125,10 +124,9 @@ describe('Input — feedback association', () => {
         />
       </>,
     );
-    const input = screen.getByRole('textbox', { name: 'Threshold' });
-    expect(input).toHaveAttribute(
+    expect(screen.getByRole('textbox', { name: 'Threshold' })).toHaveAttribute(
       'aria-describedby',
-      `external-help ${input.id}-hint`,
+      'external-help threshold-hint',
     );
   });
 

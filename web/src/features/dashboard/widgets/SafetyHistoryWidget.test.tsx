@@ -78,35 +78,6 @@ vi.mock('@/api/hooks/useVehicleSystems', async (importActual) => {
     await importActual<typeof import('@/api/hooks/useVehicleSystems')>();
   return { ...actual, useSafetyHistory: vi.fn() };
 });
-
-describe('SafetyHistoryWidget retained snapshot semantics', () => {
-  it('does not classify unknown enum readings as active warnings', () => {
-    expect(classifySnapshot({
-      forward_collision_warning: 'ForwardCollisionSensitivityUnknown',
-      lane_departure_avoidance: 'LaneAssistLevelUnknown',
-    }).type).toBe('general');
-  });
-
-  it.each([{ cols: 1, rows: 1 }, { cols: 2, rows: 2 }, { cols: 4, rows: 4 }])('keeps cached snapshots and bounded summary trust in %o', (size) => {
-    mockSafety.mockReturnValue(qr({
-      data: [snap({ automatic_emergency_braking_off: true })],
-      error: new Error('refresh failed'), isError: true,
-    }));
-    renderWidget(size);
-    expect(screen.getByText('Summary of returned safety snapshots, not activation counts')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
-    if (size.cols === 1) expect(screen.getByText('1 events (30d)')).toBeInTheDocument();
-    else expect(screen.getByText('Automatic emergency braking disabled')).toBeInTheDocument();
-    expect(screen.queryByText('AEB activation')).toBeNull();
-  });
-
-  it('does not fabricate stable trend or epoch timestamps from absent evidence', () => {
-    mockSafety.mockReturnValue(qr({ data: [snap({ created_at: undefined })] }));
-    renderWidget(STANDARD);
-    expect(screen.queryByText('Stable')).toBeNull();
-    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
-  });
-});
 vi.mock('@/api/hooks/useVehicles', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();
   return { ...actual, useVehicles: vi.fn() };
@@ -242,22 +213,22 @@ describe('classifySnapshot', () => {
 
 describe('safetyEventTitle', () => {
   it('maps each type to its title, appending the cleaned enum for FCW/lane', () => {
-    expect(safetyEventTitle('aeb', {}, echo)).toBe('Automatic emergency braking disabled');
-    expect(safetyEventTitle('bsw', {}, echo)).toBe('Blind spot warning');
-    expect(safetyEventTitle('elda', {}, echo)).toBe('Emergency lane departure avoidance');
-    expect(safetyEventTitle('general', {}, echo)).toBe('Safety state update');
+    expect(safetyEventTitle('aeb', {}, echo)).toBe('AEB Activation');
+    expect(safetyEventTitle('bsw', {}, echo)).toBe('Blind Spot Warning');
+    expect(safetyEventTitle('elda', {}, echo)).toBe('Emergency Lane Departure Avoidance');
+    expect(safetyEventTitle('general', {}, echo)).toBe('Safety State Update');
     expect(
       safetyEventTitle('fcw', { forward_collision_warning: 'ForwardCollisionSensitivityLate' }, echo),
     ).toBe('FCW: Late');
     expect(
       safetyEventTitle('lane', { lane_departure_avoidance: 'LaneAssistLevelWarning' }, echo),
-    ).toBe('Lane departure: Warning');
+    ).toBe('Lane Departure: Warning');
   });
 
   it('resolves the title through the provided translator', () => {
     const t = vi.fn((_k: string, fb: string) => fb);
     safetyEventTitle('aeb', {}, t);
-    expect(t).toHaveBeenCalledWith('widget.safety.aebDisabled', 'Automatic emergency braking disabled');
+    expect(t).toHaveBeenCalledWith('widget.safety.aeb', 'AEB Activation');
   });
 });
 
@@ -267,16 +238,16 @@ describe('safetyTypeLabel', () => {
   it('maps each type to its short label', () => {
     expect(safetyTypeLabel('aeb', echo)).toBe('AEB');
     expect(safetyTypeLabel('fcw', echo)).toBe('FCW');
-    expect(safetyTypeLabel('lane', echo)).toBe('Lane departure');
-    expect(safetyTypeLabel('bsw', echo)).toBe('Blind spot');
-    expect(safetyTypeLabel('elda', echo)).toBe('Emergency lane');
+    expect(safetyTypeLabel('lane', echo)).toBe('Lane Departure');
+    expect(safetyTypeLabel('bsw', echo)).toBe('Blind Spot');
+    expect(safetyTypeLabel('elda', echo)).toBe('Emergency Lane');
     expect(safetyTypeLabel('general', echo)).toBe('General');
   });
 
   it('resolves the label through the provided translator', () => {
     const t = vi.fn((_k: string, fb: string) => fb);
-    expect(safetyTypeLabel('lane', t)).toBe('Lane departure');
-    expect(t).toHaveBeenCalledWith('widget.safety.laneShort', 'Lane departure');
+    expect(safetyTypeLabel('lane', t)).toBe('Lane Departure');
+    expect(t).toHaveBeenCalledWith('widget.safety.laneShort', 'Lane Departure');
   });
 });
 
@@ -292,14 +263,14 @@ describe('buildSubtitle', () => {
       },
       echo,
     );
-    expect(out).toBe('Speed limit: Chime · Follow: 3 · PIN to drive');
+    expect(out).toBe('Speed Limit: Chime · Follow: 3 · PIN to Drive');
     expect(out).not.toContain('SpeedAssistLevel');
     expect(out).not.toContain('FollowDistance');
   });
 
   it('renders a boolean advisory as On/Off (never "true"/"false")', () => {
     const out = buildSubtitle({ speed_limit_warning: false }, echo);
-    expect(out).toBe('Speed limit: Off');
+    expect(out).toBe('Speed Limit: Off');
     expect(out).not.toContain('false');
   });
 
@@ -313,7 +284,7 @@ describe('buildSubtitle', () => {
       { speed_limit_warning: 'SpeedAssistLevelChime', cruise_follow_distance: 2 },
       echo,
     );
-    expect(out).toBe('Speed limit: Chime · Follow: 2');
+    expect(out).toBe('Speed Limit: Chime · Follow: 2');
   });
 });
 
@@ -325,8 +296,8 @@ describe('SafetyHistoryWidget — shell states', () => {
     const { container } = renderWidget(STANDARD);
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Safety history')).toBeInTheDocument();
-    expect(screen.queryByText('Automatic emergency braking disabled')).toBeNull();
+    expect(screen.queryByText('Safety History')).toBeNull();
+    expect(screen.queryByText('AEB Activation')).toBeNull();
   });
 
   it('surfaces a QueryError (not a misleading empty state) on failure (R1)', () => {
@@ -339,16 +310,16 @@ describe('SafetyHistoryWidget — shell states', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     // The pre-fix behaviour was to render this empty state on error.
     expect(screen.queryByText('No safety events recorded')).toBeNull();
-    expect(screen.queryByText('Safety history')).toBeInTheDocument();
+    expect(screen.queryByText('Safety History')).toBeNull();
   });
 
   it('renders the title + explicit empty state when there is no history (standard)', () => {
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Safety history')).toBeInTheDocument();
+    expect(screen.getByText('Safety History')).toBeInTheDocument();
     // Stat strip still renders (sections never disappear) …
     expect(screen.getByText('Events (30d)')).toBeInTheDocument();
-    expect(screen.getByText('Most common')).toBeInTheDocument();
+    expect(screen.getByText('Most Common')).toBeInTheDocument();
     // … and the feed shows an empty state rather than a blank panel.
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
@@ -363,7 +334,7 @@ describe('SafetyHistoryWidget — shell states', () => {
     mockSafety.mockReturnValue(qr({ data: undefined }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Safety history')).toBeInTheDocument();
+    expect(screen.getByText('Safety History')).toBeInTheDocument();
     expect(screen.getByText('No safety events recorded')).toBeInTheDocument();
   });
 });
@@ -406,13 +377,13 @@ describe('SafetyHistoryWidget — standard layout', () => {
 
     // Stat strip.
     expect(screen.getByText('Events (30d)')).toBeInTheDocument();
-    expect(screen.getByText('Most common')).toBeInTheDocument();
+    expect(screen.getByText('Most Common')).toBeInTheDocument();
     expect(screen.getByText('Trend')).toBeInTheDocument();
     expect(screen.getByText('AEB')).toBeInTheDocument(); // most-common value
 
     // Feed row: classified title + cleaned enum subtitle, never the raw string.
-    expect(screen.getByText('Automatic emergency braking disabled')).toBeInTheDocument();
-    expect(screen.getByText('Speed limit: Chime')).toBeInTheDocument();
+    expect(screen.getByText('AEB Activation')).toBeInTheDocument();
+    expect(screen.getByText('Speed Limit: Chime')).toBeInTheDocument();
     expect(screen.queryByText(/SpeedAssistLevel/)).toBeNull();
   });
 

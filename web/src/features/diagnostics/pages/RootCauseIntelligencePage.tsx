@@ -1,20 +1,20 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageLayout } from '@/components/layout';
-import type { StatMetric } from '@/components/data-display';
-import { HelpTooltip } from '@/components/ui';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { ShieldCheck, ArrowUpDown, ListOrdered, Activity } from 'lucide-react';
+
+import { PageContainer } from '@/components/layout';
+import { GlassPanel } from '@/components/ui';
+
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
-import { EvidenceSourceNotice } from '../components/EvidenceSourceNotice';
-import { DiagnosticEvidenceBrief } from '../components/operationalbrief-all/DiagnosticEvidenceBrief';
 import {
   SignalWindowPicker,
   RootCauseSignalTimelineChart,
@@ -22,8 +22,15 @@ import {
   RootCauseHypothesisList,
   RootCauseInterpretationPanel,
 } from '../components';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
+import type { EvidenceQualityBand } from '../lib/rootCauseIntelligence';
+
+/** Mirrors `QualityBadge`'s semantics with the KPI band's `NeonColor` palette. */
+const QUALITY_COLOR: Record<EvidenceQualityBand, 'green' | 'cyan' | 'amber' | 'red'> = {
+  strong: 'green',
+  moderate: 'cyan',
+  weak: 'amber',
+  insufficient: 'red',
+};
 
 /**
  * Root-Cause Intelligence Graph.
@@ -39,17 +46,11 @@ import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
  * `vehicleId == null` early return, matching `SignalChangePointsPage.tsx`.
  */
 export default function RootCauseIntelligencePage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('rootCauseIntelligence.title', 'Root-cause intelligence'));
+  usePageTitle(t('rootCauseIntelligence.title', 'Root-Cause Intelligence'));
 
   const { vehicleId } = useSelectedVehicle();
   const workspace = useRootCauseWorkspace(vehicleId);
-  const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
-  const evidenceState = useDataState({
-    ...workspace.evidenceBundle,
-    data: workspace.evidenceBundle.data.length > 0 ? workspace.evidenceBundle.data : undefined,
-  }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
 
   const onRetry = useCallback(() => {
     workspace.signalsQuery.refetch();
@@ -57,16 +58,13 @@ export default function RootCauseIntelligencePage() {
   }, [workspace.signalsQuery, workspace.evidenceBundle]);
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('rootCauseIntelligence.title', 'Root-cause intelligence')} />;
+    return <NoVehicleSelected pageTitle={t('rootCauseIntelligence.title', 'Root-Cause Intelligence')} />;
   }
 
   const { analysis } = workspace;
-  const isLoading = !evidenceState.hasData && (
-    (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
-    (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading)
-  );
-  const error = evidenceState.fatalError ?? (!workspace.hasChosenSignal ? signalsState.fatalError : null);
-  const isError = !!error;
+  const isLoading = workspace.signalsQuery.isLoading || (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading);
+  const isError = workspace.signalsQuery.isError || workspace.evidenceBundle.isError;
+  const error = workspace.signalsQuery.error ?? workspace.evidenceBundle.error;
 
   const qualityLabel =
     analysis.quality.band === 'strong'
@@ -77,66 +75,9 @@ export default function RootCauseIntelligencePage() {
           ? t('rootCauseIntelligence.quality.weak', 'Weak evidence')
           : t('rootCauseIntelligence.quality.insufficient', 'Insufficient evidence');
 
-  const available = workspace.hasChosenSignal && evidenceState.hasData;
-  const focalAvailable = available && hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal);
-  const metrics: readonly StatMetric[] = [
-    {
-      metricId: 'status', occurrenceId: 'root-cause-quality',
-      rawValue: available ? qualityLabel : null,
-      label: t('rootCauseIntelligence.kpis.quality', 'Evidence quality'),
-      description: t('help.rootCauseIntelligence.quality', 'Combines focal sample coverage, corroborating-candidate ratio, and analysis window length into a single 0–1 score.'),
-      context: <>
-        {t('rootCauseIntelligence.kpis.qualitySubtitle', 'Overall score {{n}} of 1.00', {
-          n: available && Number.isFinite(analysis.quality.overallScore)
-            ? fmtNumber(analysis.quality.overallScore) : '—',
-        })}
-        <HelpTooltip
-          i18nKey="help.rootCauseIntelligence.quality"
-          defaultValue="Combines focal sample coverage, corroborating-candidate ratio, and analysis window length into a single 0–1 score."
-        />
-      </>,
-    },
-    {
-      metricId: 'ratio', occurrenceId: 'root-cause-overall-score',
-      rawValue: available ? analysis.quality.overallScore : null,
-      label: t('diagnostics.brief.evidenceScore', 'Overall evidence score'),
-      description: t('diagnostics.brief.scoreBasis', 'Existing evidence-quality score on a 0–1 scale, not a probability or causal confidence.'),
-    },
-    {
-      metricId: 'ratio', occurrenceId: 'root-cause-effect',
-      rawValue: focalAvailable ? analysis.focalShift?.effectSize : null,
-      label: t('rootCauseIntelligence.kpis.effect', 'Focal shift effect size'),
-      description: t('diagnostics.brief.effectBasis', 'Existing robust shift effect size; before and after medians retain their source scale.'),
-      context: !focalAvailable ? t('diagnostics.brief.focalUnavailable', 'Focal history unavailable; no shift conclusion can be drawn.')
-        : analysis.focalShift != null
-        ? t('rootCauseIntelligence.kpis.effectSubtitle', '{{before}} → {{after}}', {
-          before: fmtNumber(analysis.focalShift.before.median),
-          after: fmtNumber(analysis.focalShift.after.median),
-        })
-        : t('rootCauseIntelligence.kpis.effectNone', 'No robust shift found'),
-    },
-    {
-      metricId: 'count', occurrenceId: 'root-cause-hypotheses',
-      rawValue: focalAvailable ? analysis.hypotheses.length : null,
-      label: t('rootCauseIntelligence.kpis.hypotheses', 'Ranked hypotheses'),
-      context: t('rootCauseIntelligence.kpis.hypothesesSubtitle', '{{n}} candidates considered', {
-        n: analysis.relatedCandidates.length,
-      }),
-      display: { notation: 'source' },
-    },
-    {
-      metricId: 'count', occurrenceId: 'root-cause-focal-samples',
-      rawValue: focalAvailable
-        ? analysis.quality.focalSampleCount : null,
-      label: t('rootCauseIntelligence.kpis.samples', 'Focal samples'),
-      context: t('rootCauseIntelligence.kpis.samplesSubtitle', '{{h}}h window', { h: workspace.windowHours }),
-      display: { notation: 'source' },
-    },
-  ];
-
   return (
-    <PageLayout
-      title={t('rootCauseIntelligence.title', 'Root-cause intelligence')}
+    <PageContainer
+      title={t('rootCauseIntelligence.title', 'Root-Cause Intelligence')}
       subtitle={t(
         'rootCauseIntelligence.subtitle',
         "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift \u2014 a statistical association, never a diagnosis or proof of causation.",
@@ -145,11 +86,10 @@ export default function RootCauseIntelligencePage() {
     >
       {/* 1 — Focal signal + analysis window */}
       <FadeIn>
-        <StaleRefreshWarning state={signalsState} label={t('rootCauseIntelligence.picker.title', 'Choose a signal to investigate')} />
         <SignalWindowPicker
           catalog={workspace.catalog}
-          signalsLoading={workspace.signalsQuery.isLoading && !signalsState.hasData}
-          signalsError={signalsState.fatalError}
+          signalsLoading={workspace.signalsQuery.isLoading}
+          signalsError={workspace.signalsQuery.error}
           onRetrySignals={() => workspace.signalsQuery.refetch()}
           focalSignal={workspace.focalSignal}
           onFocalSignalChange={workspace.setFocalSignal}
@@ -157,35 +97,66 @@ export default function RootCauseIntelligencePage() {
           onWindowHoursChange={workspace.setWindowHours}
         />
       </FadeIn>
-      <EvidenceSourceNotice
-        state={evidenceState}
-        sources={workspace.evidenceBundle.sources}
-        summary={focalAvailable ? analysis.summary : null}
-        limitations={analysis.limitations}
-        label={t('rootCauseIntelligence.kpis.sectionLabel', 'Root-cause evidence metrics')}
-        hasChosenSignal={workspace.hasChosenSignal}
-      />
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
         <section
           aria-label={t('rootCauseIntelligence.kpis.sectionLabel', 'Root-cause evidence metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
-          <DiagnosticEvidenceBrief
-            testId="root-cause-summary"
-            eyebrow={t('rootCauseIntelligence.title', 'Root-cause intelligence')}
-            title={t('diagnostics.brief.analysisTitle', 'Evidence quality and focal shift')}
-            description={t('rootCauseIntelligence.subtitle', "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift — a statistical association, never a diagnosis or proof of causation.")}
-            metrics={metrics}
-            state={evidenceState}
-            loading={isLoading}
-            error={error}
-            onRetry={onRetry}
-            focalSignal={workspace.focalSignal}
-            windowHours={workspace.windowHours}
-            hasChosenSignal={workspace.hasChosenSignal}
-            sources={workspace.evidenceBundle.sources}
-          />
+          {isError ? (
+            <GlassPanel className="col-span-full p-4 sm:p-5">
+              <QueryError error={error} onRetry={onRetry} />
+            </GlassPanel>
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
+          ) : (
+            <>
+              <MetricCard
+                label={t('rootCauseIntelligence.kpis.quality', 'Evidence Quality')}
+                value={workspace.hasChosenSignal ? qualityLabel : '—'}
+                subtitle={t('rootCauseIntelligence.kpis.qualitySubtitle', 'Overall score {{n}} of 1.00', {
+                  n: fmtNumber(analysis.quality.overallScore, 2),
+                })}
+                icon={<ShieldCheck className="h-5 w-5" />}
+                color={workspace.hasChosenSignal ? QUALITY_COLOR[analysis.quality.band] : 'cyan'}
+                help={{
+                  i18nKey: 'help.rootCauseIntelligence.quality',
+                  defaultValue: 'Combines focal sample coverage, corroborating-candidate ratio, and analysis window length into a single 0–1 score.',
+                }}
+              />
+              <MetricCard
+                label={t('rootCauseIntelligence.kpis.effect', 'Focal Shift Effect Size')}
+                value={analysis.focalShift != null ? fmtNumber(analysis.focalShift.effectSize, 2) : '—'}
+                subtitle={
+                  analysis.focalShift != null
+                    ? t('rootCauseIntelligence.kpis.effectSubtitle', '{{before}} \u2192 {{after}}', {
+                        before: fmtNumber(analysis.focalShift.before.median, 2),
+                        after: fmtNumber(analysis.focalShift.after.median, 2),
+                      })
+                    : t('rootCauseIntelligence.kpis.effectNone', 'No robust shift found')
+                }
+                icon={<ArrowUpDown className="h-5 w-5" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('rootCauseIntelligence.kpis.hypotheses', 'Ranked Hypotheses')}
+                value={analysis.hypotheses.length}
+                subtitle={t('rootCauseIntelligence.kpis.hypothesesSubtitle', '{{n}} candidates considered', {
+                  n: analysis.relatedCandidates.length,
+                })}
+                icon={<ListOrdered className="h-5 w-5" />}
+                color="blue"
+              />
+              <MetricCard
+                label={t('rootCauseIntelligence.kpis.samples', 'Focal Samples')}
+                value={analysis.quality.focalSampleCount}
+                subtitle={t('rootCauseIntelligence.kpis.samplesSubtitle', '{{h}}h window', { h: workspace.windowHours })}
+                icon={<Activity className="h-5 w-5" />}
+                color="cyan"
+              />
+            </>
+          )}
         </section>
       </FadeIn>
 
@@ -207,7 +178,6 @@ export default function RootCauseIntelligencePage() {
       <FadeIn delay={0.3}>
         <RootCauseEvidenceGraph
           graph={analysis.graph}
-          sources={workspace.evidenceBundle.sources}
           hasChosenSignal={workspace.hasChosenSignal}
           isLoading={isLoading}
           isError={isError}
@@ -220,7 +190,6 @@ export default function RootCauseIntelligencePage() {
       <FadeIn delay={0.4}>
         <RootCauseHypothesisList
           hypotheses={analysis.hypotheses}
-          focalHistoryAvailable={hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal)}
           hasChosenSignal={workspace.hasChosenSignal}
           focalShiftFound={analysis.focalShift != null}
           isLoading={isLoading}
@@ -234,7 +203,6 @@ export default function RootCauseIntelligencePage() {
       <FadeIn delay={0.5}>
         <RootCauseInterpretationPanel
           summary={analysis.summary}
-          focalHistoryAvailable={hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal)}
           limitations={analysis.limitations}
           quality={analysis.quality}
           hasChosenSignal={workspace.hasChosenSignal}
@@ -244,6 +212,6 @@ export default function RootCauseIntelligencePage() {
           onRetry={onRetry}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

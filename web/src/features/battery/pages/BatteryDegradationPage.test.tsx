@@ -15,11 +15,11 @@
  *     the degradation history table, and hook-wiring (stringified vehicle id).
  *   - SOH verdict branches (Excellent / Good / Degraded) via `sohColor`+Badge.
  *   - Battery-age formatting branches (`ageLabel`: months / "Ny Mm" / "N years")
- *     AND the hardened missing/non-finite guard (unknown age → "—", never zero).
+ *     AND the hardened non-finite guard (undefined age → "0 months", never "NaN").
  *   - unit boundary: switching the display unit to miles re-runs the real SI
  *     converter (km → mi) at the render edge for the odometer/range columns.
  *   - empty states: every data source shows its own placeholder; the charging
- *     banner preserves zero counts without inventing a ratio for an empty sample.
+ *     banner survives a null `charging_habits` object (0% fast charges).
  *   - degradation-absent branch: prediction/habits/risk/recommendations each fall
  *     back to their own empty state while the health-driven panels stay intact.
  *   - per-query error isolation: a health-query 5xx surfaces QueryError in every
@@ -37,7 +37,6 @@ import { ApiError } from '@/lib/resilience';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
-import type { UseUnitsResult } from '@/hooks/useUnits';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -227,13 +226,9 @@ function selected(vehicleId: number | null) {
 const formatEnergy = (v: number | null | undefined, opts?: { precision?: number }): string =>
   `${(Number(v ?? 0) / 1000).toFixed(opts?.precision ?? 1)} kWh`;
 
-function unitReturn(distance: 'km' | 'mi'): UseUnitsResult {
+function unitReturn(distance: 'km' | 'mi') {
   return {
-    unitPrefs: {
-      distance, speed: distance === 'mi' ? 'mph' : 'km/h',
-      temperature: '°C', pressure: 'bar', energy: 'kWh', duration: 'h',
-      power: 'kW', precision: 2, locale: 'en-US',
-    },
+    unitPrefs: { distance, speed: distance === 'mi' ? 'mph' : 'km/h' },
     formatEnergy,
     formatDistance: (v: number) => String(v),
     formatSpeed: (v: number) => String(v),
@@ -257,12 +252,11 @@ function renderPage() {
 
 const TREND_IMG = 'Battery health trend and 95% confidence projection chart';
 const kpiRegion = () => screen.getByRole('region', { name: 'Battery health summary' });
-const heroRegion = () => screen.getByRole('region', { name: 'Health trend & projection' });
+const heroRegion = () => screen.getByRole('region', { name: 'Health Trend & Projection' });
 
-/** Read the real shared stat's value and adjacent unit, not legacy MetricCard markup. */
+/** Value <p> that immediately follows a MetricCard's label. */
 function metricValue(region: HTMLElement, label: string): string {
-  const tile = within(region).getByText(label).closest('[data-operational-metric]');
-  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
+  return within(region).getByText(label).closest('p')?.nextElementSibling?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -281,11 +275,9 @@ describe('BatteryDegradationPage — loading', () => {
     mockHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Battery degradation', level: 1 })).toBeInTheDocument();
-    // Shared stats retain their labels while withholding all measured values.
-    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
-    expect(kpiRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(kpiRegion().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading', { name: 'Battery Degradation', level: 1 })).toBeInTheDocument();
+    // "Current SOH" labels the KPI tile AND the gauge — both sit behind skeletons.
+    expect(screen.queryByText('Current SOH')).toBeNull();
     // The gauge verdict badge is withheld while its skeleton stands in.
     expect(screen.queryByText('Excellent')).toBeNull();
     // The prediction block is a skeleton, so its copy is absent.
@@ -301,32 +293,10 @@ describe('BatteryDegradationPage — populated (km)', () => {
     const kpi = kpiRegion();
 
     expect(metricValue(kpi, 'Current SOH')).toBe('91.00%');
-    expect(metricValue(kpi, 'Estimated capacity')).toBe('72.5 kWh');
-    expect(metricValue(kpi, 'Degradation rate')).toBe('2.10%/yr');
+    expect(metricValue(kpi, 'Estimated Capacity')).toBe('72.5 kWh');
+    expect(metricValue(kpi, 'Degradation Rate')).toBe('2.10%/yr');
     // battery_age_months 30 → 2 years, 6 months.
-    expect(metricValue(kpi, 'Battery age')).toBe('2y 6m');
-  });
-
-  it.each([null, undefined])('does not fabricate estimated capacity from an absent value %s', (capacity) => {
-    const health = { ...HEALTH };
-    Reflect.set(health, 'estimated_capacity_wh', capacity);
-    mockHealth.mockReturnValue(makeQuery({ data: health }));
-    renderPage();
-    const kpi = kpiRegion();
-    expect(metricValue(kpi, 'Estimated capacity')).toBe('—');
-    expect(within(kpi).getByText('Estimated capacity').closest('[data-operational-metric]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(within(kpi).queryByText('0.0 kWh', { exact: true })).not.toBeInTheDocument();
-    expect(metricValue(kpi, 'Current SOH')).toBe('91.00%');
-  });
-
-  it('preserves a supplied zero capacity without replacing it with a nominal estimate', () => {
-    mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, estimated_capacity_wh: 0 } }));
-    renderPage();
-    expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('0.0 kWh');
-    expect(within(kpiRegion()).getByText('Estimated capacity').closest('[data-operational-metric]'))
-      .toHaveAttribute('data-value-state', 'value');
-    expect(metricValue(kpiRegion(), 'Current SOH')).toBe('91.00%');
+    expect(metricValue(kpi, 'Battery Age')).toBe('2y 6m');
   });
 
   it('renders the SOH gauge verdict and the projection chart surface', () => {
@@ -344,7 +314,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     // years_to_80_pct 5.3 → "~5.30 years", plus the predicted date.
     expect(screen.getByText(/in approximately/)).toBeInTheDocument();
     expect(screen.getByText(/2029-06-01/)).toBeInTheDocument();
-    expect(metricValue(screen.getByText('Total cycles').closest('[data-operational-brief]') as HTMLElement, 'Total cycles')).toBe('412.00');
+    expect(screen.getByText('Total Cycles').closest('p')?.nextElementSibling?.textContent).toBe('412.00');
 
     // 40 fast + 60 slow → 40% fast charges; 5 deep discharges; Medium stress.
     expect(screen.getByText(/40% fast charges/)).toBeInTheDocument();
@@ -363,7 +333,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     expect(screen.getByText('Charge to 80% for daily use')).toBeInTheDocument();
 
     // Health factors: charge-habits (82), temperature (70), cycle-depth (60).
-    expect(screen.getByText('Charge habits').closest('div')?.querySelector('span')?.textContent).toBeTruthy();
+    expect(screen.getByText('Charge Habits').closest('div')?.querySelector('span')?.textContent).toBeTruthy();
     expect(screen.getByText('82.00/100')).toBeInTheDocument();
     expect(screen.getByText('70.00/100')).toBeInTheDocument();
     expect(screen.getByText('60.00/100')).toBeInTheDocument();
@@ -398,30 +368,23 @@ describe('BatteryDegradationPage — SOH verdict + battery-age branches', () => 
   });
 
   it.each([
-    [0, '0 months'],
     [6, '6 months'],
     [24, '2 years'],
     [30, '2y 6m'],
   ])('formats a %s-month pack age as "%s"', (months, label) => {
     mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, battery_age_months: months } }));
     renderPage();
-    expect(metricValue(kpiRegion(), 'Battery age')).toBe(label);
+    expect(metricValue(kpiRegion(), 'Battery Age')).toBe(label);
   });
 
-  it.each([undefined, null, Number.NaN, Number.POSITIVE_INFINITY, -1])(
-    'keeps missing or invalid pack age %s unknown rather than zero months',
-    (months) => {
-      const health = { ...HEALTH };
-      Reflect.set(health, 'battery_age_months', months);
-      mockHealth.mockReturnValue(
-        makeQuery({ data: health }),
-      );
-      renderPage();
-      expect(metricValue(kpiRegion(), 'Battery age')).toBe('—');
-      expect(within(kpiRegion()).queryByText('0 months', { exact: true })).not.toBeInTheDocument();
-      expect(kpiRegion()).not.toHaveTextContent('NaN');
-    },
-  );
+  it('guards a non-finite pack age (undefined → "0 months", never "NaN")', () => {
+    mockHealth.mockReturnValue(
+       
+      makeQuery({ data: { ...HEALTH, battery_age_months: undefined as any } }),
+    );
+    renderPage();
+    expect(metricValue(kpiRegion(), 'Battery Age')).toBe('0 months');
+  });
 });
 
 describe('BatteryDegradationPage — unit boundary (miles)', () => {
@@ -467,28 +430,8 @@ describe('BatteryDegradationPage — empty states', () => {
     expect(screen.getByText('No degradation records found.')).toBeInTheDocument();
     expect(screen.getByText(/Capacity estimates appear after enough charging/)).toBeInTheDocument();
 
-    // MDC-025/026: a zero-sized sample has no ratio (0/0), but its count is known.
-    expect(screen.getByText(/—% fast charges, 0 deep discharges/)).toBeInTheDocument();
-    expect(screen.queryByText(/0% fast charges/)).not.toBeInTheDocument();
-  });
-
-  it('renders a measured zero fast-charge ratio when slow charges establish a sample', () => {
-    mockHealth.mockReturnValue(makeQuery({
-      data: {
-        ...HEALTH,
-        charging_habits: {
-          ...HEALTH.charging_habits,
-          fast_charge_count: 0,
-          slow_charge_count: 20,
-          deep_discharge_count: 0,
-          total_count: 20,
-        },
-      },
-    }));
-    renderPage();
-    expect(screen.getByText(/0% fast charges, 0 deep discharges/)).toBeInTheDocument();
-    expect(screen.queryByText(/—% fast charges/)).not.toBeInTheDocument();
-    expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('72.5 kWh');
+    // Charging banner survives a null habits object: 0 fast, 0 deep discharges.
+    expect(screen.getByText(/0% fast charges/)).toBeInTheDocument();
   });
 
   it('keeps summary metrics when consolidated prediction details are empty', () => {
@@ -535,7 +478,7 @@ describe('BatteryDegradationPage — a11y + interaction', () => {
     renderPage();
 
     expect(screen.getByRole('region', { name: 'Battery health summary' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Health trend & projection' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Health Trend & Projection' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: TREND_IMG })).toBeInTheDocument();
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();

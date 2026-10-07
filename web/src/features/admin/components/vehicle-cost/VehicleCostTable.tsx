@@ -12,18 +12,16 @@ import { Wallet } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
-
+import { fmtNumber, fmtInt, formatBytes } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
 import { vehicleName, type SectionState } from './helpers';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface VehicleCostTableProps extends SectionState {
   vehicles: VehicleCostRow[];
 }
 
 export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleCostTableProps) {
-  const { fmtInt, fmtNumber, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive: the page passes `data?.vehicles ?? []`, but guard here too so a
@@ -35,8 +33,6 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
     () => [
       {
         key: 'vehicle',
-        filterValue: (r) => r.vehicle_id ?? null,
-        filterValueLabel: (_value, r) => vehicleName(r, t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id })),
         header: t('admin.vehicleCost.colVehicle', 'Vehicle'),
         render: (r) => (
           <div className="flex flex-col">
@@ -51,35 +47,26 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
       },
       {
         key: 'rows',
-        filterValue: (r) => r.signal_row_count ?? null,
-        filterValueLabel: (_value, r) => fmtInt(r.signal_row_count),
-        groupStart: true,
         header: t('admin.vehicleCost.colRows', 'Rows'),
         align: 'right',
-        render: (r) => <Text className="tabular-nums">{fmtInt(r.signal_row_count)}</Text>,
+        render: (r) => <Text className="tabular-nums">{fmtNumber(r.signal_row_count)}</Text>,
       },
       {
         key: 'bytes',
-        filterValue: (r) => r.signal_bytes_est ?? null,
-        filterValueLabel: (_value, r) => formatBytes(r.signal_bytes_est),
         header: t('admin.vehicleCost.colBytes', 'Bytes (est.)'),
         align: 'right',
         render: (r) => <Text className="tabular-nums">{formatBytes(r.signal_bytes_est)}</Text>,
       },
       {
         key: 'rate',
-        filterValue: (r) => r.ingest_rate_per_minute_24h ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.ingest_rate_per_minute_24h),
         header: t('admin.vehicleCost.colRate', 'Rate (rows/min, 24h)'),
         align: 'right',
         render: (r) => (
-          <Text className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h)}</Text>
+          <Text className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h, 1)}</Text>
         ),
       },
       {
         key: 'failures',
-        filterValue: (r) => r.dlq_failures_24h ?? null,
-        filterValueLabel: (_value, r) => r.dlq_failures_24h == null ? '—' : fmtInt(r.dlq_failures_24h),
         header: t('admin.vehicleCost.colFailures', 'DLQ (24h)'),
         align: 'right',
         render: (r) => {
@@ -88,23 +75,22 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
             failures > 0
               ? 'tabular-nums text-amber-300'
               : 'tabular-nums text-[var(--text-secondary)]';
-          return <Text className={cls}>{fmtInt(failures)}</Text>;
+          return <Text className={cls}>{fmtNumber(failures)}</Text>;
         },
       },
       {
         key: 'last',
-        filterValue: (r) => r.last_seen_at ?? null,
         header: t('admin.vehicleCost.colLastSeen', 'Last seen'),
         render: (r) => (
           <Text color="primary">{formatRelative(r.last_seen_at)}</Text>
         ),
       },
     ],
-    [t, fmtInt, fmtNumber, formatBytes],
+    [t],
   );
 
   return (
-    <GlassPanel className="min-w-0 p-4 sm:p-5">
+    <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3">
         {t('admin.vehicleCost.tableTitle', 'Per-vehicle breakdown')}
       </PanelTitle>
@@ -129,7 +115,6 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
             columns={columns}
             mobileColumns={['vehicle', 'failures', 'last']}
             data={vehicleRows}
-            enableValueFilters
             keyExtractor={(r) => r.vehicle_id}
             emptyMessage={t('admin.vehicleCost.emptyTable', 'No vehicle cost data')}
           />

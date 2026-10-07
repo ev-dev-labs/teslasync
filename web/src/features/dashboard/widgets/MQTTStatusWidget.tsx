@@ -1,24 +1,20 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Radio } from 'lucide-react';
-import { KVList } from '@/components/data-display';
+import { StatusBadge, StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
-
-import { deriveDataState, knownNumber } from '@/api/dataState';
+import { fmtNumber, fmtInt, safeNumber } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatusGrid, type StatusCell } from './shared';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface MqttWidgetStats {
   /** Sum of per-vehicle signal counts across the streaming fleet. */
-  totalMessages: number | null;
+  totalMessages: number;
   /** Sum of per-vehicle signal rates (signals/sec) across the fleet. */
-  messagesPerSec: number | null;
+  messagesPerSec: number;
   /** ISO timestamp of the most recently received signal, or null when none. */
   lastMessage: string | null;
 }
@@ -28,8 +24,8 @@ export interface MqttWidgetStats {
  * widget renders. Pure + null-safe so it can be unit-tested in isolation and
  * reused without a React tree.
  *
- * A missing counter makes its fleet total unknown: a partial sum cannot be
- * presented as a complete fleet measurement. `lastMessage` is
+ * Counts run through `safeNumber` so a nullish/NaN/non-numeric field
+ * contributes 0 instead of poisoning the running total. `lastMessage` is
  * chosen by parsed instant rather than lexical order — an out-of-band
  * timestamp format (e.g. differing fractional-second precision) can sort
  * incorrectly as a raw string, and unparseable timestamps are skipped instead
@@ -38,20 +34,14 @@ export interface MqttWidgetStats {
 export function deriveMqttStats(
   vehicles: VehicleTelemetry[] | null | undefined,
 ): MqttWidgetStats {
-  let totalMessages: number | null = vehicles != null && vehicles.length === 0 ? 0 : null;
-  let messagesPerSec: number | null = vehicles != null && vehicles.length === 0 ? 0 : null;
-  let countsComplete = true;
-  let ratesComplete = true;
+  let totalMessages = 0;
+  let messagesPerSec = 0;
   let lastMessage: string | null = null;
   let lastMessageMs = -Infinity;
 
   for (const v of vehicles ?? []) {
-    const count = knownNumber(v.signalCount ?? v.signal_count);
-    const rate = knownNumber(v.signalsPerSecond ?? v.signals_per_second);
-    countsComplete &&= count != null;
-    ratesComplete &&= rate != null;
-    if (count != null) totalMessages = (totalMessages ?? 0) + count;
-    if (rate != null) messagesPerSec = (messagesPerSec ?? 0) + rate;
+    totalMessages += safeNumber(v.signalCount ?? v.signal_count);
+    messagesPerSec += safeNumber(v.signalsPerSecond ?? v.signals_per_second);
     const received = v.lastReceived ?? v.last_received;
     if (received) {
       const ms = new Date(received).getTime();
@@ -62,93 +52,86 @@ export function deriveMqttStats(
     }
   }
 
-  return {
-    totalMessages: countsComplete ? totalMessages : null,
-    messagesPerSec: ratesComplete ? messagesPerSec : null,
-    lastMessage,
-  };
+  return { totalMessages, messagesPerSec, lastMessage };
 }
 
 export default function MQTTStatusWidget({ size }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const query = useMQTTStatus();
-  const { data, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = query;
-  const state = deriveDataState({ ...query, data: data ?? (isLoading || query.isError || query.error ? undefined : null) });
+  const { data, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } =
+    useMQTTStatus();
 
   const isCompact = size.cols <= 1;
 
   const stats = useMemo(() => deriveMqttStats(data?.vehicles), [data]);
 
-  const connected = data?.connected;
-  const status: StatusCell = {
-    id: 'mqtt', label: t('widget.mqtt.status', 'Status'),
-    status: connected == null ? 'unknown' : connected ? 'ok' : 'error',
-    statusLabel: connected == null ? t('widget.mqtt.unknown', 'Unknown')
-      : connected ? t('widget.mqtt.online', 'Online') : t('widget.mqtt.offline', 'Offline'),
-  };
+  const connected = data?.connected ?? false;
   // `|| '—'` (not `??`) so an empty-string broker also degrades to the
   // placeholder rather than rendering a blank value.
   const broker = data?.broker || '—';
 
   return (
     <WidgetShell
-      title={t('widget.mqtt.title', 'MQTT status')}
-      icon={<Radio className="h-3.5 w-3.5" />}
+      title={isCompact ? undefined : t('widget.mqtt.title', 'MQTT Status')}
+      icon={<Radio className="h-3.5 w-3.5 text-neon-green" />}
       loading={isLoading}
-      dataState={state}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {isCompact ? (
+      {data ? (
+        isCompact ? (
           /* ── Compact layout (1×2) ── */
           <div className="flex flex-col items-center justify-center gap-2 h-full min-h-[44px]">
-            <WidgetBigNumber
-              value={stats.messagesPerSec == null ? null : fmtNumber(stats.messagesPerSec)}
-              unit={t('widget.mqtt.msgSec', 'msg/s')}
-              badge={{ text: status.statusLabel ?? '—', variant: connected == null ? 'neutral' : connected ? 'success' : 'error' }}
-            />
+            <StatusBadge status={connected ? 'online' : 'offline'} size="sm" />
+            <span className="text-lg font-bold text-[var(--text-primary)] truncate">
+              {fmtNumber(stats.messagesPerSec, 1)}
+              <span className="text-xs font-normal text-[var(--text-secondary)] ml-1">
+                {t('widget.mqtt.msgSec', 'msg/s')}
+              </span>
+            </span>
           </div>
         ) : (
           /* ── Standard layout (2×2+) ── */
           <div className="flex flex-col gap-3 h-full">
             {/* Connection status row */}
-            <WidgetStatusGrid cells={[status]} />
+            <div className="flex items-center justify-between">
+              <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+                {t('widget.mqtt.status', 'Status')}
+              </span>
+              <StatusBadge status={connected ? 'online' : 'offline'} size="sm" />
+            </div>
 
             {/* Stats grid */}
-            <DashboardSourceBrief
-              metrics={[
-                { metricId: 'rate', rawValue: stats.messagesPerSec, label: t('widget.mqtt.msgRate', 'Messages/sec'), description: t('widget.mqtt.rateDescription', 'Sum of returned per-vehicle signal rates; one missing operand makes the total unknown.'), display: { formatter: raw => ({ value: fmtNumber(Number(raw)), unit: '' }) } },
-                { metricId: 'count', rawValue: stats.totalMessages, label: t('widget.mqtt.totalToday', 'Total messages'), description: t('widget.mqtt.countDescription', 'Sum of returned signal counters; counter reset periods are not supplied by the source.') },
-              ]}
-              state={state} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-              title={t('widget.mqtt.summaryTitle', 'MQTT source counters')}
-              description={t('widget.mqtt.summaryDescription', 'Fleet counters retain complete-operand checks; connection presence and newest valid observation remain separate evidence.')}
-              scope={t('widget.mqtt.summaryScope', 'Returned streaming-fleet rows; no complete calendar-day or verified-live coverage is inferred')}
-              loading={isLoading && !data} testId="mqtt-operational-brief"
-            />
+            <div className="grid grid-cols-2 gap-2">
+              <StatCard
+                label={t('widget.mqtt.msgRate', 'Messages/sec')}
+                value={fmtNumber(stats.messagesPerSec, 1)}
+              />
+              <StatCard
+                label={t('widget.mqtt.totalToday', 'Total Messages')}
+                value={fmtInt(stats.totalMessages)}
+              />
+            </div>
 
             {/* Last message & broker */}
-            <div className="mt-auto pt-2 border-t border-[var(--border-subtle)] space-y-1.5">
-              <KVList layout="responsive" wrap items={[
-                {
-                  id: 'last-message',
-                  label: t('widget.mqtt.lastMessage', 'Last message'),
-                  value: stats.lastMessage ? formatRelative(stats.lastMessage) : '—',
-                },
-                {
-                  id: 'broker',
-                  label: t('widget.mqtt.broker', 'Broker'),
-                  value: <span title={broker}>{broker}</span>,
-                },
-              ]} />
+            <div className="mt-auto pt-2 border-t border-white/[0.06] space-y-1.5">
+              <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
+                <span>{t('widget.mqtt.lastMessage', 'Last Message')}</span>
+                <span className="text-[var(--text-secondary)] truncate ml-2">
+                  {stats.lastMessage ? formatRelative(stats.lastMessage) : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-2xs text-[var(--text-muted)]">
+                <span>{t('widget.mqtt.broker', 'Broker')}</span>
+                <span className="text-[var(--text-secondary)] truncate ml-2">{broker}</span>
+              </div>
             </div>
           </div>
-      )}
-      {!data && (
+        )
+      ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Radio className="h-5 w-5" />}
           message={t('widget.mqtt.noData', 'No MQTT status data')}

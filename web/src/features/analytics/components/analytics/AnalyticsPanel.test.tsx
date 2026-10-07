@@ -70,7 +70,7 @@ describe('AnalyticsPanel', () => {
 
     // Title renders as an h3 (PanelTitle → Heading level="panel").
     expect(
-      screen.getByRole('heading', { level: 3, name: /Distance by vehicle/i }),
+      screen.getByRole('heading', { level: 3, name: /Distance by Vehicle/i }),
     ).toBeInTheDocument();
 
     // Children render in the idle branch.
@@ -117,8 +117,7 @@ describe('AnalyticsPanel', () => {
     expect(skeleton).toHaveStyle({ height: '260px' });
 
     // Panel is announced as busy for assistive tech during the fetch.
-    expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-card]')).toBeInTheDocument();
+    expect(container.querySelector('[data-print-card]')).toHaveAttribute('aria-busy', 'true');
 
     // Children are withheld behind the loading gate.
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
@@ -143,7 +142,7 @@ describe('AnalyticsPanel', () => {
     );
 
     // Plain Error → status undefined → network "Can't reach server" branch.
-    expect(screen.getByText('Failed to load data')).toBeInTheDocument();
+    expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
 
     // Retry CTA present and wired to the query's refetch callback.
@@ -197,7 +196,7 @@ describe('AnalyticsPanel', () => {
 
     // loading wins over error + empty + children.
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Failed to load data')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
     expect(screen.queryByText('No analytics records match the current selection.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
 
@@ -209,7 +208,7 @@ describe('AnalyticsPanel', () => {
         </AnalyticsPanel>
       </MemoryRouter>,
     );
-    expect(screen.getByText('Failed to load data')).toBeInTheDocument();
+    expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
     expect(screen.queryByText('No analytics records match the current selection.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
 
@@ -244,8 +243,10 @@ describe('AnalyticsPanel', () => {
       </AnalyticsPanel>,
     );
 
-    expect(container.firstElementChild).toHaveClass('test-grid-item', 'md:col-span-2');
-    expect(container.querySelector('[data-card]')).toHaveClass('p-3');
-    expect(screen.getByRole('heading', { level: 3, name: 'P' })).toBeInTheDocument();
+    const panel = container.querySelector('[data-print-card]');
+    expect(panel).toHaveClass('test-grid-item');
+    expect(panel).toHaveClass('md:col-span-2');
+    // The component's own padding survives the tailwind-merge.
+    expect(panel?.className).toContain('p-4');
   });
 });

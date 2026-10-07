@@ -3,19 +3,13 @@ import { render, screen } from '@testing-library/react'
 import { NavSectionHeader } from '../NavSectionHeader'
 
 describe('NavSectionHeader', () => {
-  it('preserves supplied brand and acronym casing without visual transformations', () => {
-    render(<NavSectionHeader label="Tesla API" />);
-    const label = screen.getByText('Tesla API');
-    expect(label).not.toHaveClass('uppercase', 'capitalize');
-  });
-
   it('renders label as a non-interactive caption with the Phase-45 typography token', () => {
     render(<NavSectionHeader label="Pinned" />)
     const label = screen.getByText('Pinned')
     expect(label.tagName).toBe('P')
     expect(label).toHaveClass('text-2xs')
     expect(label).toHaveClass('font-semibold')
-    expect(label).not.toHaveClass('uppercase', 'capitalize')
+    expect(label).toHaveClass('uppercase')
     expect(label).toHaveClass('tracking-[0.14em]')
     expect(label).toHaveClass('text-[var(--text-muted)]')
   })
@@ -36,8 +30,8 @@ describe('NavSectionHeader', () => {
   })
 
   it('applies the supplied id to the label so callers can use aria-labelledby', () => {
-    render(<NavSectionHeader label="Recently used" id="nav-recent-label" />)
-    const label = screen.getByText('Recently used')
+    render(<NavSectionHeader label="Recently Used" id="nav-recent-label" />)
+    const label = screen.getByText('Recently Used')
     expect(label).toHaveAttribute('id', 'nav-recent-label')
   })
 

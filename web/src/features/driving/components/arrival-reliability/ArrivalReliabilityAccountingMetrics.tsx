@@ -1,12 +1,11 @@
 import { useTranslation } from 'react-i18next';
 
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import {
   ArrivalReliabilityEvidenceMetricGroup,
   type ArrivalReliabilityEvidenceMetric,
 } from './ArrivalReliabilityEvidenceMetricGroup';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityAccountingMetricsProps {
   analysis: ArrivalReliabilityResult;
@@ -15,7 +14,6 @@ interface ArrivalReliabilityAccountingMetricsProps {
 export function ArrivalReliabilityAccountingMetrics({
   analysis,
 }: ArrivalReliabilityAccountingMetricsProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = analysis.accounting;
   const metrics: ArrivalReliabilityEvidenceMetric[] = [

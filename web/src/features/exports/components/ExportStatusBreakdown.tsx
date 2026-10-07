@@ -1,14 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
-import { Caption, Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
-
+import { fmtInt, fmtPercent, formatBytes } from '@/lib/numberFormat';
 
 import { STATUS_ORDER, statusColor, type ExportStats } from './exportStats';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
   ready: 'Ready',
@@ -23,7 +21,6 @@ interface ExportStatusBreakdownProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
-  unresolvedMessage?: string;
 }
 
 /**
@@ -36,9 +33,7 @@ export function ExportStatusBreakdown({
   isLoading,
   error,
   onRetry,
-  unresolvedMessage,
 }: ExportStatusBreakdownProps) {
-  const { fmtInt, fmtPercent, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive: `byStatus` can be missing a key if the API ever returns a
@@ -48,7 +43,11 @@ export function ExportStatusBreakdown({
   const rows = STATUS_ORDER.filter((s) => (stats.byStatus?.[s] ?? 0) > 0);
 
   return (
-    <LayoutCard title={t('exportsList.breakdown.title', 'Status breakdown')}>
+    <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('exportsList.breakdown.title', 'Status Breakdown')}
+      </PanelTitle>
 
       {isLoading ? (
         <div
@@ -70,8 +69,6 @@ export function ExportStatusBreakdown({
           onRetry={onRetry}
           resourceName={t('exportsList.resource', 'Exports')}
         />
-      ) : unresolvedMessage ? (
-        <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
       ) : stats.total === 0 || rows.length === 0 ? (
         <EmptyState /* no-action: transient — nothing to summarize until exports exist */
           icon={<Icons.analytics className="h-8 w-8" aria-hidden="true" />}
@@ -95,7 +92,7 @@ export function ExportStatusBreakdown({
                   value={count}
                   max={stats.total}
                   color={statusColor[status]}
-                  sublabel={`${fmtInt(count)} · ${fmtPercent(pct)}`}
+                  sublabel={`${fmtInt(count)} · ${fmtPercent(pct, 0)}`}
                 />
               );
             })}
@@ -104,7 +101,7 @@ export function ExportStatusBreakdown({
           <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
             <Caption className="flex items-center gap-1.5">
               <Icons.hardDrive className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('exportsList.breakdown.storage', 'Storage used')}
+              {t('exportsList.breakdown.storage', 'Storage Used')}
             </Caption>
             <Text variant="body" mono className="tabular-nums">
               {formatBytes(stats.totalBytes, { zeroAsEmpty: true })}
@@ -112,6 +109,6 @@ export function ExportStatusBreakdown({
           </div>
         </div>
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

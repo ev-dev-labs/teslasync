@@ -34,8 +34,9 @@ import {
   Table,
   Text,
 } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { QueryError } from '@/components/feedback/QueryError';
 import { TimeStamp } from '@/components/data-display';
 import { Icons } from '@/lib/icons';
 import {
@@ -92,11 +93,7 @@ function inputFromRow(row: ScheduledExport): ScheduledExportInput {
 
 export function ScheduledExportsPanel() {
   const { t } = useTranslation();
-  const query = useScheduledExports();
-  const { data, isLoading, refetch } = query;
-  const state = useDataState(query);
-  const error = state.fatalError;
-  const isError = !!error;
+  const { data, isLoading, isError, error, refetch } = useScheduledExports();
   const create = useCreateScheduledExport();
   const update = useUpdateScheduledExport();
   const remove = useDeleteScheduledExport();
@@ -168,8 +165,7 @@ export function ScheduledExportsPanel() {
   }
 
   return (
-    <GlassPanel className="min-w-0 p-6" data-testid="scheduled-exports-panel">
-      <StaleRefreshWarning state={state} label={t('dataExport.scheduled.title', 'Scheduled exports')} />
+    <GlassPanel className="p-6" data-testid="scheduled-exports-panel">
       <div className="flex items-start justify-between gap-4">
         <div>
           <Heading level="section">
@@ -201,7 +197,7 @@ export function ScheduledExportsPanel() {
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="block">
-              <Text as="span" size="xs" color="secondary" className="tracking-wide">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.name', 'Name')}
               </Text>
               <Input
@@ -215,7 +211,7 @@ export function ScheduledExportsPanel() {
               />
             </label>
             <label className="block">
-              <Text as="span" size="xs" color="secondary" className="tracking-wide">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.scheduleCron', 'Cron expression')}
               </Text>
               <Input
@@ -232,7 +228,7 @@ export function ScheduledExportsPanel() {
               </Text>
             </label>
             <label className="block">
-              <Text as="span" size="xs" color="secondary" className="tracking-wide">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.exportType', 'Export type')}
               </Text>
               <Select
@@ -247,7 +243,7 @@ export function ScheduledExportsPanel() {
               />
             </label>
             <label className="block">
-              <Text as="span" size="xs" color="secondary" className="tracking-wide">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.format', 'Format')}
               </Text>
               <Select
@@ -262,7 +258,7 @@ export function ScheduledExportsPanel() {
               />
             </label>
             <label className="block">
-              <Text as="span" size="xs" color="secondary" className="tracking-wide">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.rangeWindow', 'Range window')}
               </Text>
               <Input
@@ -278,7 +274,7 @@ export function ScheduledExportsPanel() {
               </Text>
             </label>
             <label className="block">
-              <Text as="span" size="xs" color="secondary" className="tracking-wide">
+              <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                 {t('dataExport.scheduled.form.deliveryKind', 'Delivery kind')}
               </Text>
               <Select
@@ -297,7 +293,7 @@ export function ScheduledExportsPanel() {
             </label>
             {form.delivery.kind !== 'download' ? (
               <label className="block md:col-span-2">
-                <Text as="span" size="xs" color="secondary" className="tracking-wide">
+                <Text as="span" size="xs" color="secondary" className="uppercase tracking-wide">
                   {t('dataExport.scheduled.form.deliveryTarget', 'Delivery target')}
                 </Text>
                 <Input
@@ -347,7 +343,7 @@ export function ScheduledExportsPanel() {
       ) : null}
 
       <div className="mt-6">
-        {isLoading && !state.hasData ? (
+        {isLoading ? (
           <div className="space-y-2">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
@@ -371,42 +367,42 @@ export function ScheduledExportsPanel() {
             )}
           />
         ) : (
-          <div className="max-w-full overflow-x-auto" data-testid="scheduled-exports-table">
-            <Table>
+          <div className="overflow-x-auto" data-testid="scheduled-exports-table">
+            <Table className="min-w-full divide-y divide-[var(--border-subtle)]">
               <thead>
-                <tr>
-                  <th scope="col">{t('dataExport.scheduled.table.name', 'Name')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.type', 'Type')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.cron', 'Cron')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.delivery', 'Delivery')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.nextRun', 'Next run')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.lastRun', 'Last run')}</th>
-                  <th scope="col">{t('dataExport.scheduled.table.status', 'Status')}</th>
-                  <th scope="col" className="text-right">{t('dataExport.scheduled.table.actions', 'Actions')}</th>
+                <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.name', 'Name')}</th>
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.type', 'Type')}</th>
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.cron', 'Cron')}</th>
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.delivery', 'Delivery')}</th>
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.nextRun', 'Next run')}</th>
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.lastRun', 'Last run')}</th>
+                  <th className="py-2 pe-4">{t('dataExport.scheduled.table.status', 'Status')}</th>
+                  <th className="py-2 pe-4 text-right">{t('dataExport.scheduled.table.actions', 'Actions')}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-[var(--border-subtle)] text-sm text-[var(--text-primary)]">
                 {rows.map((row) => (
                   <tr
                     key={row.id}
                     data-testid={`scheduled-exports-row-${row.id}`}
                     className={row.enabled ? '' : 'opacity-50'}
                   >
-                    <td className="font-medium">{row.name}</td>
-                    <td>{row.export_type} ({row.format})</td>
-                    <td><Code>{row.schedule_cron}</Code></td>
-                    <td>
+                    <td className="py-2 pe-4 font-medium">{row.name}</td>
+                    <td className="py-2 pe-4">{row.export_type} ({row.format})</td>
+                    <td className="py-2 pe-4"><Code>{row.schedule_cron}</Code></td>
+                    <td className="py-2 pe-4">
                       {row.delivery.kind}
                       {row.delivery.target ? ` → ${row.delivery.target}` : ''}
                     </td>
-                    <td>
+                    <td className="py-2 pe-4">
                       {row.next_run_at ? (
                         <TimeStamp value={row.next_run_at} />
                       ) : (
                         <Text as="span" color="muted">—</Text>
                       )}
                     </td>
-                    <td>
+                    <td className="py-2 pe-4">
                       {row.last_run_at ? (
                         <TimeStamp value={row.last_run_at} />
                       ) : (
@@ -415,7 +411,7 @@ export function ScheduledExportsPanel() {
                         </Text>
                       )}
                     </td>
-                    <td>
+                    <td className="py-2 pe-4">
                       {row.last_status === 'ok' ? (
                         <Badge variant="success">{t('dataExport.scheduled.status.ok', 'OK')}</Badge>
                       ) : row.last_status === 'failed' ? (
@@ -424,7 +420,7 @@ export function ScheduledExportsPanel() {
                         <Text as="span" color="muted">—</Text>
                       )}
                     </td>
-                    <td>
+                    <td className="py-2 pe-4">
                       <div className="flex justify-end gap-1">
                         <Button
                           size="sm"

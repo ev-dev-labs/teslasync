@@ -10,11 +10,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowDown, Pause, Play, Radio, Trash2 } from 'lucide-react';
+import { Activity, ArrowDown, ArrowUpDown, Pause, Play, Radio, Trash2 } from 'lucide-react';
 
-import { GlassPanel, Badge, Button, Input, DataTable, PanelTitle, Text, Code, type Column } from '@/components/ui';
-import { FreshnessIndicator, type StatMetric } from '@/components/data-display';
-import { TelemetrySummaryBrief } from './operationalbrief-all/TelemetrySummaryBrief';
+import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, type Column } from '@/components/ui';
+import { StatCard, FreshnessIndicator } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { formatTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
@@ -120,31 +119,15 @@ export function LiveSignalTail({
   ], [t]);
 
   const uniqueSignals = useMemo(() => new Set(items.map((e) => e.name)).size, [items]);
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'rate', occurrenceId: 'rate', rawValue: rate,
-      label: t('liveMonitor.sigPerSec', 'Signals / sec'),
-      display: { formatter: (raw) => ({ value: String(raw), unit: '' }) },
-      description: t('telemetryBrief.sseRate', 'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.') },
-    { metricId: 'count', occurrenceId: 'buffer', rawValue: items.length,
-      label: t('liveMonitor.bufferSize', 'Buffer size'),
-      description: `/ ${bufferMax ?? 0}`,
-      context: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
-    { metricId: 'count', occurrenceId: 'unique', rawValue: uniqueSignals,
-      label: t('liveMonitor.uniqueSignals', 'Unique signals'),
-      description: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
-    { metricId: 'count', occurrenceId: 'filtered', rawValue: filtered.length,
-      label: t('liveMonitor.filtered', 'Filtered'),
-      description: t('telemetryBrief.tailFiltered', 'Buffered entries after the case-insensitive signal-name filter; not distinct signals.') },
-  ];
 
   return (
-    <FadeIn className="min-w-0 max-w-full">
-      <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5 space-y-3', className)}>
+    <FadeIn>
+      <GlassPanel className={cn('p-4 sm:p-5 space-y-3', className)}>
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {title ? (
-            <div className="flex min-w-0 items-center gap-2">
-              <Radio className="h-4 w-4 shrink-0 text-red-500 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
-              <PanelTitle className="min-w-0 break-words">{title}</PanelTitle>
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-red-500 animate-pulse" />
+              <Text variant="sectionTitle">{title}</Text>
             </div>
           ) : null}
           <Input
@@ -155,14 +138,12 @@ export function LiveSignalTail({
             aria-label={t('liveMonitor.filterLabel', 'Filter signals')}
             className="w-full sm:w-64"
           />
-          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2 sm:ms-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             {headerExtra}
             <Button
               onClick={onPauseToggle}
               variant="secondary"
               size="sm"
-              wrapLabel
-              aria-pressed={paused}
               icon={paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
             >
               {paused ? t('liveMonitor.resume', 'Resume') : t('liveMonitor.pause', 'Pause')}
@@ -171,7 +152,6 @@ export function LiveSignalTail({
               onClick={() => setAutoScroll((a) => !a)}
               variant="secondary"
               size="sm"
-              wrapLabel
               aria-pressed={autoScroll}
               icon={<ArrowDown className="h-3.5 w-3.5" />}
               className={autoScroll ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : ''}
@@ -182,7 +162,6 @@ export function LiveSignalTail({
               onClick={onClear}
               variant="danger"
               size="sm"
-              wrapLabel
               icon={<Trash2 className="h-3.5 w-3.5" />}
             >
               {t('liveMonitor.clear', 'Clear')}
@@ -191,12 +170,29 @@ export function LiveSignalTail({
         </div>
 
         {showStats ? (
-          <TelemetrySummaryBrief title={t('telemetryBrief.tailTitle', 'Buffered tail summary')}
-            metrics={metrics} testId="live-tail-summary"
-            statusLabel={paused ? t('telemetryBrief.tailPaused', 'Tail paused') : t('telemetryBrief.tailRecording', 'Tail recording enabled')}
-            scope={t('telemetryBrief.sseScope', 'Current SSE session · bounded tail buffer')}
-            provenance={t('telemetryBrief.sseProvenance', 'Client SSE tail and locally sampled throughput')}
-            description={t('telemetryBrief.tailDescription', 'Pause freezes the tail presentation, not durable telemetry ingestion. Connection and per-row timestamp freshness remain separate evidence.')} />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <StatCard
+              label={t('liveMonitor.sigPerSec', 'Signals / sec')}
+              value={rate ?? 0}
+              icon={<Activity className="h-4 w-4" />}
+            />
+            <StatCard
+              label={t('liveMonitor.bufferSize', 'Buffer Size')}
+              value={items.length}
+              unit={`/ ${bufferMax ?? 0}`}
+              icon={<ArrowUpDown className="h-4 w-4" />}
+            />
+            <StatCard
+              label={t('liveMonitor.uniqueSignals', 'Unique Signals')}
+              value={uniqueSignals}
+              icon={<Activity className="h-4 w-4" />}
+            />
+            <StatCard
+              label={t('liveMonitor.filtered', 'Filtered')}
+              value={filtered.length}
+              icon={<Activity className="h-4 w-4" />}
+            />
+          </div>
         ) : null}
 
         <div ref={tableRef} className="overflow-auto rounded-lg border border-[var(--border-subtle)]" style={{ maxHeight }}>

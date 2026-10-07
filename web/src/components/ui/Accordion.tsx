@@ -3,13 +3,9 @@ import { motion, AnimatePresence } from '@/components/motion'
 import { cn } from '../../lib/cn'
 import { ChevronDown } from 'lucide-react'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
-import { Button } from './Button'
-import { Text } from './Typography'
 
 interface AccordionProps {
   title: string
-  /** Caller-localized, non-interactive rich text stacked below the title, not in headerExtra. */
-  description?: ReactNode
   children: ReactNode
   defaultOpen?: boolean
   /**
@@ -34,7 +30,6 @@ interface AccordionProps {
 /** Collapsible content section with animated reveal. Controlled when `open`+`onOpenChange` provided. */
 export function Accordion({
   title,
-  description,
   children,
   defaultOpen = false,
   open: openProp,
@@ -56,8 +51,6 @@ export function Accordion({
   const reactId = useId()
   const titleId = `${reactId}-title`
   const panelId = `${reactId}-panel`
-  const descriptionId = `${reactId}-description`
-  const hasDescription = description != null && description !== false && description !== ''
 
   const handleToggle = useCallback(() => {
     // Controlled: hand the next value to the parent (source of truth).
@@ -68,19 +61,15 @@ export function Accordion({
   }, [isControlled, onOpenChange, openProp])
 
   return (
-    <div className={cn('rounded-xl border border-white/[0.06] overflow-hidden forced-colors:border-[CanvasText]', className)}>
-      <Button
-        variant="ghost"
+    <div className={cn('rounded-xl border border-white/[0.06] overflow-hidden', className)}>
+      <button
         type="button"
         onClick={handleToggle}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-labelledby={hasDescription ? titleId : undefined}
-        aria-describedby={hasDescription ? descriptionId : undefined}
         className={cn(
-          'flex h-auto w-full flex-wrap items-center justify-start gap-3 rounded-none text-start text-[length:inherit] font-normal hover:bg-white/[0.02] transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-inset focus-visible:ring-offset-0',
-          'forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-[Highlight] forced-colors:focus-visible:-outline-offset-2',
+          'flex w-full items-center gap-3 text-left hover:bg-white/[0.02] transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-inset',
           headerClassName ?? 'px-4 py-3',
         )}
       >
@@ -89,19 +78,8 @@ export function Accordion({
             {icon}
           </div>
         )}
-        <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-          <Text id={titleId} size="sm" weight="medium" color="primary" className="block forced-colors:text-[ButtonText]">
-            {title}
-          </Text>
-          {hasDescription && (
-            <Text
-              id={descriptionId}
-              variant="bodySm"
-              className="mt-0.5 block whitespace-normal font-normal forced-colors:text-[ButtonText]"
-            >
-              {description}
-            </Text>
-          )}
+        <span id={titleId} className="flex-1 text-sm font-medium text-[var(--text-primary)]">
+          {title}
         </span>
         {badge}
         {headerExtra}
@@ -112,7 +90,7 @@ export function Accordion({
             open && 'rotate-180',
           )}
         />
-      </Button>
+      </button>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -125,7 +103,7 @@ export function Accordion({
             transition={{ duration: reduce ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div className={cn('border-t border-white/[0.04] forced-colors:border-[CanvasText]', bodyClassName ?? 'px-4 py-3')}>
+            <div className={cn('border-t border-white/[0.04]', bodyClassName ?? 'px-4 py-3')}>
               {children}
             </div>
           </motion.div>

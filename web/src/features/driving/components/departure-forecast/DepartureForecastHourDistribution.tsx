@@ -15,7 +15,7 @@ import {
   axisTick,
 } from '@/components/charts';
 import { Text } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { DepartureForecastSectionBody } from './DepartureForecastSectionBody';
 import {
@@ -23,7 +23,6 @@ import {
   departureLocalHour,
 } from './labels';
 import type { DepartureForecastQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastHourDistributionProps {
   forecast: DepartureForecast;
@@ -38,7 +37,6 @@ export function DepartureForecastHourDistribution({
   locale,
   timeZone,
 }: DepartureForecastHourDistributionProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const seriesName = t(
     'departure.hourDistribution.series',
@@ -171,7 +169,7 @@ export function DepartureForecastHourDistribution({
                           departures: fmtInt(daypart.departures),
                           share: fmtNumber(
                             daypart.share * 100,
-                            undefined,
+                            0,
                             locale,
                           ),
                         },

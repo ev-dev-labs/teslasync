@@ -27,18 +27,15 @@ import {
   YAxis,
 } from '@/components/charts';
 import { MetricTile } from '@/components/data-display';
-import { Badge, Caption, Select, Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Badge, Caption, GlassPanel, Select, Text } from '@/components/ui';
 import { EmptyState, InlineCallout } from '@/components/feedback';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { useCatalog } from '../hooks/useCatalog';
 import { useTrustDecision } from '../hooks/useTrustDecision';
 import { useSandboxPreview } from '../hooks/useSandboxPreview';
 import { resolveDashboardWidgetResults } from '../lib/sandboxRunner';
 import type { FormulaRunResult } from '../lib/sandboxRunner';
 import type { PackCapabilityId, PackVizKind } from '../lib/manifestTypes';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { SandboxRunBrief } from './operationalbrief-all/SandboxRunBrief';
 
 function seriesToChartData(series: number[]) {
   return series.map((value, i) => ({ i, value }));
@@ -48,12 +45,10 @@ function FormulaSeriesChart({
   title,
   kind,
   data,
-  unit,
 }: {
   title: string;
   kind: 'line' | 'area' | 'bar';
   data: { i: number; value: number }[];
-  unit?: string;
 }) {
   const { t } = useTranslation();
 
@@ -69,7 +64,7 @@ function FormulaSeriesChart({
       data={data}
       dataColumns={[
         { key: 'i', label: t('intelPacks.sandbox.row', 'Sample') },
-        { key: 'value', label: `${t('intelPacks.sandbox.value', 'Value')}${unit ? ` (${unit})` : ''}` },
+        { key: 'value', label: t('intelPacks.sandbox.value', 'Value') },
       ]}
       fluid={false}
       mobileHeight={120}
@@ -107,23 +102,24 @@ function FormulaSeriesChart({
 }
 
 function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind; result: FormulaRunResult | null }) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   if (!result) {
     return (
-      <LayoutCard title={title}>
-        <Text as="p" variant="caption">{t('intelPacks.sandbox.formulaMissing', 'Referenced formula not found.')}</Text>
-      </LayoutCard>
+      <GlassPanel padding="sm" className="flex flex-col gap-1">
+        <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
+        <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.formulaMissing', 'Referenced formula not found.')}</p>
+      </GlassPanel>
     );
   }
   const data = seriesToChartData(result.series);
 
   return (
-    <LayoutCard title={title}>
+    <GlassPanel padding="sm" className="flex flex-col gap-2">
+      <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
       {data.length === 0 ? (
-        <Text as="p" variant="caption">{t('intelPacks.sandbox.noData', 'No output rows.')}</Text>
+        <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.noData', 'No output rows.')}</p>
       ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
-        <FormulaSeriesChart title={title} kind={kind} data={data} unit={result.unit} />
+        <FormulaSeriesChart title={title} kind={kind} data={data} />
       ) : kind === 'sparkline' ? (
         <Sparkline data={result.series} ariaLabel={title} />
       ) : kind === 'radial-gauge' ? (
@@ -139,17 +135,17 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           align="start"
           decimals={1}
           sublabel={t('intelPacks.sandbox.sampleRange', 'sample {{min}}–{{max}}{{unit}}', {
-            min: fmtNumber(Math.min(...result.series)),
-            max: fmtNumber(Math.max(...result.series)),
+            min: fmtNumber(Math.min(...result.series), 1),
+            max: fmtNumber(Math.max(...result.series), 1),
             unit: result.unit ? ` ${result.unit}` : '',
           })}
         />
       ) : (
         <div>
-          <Text variant="metricValue">{result.latest != null ? `${fmtNumber(result.latest)}${result.unit ? ` ${result.unit}` : ''}` : '—'}</Text>
-          <Text as="p" variant="caption">
-            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
-          </Text>
+          <Text variant="metricValue">{result.latest != null ? fmtNumber(result.latest, 1) : '—'}</Text>
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('intelPacks.sandbox.average', 'avg {{value}}{{unit}}', { value: result.average != null ? fmtNumber(result.average, 1) : '—', unit: result.unit ? ` ${result.unit}` : '' })}
+          </p>
         </div>
       )}
       {result.budgetError && <Caption className="block text-amber-300">{result.budgetError}</Caption>}
@@ -158,7 +154,7 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
           {t('intelPacks.sandbox.deniedFields', 'Fields evaluated as 0 (capability denied): {{fields}}', { fields: result.deniedFieldRefs.join(', ') })}
         </Caption>
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }
 
@@ -180,11 +176,6 @@ export function SandboxPreviewPanel() {
   }, [selectedEntry, trustQuery.data]);
 
   const run = useSandboxPreview(selectedEntry?.envelope.manifest ?? null, grantedCapabilities);
-  const grantDescription = trustQuery.data
-    ? t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant')
-    : selectedEntry?.installedVersion != null
-      ? t('intelPacks.sandbox.installedGrantUnavailable', 'Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available.')
-      : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)');
 
   if (entries.length === 0) {
     // no-action: preview entries are sourced from the same bundled catalog fixture as the Catalog tab, which always ships at least one demo entry.
@@ -209,7 +200,9 @@ export function SandboxPreviewPanel() {
 
       {selectedEntry && (
         <Badge variant={trustQuery.data ? 'success' : 'neutral'} size="sm">
-          {grantDescription}
+          {trustQuery.data
+            ? t('intelPacks.sandbox.usingInstalledGrant', 'Using installed capability grant')
+            : t('intelPacks.sandbox.usingFullGrant', 'Preview mode: simulating full requested-capability grant (not installed)')}
         </Badge>
       )}
 
@@ -231,12 +224,14 @@ export function SandboxPreviewPanel() {
               </div>
             </div>
           ))}
-          <SandboxRunBrief
-            run={run}
-            packName={selectedEntry.envelope.manifest.name}
-            packVersion={selectedEntry.envelope.manifest.version}
-            grantDescription={grantDescription}
-          />
+          <p className="text-xs text-[var(--text-muted)]">
+            {t('intelPacks.sandbox.runStats', '{{rows}} sample rows · {{steps}} evaluation steps · {{ms}}ms{{truncated}}', {
+              rows: run.rowsUsed,
+              steps: run.totalStepsUsed,
+              ms: run.durationMs,
+              truncated: run.truncated ? t('intelPacks.sandbox.truncatedSuffix', ' · truncated by budget') : '',
+            })}
+          </p>
         </div>
       )}
     </div>

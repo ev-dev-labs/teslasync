@@ -6,6 +6,7 @@ import {
   BatteryCharging,
   Thermometer,
   ThermometerSun,
+  Gauge,
   Lock,
   Unlock,
   MapPin,
@@ -25,20 +26,18 @@ import {
   Badge,
   Button,
   GlassPanel,
+  Select,
+  SectionTitle,
   PanelTitle,
   Subhead,
   Text,
   Caption,
 } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
-import { FreshnessIndicator, KVList } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { FreshnessIndicator, MetricCard } from '@/components/data-display';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { PageLayout, Section, SourceContent } from '@/components/layout';
-import { useDataState } from '@/hooks/useDataState';
-import { knownNumber } from '@/api/dataState';
+import { PageContainer } from '@/components/layout';
 import {
   useVehicles,
   useVehicleState,
@@ -49,12 +48,11 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import type { NeonColor } from '@/lib/tokens';
 import type { LocationSnapshot } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type TFn = (key: string, fallback: string) => string;
 
@@ -94,7 +92,6 @@ function QuickAction({ icon: Icon, label, onClick, disabled, loading }: QuickAct
       onClick={onClick}
       disabled={disabled}
       loading={loading}
-      wrapLabel
       aria-label={label}
       className="flex min-h-[4.5rem] min-w-[5.5rem] flex-1 flex-col items-center justify-center gap-1.5
         rounded-xl border border-white/[0.06] bg-[var(--surface-2)] p-3 hover:border-white/[0.12]"
@@ -114,15 +111,13 @@ interface DetailRowProps {
 /** Icon + label on the left, primary-coloured value on the right. */
 function DetailRow({ icon: Icon, label, value }: DetailRowProps) {
   return (
-    <KVList
-      layout="responsive"
-      wrap
-      items={[{
-        label,
-        leading: <Icon className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />,
-        value: <span className="tabular-nums">{value}</span>,
-      }]}
-    />
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="flex min-w-0 items-center gap-2">
+        <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+        <Caption className="truncate">{label}</Caption>
+      </span>
+      <Text variant="body" className="shrink-0 tabular-nums">{value}</Text>
+    </div>
   );
 }
 
@@ -135,32 +130,32 @@ interface StatusRowProps {
 /** Icon + label on the left, a status <Badge> (or similar) on the right. */
 function StatusRow({ icon: Icon, label, children }: StatusRowProps) {
   return (
-    <KVList
-      layout="responsive"
-      wrap
-      items={[{
-        label,
-        leading: <Icon className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />,
-        value: children,
-      }]}
-    />
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="flex min-w-0 items-center gap-2">
+        <Icon className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+        <Caption className="truncate">{label}</Caption>
+      </span>
+      {children}
+    </div>
   );
 }
 
 // ── Main page ────────────────────────────────────────────────────────
 
 export default function GlancePage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const title = t('glance.title', 'Quick glance');
+  const title = t('glance.title', 'Quick Glance');
   usePageTitle(title);
 
-  const vehiclesQuery = useVehicles();
-  const { isLoading: vehiclesLoading } = vehiclesQuery;
-  const vehiclesState = useDataState(vehiclesQuery);
+  const {
+    isLoading: vehiclesLoading,
+    error: vehiclesError,
+  } = useVehicles();
   const {
     vehicle,
     vehicleId: selectedVehicleId,
+    vehicles,
+    setVehicleId,
   } = useSelectedVehicle();
   const vehicleId = selectedVehicleId ?? 0;
 
@@ -175,14 +170,13 @@ export default function GlancePage() {
     data: stateData,
     dataUpdatedAt,
     isLoading: stateLoading,
+    isError: stateIsError,
+    error: stateError,
     refetch,
   } = stateQuery;
   const state = stateData?.state;
-  const stateTrust = useDataState(stateQuery, { provenance: 'live' });
 
-  const locationQuery = useLocationSnapshotLatest(vehicleId, 30_000);
-  const { data: location } = locationQuery;
-  const locationTrust = useDataState(locationQuery, { provenance: 'live' });
+  const { data: location } = useLocationSnapshotLatest(vehicleId, 30_000);
 
   const { formatDistance, formatSpeed, formatTemperature } = useUnits();
   const sendCommand = useVehicleCommand();
@@ -198,29 +192,31 @@ export default function GlancePage() {
     () => (dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null),
     [dataUpdatedAt],
   );
-  const overviewMetrics: readonly StatMetric[] = [
-    { metricId: 'percent', rawValue: state?.battery_level, label: t('glance.battery', 'Battery'),
-      description: t('glance.summary.batteryHelp', 'Reported battery state of charge, on the 0–100 percent scale.'),
-      display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
-    { metricId: 'distance', rawValue: state?.rated_range, label: t('glance.range', 'Range'),
-      description: t('glance.summary.rangeHelp', 'Reported rated range in metres, converted only for display.'),
-      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
-    { metricId: 'temperature', rawValue: state?.inside_temp, label: t('glance.temp', 'Interior'),
-      description: t('glance.summary.interiorHelp', 'Reported cabin temperature in degrees Celsius.'),
-      display: { formatter: raw => ({ value: formatTemperature(raw), unit: '' }) } },
-    { metricId: 'temperature', rawValue: state?.outside_temp, label: t('glance.outsideTemp', 'Exterior'),
-      description: t('glance.summary.exteriorHelp', 'Reported exterior temperature in degrees Celsius.'),
-      display: { formatter: raw => ({ value: formatTemperature(raw), unit: '' }) } },
-    { metricId: 'distance', rawValue: state?.odometer, label: t('glance.odometer', 'Odometer'),
-      description: t('glance.summary.odometerHelp', 'Reported odometer in metres; lifetime reading, not distance in a selected window.'),
-      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
-    { metricId: 'speed', rawValue: state?.speed, label: t('glance.speed', 'Speed'),
-      description: t('glance.summary.speedHelp', 'Reported speed in metres per second. Missing speed is not a measured stop.'),
-      display: { formatter: raw => ({ value: formatSpeed(raw), unit: '' }) } },
-  ];
+
+  const vehicleOptions = useMemo(
+    () =>
+      (vehicles ?? []).map((v) => ({
+        value: String(v.id),
+        label: v.display_name || v.model || v.vin,
+      })),
+    [vehicles],
+  );
+
+  const onPickVehicle = (id: string) => {
+    const next = Number(id);
+    setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
+  };
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
+      {vehicleOptions.length > 1 && (
+        <Select
+          options={vehicleOptions}
+          value={String(vehicleId || '')}
+          onChange={(e) => onPickVehicle(e.target.value)}
+          aria-label={t('glance.selectVehicle', 'Select vehicle')}
+        />
+      )}
       <Button
         variant="ghost"
         onClick={() => refetch()}
@@ -234,42 +230,25 @@ export default function GlancePage() {
 
   // Shared placeholder for state-bound panels — self-sufficient per section.
   const renderPanelState = (skeletonHeight: number, emptyMessage: string) => {
-    if (stateTrust.fatalError) return <QueryError error={stateTrust.fatalError} onRetry={() => refetch()} />;
+    if (stateLoading) return <Skeleton height={skeletonHeight} />;
+    if (stateIsError) return <QueryError error={stateError} onRetry={() => refetch()} />;
     return (
-      <SourceContent
-        state={stateLoading ? 'loading' : 'empty'}
-        label={t('glance.liveStatus', 'Live status')}
-        emptyMessage={emptyMessage}
-        errorMessage={emptyMessage}
-        loadingContent={<Skeleton height={skeletonHeight} />}
-        emptyContent={
-          <EmptyState /* no-action: transient empty state — vehicle has not emitted live telemetry yet */
-            icon={<Battery className="h-8 w-8" />}
-            message={emptyMessage}
-          />
-        }
-      >
-        {null}
-      </SourceContent>
+      <EmptyState /* no-action: transient empty state — vehicle has not emitted live telemetry yet */
+        icon={<Battery className="h-8 w-8" />}
+        message={emptyMessage}
+      />
     );
   };
 
   return (
-    <PageLayout
+    <PageContainer
       title={title}
       subtitle={t('glance.subtitle', 'A quick, live snapshot of your vehicle')}
       actions={vehicle ? actions : undefined}
-      loading={vehiclesLoading && !vehiclesState.hasData}
-      error={vehiclesState.fatalError}
+      loading={vehiclesLoading}
+      error={vehiclesError as Error | null}
       query={vehicleId > 0 ? stateQuery : undefined}
-      dataSources={[
-        { id: 'vehicle-registry', label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'), query: vehiclesQuery },
-        { id: 'live-vehicle-state', label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'), query: stateQuery, enabled: vehicleId > 0 },
-        { id: 'live-location', label: t('glance.locationLabel', 'Location'), query: locationQuery, enabled: vehicleId > 0 },
-      ]}
     >
-      <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
-      <StaleRefreshWarning state={stateTrust} label={t('glance.liveStatus', 'Live status')} />
       {!vehicle ? (
         <GlassPanel className="p-8">
           <EmptyState
@@ -291,29 +270,66 @@ export default function GlancePage() {
         </GlassPanel>
       ) : (
         <>
-          {/* 1 — Overview summary, independently retained from live detail panels. */}
+          {/* 1 — Overview KPI band: full-width responsive metric grid */}
           <FadeIn>
             <section
               aria-label={t('glance.overviewAria', 'Vehicle overview')}
-              className="min-w-0"
+              className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-6"
             >
-              <DashboardSourceBrief
-                metrics={overviewMetrics}
-                state={stateTrust}
-                eyebrow={t('glance.summary.eyebrow', 'Vehicle telemetry')}
-                title={t('glance.summary.title', 'Vehicle operating summary')}
-                description={t('glance.summary.description', 'Latest returned measurements for the selected vehicle. Poll completion is not a verified observation time for each signal; location has an independent source.')}
-                scope={vehicleName}
-                freshness={<FreshnessIndicator timestamp={freshnessTimestamp} size="sm" />}
-                loading={stateLoading && !state}
-                testId="glance-operational-brief"
-              />
+              {stateLoading && !state ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} height={92} />
+                ))
+              ) : (
+                <>
+                  <MetricCard
+                    label={t('glance.battery', 'Battery')}
+                    value={state ? `${fmtNumber(state.battery_level ?? 0, 0)}%` : '—'}
+                    icon={<Battery className="h-5 w-5" />}
+                    color={batteryNeon(state?.battery_level)}
+                  />
+                  <MetricCard
+                    label={t('glance.range', 'Range')}
+                    value={state ? formatDistance(state.rated_range ?? 0, { precision: 0 }) : '—'}
+                    icon={<Gauge className="h-5 w-5" />}
+                    color="green"
+                  />
+                  <MetricCard
+                    label={t('glance.temp', 'Interior')}
+                    value={state ? formatTemperature(state.inside_temp) : '—'}
+                    icon={<Thermometer className="h-5 w-5" />}
+                    color="amber"
+                  />
+                  <MetricCard
+                    label={t('glance.outsideTemp', 'Exterior')}
+                    value={state ? formatTemperature(state.outside_temp) : '—'}
+                    icon={<ThermometerSun className="h-5 w-5" />}
+                    color="cyan"
+                  />
+                  <MetricCard
+                    label={t('glance.odometer', 'Odometer')}
+                    value={state ? formatDistance(state.odometer ?? 0, { precision: 0 }) : '—'}
+                    icon={<Route className="h-5 w-5" />}
+                    color="purple"
+                  />
+                  <MetricCard
+                    label={t('glance.speed', 'Speed')}
+                    value={state ? formatSpeed(state.speed ?? 0, { precision: 0 }) : '—'}
+                    icon={<Navigation className="h-5 w-5" />}
+                    color="blue"
+                  />
+                </>
+              )}
             </section>
           </FadeIn>
 
           {/* 2 — Live status bento: hero battery + charging/climate + security/location */}
           <FadeIn delay={0.1}>
-            <Section id="glance-live-status" title={t('glance.liveStatus', 'Live status')}>
+            <section
+              aria-label={t('glance.liveStatusAria', 'Live status')}
+              className="space-y-3"
+            >
+              <SectionTitle>{t('glance.liveStatus', 'Live status')}</SectionTitle>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {/* Hero — vehicle identity + battery ring */}
                 <GlassPanel className="p-4 sm:p-5 md:col-span-2 xl:col-span-1">
@@ -331,8 +347,7 @@ export default function GlancePage() {
                     <div className="mt-4 flex flex-col items-center">
                       <div className="relative flex w-full justify-center">
                         <LinearGauge
-                          value={state.battery_level}
-                          preserveReadingAndScale
+                          value={state.battery_level ?? 0}
                           max={100}
                           label={t('glance.battery', 'Battery')}
                           unit="%"
@@ -348,7 +363,7 @@ export default function GlancePage() {
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                         <Badge variant="neutral" size="sm">
                           <Battery className="h-3.5 w-3.5" aria-hidden="true" />
-                          {formatDistance(state.rated_range)}
+                          {formatDistance(state.rated_range ?? 0, { precision: 0 })}
                         </Badge>
                         {state.is_charging && (
                           <Badge variant="info" size="sm" dot>
@@ -381,9 +396,7 @@ export default function GlancePage() {
                             dot
                             size="sm"
                           >
-                            {state.is_charging == null
-                              ? t('common.unknown', 'Unknown')
-                              : state.is_charging
+                            {state.is_charging
                               ? t('glance.charging.active', 'Charging')
                               : t('glance.charging.idle', 'Idle')}
                           </Badge>
@@ -393,28 +406,26 @@ export default function GlancePage() {
                             <DetailRow
                               icon={Zap}
                               label={t('glance.charging.power', 'Charger power')}
-                              value={knownNumber(state.charger_power) == null ? '—' : `${fmtNumber(state.charger_power)} kW`}
+                              value={`${fmtNumber(state.charger_power ?? 0)} kW`}
                             />
                             <DetailRow
                               icon={BatteryCharging}
                               label={t('glance.charging.rate', 'Charge rate')}
-                              value={knownNumber(state.charge_rate) == null ? '—' : `${formatDistance(state.charge_rate)}/h`}
+                              value={`${formatDistance(state.charge_rate ?? 0, { precision: 0 })}/h`}
                             />
                             <DetailRow
                               icon={Clock}
                               label={t('glance.charging.timeToFull', 'Time to full')}
                               value={
-                                (knownNumber(state.time_to_full_charge) ?? 0) > 0
-                                  ? `${fmtNumber(state.time_to_full_charge)} h`
+                                (state.time_to_full_charge ?? 0) > 0
+                                  ? `${fmtNumber(state.time_to_full_charge, 1)} h`
                                   : '—'
                               }
                             />
                           </>
                         ) : (
                           <Text variant="bodySm">
-                            {state.is_charging == null
-                              ? t('common.unknown', 'Unknown')
-                              : t('glance.charging.notCharging', 'Not currently charging')}
+                            {t('glance.charging.notCharging', 'Not currently charging')}
                           </Text>
                         )}
                       </div>
@@ -426,9 +437,7 @@ export default function GlancePage() {
                             dot
                             size="sm"
                           >
-                            {state.is_climate_on == null
-                              ? t('common.unknown', 'Unknown')
-                              : state.is_climate_on
+                            {state.is_climate_on
                               ? t('glance.climate.on', 'On')
                               : t('glance.climate.off', 'Off')}
                           </Badge>
@@ -454,10 +463,10 @@ export default function GlancePage() {
                     <Shield className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                     {t('glance.securityLocation', 'Security & location')}
                   </PanelTitle>
-                  <div className="space-y-4">
-                    {!state ? (
-                      renderPanelState(200, t('glance.noState', 'No live data for this vehicle yet'))
-                    ) : (
+                  {!state ? (
+                    renderPanelState(200, t('glance.noState', 'No live data for this vehicle yet'))
+                  ) : (
+                    <div className="space-y-4">
                       <div className="space-y-1">
                         <Subhead>{t('glance.security', 'Security')}</Subhead>
                         <StatusRow
@@ -465,13 +474,11 @@ export default function GlancePage() {
                           label={t('glance.lockStatus', 'Doors')}
                         >
                           <Badge
-                            variant={state.is_locked == null ? 'neutral' : state.is_locked ? 'success' : 'warning'}
+                            variant={state.is_locked ? 'success' : 'warning'}
                             dot
                             size="sm"
                           >
-                            {state.is_locked == null
-                              ? t('common.unknown', 'Unknown')
-                              : state.is_locked
+                            {state.is_locked
                               ? t('glance.locked', 'Locked')
                               : t('glance.unlocked', 'Unlocked')}
                           </Badge>
@@ -485,21 +492,14 @@ export default function GlancePage() {
                             dot
                             size="sm"
                           >
-                            {state.sentry_mode == null
-                              ? t('common.unknown', 'Unknown')
-                              : state.sentry_mode
+                            {state.sentry_mode
                               ? t('common.on', 'On')
                               : t('common.off', 'Off')}
                           </Badge>
                         </StatusRow>
                       </div>
-                    )}
                       <div className="space-y-1 border-t border-white/[0.06] pt-3">
                         <Subhead>{t('glance.locationLabel', 'Location')}</Subhead>
-                        <StaleRefreshWarning state={locationTrust} label={t('glance.locationLabel', 'Location')} />
-                        {locationTrust.fatalError && (
-                          <QueryError error={locationTrust.fatalError} onRetry={() => { void locationQuery.refetch(); }} />
-                        )}
                         <DetailRow
                           icon={MapPin}
                           label={t('glance.place', 'Place')}
@@ -512,26 +512,31 @@ export default function GlancePage() {
                             value={location.destination_name}
                           />
                         )}
-                        {(knownNumber(location?.minutes_to_arrival) ?? 0) > 0 && (
+                        {(location?.minutes_to_arrival ?? 0) > 0 && (
                           <DetailRow
                             icon={Route}
                             label={t('glance.eta', 'ETA')}
-                            value={`${fmtNumber(location?.minutes_to_arrival ?? 0)} ${t('glance.minutesShort', 'min')}`}
+                            value={`${fmtNumber(location?.minutes_to_arrival ?? 0, 0)} ${t('glance.minutesShort', 'min')}`}
                           />
                         )}
                       </div>
                       <Caption className="block border-t border-white/[0.06] pt-3">
-                        {t('glance.software', 'Software')}: {state?.software_version || '—'}
+                        {t('glance.software', 'Software')}: {state.software_version || '—'}
                       </Caption>
-                  </div>
+                    </div>
+                  )}
                 </GlassPanel>
               </div>
-            </Section>
+            </section>
           </FadeIn>
 
           {/* 3 — Controls: full-width quick-action band */}
           <FadeIn delay={0.2}>
-            <Section id="glance-controls" title={t('glance.controls', 'Controls')}>
+            <section
+              aria-label={t('glance.controlsAria', 'Controls')}
+              className="space-y-3"
+            >
+              <SectionTitle>{t('glance.controls', 'Controls')}</SectionTitle>
               <GlassPanel className="p-4 sm:p-5">
                 {!isOnline && (
                   <Text variant="bodySm" className={cn('mb-3 block')}>
@@ -563,8 +568,8 @@ export default function GlancePage() {
                     icon={Wind}
                     label={
                       state?.is_climate_on
-                        ? t('glance.action.climateOff', 'Climate off')
-                        : t('glance.action.climateOn', 'Climate on')
+                        ? t('glance.action.climateOff', 'Climate Off')
+                        : t('glance.action.climateOn', 'Climate On')
                     }
                     disabled={!canSendCommands}
                     loading={
@@ -591,7 +596,7 @@ export default function GlancePage() {
                   />
                 </div>
               </GlassPanel>
-            </Section>
+            </section>
           </FadeIn>
 
           {/* 4 — Footer: link to full app */}
@@ -605,6 +610,6 @@ export default function GlancePage() {
           </div>
         </>
       )}
-    </PageLayout>
+    </PageContainer>
   );
 }

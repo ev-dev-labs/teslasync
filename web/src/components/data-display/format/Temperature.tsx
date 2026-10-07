@@ -1,5 +1,5 @@
 import { useUnits } from '@/hooks/useUnits';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
 interface TemperatureProps {
@@ -13,10 +13,9 @@ interface TemperatureProps {
 
 /**
  * Temperature renderer that respects the user's °C/°F preference.
- * Hover title shows the source-unit value at the requested display precision.
+ * Hover title shows the raw caller-supplied value with its source unit.
  */
 export function Temperature({ c, f, precision, className }: TemperatureProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
   const toTemperatureDisplay = (value: number) => convertTempFromSI(value, unitPrefs.temperature);
@@ -25,10 +24,10 @@ export function Temperature({ c, f, precision, className }: TemperatureProps) {
   let title: string | undefined;
   if (c != null && Number.isFinite(c)) {
     sourceC = c;
-    title = `${fmtNumber(c, precision)} °C`;
+    title = `${c.toFixed(1)} °C`;
   } else if (f != null && Number.isFinite(f)) {
     sourceC = ((f - 32) * 5) / 9;
-    title = `${fmtNumber(f, precision)} °F`;
+    title = `${f.toFixed(1)} °F`;
   }
 
   if (sourceC == null) {

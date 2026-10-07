@@ -13,17 +13,15 @@ import { useTranslation } from 'react-i18next';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { TrueCostQueryStatus } from './TrueCostQueryStatus';
 import type { TrueCostSectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function TrueCostEvidenceLedger({
   analysis,
   state,
   display,
 }: TrueCostSectionProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const m = analysis.metrics;
   const resolved = state.isResolved && state.hasData;
@@ -44,7 +42,7 @@ export function TrueCostEvidenceLedger({
   return (
     <section
       data-testid="tco-evidence-kpis"
-      aria-label={t('tco.kpis.aria', 'True cost KPI and evidence ledger')}
+      aria-label={t('tco.kpis.aria', 'True Cost KPI and evidence ledger')}
     >
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-4">
@@ -115,7 +113,7 @@ export function TrueCostEvidenceLedger({
           <MetricCard
             label={t('tco.kpis.driveSpanMonths', 'Modeled drive-span months')}
             value={resolved && analysis.driveSpan.available
-              ? display.formatNumber(m.monthsOfDriveSpan.value)
+              ? display.formatNumber(m.monthsOfDriveSpan.value, 1)
               : '—'}
             subtitle={t('tco.kpis.driveSpanHint', 'First-to-last positive-drive span; not tenure')}
             icon={<CalendarRange className="h-5 w-5" />}

@@ -1,9 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { CalendarDays } from 'lucide-react';
 
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { HelpTooltip, Caption } from '@/components/ui';
-import { LayoutCard, SourceContent } from '@/components/layout';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { GlassPanel, HelpTooltip, PanelTitle, Caption } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
 import { formatDayKey } from '@/lib/dateFormat';
@@ -39,15 +38,18 @@ export function DriveCalendarHeatmap({
   const weekdayLabels = getWeekdayLabels(t);
 
   return (
-    <div className={className}>
-    <LayoutCard title={t('driveCalendar.heatmap.title', 'Selected period')}
-      actions={<div className="flex min-w-0 flex-wrap items-center gap-2">
+    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <PanelTitle className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {t('driveCalendar.heatmap.title', 'Selected period')}
           <HelpTooltip
             size="sm"
             i18nKey="help.driveCalendar.body"
             defaultValue="Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive."
             ariaLabel={t('help.driveCalendar.iconLabel', 'More info about the calendar')}
           />
+        </PanelTitle>
         {!isLoading && !error && (
           <Caption>
             {t('driveCalendar.heatmap.activeSummary', '{{active}} active days · {{drives}} drives', {
@@ -56,15 +58,13 @@ export function DriveCalendarHeatmap({
             })}
           </Caption>
         )}
-      </div>}
-    >
-      <SourceContent
-        state={error ? 'error' : isLoading ? 'loading' : calendar.totalDrives === 0 ? 'empty' : 'ready'}
-        label={t('driveCalendar.heatmap.title', 'Selected period')}
-        emptyMessage={t('driveCalendar.noDrives', 'No drives in the selected period.')}
-        errorMessage={t('error.loadFailed', 'Failed to load data')} error={error}
-        errorRecovery={{ onRetry }} loadingContent={<Skeleton height={230} />}
-        emptyContent={(
+      </div>
+
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <Skeleton height={230} />
+      ) : calendar.totalDrives === 0 ? (
         <EmptyState
           icon={<CalendarDays className="h-8 w-8" aria-hidden="true" />}
           message={t('driveCalendar.noDrives', 'No drives in the selected period.')}
@@ -73,8 +73,7 @@ export function DriveCalendarHeatmap({
             to: '/drives',
           }}
         />
-        )}
-      >
+      ) : (
         <div
           role="img"
           aria-label={t(
@@ -123,7 +122,7 @@ export function DriveCalendarHeatmap({
                                 style: 'long',
                                 locale: unitPrefs.locale,
                               }),
-                              distance: formatDistance(day.distanceM),
+                              distance: formatDistance(day.distanceM, { precision: 1 }),
                               count: day.drives,
                             },
                           )}
@@ -158,8 +157,7 @@ export function DriveCalendarHeatmap({
             <Caption>{t('driveCalendar.more', 'More')}</Caption>
           </div>
         </div>
-      </SourceContent>
-    </LayoutCard>
-    </div>
+      )}
+    </GlassPanel>
   );
 }

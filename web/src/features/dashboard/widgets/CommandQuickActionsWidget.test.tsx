@@ -30,7 +30,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -85,7 +85,6 @@ const SIZE_MEDIUM: WidgetSize = { cols: 2, rows: 2 };
 const SIZE_WIDE: WidgetSize = { cols: 4, rows: 3 };
 
 interface VehiclesOverrides {
-  error?: Error;
   data?: { id: number }[] | undefined;
   isLoading?: boolean;
   isFetching?: boolean;
@@ -158,35 +157,12 @@ describe('visibleCommandsForSize', () => {
 
 // ── Widget render states ─────────────────────────────────────────────────────
 describe('CommandQuickActionsWidget', () => {
-  it('distinguishes failed vehicle discovery from an empty fleet and retries it', () => {
-    const refetch = vi.fn();
-    vehiclesMock.mockReturnValue(makeVehiclesQuery({ data: undefined, error: new Error('discovery failed'), isError: true, refetch }));
-    renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
-    expect(screen.queryByText('No vehicle selected')).toBeNull();
-    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /retry/i }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('retains selected action identities after fleet refresh failure', () => {
-    const refetch = vi.fn();
-    vehiclesMock.mockReturnValue(makeVehiclesQuery({ isError: true, error: new Error('refresh failed'), refetch }));
-    renderWidget(<CommandQuickActionsWidget size={SIZE_WIDE} />);
-    expect(screen.getByRole('button', { name: 'Trunk' })).toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByRole('button', { name: 'Frunk' }));
-    expect(mutateMock).toHaveBeenCalledWith(
-      { vehicleId: 42, command: 'actuate_frunk' },
-      expect.objectContaining({ onSettled: expect.any(Function) }),
-    );
-  });
-
   it('renders the title and the 6-command medium set (Flash/Trunk are wide-only)', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
-    expect(screen.getByText('Quick actions')).toBeInTheDocument();
+    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
     // Medium tiles carry a visible text label alongside the icon.
-    expect(screen.getByText('Climate on')).toBeInTheDocument();
+    expect(screen.getByText('Climate On')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Horn' })).toBeInTheDocument();
     // The 7th/8th commands only appear once the tile is wide.
@@ -208,13 +184,13 @@ describe('CommandQuickActionsWidget', () => {
     renderWidget(<CommandQuickActionsWidget size={SIZE_COMPACT} />);
 
     // 1×1 tile suppresses the title chrome.
-    expect(screen.queryByText('Quick actions')).not.toBeInTheDocument();
+    expect(screen.queryByText('Quick Actions')).not.toBeInTheDocument();
     // Tiles are still reachable/announced via aria-label...
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Climate off' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Climate Off' })).toBeInTheDocument();
     // ...but the visible text label is dropped (icon-only), and the 5th
     // command (Frunk) is not part of the compact set.
-    expect(screen.queryByText('Climate off')).not.toBeInTheDocument();
+    expect(screen.queryByText('Climate Off')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Frunk' })).not.toBeInTheDocument();
   });
 

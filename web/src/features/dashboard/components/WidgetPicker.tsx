@@ -12,13 +12,12 @@ import { Check, Clock, Search, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Badge, Button as UiButton, Input as UiInput, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
-import { PillFilterBar } from '@/components/forms';
 import { WIDGET_REGISTRY } from '../widgets/registry';
 import { WIDGET_DND_MIME, type WidgetCategory, type WidgetDef } from '../widgets/types';
 
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   vehicle: 'Vehicle',
-  battery: 'Battery & range',
+  battery: 'Battery & Range',
   energy: 'Energy',
   driving: 'Driving',
   charging: 'Charging',
@@ -95,8 +94,6 @@ export function WidgetPicker({
   onDragWidgetEnd,
 }: WidgetPickerProps) {
   const { t } = useTranslation('dashboard');
-  const categoryLabel = (category: WidgetCategory) =>
-    t(`widgets.categories.${category}`, CATEGORY_LABELS[category]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<WidgetCategory | 'all'>('all');
   const [addedThisSessionIds, setAddedThisSessionIds] = useState<string[]>([]);
@@ -362,7 +359,7 @@ export function WidgetPicker({
               })}
               {query && (
                 <span className="ml-2 text-[var(--text-muted)]">
-                  {categoryLabel(w.category)}
+                  {CATEGORY_LABELS[w.category]}
                 </span>
               )}
             </p>
@@ -381,13 +378,13 @@ export function WidgetPicker({
   return (
     <section
       role="complementary"
-      aria-label={t('dashboard.addWidget', 'Add widget')}
+      aria-label={t('dashboard.addWidget', 'Add Widget')}
       data-testid="widget-picker-dock"
       className="widget-picker-dock flex min-h-0 w-full shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--border-default)] bg-[var(--surface-1)] max-h-[60dvh] xl:sticky xl:top-4 xl:h-[calc(100dvh-8rem)] xl:max-h-none xl:w-[340px]"
     >
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border-default)] px-4 py-3">
         <div className="min-w-0">
-          <Text as="h2" variant="bodySm" className="font-semibold">{t('dashboard.addWidget', 'Add widget')}</Text>
+          <Text as="h2" variant="bodySm" className="font-semibold">{t('dashboard.addWidget', 'Add Widget')}</Text>
           <Text as="p" variant="caption">
             {t('widgets.pickerDescription', 'Choose the operational signals and workflows that belong on this dashboard.')}
           </Text>
@@ -418,34 +415,42 @@ export function WidgetPicker({
 
         {/* Categories are filters, not document tabs: pressed state communicates
             the active scope without implying a separate tabpanel relationship. */}
-        <PillFilterBar
-          semanticMode="filters"
-          scrollable={false}
-          className="flex-wrap"
-          ariaLabel={t('widgets.categoryFilter', 'Filter by category')}
-          activeKey={categoryFilter}
-          onChange={(key) => {
-            if (key === 'all') setCategoryFilter('all');
-            else {
-              const category = availableCategories.find((candidate) => candidate === key);
-              if (category) setCategoryFilter(category);
-            }
-          }}
-          items={[
-            { key: 'all', label: t('widgets.allCategories', 'All') },
-            ...availableCategories.map((category) => ({
-              key: category,
-              label: categoryLabel(category),
-            })),
-          ]}
-        />
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="group"
+          aria-label={t('widgets.categoryFilter', 'Filter by category')}
+        >
+                  <UiButton
+            type="button"
+            variant={categoryFilter === 'all' ? 'primary' : 'outline'}
+            size="sm"
+            aria-pressed={categoryFilter === 'all'}
+            onClick={() => setCategoryFilter('all')}
+            className="rounded-shape-sm px-3 text-xs"
+          >
+            {t('widgets.allCategories', 'All')}
+                  </UiButton>
+          {availableCategories.map((cat) => (
+            <UiButton
+              key={cat}
+              type="button"
+              variant={categoryFilter === cat ? 'primary' : 'outline'}
+              size="sm"
+              aria-pressed={categoryFilter === cat}
+              onClick={() => setCategoryFilter(cat)}
+              className="rounded-shape-sm px-3 text-xs"
+            >
+              {CATEGORY_LABELS[cat]}
+            </UiButton>
+          ))}
+        </div>
 
         {/* Recently Added — only on the unfiltered, unsearched view */}
         {recentlyAddedVisible.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
               <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              {t('widgets.recentlyAdded', 'Recently added')}
+              {t('widgets.recentlyAdded', 'Recently Added')}
             </h3>
             <div className="grid grid-cols-1 gap-2">
               {recentlyAddedVisible.map(renderWidgetCard)}
@@ -494,8 +499,8 @@ export function WidgetPicker({
             return (
               <div key={cat}>
                 <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-xs font-semibold tracking-wider text-[var(--text-muted)]">
-                    {categoryLabel(cat)}
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                    {CATEGORY_LABELS[cat]}
                   </h3>
                     <UiButton
                     variant="ghost"

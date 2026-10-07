@@ -1,20 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DestinationEvidenceBrief } from '../components/operationalbrief-a-m/DestinationEvidenceBrief';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
   DestinationTransitionsEvidenceQuality,
+  DestinationTransitionsKpiBand,
   DestinationTransitionsMethodology,
   DestinationVisitShareChart,
   EmpiricalInformationEdges,
@@ -40,10 +38,9 @@ export default function DestinationTransitionsPage() {
   const selectedTimeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [nowMs] = useState(() => Date.now());
   const hasCachedData =
-    vehicleId != null && drivesState.hasData;
+    vehicleId != null && drivesQuery.data !== undefined;
   const isResolved =
     vehicleId != null && (hasCachedData || drivesQuery.isSuccess);
   const drives = useMemo<Drive[]>(
@@ -63,30 +60,30 @@ export default function DestinationTransitionsPage() {
   const state: DestinationTransitionsQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && drivesState.status === 'initial',
+      vehicleId != null && !hasCachedData && drivesQuery.isLoading,
     isResolved,
     error:
-      drivesState.fatalError,
+      drivesQuery.isError && !hasCachedData
+        ? drivesQuery.error
+        : null,
     refreshError:
-      drivesState.refreshError,
+      drivesQuery.isError && hasCachedData
+        ? drivesQuery.error
+        : null,
     onRetry: () => void drivesQuery.refetch(),
   };
   const locale = i18n.language;
   const timeZone = model.timeZone;
   return (
-    <PageLayout
+    <PageContainer
       title={t('destinationTransitions.title', 'Destination Transitions')}
-      query={drivesQuery}
       subtitle={t(
         'destinationTransitions.subtitle',
         'Continuity-safe historical destination flows, support, temporal profiles, and complete returned-row accounting',
       )}
     >
-      {drivesState.isRefreshBlocked && (
-        <StaleRefreshWarning state={drivesState} label={t('destinationTransitions.title', 'Destination Transitions')} />
-      )}
       <FadeIn>
-        <DestinationEvidenceBrief
+        <DestinationTransitionsKpiBand
           model={model} state={state} locale={locale}
         />
       </FadeIn>
@@ -177,6 +174,6 @@ export default function DestinationTransitionsPage() {
           timeZone={timeZone}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

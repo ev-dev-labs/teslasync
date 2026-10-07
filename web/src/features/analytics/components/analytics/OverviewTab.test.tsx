@@ -227,9 +227,9 @@ describe('OverviewTab — loading state', () => {
     const { container } = renderTab(makeQuery({ isLoading: true }));
 
     // Each own panel keeps its titled chrome — never a fully blank section.
-    expect(panelByTitle(/Distance by vehicle/i)).toBeInTheDocument();
-    expect(panelByTitle(/Day of week pattern/i)).toBeInTheDocument();
-    expect(panelByTitle(/Monthly cost comparison/i)).toBeInTheDocument();
+    expect(panelByTitle(/Distance by Vehicle/i)).toBeInTheDocument();
+    expect(panelByTitle(/Day of Week Pattern/i)).toBeInTheDocument();
+    expect(panelByTitle(/Monthly Cost Comparison/i)).toBeInTheDocument();
 
     // Three own panels each render a loading skeleton and are announced busy.
     expect(screen.getAllByRole('status')).toHaveLength(3);
@@ -240,7 +240,7 @@ describe('OverviewTab — loading state', () => {
     expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument();
 
     // The static Quick Links band renders regardless of query state.
-    expect(screen.getByRole('heading', { level: 3, name: /Quick links/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /Quick Links/i })).toBeInTheDocument();
   });
 });
 
@@ -255,7 +255,7 @@ describe('OverviewTab — error state', () => {
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
 
     // Retrying the Distance panel calls the query's refetch exactly once.
-    const distancePanel = panelByTitle(/Distance by vehicle/i);
+    const distancePanel = panelByTitle(/Distance by Vehicle/i);
     fireEvent.click(within(distancePanel).getByRole('button', { name: /^Retry$/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -265,9 +265,9 @@ describe('OverviewTab — empty state', () => {
   it('renders each own panel’s bespoke empty copy (never a blank panel) when the payload has no rows', () => {
     renderTab(makeQuery({ data: fleetData() }));
 
-    expect(within(panelByTitle(/Distance by vehicle/i)).getByText('No vehicle data')).toBeInTheDocument();
-    expect(within(panelByTitle(/Day of week pattern/i)).getByText('No day-of-week data')).toBeInTheDocument();
-    expect(within(panelByTitle(/Monthly cost comparison/i)).getByText('No monthly data')).toBeInTheDocument();
+    expect(within(panelByTitle(/Distance by Vehicle/i)).getByText('No vehicle data')).toBeInTheDocument();
+    expect(within(panelByTitle(/Day of Week Pattern/i)).getByText('No day-of-week data')).toBeInTheDocument();
+    expect(within(panelByTitle(/Monthly Cost Comparison/i)).getByText('No monthly data')).toBeInTheDocument();
 
     // No chart is mounted for an empty payload.
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
@@ -279,7 +279,7 @@ describe('OverviewTab — ready state (metric)', () => {
   it('feeds the Distance chart the km-converted series keyed by vehicle name with the unit-named bar', () => {
     renderTab(makeQuery({ data: fleetData(FULL) }));
 
-    const panel = panelByTitle(/Distance by vehicle/i);
+    const panel = panelByTitle(/Distance by Vehicle/i);
     const data = seriesOf(panel, 'bar-chart');
     // km path: SI-km value passes straight through (× 1000 m ÷ 1000 = km).
     expect(data).toEqual([
@@ -297,7 +297,7 @@ describe('OverviewTab — ready state (metric)', () => {
   it('feeds the Day of Week chart its payload verbatim with a drives bar + avg-distance line', () => {
     renderTab(makeQuery({ data: fleetData(FULL) }));
 
-    const panel = panelByTitle(/Day of week pattern/i);
+    const panel = panelByTitle(/Day of Week Pattern/i);
     expect(seriesOf(panel, 'composed-chart')).toEqual(FULL.day_of_week);
 
     expect(within(panel).getByTestId('x-axis')).toHaveAttribute('data-key', 'day');
@@ -308,7 +308,7 @@ describe('OverviewTab — ready state (metric)', () => {
   it('feeds the Monthly Cost chart its payload with electric + gas cost bars and a savings line', () => {
     renderTab(makeQuery({ data: fleetData(FULL) }));
 
-    const panel = panelByTitle(/Monthly cost comparison/i);
+    const panel = panelByTitle(/Monthly Cost Comparison/i);
     expect(seriesOf(panel, 'composed-chart')).toEqual(FULL.monthly_trend);
 
     expect(within(panel).getByTestId('x-axis')).toHaveAttribute('data-key', 'month');
@@ -323,7 +323,7 @@ describe('OverviewTab — ready state (imperial)', () => {
     mockUseSettings.mockReturnValue(settingsFor('mi'));
     renderTab(makeQuery({ data: fleetData(FULL) }));
 
-    const panel = panelByTitle(/Distance by vehicle/i);
+    const panel = panelByTitle(/Distance by Vehicle/i);
     const data = seriesOf(panel, 'bar-chart');
     // 100 km → 62.137 mi, 50 km → 31.069 mi (genuine lib conversion).
     expect(data[0].name).toBe('Model 3');
@@ -341,7 +341,7 @@ describe('OverviewTab — null safety', () => {
     });
     renderTab(query);
 
-    const panel = panelByTitle(/Distance by vehicle/i);
+    const panel = panelByTitle(/Distance by Vehicle/i);
     const data = seriesOf(panel, 'bar-chart');
     expect(data).toEqual([{ name: DASH, distance: 0 }]);
     // The value is a real 0, never a NaN sentinel.

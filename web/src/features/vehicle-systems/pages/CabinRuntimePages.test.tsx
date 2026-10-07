@@ -52,19 +52,18 @@ vi.mock('@/components/charts', () => ({
   Bar: () => null,
   BarChart: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
-  EmbeddedChart: ({
+  ChartContainer: ({
     children,
     title,
   }: {
-    children: React.ReactNode | ((context: { hiddenSeries?: undefined }) => React.ReactNode);
+    children: React.ReactNode;
     title: string;
   }) => (
     <section>
       <h2>{title}</h2>
-      {typeof children === 'function' ? children({}) : children}
+      {children}
     </section>
   ),
-  ChartLegend: () => null,
   ChartTooltip: () => null,
   Legend: () => null,
   Line: () => null,
@@ -89,14 +88,14 @@ describe('cabin analytics runtime pages', () => {
   it('renders HVAC Cycling with canonical boolean HVAC history', () => {
     renderPage(<HvacCyclingPage />);
 
-    expect(screen.getByRole('heading', { name: 'HVAC cycling' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Hourly HVAC duty' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'HVAC Cycling' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hourly HVAC Duty' })).toBeInTheDocument();
   });
 
   it('renders Cabin Thermal Model with canonical boolean HVAC history', () => {
     renderPage(<CabinThermalPage />);
 
-    expect(screen.getByRole('heading', { name: 'Cabin thermal model' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Cabin Thermal Model' })).toBeInTheDocument();
     expect(screen.getByText('Accepted median τ')).toBeInTheDocument();
   });
 });

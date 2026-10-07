@@ -14,11 +14,11 @@
  *     assert they receive SI Wh / raw cost;
  *   - mi preference → distance converts to miles and the efficiency unit suffix
  *     follows the display unit ("Wh/mi");
- *   - loading (no trip yet) → six placeholders in the busy real brief;
+ *   - loading (no trip yet) → six aria-hidden skeletons, no region, no data;
  *   - background refetch (loading WITH a cached trip) → keeps showing data, never
  *     blanks to skeletons — proving the `isLoading && !trip` gate;
- *   - empty (no trip, not loading) → six missing measurements, never fabricated
- *     measured zeroes or a blank panel;
+ *   - empty (no trip, not loading) → the region still renders with zeroed tiles
+ *     and "—" placeholders for the two derived metrics, never a blank panel;
  *   - malformed data (the real bug this elevation fixed) → negative / NaN /
  *     Infinity totals are clamped to 0 by `safeMetric`, so the band never leaks
  *     "-5 km", "-3 drives", "$-9.99", a negative efficiency, or "NaN".
@@ -27,11 +27,12 @@
  * interpolation), mirroring the DriveStatCards / FleetCostKpis convention.
  * `useUnits` + `useFormatting` are mocked to drive the km/mi branch and to
  * assert the formatter calls; the pure SI converter, integer formatter, and
- * duration formatter run for real. Review details opens the real shared drawer.
+ * duration formatter run for real. The component exposes no interactive
+ * controls, so there is no userEvent surface.
  */
 import type { ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 import { TripKpiBand, safeMetric } from './TripKpiBand';
 import type { TripDetail } from '@/api/types';
@@ -81,12 +82,8 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 vi.mock('@/hooks/useFormatting', () => ({
-  useFormatting: () => ({ formatCurrency: fmt.formatCurrency, currencySymbol: '$' }),
+  useFormatting: () => ({ formatCurrency: fmt.formatCurrency }),
 }));
-vi.mock('@/hooks/useDateFormat', async () => {
-  const { formatTime } = await import('@/lib/dateFormat');
-  return { useDateFormat: () => ({ formatTime }) };
-});
 
 /* ── Unicode glyph the component renders (escaped to avoid encoding drift) ── */
 const DASH = '\u2014'; // —
@@ -178,12 +175,12 @@ describe('TripKpiBand — km preference', () => {
     expect(fmt.formatCurrency).toHaveBeenCalledWith(12.5);
   });
 
-  it('renders exactly six raw metric cells and the real review action', () => {
+  it('renders exactly six tiles, each with an aria-hidden decorative icon', () => {
     const { container } = render(<TripKpiBand trip={makeTrip()} isLoading={false} />);
 
-    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
-    expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
+    // One metric label + one hidden icon per tile — no section is dropped.
+    expect(container.querySelectorAll('[data-role="metric-label"]')).toHaveLength(6);
+    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(6);
   });
 
   it('rounds a fractional distance and formats a multi-hour duration', () => {
@@ -212,14 +209,17 @@ describe('TripKpiBand — mi preference', () => {
 
 /* ── Loading branch ───────────────────────────────────────────────────────── */
 describe('TripKpiBand — loading', () => {
-  it('renders six loading placeholders in the busy brief before the first load', () => {
+  it('renders six aria-hidden skeletons and no region/data before the first load', () => {
     const { container } = render(<TripKpiBand trip={undefined} isLoading />);
 
-    expect(container.querySelectorAll('[data-operational-metric] span[aria-hidden="true"]')).toHaveLength(6);
-    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-operational-value]')).toBeNull();
-    expect(screen.getByRole('region', REGION)).toBeInTheDocument();
-    expect(screen.getByText('Distance')).toBeInTheDocument();
+    // Six skeleton placeholders inside a grid hidden from assistive tech.
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.getAttribute('aria-hidden')).toBe('true');
+
+    // No landmark + no metric labels while the first load is in flight.
+    expect(screen.queryByRole('region', REGION)).not.toBeInTheDocument();
+    expect(screen.queryByText('Distance')).not.toBeInTheDocument();
     expect(fmt.formatEnergy).not.toHaveBeenCalled();
   });
 });
@@ -238,49 +238,21 @@ describe('TripKpiBand — background refetch', () => {
 
 /* ── Empty state (no trip, not loading) ───────────────────────────────────── */
 describe('TripKpiBand — empty', () => {
-  it('renders the region with missing metrics rather than inventing measured zeroes', () => {
-    const { container } = render(<TripKpiBand trip={undefined} isLoading={false} />);
+  it('renders the region with zeroed tiles and "—" for the two derived metrics', () => {
+    render(<TripKpiBand trip={undefined} isLoading={false} />);
 
     // Region never blanks — it renders even with no trip.
     expect(screen.getByRole('region', REGION)).toBeInTheDocument();
 
-    expect(screen.queryByText('0 km')).not.toBeInTheDocument();
-    expect(screen.queryByText('0 drives')).not.toBeInTheDocument();
-    expect(screen.queryByText('0 charges')).not.toBeInTheDocument();
-    expect(fmt.formatEnergy).not.toHaveBeenCalled();
-    expect(fmt.formatCurrency).not.toHaveBeenCalled();
-    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
-    expect(screen.getAllByText(DASH)).toHaveLength(6);
-  });
+    // Zeroed direct metrics.
+    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0 drives')).toBeInTheDocument();
+    expect(screen.getByText('0 charges')).toBeInTheDocument();
+    expect(fmt.formatEnergy).toHaveBeenCalledWith(0);
+    expect(fmt.formatCurrency).toHaveBeenCalledWith(0);
 
-  describe('TripKpiBand — real Review details', () => {
-    it('opens the retained raw-source context and keeps the six measurements available', () => {
-      const { container } = render(<TripKpiBand trip={makeTrip()} isLoading={false} />);
-      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-      const drawer = screen.getByRole('dialog');
-      expect(within(drawer).getByText('32 km')).toBeInTheDocument();
-      expect(within(drawer).getByText('7.2 kWh')).toBeInTheDocument();
-      expect(within(drawer).getByText('225 Wh/km')).toBeInTheDocument();
-      expect(within(drawer).getByText('3 drives')).toBeInTheDocument();
-      expect(within(drawer).getByText('2 charges')).toBeInTheDocument();
-      expect(within(drawer).getByText(/zero-clamp display policy/)).toBeInTheDocument();
-      expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
-    });
-
-    it('keeps known zero source totals distinct from an unavailable record', () => {
-      const { container } = render(<TripKpiBand trip={makeTrip({
-        total_distance_m: 0, total_energy_wh: 0, total_duration_s: 0,
-        total_cost: 0, drive_count: 0, charge_count: 0,
-      })} isLoading={false} />);
-      expect(screen.getByText('0 km')).toBeInTheDocument();
-      expect(screen.getByText('0 drives')).toBeInTheDocument();
-      expect(screen.getByText('0 charges')).toBeInTheDocument();
-      expect(fmt.formatEnergy).toHaveBeenCalledWith(0);
-      expect(fmt.formatCurrency).toHaveBeenCalledWith(0);
-      expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
-      expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
-      expect(screen.getAllByText(DASH)).toHaveLength(2);
-    });
+    // Efficiency (0 distance) + duration (0 s) both fall back to the placeholder.
+    expect(screen.getAllByText(DASH)).toHaveLength(2);
   });
 });
 

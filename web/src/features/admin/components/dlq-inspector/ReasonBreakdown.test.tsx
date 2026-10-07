@@ -220,7 +220,7 @@ describe('ReasonBreakdown — reason bucketing', () => {
 
     const bars = readBars();
     // 3/6 = 50, 2/6 = 33.3 → 33, 1/6 = 16.6 → 17 (rounded to 0 dp).
-    expect(bars.map((b) => b.sublabel)).toEqual(['3 · 50.00%', '2 · 33.33%', '1 · 16.67%']);
+    expect(bars.map((b) => b.sublabel)).toEqual(['3 · 50%', '2 · 33%', '1 · 17%']);
   });
 
   it('coalesces blank and whitespace-only reasons into a single "unknown" bucket', () => {
@@ -246,7 +246,7 @@ describe('ReasonBreakdown — reason bucketing', () => {
     expect(bars).toHaveLength(1);
     expect(bars[0].label).toBe('timeout');
     expect(bars[0].value).toBe('3');
-    expect(bars[0].sublabel).toBe('3 · 100.00%');
+    expect(bars[0].sublabel).toBe('3 · 100%');
   });
 
   it('cycles the colour palette back to the first colour after eight buckets', () => {
@@ -274,7 +274,7 @@ describe('ReasonBreakdown — accessibility', () => {
 
     renderRB({ rows });
 
-    const list = screen.getByRole('list', { name: /Failure reasons breakdown/i });
+    const list = screen.getByRole('list', { name: /failure reasons breakdown/i });
     expect(list).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });

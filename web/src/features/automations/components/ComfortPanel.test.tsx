@@ -57,7 +57,7 @@ beforeEach(() => {
 describe('ComfortPanel', () => {
   it('renders the next offsite event with armed badge', () => {
     render(<ComfortPanel />);
-    expect(screen.getByText('Cabin comfort Autopilot')).toBeInTheDocument();
+    expect(screen.getByText('Cabin Comfort Autopilot')).toBeInTheDocument();
     expect(screen.getByText('Armed')).toBeInTheDocument();
     expect(screen.getByText(/Dentist/)).toBeInTheDocument();
     expect(screen.getByText(/123 Main/)).toBeInTheDocument();

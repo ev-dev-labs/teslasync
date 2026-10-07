@@ -11,8 +11,7 @@
  *     a rejected clipboard write surfaces an error toast (failure path)
  *   - the page title uses the shared typography role without decorative
  *     gradient treatment
- *   - compact descriptions remain accessible through the info tooltip
- *   - the compact header is unboxed, without a decorative gradient underline
+ *   - the header uses the shared subtle divider for consistent hierarchy
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
@@ -83,15 +82,11 @@ describe('PageHeader', () => {
     expect(heading.tagName).toBe('H1')
   })
 
-  it('owns the compact description in an accessible info tooltip and omits it when unset', () => {
-    const { container, rerender } = renderHeader(
+  it('renders the subtitle when provided and omits the paragraph when not', () => {
+    const { rerender } = renderHeader(
       <PageHeader title="Drives" subtitle="Last 30 days" />,
     )
-    const info = screen.getByRole('button', { name: 'More info: Drives' })
-    const tooltip = screen.getByRole('tooltip')
-    expect(tooltip).toHaveTextContent('Last 30 days')
-    expect(info).toHaveAttribute('aria-describedby', tooltip.id)
-    expect(container.querySelector('p')).toBeNull()
+    expect(screen.getByText('Last 30 days')).toBeInTheDocument()
 
     rerender(
       <ToastProvider>
@@ -99,16 +94,6 @@ describe('PageHeader', () => {
       </ToastProvider>,
     )
     expect(screen.queryByText('Last 30 days')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'More info: Drives' })).toBeNull()
-    expect(screen.queryByRole('tooltip')).toBeNull()
-  })
-
-  it('keeps the explicit expanded subtitle readable without an info button', () => {
-    const { container } = renderHeader(
-      <PageHeader title="Drives" subtitle="Last 30 days" compactHeader={false} />,
-    )
-    expect(container.querySelector('p')).toHaveTextContent('Last 30 days')
-    expect(screen.queryByRole('button', { name: 'More info: Drives' })).toBeNull()
   })
 
   it('renders a leading icon only when the icon prop is set', () => {
@@ -139,9 +124,8 @@ describe('PageHeader', () => {
 
   it('does not render the actions rail when neither actions nor copyLink are set', () => {
     renderHeader(<PageHeader title="Analytics" subtitle="TCO" />)
-    expect(screen.getByRole('button', { name: 'More info: Analytics' })).toBeInTheDocument()
-    expect(screen.queryByRole('group', { name: 'Actions' })).toBeNull()
-    expect(screen.queryByRole('button', { name: /copy link to this view/i })).toBeNull()
+    // No copy-link button and no action buttons ⇒ the rail is absent entirely.
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('mounts the CopyLinkButton when copyLink is true', () => {
@@ -195,8 +179,8 @@ describe('PageHeader', () => {
     )
     expect(writeText).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Link copied to clipboard')).toBeInTheDocument()
-    expect(btn).toHaveAccessibleName('Copied')
-    expect(btn.textContent).toBe('')
+    // aria-label is stable; the *visible* label flips to "Copied".
+    expect(btn).toHaveTextContent('Copied')
   })
 
   it('surfaces an error toast when the clipboard write is rejected', async () => {
@@ -218,15 +202,17 @@ describe('PageHeader', () => {
     expect(heading.className).not.toContain('bg-clip-text')
   })
 
-  it('uses compact unboxed framing and omits the decorative gradient underline', () => {
+  it('uses the shared subtle divider and omits the decorative underline', () => {
     const { container } = renderHeader(<PageHeader title="Fleet Overview" />)
     expect(container.querySelector('header')).toHaveClass(
-      'rounded-none',
-      'border-0',
-      'bg-transparent',
-      'shadow-none',
+      'rounded-panel',
+      'border-[var(--border-default)]',
+      'shadow-e1',
     )
-    expect(container.querySelector('header')).not.toHaveClass('rounded-panel', 'shadow-e1')
+    expect(container.querySelector('header span[aria-hidden="true"]')).toHaveClass(
+      'w-1',
+      'bg-[var(--theme-primary)]',
+    )
     expect(container.querySelector('.from-neon-cyan')).toBeNull()
   })
 })

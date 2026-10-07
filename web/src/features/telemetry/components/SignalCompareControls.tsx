@@ -10,11 +10,10 @@
  * pages can also drive their server-side filter strings.
  */
 
-import { useCallback, useId } from 'react';
+import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, Button, Input, HelpTooltip, Label, Caption } from '@/components/ui';
-import { PillFilterBar } from '@/components/forms';
+import { GlassPanel, Button, Input, HelpTooltip } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
@@ -92,7 +91,6 @@ export function SignalCompareControls({
   className,
 }: SignalCompareControlsProps) {
   const { t } = useTranslation();
-  const presetsLabelId = useId();
 
   const applyPreset = useCallback(
     (id: DiffPresetId) => {
@@ -112,14 +110,14 @@ export function SignalCompareControls({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <Label className="mb-1.5 flex flex-wrap items-center gap-1 text-cyan-300">
+            <span className="mb-1.5 flex items-center gap-1 text-xs text-cyan-300">
               {t('signalDiff.windowA', 'Window A')}
               <HelpTooltip
                 i18nKey="help.signal.snapshot"
                 defaultValue="A snapshot is a point-in-time view of every signal value at a single timestamp. Falls back to signal_log within the last 30 days when the live layer doesn't have it."
                 ariaLabel={t('help.signal.snapshot.aria', { defaultValue: 'More info about signal snapshots' })}
               />
-            </Label>
+            </span>
             <Input
               type="datetime-local"
               value={atA}
@@ -128,14 +126,14 @@ export function SignalCompareControls({
             />
           </div>
           <div>
-            <Label className="mb-1.5 flex flex-wrap items-center gap-1 text-amber-300">
+            <span className="mb-1.5 flex items-center gap-1 text-xs text-amber-300">
               {t('signalDiff.windowB', 'Window B')}
               <HelpTooltip
                 i18nKey="help.signal.diff"
                 defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
                 ariaLabel={t('help.signal.diff.aria', { defaultValue: 'More info about signal diffs' })}
               />
-            </Label>
+            </span>
             <Input
               type="datetime-local"
               value={atB}
@@ -148,13 +146,13 @@ export function SignalCompareControls({
         <div
           className="flex flex-wrap items-center gap-2"
           role="group"
-          aria-labelledby={presetsLabelId}
+          aria-labelledby="signal-compare-presets-label"
         >
-          <Caption id={presetsLabelId}>
+          <span id="signal-compare-presets-label" className="text-xs text-[var(--text-muted)]">
             {t('signalDiff.presetsLabel', 'Quick presets:')}
-          </Caption>
+          </span>
           {DIFF_PRESETS.map((p) => (
-            <Button key={p.id} variant="secondary" size="sm" wrapLabel onClick={() => applyPreset(p.id)}>
+            <Button key={p.id} variant="secondary" size="sm" onClick={() => applyPreset(p.id)}>
               {t(p.labelKey, p.defaultLabel)}
             </Button>
           ))}
@@ -171,16 +169,25 @@ export function SignalCompareControls({
           />
           <div
             className="flex flex-wrap items-center gap-1.5"
+            role="group"
+            aria-label={t('signalDiff.categoryFilterLabel', 'Filter by category')}
           >
-            <PillFilterBar
-              semanticMode="filters"
-              scrollable={false}
-              className="flex-wrap"
-              ariaLabel={t('signalDiff.categoryFilterLabel', 'Filter by category')}
-              activeKey={category ?? ''}
-              onChange={(key) => onCategoryChange(category === key ? null : key)}
-              items={CATEGORY_PREFIXES.map((c) => ({ key: c.id, label: t(c.labelKey, c.defaultLabel) }))}
-            />
+            {CATEGORY_PREFIXES.map((c) => {
+              const active = category === c.id;
+              return (
+                <Button
+                  key={c.id}
+                  type="button"
+                  variant={active ? 'primary' : 'outline'}
+                  size="sm"
+                  aria-pressed={active}
+                  onClick={() => onCategoryChange(active ? null : c.id)}
+                  className="rounded-shape-sm px-2.5 text-xs uppercase tracking-wide"
+                >
+                  {t(c.labelKey, c.defaultLabel)}
+                </Button>
+              );
+            })}
             {category ? (
               <Button variant="ghost" size="sm" onClick={() => onCategoryChange(null)}>
                 {t('signalDiff.clearCategory', 'Clear')}

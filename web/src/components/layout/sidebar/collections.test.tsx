@@ -88,14 +88,14 @@ describe('sidebar collections', () => {
     ])
     expect(flat.every(entry => entry.icon)).toBe(true)
     // Pages keep their own catalog labels — the group label never renders.
-    expect(flat.find(entry => entry.to === '/tco')?.label).toBe('Cost of ownership')
+    expect(flat.find(entry => entry.to === '/tco')?.label).toBe('Cost of Ownership')
   })
 
   it('adds collection headings without changing the flat order or hiding standalone pages', () => {
     const reports = collectionSidebarSections(navSections, groups).find(section => section.title === 'Reports')!
     const grouped = groupSidebarItems(reports.items, groups)
     expect(grouped.map(group => group.label)).toEqual([
-      'Fleet insights', 'Driving efficiency', 'Costs', undefined, undefined, undefined,
+      'Fleet Insights', 'Driving Efficiency', 'Costs', undefined, undefined, undefined,
     ])
     expect(grouped.flatMap(group => group.entries.map(entry => entry.to)))
       .toEqual(flattenSidebarItems(reports.items, groups).map(entry => entry.to))
@@ -130,20 +130,16 @@ describe('sidebar collections', () => {
     expect(commands).toBeDefined()
     const flat = flattenSidebarItems(commands!.items, groups)
     expect(flat.map(entry => entry.to)).toEqual(['/commands', '/command-history', '/command-reliability'])
-    expect(flat.map(entry => entry.label)).toEqual(['Send commands', 'Command history', 'Command reliability'])
+    expect(flat.map(entry => entry.label)).toEqual(['Send Commands', 'Command History', 'Command Reliability'])
   })
 
-  it('groups the singleton vehicle cost destination in Diagnostics without relocating or duplicating it', () => {
+  it('groups the singleton Vehicle Cost destination in Diagnostics without duplicating it', () => {
     const diagnostics = collectionSidebarSections(navSections, groups).find(section => section.title === 'Diagnostics')!
     const grouped = groupSidebarItems(diagnostics.items, groups)
-    const vehicleCosts = grouped.find(group => group.entries.some(entry => entry.to === '/admin/vehicle-cost'))
-    expect(vehicleCosts?.label).toBe('Vehicle costs')
+    const vehicleCosts = grouped.find(group => group.label === 'Vehicle Costs')
     expect(vehicleCosts?.labelKey).toBe('nav.diagnosticGroups.vehicleCost')
     expect(vehicleCosts?.entries.map(entry => entry.to)).toEqual(['/admin/vehicle-cost'])
     expect(grouped.flatMap(group => group.entries).filter(entry => entry.to === '/admin/vehicle-cost')).toHaveLength(1)
-    expect(collectionSidebarSections(navSections, groups)
-      .flatMap(section => flattenSidebarItems(section.items, groups))
-      .filter(entry => entry.to === '/admin/vehicle-cost')).toHaveLength(1)
   })
 
   it('uses distinct icons for sibling destinations', () => {

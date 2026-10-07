@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
+  ChartContainer,
   ChartLegend,
   ChartTooltip,
   ComposedChart,
@@ -15,7 +16,6 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -58,8 +58,7 @@ export function CarbonMonthlyTrend({
         'Selected-period monthly carbon and energy trend',
       )}
     >
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t(
           'carbon.monthly.title',
           'Selected-period monthly CO₂ and energy',
@@ -125,7 +124,7 @@ export function CarbonMonthlyTrend({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value: number) =>
-                      display.formatNumber(value)}
+                      display.formatNumber(value, 1)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -135,7 +134,7 @@ export function CarbonMonthlyTrend({
                     tickLine={false}
                     axisLine={false}
                     tickFormatter={(value: number) =>
-                      display.formatNumber(value)}
+                      display.formatNumber(value, 1)}
                   />
                   <Tooltip
                     content={(
@@ -146,7 +145,7 @@ export function CarbonMonthlyTrend({
                               'carbon.units.energyDisplay',
                               '{{value}} {{unit}}',
                               {
-                                value: display.formatNumber(Number(value)),
+                                value: display.formatNumber(Number(value), 2),
                                 unit: display.energyUnit,
                               },
                             )
@@ -184,7 +183,7 @@ export function CarbonMonthlyTrend({
             )}
           </CarbonSectionBody>
         )}
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

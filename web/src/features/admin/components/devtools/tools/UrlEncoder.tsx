@@ -49,7 +49,7 @@ export function UrlEncoderTool() {
   const selectDecode = useCallback(() => setMode('decode'), [])
 
   return (
-    <ToolCard icon={Link} color="cyan" title={t('devtools.utils.url', 'URL encoder')} description={t('devtools.utils.urlDesc', 'URL encoder desc')}>
+    <ToolCard icon={Link} color="cyan" title={t('devtools.utils.url', 'Url Encoder')} description={t('devtools.utils.urlDesc', 'Url Encoder Desc')}>
       <div className="space-y-3">
         <div className="flex gap-2" role="group" aria-label={t('devtools.url.modeGroup', 'Encoding mode')}>
           <Button
@@ -70,7 +70,7 @@ export function UrlEncoderTool() {
           </Button>
         </div>
         <Textarea
-          label={t('devtools.utils.urlInputLabel', 'Input label')}
+          label={t('devtools.utils.urlInputLabel', 'Input Label')}
           rows={2}
           value={inputVal}
           onChange={handleInputChange}
@@ -78,13 +78,13 @@ export function UrlEncoderTool() {
         />
         {result.error && (
           <p role="alert" className="text-sm text-rose-300">
-            {t('devtools.utils.urlInvalidInput', 'Invalid input')}
+            {t('devtools.utils.urlInvalidInput', 'Invalid Input')}
           </p>
         )}
         {result.output && (
           <div className="rounded bg-[var(--surface-overlay)] p-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.urlOutputLabel', 'Output label')}</span>
+              <span className="text-xs text-[var(--text-secondary)]">{t('devtools.utils.urlOutputLabel', 'Output Label')}</span>
               <CopyButton text={result.output} />
             </div>
             <pre className="mt-1 whitespace-pre-wrap break-all text-sm font-mono text-cyan-300">{result.output}</pre>

@@ -101,10 +101,10 @@ describe('InfrastructureSection', () => {
   it('renders all five infrastructure tools as titled cards', () => {
     renderSection()
 
-    expect(screen.getByRole('heading', { name: 'DB stats' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Db Stats' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Migrations' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'MQTT' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Env check' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Mqtt' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Env Check' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Runtime' })).toBeInTheDocument()
   })
 
@@ -135,14 +135,14 @@ describe('InfrastructureSection', () => {
     renderSection()
 
     expect(screen.getAllByRole('button', { name: 'Run' })).toHaveLength(4)
-    expect(screen.getByRole('button', { name: 'Send test' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send Test' })).toBeInTheDocument()
   })
 
   it('runs a backend tool against its endpoint and shows the success result', async () => {
     mockedRequest.mockResolvedValueOnce({ tables: 12, hypertables: 3 })
     renderSection()
 
-    const card = cardByTitle('DB stats')
+    const card = cardByTitle('Db Stats')
     fireEvent.click(within(card).getByRole('button', { name: 'Run' }))
 
     await waitFor(() => {
@@ -159,9 +159,9 @@ describe('InfrastructureSection', () => {
     renderSection()
 
     const wiring: Array<[string, string]> = [
-      ['DB stats', 'db-stats'],
+      ['Db Stats', 'db-stats'],
       ['Migrations', 'migration-status'],
-      ['Env check', 'env-check'],
+      ['Env Check', 'env-check'],
       ['Runtime', 'runtime-info'],
     ]
     for (const [title] of wiring) {
@@ -184,7 +184,7 @@ describe('InfrastructureSection', () => {
     mockedRequest.mockRejectedValueOnce(new Error('db unreachable'))
     renderSection()
 
-    const card = cardByTitle('DB stats')
+    const card = cardByTitle('Db Stats')
     fireEvent.click(within(card).getByRole('button', { name: 'Run' }))
 
     await waitFor(() => {
@@ -208,9 +208,9 @@ describe('InfrastructureSection', () => {
 
   it('does not render an MQTT result panel before anything is sent', () => {
     renderSection()
-    const card = cardByTitle('MQTT')
+    const card = cardByTitle('Mqtt')
 
-    expect(within(card).getByRole('button', { name: 'Send test' })).toBeInTheDocument()
+    expect(within(card).getByRole('button', { name: 'Send Test' })).toBeInTheDocument()
     // No result <pre> and no idle placeholder — the panel only mounts on demand.
     expect(card.querySelector('pre')).toBeNull()
     expect(mockedRequest).not.toHaveBeenCalled()
@@ -226,7 +226,7 @@ describe('InfrastructureSection', () => {
     fireEvent.change(screen.getByLabelText('Message'), {
       target: { value: '{"c":21}' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }))
 
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith('/dev-tools/mqtt-test', {
@@ -234,7 +234,7 @@ describe('InfrastructureSection', () => {
         body: JSON.stringify({ topic: 'sensors/temp', message: '{"c":21}' }),
       })
     })
-    const card = cardByTitle('MQTT')
+    const card = cardByTitle('Mqtt')
     await waitFor(() => {
       expect(card).toHaveTextContent(/"published": true/)
     })
@@ -247,9 +247,9 @@ describe('InfrastructureSection', () => {
     fireEvent.change(screen.getByLabelText('Topic'), {
       target: { value: 'test/topic' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Send Test' }))
 
-    const card = cardByTitle('MQTT')
+    const card = cardByTitle('Mqtt')
     await waitFor(() => {
       expect(within(card).getByText('broker unreachable')).toBeInTheDocument()
     })
@@ -268,7 +268,7 @@ describe('InfrastructureSection', () => {
     )
     renderSection()
 
-    const sendBtn = screen.getByRole('button', { name: 'Send test' })
+    const sendBtn = screen.getByRole('button', { name: 'Send Test' })
     fireEvent.click(sendBtn)
 
     await waitFor(() => {

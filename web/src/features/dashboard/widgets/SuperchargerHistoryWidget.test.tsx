@@ -40,7 +40,7 @@
  * `AnimatedNumber` lands on its final value synchronously.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -61,13 +61,7 @@ vi.mock('@/api/client', async () => {
 });
 
 import SuperchargerHistoryWidget from './SuperchargerHistoryWidget';
-
-it.each([1, 2, 3])('identifies supercharger history at %i columns', (cols) => {
-  renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Supercharger history' })).toBeInTheDocument();
-});
 import { request } from '@/api/client';
-import { useSettings } from '@/hooks/useSettings';
 import type { WidgetSize } from './types';
 import type {
   TeslaChargingHistoryEntry,
@@ -132,15 +126,13 @@ function makeResponse(
 
 function renderWidget(size: WidgetSize) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const view = render(
+  return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <SuperchargerHistoryWidget size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Supercharger history');
-  return view;
 }
 
 beforeEach(() => {
@@ -169,21 +161,6 @@ afterEach(() => {
 });
 
 describe('SuperchargerHistoryWidget — full view', () => {
-  it('reviews actual raw-source totals independently of the ranked ten-row presentation', async () => {
-    mockedRequest.mockResolvedValue(makeResponse([
-      makeEntry({ site_location_name: 'Retained location', usage_wh: 10_000 }),
-    ]));
-    renderWidget(FULL);
-    expect(await screen.findByText('Retained location')).toBeInTheDocument();
-    const brief = screen.getByTestId('supercharger-history-operational-brief');
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('60.00 kWh')).toBeInTheDocument();
-    expect(within(drawer).getByText('$17.50')).toBeInTheDocument();
-    expect(within(drawer).getByText(/not the sum of the top-ten presentation rows/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/exact instants and timezone are not supplied/)).toBeInTheDocument();
-  });
   it('renders a ranked, kWh-formatted session list with cost badges and a totals row', async () => {
     mockedRequest.mockResolvedValue(
       makeResponse(
@@ -216,8 +193,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
     renderWidget(FULL);
 
     // The full tile shows a header title once the query resolves.
-    expect(await screen.findByText('Supercharger history')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(await screen.findByText('Supercharger History')).toBeInTheDocument();
 
     // Un-prefixed endpoint — no /api/v1 double-prefix, no query params.
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
@@ -226,14 +202,14 @@ describe('SuperchargerHistoryWidget — full view', () => {
     expect(screen.getByText('Fremont Supercharger')).toBeInTheDocument();
     expect(screen.getByText('Harris Ranch')).toBeInTheDocument();
     expect(screen.getByText('Kettleman City')).toBeInTheDocument();
-    expect(screen.getByText('30.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('10.00 kWh')).toBeInTheDocument();
-    expect(screen.getByText('20.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('30.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('10.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('20.0 kWh')).toBeInTheDocument();
 
     // Priced sessions get a currency badge; the free ($0) session does NOT.
     expect(screen.getByText('$12.50')).toBeInTheDocument();
     expect(screen.getByText('$5.00')).toBeInTheDocument();
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.queryByText('$0.00')).toBeNull();
 
     // Rows are ranked by energy descending: Fremont (30) → Kettleman (20) → Harris (10).
     const rowLabels = screen
@@ -243,7 +219,7 @@ describe('SuperchargerHistoryWidget — full view', () => {
 
     // Totals row echoes the summary (60 kWh across the window, $17.50 spent).
     expect(screen.getByText('30-day totals')).toBeInTheDocument();
-    expect(screen.getByText('60.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('60.0 kWh')).toBeInTheDocument();
     expect(screen.getByText('$17.50')).toBeInTheDocument();
   });
 
@@ -279,7 +255,6 @@ describe('SuperchargerHistoryWidget — full view', () => {
 
     // A recent session confirms the list mounted.
     expect(await screen.findByText('Recent 9')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
 
     // Exactly ten rows, and neither high-energy old row survived the date slice.
     expect(screen.getAllByRole('listitem')).toHaveLength(10);
@@ -309,7 +284,6 @@ describe('SuperchargerHistoryWidget — full view', () => {
     renderWidget(FULL);
 
     expect(await screen.findByText('Valid 9')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // No crash, ten rows, and the malformed-date row was sliced out as oldest.
     expect(screen.getAllByRole('listitem')).toHaveLength(10);
     expect(screen.queryByText('BrokenSite')).toBeNull();
@@ -332,54 +306,34 @@ describe('SuperchargerHistoryWidget — full view', () => {
     renderWidget(FULL);
 
     // Missing site name falls back to an em dash.
-    expect((await screen.findAllByText('—')).length).toBeGreaterThanOrEqual(3);
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(await screen.findByText('—')).toBeInTheDocument();
 
     // Null usage → 0 Wh formats to "0.0 kWh"; it shows in the row AND the totals.
-    expect(screen.queryByText('0.00 kWh')).toBeNull();
+    expect(screen.getAllByText('0.0 kWh').length).toBeGreaterThanOrEqual(2);
 
     // Null cost → the row carries no badge (only the totals row shows a $ value).
     const [row] = screen.getAllByRole('listitem');
     expect(within(row).queryByText(/\$/)).toBeNull();
 
     // Null summary spend degrades the totals figure to $0.00.
-    expect(screen.queryByText('$0.00')).toBeNull();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
   });
 });
 
 describe('SuperchargerHistoryWidget — compact view', () => {
-  it('reacts to currency and locale preferences without changing billing facts', async () => {
-    const response = makeResponse([makeEntry()], makeSummary({ total_spend: 120.5 }));
-    mockedRequest.mockResolvedValue(response);
-    const client = new QueryClient();
-    const tree = () => <QueryClientProvider client={client}><MemoryRouter><SuperchargerHistoryWidget size={COMPACT} /></MemoryRouter></QueryClientProvider>;
-    const view = render(tree());
-    await screen.findByText('$120.50');
-    const settings = renderHook(() => useSettings()).result.current.settings;
-    const original = { currency_symbol: settings.currency_symbol, locale: settings.locale, decimal_precision: settings.decimal_precision };
-    try {
-      Object.assign(settings, { currency_symbol: '€', locale: 'de-DE', decimal_precision: 3 });
-      view.rerender(tree());
-      expect(screen.getByText('€120,500')).toBeInTheDocument();
-      expect(response.summary.total_spend).toBe(120.5);
-    } finally {
-      Object.assign(settings, original);
-    }
-  });
-
-  it('identifies the 30-day spend headline without adding a list', async () => {
+  it('shows the 30-day spend as a big number with a label, and no title or list', async () => {
     mockedRequest.mockResolvedValue(
       makeResponse([makeEntry({ id: 1 })], makeSummary({ total_spend: 120 })),
     );
     renderWidget(COMPACT);
 
     // The spend lands as a big number (reduced-motion → synchronous commit).
-    expect(await screen.findByText('$120.00')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(await screen.findByText('120')).toBeInTheDocument();
+    expect(screen.getByText('$')).toBeInTheDocument();
     expect(screen.getByText('30-day Supercharger')).toBeInTheDocument();
 
     // A compact tile drops the header title and the ranked list entirely.
-    expect(screen.getByRole('heading', { name: 'Supercharger history' })).toBeInTheDocument();
+    expect(screen.queryByText('Supercharger History')).toBeNull();
     expect(screen.queryByRole('listitem')).toBeNull();
   });
 
@@ -388,56 +342,30 @@ describe('SuperchargerHistoryWidget — compact view', () => {
     renderWidget(COMPACT);
 
     expect(await screen.findByText('No Supercharger sessions')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('No Supercharger sessions').closest('[role="status"]')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
     // The big-number label only renders in the populated compact path.
     expect(screen.queryByText('30-day Supercharger')).toBeNull();
   });
 });
 
 describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
-  it.each([COMPACT, FULL, { cols: 4, rows: 2 }])('preserves billing content and recovers stale history at %j', async (size) => {
-    mockedRequest.mockResolvedValue(makeResponse([makeEntry()], makeSummary()));
-    renderWidget(size);
-    await screen.findByText(size.cols === 1 ? '$17.50' : 'Fremont Supercharger');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    mockedRequest.mockRejectedValueOnce(new Error('refresh'));
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
-    await screen.findByTestId('stale-refresh-warning');
-    expect(document.querySelector('[data-data-state="stale"]')).not.toBeNull();
-    expect(screen.getByText(size.cols === 1 ? '$17.50' : 'Fremont Supercharger')).toBeInTheDocument();
-    expect(screen.queryByText("Can't reach server")).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull());
-    expect(mockedRequest).toHaveBeenCalledTimes(3);
-  });
-
-  it('normalizes nullable entries without inventing spend or energy', async () => {
-    mockedRequest.mockResolvedValue({ entries: null, summary: null });
-    renderWidget(FULL);
-    await screen.findByText('No Supercharger sessions');
-    expect(screen.queryByText('$0.00')).toBeNull();
-    expect(screen.queryByText('0.00 kWh')).toBeNull();
-  });
-
   it('shows an accessible empty state (not a list) when the history is empty', async () => {
     mockedRequest.mockResolvedValue(makeResponse([]));
     renderWidget(FULL);
 
     expect(await screen.findByText('No Supercharger sessions')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('No Supercharger sessions').closest('[role="status"]')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByRole('listitem')).toBeNull();
     // No totals row when there is nothing to summarise.
     expect(screen.queryByText('30-day totals')).toBeNull();
   });
 
-  it('retains its heading above a pending skeleton without empty copy or list', () => {
+  it('renders only a skeleton (no title / empty copy / list) while pending', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderWidget(FULL);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Supercharger history')).toBeInTheDocument();
+    expect(screen.queryByText('Supercharger History')).toBeNull();
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
     expect(screen.queryByRole('listitem')).toBeNull();
   });
@@ -449,7 +377,6 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
     // The error branch renders WidgetShell's <QueryError> — an alert card — and
     // suppresses the list / empty state entirely.
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
@@ -467,8 +394,7 @@ describe('SuperchargerHistoryWidget — refresh', () => {
 
     // Wait for the first load to settle — a visible title implies the query is
     // no longer fetching, so the refresh control is armed.
-    expect(await screen.findByText('Supercharger history')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(await screen.findByText('Supercharger History')).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

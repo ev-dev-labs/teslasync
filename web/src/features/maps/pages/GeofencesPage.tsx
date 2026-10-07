@@ -12,19 +12,17 @@ import { useState, useMemo, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  Plus, Globe, Ruler,
-  Check, X, Navigation, RefreshCw,
+  MapPin, Plus, Globe, Ruler,
+  Check, X, Navigation, RefreshCw, BatteryCharging,
 } from 'lucide-react';
 
-import { PageLayout, LayoutCard } from '@/components/layout';
-import { FormSection } from '@/components/forms';
-import { deriveDataState } from '@/api/dataState';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, Button, Input, Select, Modal, Toggle, ConfirmDialog,
-  Tabs, PanelTitle, Caption, HelperText,
+  Tabs, PanelTitle, Caption, Label, HelperText,
 } from '@/components/ui';
-import { AlertBanner } from '@/components/feedback';
-import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
@@ -42,12 +40,12 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
 import type { Geofence } from '@/types/location';
 import type { Geofence as ApiGeofence, Position, VisitedPlaceCandidate } from '@/api/types';
-import { AISuggestNewGeofences } from '@/components/ai';
+import { AISuggestNewGeofences } from '@/components/ai/AISuggestNewGeofences';
 import { ChargingPlacesWorkspace } from '@/features/maps/components/charging-places';
 import { useVisitedPlaceCandidates, resolveSavedPlaceName } from '@/api/hooks/useLocations';
 import {
@@ -60,7 +58,6 @@ import {
   type GeofenceFormData,
   type GeofencePayload,
 } from '../schemas/geofence';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -115,7 +112,6 @@ function isGeolocationError(err: unknown): boolean {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function GeofencesPage() {
-  const { fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('geofences.title', 'Geofences'));
   const queryClient = useQueryClient();
@@ -181,8 +177,7 @@ export default function GeofencesPage() {
     queryFn: ({ signal }) => request<Geofence[]>('/geofences', { signal }),
   });
   const geofences = geofencesQuery.data;
-  const geofencesState = deriveDataState(geofencesQuery);
-  const isLoading = geofencesQuery.isLoading && !geofencesState.hasData;
+  const isLoading = geofencesQuery.isLoading;
 
   const {
     vehicleId,
@@ -242,14 +237,6 @@ export default function GeofencesPage() {
       pending: list.filter((g) => g.needsReview).length,
     };
   }, [geofences]);
-  const candidateState = deriveDataState(candidateQuery, { provenance: 'historical' });
-  const briefScope = t('geofences.brief.scope', 'Saved geofences and visited candidates are independent sources; not limited to the selected vehicle.');
-  const briefMetrics = [
-    { metricId: 'count', occurrenceId: 'geofences-total', rawValue: geofencesState.hasData ? stats.total : null, label: t('geofences.totalGeofences', 'Total geofences'), description: briefScope },
-    { metricId: 'count', occurrenceId: 'geofences-reviewed', rawValue: geofencesState.hasData ? stats.reviewed : null, label: t('geofences.visits.reviewedPlaces', 'Reviewed places'), description: t('geofences.brief.reviewed', 'Saved places not flagged as needing review.') },
-    { metricId: 'count', occurrenceId: 'geofences-pending', rawValue: geofencesState.hasData ? stats.pending : null, label: t('geofences.visits.pending', 'Awaiting review'), description: t('geofences.brief.pending', 'Saved places flagged as needing review.') },
-    { metricId: 'count', occurrenceId: 'geofences-candidates', rawValue: candidateQuery.data?.length, label: t('geofences.visits.candidates', 'Visited candidates'), description: t('geofences.brief.candidates', 'Returned visited-place candidates; separate from saved geofence totals.') },
-  ] as const;
 
   // ─── Drawer integration ──────────────────────────────────────────────────
 
@@ -418,11 +405,11 @@ export default function GeofencesPage() {
     if (savedName) return savedName;
     try {
       const res = await request<ReverseGeocodeResult>(`/geocode/reverse?lat=${lat}&lon=${lon}`);
-      return res.display_name || `${fmtScientificNumber(lat, 4)}, ${fmtScientificNumber(lon, 4)}`;
+      return res.display_name || `${fmtNumber(lat, 4)}, ${fmtNumber(lon, 4)}`;
     } catch {
-      return `${fmtScientificNumber(lat, 4)}, ${fmtScientificNumber(lon, 4)}`;
+      return `${fmtNumber(lat, 4)}, ${fmtNumber(lon, 4)}`;
     }
-  }, [fmtScientificNumber]);
+  }, []);
 
   const handleGetLocation = useCallback(async () => {
     setLocationLoading(true);
@@ -522,42 +509,68 @@ export default function GeofencesPage() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('geofences.title', 'Geofences')}
       subtitle={t('geofences.subtitle', 'Define locations for contextual tracking and automation')}
       query={geofencesQuery}
-      dataSources={[
-        { id: 'geofences', label: t('geofences.title', 'Geofences'), query: geofencesQuery },
-        { id: 'candidates', label: t('geofences.visits.candidates', 'Visited candidates'), query: candidateQuery },
-      ]}
-      secondaryActions={
-        <Button
-          variant="ghost"
-          onClick={() => geofencesQuery.refetch()}
-          aria-label={t('common.refresh', 'Refresh')}
-        >
-          <RefreshCw
-            className={cn('h-4 w-4', geofencesQuery.isFetching && 'animate-spin')}
-            aria-hidden="true"
-          />
-        </Button>
-      }
-      primaryAction={
-        <Button variant="primary" icon={<Plus className="h-4 w-4" aria-hidden="true" />} onClick={openCreate}>
-          {t('geofences.addGeofence', 'Add geofence')}
-        </Button>
+      actions={
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => geofencesQuery.refetch()}
+            aria-label={t('common.refresh', 'Refresh')}
+          >
+            <RefreshCw
+              className={cn('h-4 w-4', geofencesQuery.isFetching && 'animate-spin')}
+              aria-hidden="true"
+            />
+          </Button>
+          <Button variant="primary" icon={<Plus className="h-4 w-4" aria-hidden="true" />} onClick={openCreate}>
+            {t('geofences.addGeofence', 'Add Geofence')}
+          </Button>
+        </div>
       }
     >
-      {/* 1 — KPI band remains visible with source-aware unknown values. */}
+      {/* 1 — KPI band: full-width responsive metric grid. Always visible with a
+          0 placeholder so the section never disappears on empty/error. */}
       <FadeIn>
-        <MapsOperationalBrief
-          title={t('geofences.summaryAria', 'Geofence summary')}
-          description={t('geofences.brief.description', 'Review saved boundaries and the independent visited-place queue before changing a zone.')}
-          scope={briefScope}
-          metrics={briefMetrics}
-          sources={[{ label: t('geofences.title', 'Geofences'), state: geofencesState }, { label: t('geofences.visits.candidates', 'Visited candidates'), state: candidateState }]}
-          loading={isLoading}
-        />
+        <section
+          aria-label={t('geofences.summaryAria', 'Geofence summary')}
+          className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+        >
+          {isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height={84} className="rounded-xl" />
+            ))
+          ) : (
+            <>
+              <MetricCard
+                label={t('geofences.totalGeofences', 'Total Geofences')}
+                value={stats.total ?? 0}
+                icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('geofences.visits.reviewedPlaces', 'Reviewed places')}
+                value={stats.reviewed}
+                icon={<Check className="h-4 w-4" aria-hidden="true" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('geofences.visits.pending', 'Awaiting review')}
+                value={stats.pending}
+                icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('geofences.visits.candidates', 'Visited candidates')}
+                value={candidateQuery.data?.length ?? 0}
+                icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
+                color="amber"
+              />
+            </>
+          )}
+        </section>
       </FadeIn>
 
       {/* 2 — Helix draft assistant. Whole section gated on the AI feature flag
@@ -568,7 +581,11 @@ export default function GeofencesPage() {
             aria-label={t('geofences.aiSuggest.title', 'Suggest a geofence for this location')}
             className="grid grid-cols-1 gap-4 xl:grid-cols-3"
           >
-            <LayoutCard title={t('geofences.aiSuggest.badge', 'Helix')}>
+            <GlassPanel className="space-y-3 p-4 sm:p-5">
+              <PanelTitle className="flex items-center gap-2">
+                <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('geofences.aiSuggest.badge', 'Helix')}
+              </PanelTitle>
               <Select
                 value={aiLocationIdRaw}
                 onChange={(e) => setAiLocationIdRaw(e.target.value)}
@@ -580,7 +597,7 @@ export default function GeofencesPage() {
                   { value: '', label: t('geofences.visits.select', 'Select a visited place') },
                   ...(candidateQuery.data ?? []).filter((item) => item.name.trim()).map((item) => ({
                     value: String(item.id),
-                    label: item.name || `${fmtScientificNumber(item.latitude, 4)}, ${fmtScientificNumber(item.longitude, 4)}`,
+                    label: item.name || `${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)}`,
                   })),
                 ]}
               />
@@ -590,7 +607,7 @@ export default function GeofencesPage() {
                   'Choose a visited location to propose a zone; review the draft before saving.',
                 )}
               </Caption>
-            </LayoutCard>
+            </GlassPanel>
             <div className="xl:col-span-2">
               <AISuggestNewGeofences
                 locationId={aiLocationId}
@@ -628,7 +645,7 @@ export default function GeofencesPage() {
       <Modal
         open={modalOpen}
         onClose={handleRequestClose}
-        title={editingId ? t('geofences.editTitle', 'Edit geofence') : t('geofences.createTitle', 'Create geofence')}
+        title={editingId ? t('geofences.editTitle', 'Edit Geofence') : t('geofences.createTitle', 'Create Geofence')}
         size="md"
       >
         <div className="space-y-4">
@@ -637,7 +654,11 @@ export default function GeofencesPage() {
           )}
           {/* Use Current Location */}
           {!editingId && (
-            <FormSection title={t('geofences.useCurrentLocation', 'Use current location')}>
+            <GlassPanel className="space-y-3 p-4">
+              <div className="flex items-center gap-2">
+                <Navigation className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+                <Label>{t('geofences.useCurrentLocation', 'Use Current Location')}</Label>
+              </div>
 
               <Tabs
                 tabs={[
@@ -651,7 +672,7 @@ export default function GeofencesPage() {
 
               {locationSource === 'vehicle' && (
                 <Select
-                  label={t('geofences.selectVehicle', 'Select vehicle')}
+                  label={t('geofences.selectVehicle', 'Select Vehicle')}
                   options={[
                     ...(vehicles.length === 0
                       ? [{
@@ -712,10 +733,10 @@ export default function GeofencesPage() {
                 >
                   {locationLoading
                     ? t('geofences.gettingLocation', 'Getting location…')
-                    : t('geofences.getLocation', 'Get location')}
+                    : t('geofences.getLocation', 'Get Location')}
                 </Button>
               )}
-            </FormSection>
+            </GlassPanel>
           )}
           <Input
             label={t('geofences.formName', 'Name')}
@@ -821,7 +842,7 @@ export default function GeofencesPage() {
       {/* Delete Confirm Dialog */}
       <ConfirmDialog
         open={deleteTarget !== null}
-        title={t('geofences.deleteTitle', 'Delete geofence')}
+        title={t('geofences.deleteTitle', 'Delete Geofence')}
         message={t('geofences.deleteMessage', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', {
           name: deleteTarget?.name ?? '',
         })}
@@ -833,6 +854,6 @@ export default function GeofencesPage() {
         }}
         onCancel={() => setDeleteTarget(null)}
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

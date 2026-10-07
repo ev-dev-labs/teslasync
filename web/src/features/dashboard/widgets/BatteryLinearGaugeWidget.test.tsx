@@ -2,7 +2,7 @@
  * BatteryLinearGaugeWidget — behaviour + hardening coverage.
  *
  * The widget renders a battery state-of-charge gauge whose arc colour is
- * driven by the shared battery color mapping (green > 50 %, amber > 20 %, else red), an
+ * driven by `getBatteryColor` (green > 50 %, amber > 20 %, else red), an
  * optional charge-limit overlay ring + "Limit" stat (only when the extended
  * `charge_limit_soc` field is a finite number), a compact 1×1 variant, and a
  * "⚡ Charging" indicator. There is a single public export (the default
@@ -74,7 +74,7 @@ function limitMarker(container: HTMLElement): HTMLElement | null {
 }
 
  
-function makeQuery(over: Record<string, unknown> = {}) {
+function makeQuery(over: Record<string, unknown> = {}): any {
   return {
     data: undefined,
     error: null,
@@ -194,16 +194,16 @@ describe('BatteryLinearGaugeWidget — level → gauge colour', () => {
     expect(circleStrokes(at20.container)).not.toContain(AMBER);
   });
 
-  it('shows an unknown readout without a fabricated 0% gauge when battery_level is missing', () => {
+  it('falls back to a 0% (red) gauge when battery_level is missing', () => {
     // battery_level omitted at runtime → widget coalesces to 0.
     mockUseVehicleState.mockReturnValue(
       stateQuery({ ...makeState(), battery_level: undefined as unknown as number }),
     );
     const { container } = renderWidget();
 
-    expect(circleStrokes(container)).not.toContain(RED);
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.queryByRole('meter')).toBeNull();
+    expect(circleStrokes(container)).toContain(RED);
+    // The numeric readout shows 0, never NaN/undefined.
+    expect(screen.getAllByText('0').length).toBeGreaterThan(0);
   });
 });
 
@@ -282,9 +282,9 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
     );
     const { container } = renderWidget({ size: { cols: 1, rows: 1 } });
 
-    // Compact: no header title or duplicate stat row; the gauge keeps its label.
+    // Compact: no header title, no gauge label, and no stat row.
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
-    expect(screen.getByText('Level')).toBeInTheDocument();
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
     expect(screen.queryByText('Limit')).not.toBeInTheDocument();
     // The gauge fill itself is still drawn.
     expect(circleStrokes(container)).toContain(GREEN);
@@ -301,8 +301,7 @@ describe('BatteryLinearGaugeWidget — layout variants', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 })));
     renderWidget({ size: { cols: 2, rows: 1 } });
     expect(screen.getByRole('heading', { name: 'Battery' })).toBeInTheDocument();
-    expect(screen.getByText('Level')).toBeInTheDocument();
-    expect(screen.getAllByText('80.00')).toHaveLength(1);
+    expect(screen.queryByText('Level')).not.toBeInTheDocument();
   });
 });
 
@@ -345,24 +344,6 @@ describe('BatteryLinearGaugeWidget — loading / empty / error', () => {
     // Data present → error is a subtle freshness signal, not a full panel.
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(circleStrokes(container)).toContain(GREEN);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  });
-
-  it('keeps a known charge limit visible even when the battery reading is unknown', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(stateWithLimit(90, { battery_level: Number.NaN })));
-    renderWidget();
-    expect(screen.queryByRole('meter')).toBeNull();
-    expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('Limit')).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument();
-  });
-
-  it('rejects an unreachable limit rather than displaying a misleading edge marker', () => {
-    mockUseVehicleState.mockReturnValue(stateQuery(stateWithLimit(120)));
-    const { container } = renderWidget();
-    expect(limitMarker(container)).toBeNull();
-    expect(screen.queryByText('Limit')).toBeNull();
-    expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuemax', '100');
   });
 });
 

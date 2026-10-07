@@ -3,13 +3,11 @@ import type {
 } from '@/api/types';
 import { Badge, Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { asList, unknownLabel, useT } from './helpers';
 import { MotionCharts } from './MotionCharts';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function DynamicsPanel({ ledger }: { ledger: PhysicsLedger }) {
-  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const { formatEnergy, formatSpeed } = useUnits();
   const d = ledger.dynamics;
@@ -23,7 +21,7 @@ export function DynamicsPanel({ ledger }: { ledger: PhysicsLedger }) {
       <div className="flex flex-wrap gap-2">
         <Badge variant={d?.unknown ? 'warning' : 'success'} size="sm">
           {t('physicsLedger.massSource', 'mass')}: {d?.mass_source ?? unknownLabel(t)}
-          {d?.mass_kg != null ? ` (${fmtNumber(d.mass_kg)} kg)` : ''}
+          {d?.mass_kg != null ? ` (${fmtNumber(d.mass_kg, 0)} kg)` : ''}
         </Badge>
         <Badge variant="neutral" size="sm">
           {t('physicsLedger.dynamics.regen', 'Regen')}: {d?.regen_wh != null ? formatEnergy(d.regen_wh) : unknownLabel(t)}

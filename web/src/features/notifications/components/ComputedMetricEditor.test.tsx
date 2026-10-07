@@ -38,8 +38,6 @@ import type {
   ComputedMetricSummary,
   ComputedMetricPreview,
 } from '@/api/types'
-import { inputPreferences } from '@/test/inputPreferences'
-import { convertDistanceFromSI } from '@/lib/unitConversion'
 
 // Shared, mutable preview-mutation stand-in. Hoisted so the vi.mock factory
 // below can close over it while individual tests drive `.data` / `.isPending` /
@@ -55,8 +53,6 @@ const { previewState } = vi.hoisted(() => ({
 vi.mock('@/api/hooks/useNotifications', () => ({
   usePreviewComputedMetric: () => previewState,
 }))
-vi.mock('@/hooks/useSettings', () => ({ useSettings: vi.fn() }))
-import { useSettings } from '@/hooks/useSettings'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -150,12 +146,9 @@ function renderEditor(
 const metricSelect = () => screen.getByRole('combobox', { name: 'Metric' })
 const windowSelect = () => screen.getByRole('combobox', { name: 'Window' })
 const opSelect = () => screen.getByRole('combobox', { name: 'Operator' })
-const thresholdInput = () => screen.getByRole('textbox', { name: 'Threshold' })
+const thresholdInput = () => screen.getByRole('spinbutton', { name: 'Threshold' })
 
 beforeEach(() => {
-  vi.mocked(useSettings).mockReturnValue({
-    settings: inputPreferences({ unit_of_length: 'mi' }),
-  } as ReturnType<typeof useSettings>)
   previewState.mutate = vi.fn()
   previewState.data = undefined
   previewState.isPending = false
@@ -177,10 +170,10 @@ describe('ComputedMetricEditor', () => {
   it('lists every registry metric as an option', () => {
     renderEditor(makeValue())
     const select = metricSelect()
-    expect(within(select).getByRole('option', { name: 'Cost · Cost per mile ($/mi)' })).toBeInTheDocument()
+    expect(within(select).getByRole('option', { name: 'Cost · Cost per mile (/mi)' })).toBeInTheDocument()
     expect(within(select).getByRole('option', { name: 'Energy · Energy used (kWh)' })).toBeInTheDocument()
     expect(within(select).getAllByRole('option').map(option => option.textContent)).toEqual([
-      'Choose a metric', 'Energy · Energy used (kWh)', 'Cost · Cost per mile ($/mi)',
+      'Choose a metric', 'Energy · Energy used (kWh)', 'Cost · Cost per mile (/mi)',
     ])
     // Placeholder option is present while nothing is chosen.
     expect(within(select).getByRole('option', { name: 'Choose a metric' })).toBeInTheDocument()
@@ -356,56 +349,5 @@ describe('ComputedMetricEditor', () => {
     renderEditor(completeValue)
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('preview failed')
-  })
-
-  it('retains a previous computed value with an explicit old-preview notice on failure', () => {
-    previewState.data = {
-      kind: 'computed_metric', metric_id: 'cost_per_mi', metric_window: '7d',
-      metric_op: '>', threshold: 0.5, value: 1.25, would_trigger: true,
-    }
-    previewState.mutate = vi.fn(
-      (_payload: unknown, opts?: { onError?: (error: unknown) => void }) =>
-        opts?.onError?.(new Error('computed refresh failed')),
-    )
-    renderEditor(completeValue)
-    expect(screen.getByRole('alert')).toHaveTextContent('computed refresh failed')
-    expect(screen.getByText(/Right now this metric/)).toHaveTextContent('1.25')
-    expect(screen.getByText(/The previous preview remains visible/)).toBeInTheDocument()
-    expect(previewState.mutate).toHaveBeenCalledWith(expect.objectContaining({
-      metric_id: 'cost_per_mi', metric_window: '7d', metric_threshold: 0.5,
-    }), expect.anything())
-  })
-
-  it('renders and edits preferred distances without changing the legacy metric payload', () => {
-    vi.mocked(useSettings).mockReturnValue({
-      settings: inputPreferences({ locale: 'de-DE', decimal_precision: 3 }),
-    } as ReturnType<typeof useSettings>)
-    const distanceMetric: ComputedMetricSummary = {
-      id: 'distance', label: 'Distance driven', category: 'driving',
-      unit: 'mi', windows: ['day'], ops: ['>'],
-    }
-    const { onChange } = renderEditor(makeValue({
-      metric_id: 'distance', metric_window: 'day', metric_threshold: '60',
-    }), { metrics: [distanceMetric] })
-    expect(thresholdInput()).toHaveValue('96,561')
-    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('km')
-    fireEvent.focus(thresholdInput())
-    fireEvent.change(thresholdInput(), { target: { value: '100,123456' } })
-    const saved = Number(onChange.mock.calls.at(-1)?.[0].metric_threshold)
-    expect(saved).toBeCloseTo(convertDistanceFromSI(100123.456, 'mi'), 10)
-    expect(previewState.mutate.mock.calls.at(-1)?.[0].metric_threshold).toBe(saved)
-  })
-
-  it('uses percentage thresholds, not energy units, for percentage-change operators', () => {
-    const { onChange } = renderEditor(makeValue({
-      metric_id: 'energy_used', metric_window: '24h',
-      metric_op: '%_change_>', metric_threshold: '5',
-    }))
-    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('%')
-    fireEvent.focus(thresholdInput())
-    fireEvent.change(thresholdInput(), { target: { value: '12.3456' } })
-    expect(onChange).toHaveBeenLastCalledWith(expect.objectContaining({
-      metric_threshold: '12.3456',
-    }))
   })
 })

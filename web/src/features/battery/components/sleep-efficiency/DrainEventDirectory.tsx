@@ -12,7 +12,7 @@ import {
   type Column,
 } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { ValidSleepDrainEvent } from '../../lib/sleepEfficiencyAnalysis';
 import { eventRecencyLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
@@ -20,7 +20,6 @@ import type {
   SleepEfficiencyFormatters,
   SleepEfficiencySectionProps,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type DrainEventDirectoryProps =
   SleepEfficiencySectionProps
@@ -31,7 +30,6 @@ export function DrainEventDirectory({
   state,
   formatTemperature,
 }: DrainEventDirectoryProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () => [...analysis.events.directory],
@@ -118,8 +116,6 @@ export function DrainEventDirectory({
       },
       {
         key: 'sentry',
-        filterValue: (event) => event.sentryMode ?? null,
-        filterValueLabel: (_, event) => event.sentryMode ? t('sleep.eventDirectory.on', 'On') : t('sleep.eventDirectory.off', 'Off'),
         header: t('sleep.eventDirectory.sentry', 'Sentry'),
         render: (event) => (
           <Badge
@@ -139,9 +135,6 @@ export function DrainEventDirectory({
       },
       {
         key: 'temperature',
-        align: 'right',
-        filterValue: (event) => event.outsideTempC ?? null,
-        filterValueLabel: (_, event) => event.outsideTempC != null ? formatTemperature(event.outsideTempC) : '—',
         header: t(
           'sleep.eventDirectory.temperature',
           'Outside temperature',
@@ -159,12 +152,12 @@ export function DrainEventDirectory({
         ),
       },
     ],
-    [formatTemperature, t, fmtNumber],
+    [formatTemperature, t],
   );
 
   return (
     <section data-testid="sleep-efficiency-event-directory">
-      <GlassPanel className="min-w-0 p-4 sm:p-5">
+      <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <CalendarClock
             className="h-4 w-4 text-purple-300"
@@ -184,7 +177,6 @@ export function DrainEventDirectory({
         <SleepEfficiencySectionBody state={state} skeletonHeight={280}>
           {rows.length > 0 ? (
             <DataTable<ValidSleepDrainEvent>
-              enableValueFilters
               tableId="battery:sleep-drain-events"
               columns={columns}
               data={rows}

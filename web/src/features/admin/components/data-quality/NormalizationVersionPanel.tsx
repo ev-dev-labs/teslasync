@@ -15,11 +15,10 @@ import { Layers } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption, Text, Badge } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { sortVersions, versionLabel, type SectionState } from './helpers';
 import type { NormalizationSummary } from '@/types/admin-operator-confidence';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface NormalizationVersionPanelProps extends SectionState {
   normalization: NormalizationSummary | undefined;
@@ -31,7 +30,6 @@ export function NormalizationVersionPanel({
   error,
   onRetry,
 }: NormalizationVersionPanelProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const legacyLabel = t('admin.dataQuality.legacyVersion', 'Legacy / unknown');
@@ -107,7 +105,7 @@ export function NormalizationVersionPanel({
                     {share == null
                       ? t('admin.dataQuality.shareUnknown', 'Share unknown')
                       : t('admin.dataQuality.versionShare', '{{share}}% of window', {
-                          share: fmtNumber(share),
+                          share: share.toFixed(1),
                         })}
                   </Caption>
                 </li>

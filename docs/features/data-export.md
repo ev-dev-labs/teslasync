@@ -22,22 +22,7 @@ Each export type has its own builder in `internal/exports/` so the producing cod
 
 ## How exports are produced
 
-### Grid downloads
-
-The shared grid toolbar provides immediate CSV and JSON downloads separately
-from queued export jobs. Local grids export matching loaded rows or selected
-loaded rows; a server-paginated grid requires an explicit page or full-result
-export handler. API logs and notification inbox downloads cover the loaded page.
-The drive-history export uses its full vehicle/date range, without list filters
-or selection. Charging-history downloads use the page's loaded session window.
-
-Default grid CSV downloads prefer readable cell text so converted values match
-the displayed column labels. JSON preserves matching source values. Callers can
-provide typed export values for rich cells or a domain-specific serializer.
-
-### Queued exports
-
-The naive path — "build the file inside the HTTP handler" — works for small exports and fails badly for large ones. Queued exports use an explicit async worker:
+The naive path — "build the file inside the HTTP handler" — works for small exports and fails badly for large ones. TeslaSync uses an explicit async worker for everything:
 
 ```mermaid
 sequenceDiagram

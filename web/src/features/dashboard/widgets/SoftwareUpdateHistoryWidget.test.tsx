@@ -29,7 +29,7 @@
  * tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement } from 'react';
 
@@ -137,38 +137,6 @@ beforeEach(() => {
   softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()]));
 });
 
-describe('SoftwareUpdateHistoryWidget trust and recovery', () => {
-  it('reports an initial failure instead of an empty software history and retries the source', () => {
-    const refetch = vi.fn();
-    softwareUpdatesMock.mockReturnValue(makeQuery(undefined, { isError: true, refetch }));
-    const { container } = renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
-    expect(container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initialFailure');
-    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
-    expect(refetch).toHaveBeenCalledOnce();
-  });
-
-  it('retains the software feed after a refresh failure and makes it recoverable', () => {
-    const refetch = vi.fn();
-    softwareUpdatesMock.mockReturnValue(makeQuery([makeUpdate()], { isError: true, refetch }));
-    renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
-    expect(screen.getByText('2024.44.25')).toBeInTheDocument();
-    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh', exact: true }));
-    expect(refetch).toHaveBeenCalledOnce();
-  });
-
-  it('recovers vehicle discovery without refetching the disabled update history', () => {
-    const refetchVehicles = vi.fn();
-    const refetchUpdates = vi.fn();
-    vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('Vehicles unavailable'), refetch: refetchVehicles });
-    softwareUpdatesMock.mockReturnValue(makeQuery(undefined, { refetch: refetchUpdates }));
-    renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
-    expect(softwareUpdatesMock).toHaveBeenCalledWith('');
-    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
-    expect(refetchVehicles).toHaveBeenCalledOnce();
-    expect(refetchUpdates).not.toHaveBeenCalled();
-  });
-});
-
 // ── updateStatusMeta (pure) ──────────────────────────────────────────────────
 describe('updateStatusMeta', () => {
   it('maps every known status to its variant, colour, severity and label', () => {
@@ -237,7 +205,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
     renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_COMPACT} />);
 
     // Title chrome + version + the "Current" badge (installed → Current).
-    expect(screen.getByText('Update history')).toBeInTheDocument();
+    expect(screen.getByText('Update History')).toBeInTheDocument();
     expect(screen.getByText('2024.44.25')).toBeInTheDocument();
     expect(screen.getByText('Current')).toBeInTheDocument();
   });
@@ -341,7 +309,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
     const { container } = renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Update history')).toBeInTheDocument();
+    expect(screen.queryByText('Update History')).not.toBeInTheDocument();
     expect(screen.queryByText('2024.44.25')).not.toBeInTheDocument();
   });
 

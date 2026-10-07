@@ -12,7 +12,7 @@ import {
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type {
   DrivingRhythm,
@@ -20,7 +20,6 @@ import type {
 } from '../../lib/drivingRhythm';
 import { DrivingRhythmSectionBody } from './DrivingRhythmSectionBody';
 import type { DrivingRhythmSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekdayWeekendComparisonProps {
   summary: DrivingRhythm;
@@ -33,7 +32,6 @@ export function WeekdayWeekendComparison({
   state,
   className,
 }: WeekdayWeekendComparisonProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const labels: Record<RhythmDayType, string> = {
@@ -100,7 +98,7 @@ export function WeekdayWeekendComparison({
                   </Text>
                   <Badge variant={row.key === 'weekday' ? 'info' : 'neutral'}>
                     {t('rhythm.comparison.shareValue', '{{share}}%', {
-                      share: fmtNumber(row.share * 100),
+                      share: fmtNumber(row.share * 100, 0),
                     })}
                   </Badge>
                 </div>
@@ -114,7 +112,7 @@ export function WeekdayWeekendComparison({
                   <div>
                     <MetricValue>
                       {row.drivesPerCalendarDay != null
-                        ? fmtNumber(row.drivesPerCalendarDay)
+                        ? fmtNumber(row.drivesPerCalendarDay, 2)
                         : '—'}
                     </MetricValue>
                     <MetricLabel>
@@ -129,7 +127,7 @@ export function WeekdayWeekendComparison({
                   </div>
                   <div>
                     <MetricValue>
-                      {formatDistance(row.averageDistanceM)}
+                      {formatDistance(row.averageDistanceM, { precision: 1 })}
                     </MetricValue>
                     <MetricLabel>
                       {t(
@@ -151,6 +149,7 @@ export function WeekdayWeekendComparison({
                             row.measuredDistanceDrives > 0
                               ? row.distanceM
                               : null,
+                            { precision: 1 },
                           ),
                         },
                       )

@@ -102,7 +102,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  const rendered = render(
+  return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/admin/tesla-region']}>
         <ToastProvider>
@@ -111,7 +111,6 @@ function renderPage() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
-  return { ...rendered, qc }
 }
 
 const endpointRegion = () =>
@@ -136,23 +135,6 @@ beforeEach(() => {
   mockedRequest.mockReset()
 })
 
-describe('TeslaRegionPage retained endpoint', () => {
-  it('retains the resolved endpoint, copy payload and all static zones on refresh failure', async () => {
-    mockedRequest.mockResolvedValue(envelope('na', NA_URL))
-    const { qc } = renderPage()
-    await screen.findByText(NA_URL)
-    mockedRequest.mockRejectedValue(new Error('refresh unavailable'))
-    await qc.invalidateQueries()
-    await waitFor(() => expect(qc.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
-    expect(within(endpointRegion()).getByText(NA_URL)).toBeInTheDocument()
-    expect(within(endpointRegion()).getByRole('button', { name: 'Copy Fleet API base URL' })).toBeInTheDocument()
-    expect(within(aboutRegion()).getByText(NA_ZONE)).toBeInTheDocument()
-    expect(within(aboutRegion()).getByText(EU_ZONE)).toBeInTheDocument()
-    expect(within(aboutRegion()).getByText(CN_ZONE)).toBeInTheDocument()
-    expect(within(overviewRegion()).getByText('Retained account snapshot')).toBeInTheDocument()
-  })
-})
-
 describe('TeslaRegionPage', () => {
   it('shows the KPI skeleton while the region query is loading', async () => {
     let resolve: (v: RegionEnvelope) => void = () => {}
@@ -162,13 +144,10 @@ describe('TeslaRegionPage', () => {
       }),
     )
 
-    const { container } = renderPage()
+    renderPage()
 
     // KPI band renders its own loading skeleton…
-    const strip = container.querySelector('[data-operational-brief][data-testid="tesla-region-summary"]')!
-    expect(strip).toHaveAttribute('aria-busy', 'true')
-    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4)
-    expect(strip.querySelector('[data-operational-value]')).toBeNull()
+    expect(screen.getByTestId('stat-grid-skeleton')).toBeInTheDocument()
     // …and the endpoint detail (base-URL row) has not rendered yet.
     expect(screen.queryByText('Fleet API base URL')).toBeNull()
     // The header refresh control is available even during the first load.
@@ -177,7 +156,7 @@ describe('TeslaRegionPage', () => {
     // Settle the query so React-Query teardown is clean.
     resolve({ data: null, fetched_at: null })
     await waitFor(() =>
-      expect(strip).not.toHaveAttribute('aria-busy', 'true'),
+      expect(screen.queryByTestId('stat-grid-skeleton')).toBeNull(),
     )
   })
 
@@ -209,23 +188,9 @@ describe('TeslaRegionPage', () => {
 
     // KPI status reflects a configured account.
     expect(within(overviewRegion()).getByText('Configured')).toBeInTheDocument()
-    const strip = overviewRegion().querySelector('[data-operational-brief][data-testid="tesla-region-summary"]')!
-    const tiles = strip.querySelectorAll('[data-operational-metric]')
-    expect(tiles).toHaveLength(4)
-    expect(within(strip as HTMLElement).getByText(/Last synced:/)).toBeInTheDocument()
-    expect(tiles[0].querySelector('[data-operational-value]')).toHaveTextContent('NA')
-    expect(tiles[0]).toHaveTextContent(NA_ZONE)
-    expect(tiles[1].querySelector('[data-operational-value]')).toHaveTextContent('Configured')
-    expect(tiles[2].querySelector('[data-operational-value]')).toHaveTextContent('HTTPS')
-    expect(tiles[3]).toHaveAttribute('data-value-state', 'value')
-    expect(tiles[3]).toHaveTextContent('From Tesla account')
 
     // No empty/error surfaces while configured.
     expect(screen.queryByText('No region on record')).toBeNull()
-    fireEvent.click(within(strip as HTMLElement).getByRole('button', { name: 'Review details' }))
-    const drawer = await screen.findByRole('dialog')
-    expect(drawer).toHaveTextContent(NA_ZONE)
-    expect(drawer).toHaveTextContent('Secure transport')
   })
 
   it('renders the EU zone label and badge, and keeps the NA label out of the hero', async () => {
@@ -264,8 +229,6 @@ describe('TeslaRegionPage', () => {
     const overview = overviewRegion()
     expect(within(overview).getByText('Not configured')).toBeInTheDocument()
     expect(within(overview).getAllByText('—').length).toBeGreaterThan(0)
-    expect(overview.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(3)
-    expect(overview.querySelector('[data-operational-metric="region-endpoint"]')).toHaveAttribute('data-value-state', 'value')
 
     // The empty state exposes its own refresh CTA (distinct from the header).
     expect(
@@ -285,9 +248,6 @@ describe('TeslaRegionPage', () => {
     })
 
     const callsBefore = mockedRequest.mock.calls.length
-    const strip = overviewRegion().querySelector('[data-operational-brief][data-testid="tesla-region-summary"]')!
-    expect(strip.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4)
-    expect(within(overviewRegion()).queryByText('Not configured')).toBeNull()
     fireEvent.click(within(endpoint).getByRole('button', { name: 'Retry' }))
 
     await waitFor(() =>

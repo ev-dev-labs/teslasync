@@ -3,8 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Compass, Home, Search } from 'lucide-react'
 
-import { PageLayout } from '@/components/layout'
-import { Button, GlassPanel, SectionTitle, Text, Caption } from '@/components/ui'
+import { PageContainer } from '@/components/layout'
+import { Button, GlassPanel } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 import { closestRoutes } from '@/lib/closestRoute'
@@ -56,30 +56,30 @@ export default function NotFoundPage() {
   }, [])
 
   return (
-    <PageLayout title={t('notFound.title', 'Page not found')}>
-      <GlassPanel className="mx-auto max-w-2xl p-4 text-center sm:p-6">
+    <PageContainer title={t('notFound.title', 'Page not found')}>
+      <GlassPanel className="mx-auto max-w-2xl px-6 py-12 text-center">
         <Compass
           className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]"
           aria-hidden="true"
         />
-        <SectionTitle>
+        <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
           {t('notFound.heading', "We couldn't find that page")}
-        </SectionTitle>
-        <Text as="p" variant="body" className="mt-2 break-all">
+        </h2>
+        <p className="mt-2 break-all text-[var(--text-secondary)]">
           {t('notFound.body', {
             defaultValue: "{{path}} doesn't match any route.",
             path: location.pathname,
           })}
-        </Text>
+        </p>
 
         {suggestions.length > 0 && (
           <nav
             className="mt-6"
             aria-label={t('notFound.suggestionsLabel', 'Suggested pages')}
           >
-            <Caption as="p" className="mb-2">
+            <p className="mb-2 text-sm text-[var(--text-muted)]">
               {t('notFound.didYouMean', 'Did you mean:')}
-            </Caption>
+            </p>
             <ul className="flex flex-col items-center gap-2">
               {suggestions.map((s) => (
                 <li key={s.path}>
@@ -88,9 +88,9 @@ export default function NotFoundPage() {
                     className="rounded px-1 text-cyan-300 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                   >
                     {t(s.i18nKey, s.label)}
-                    <Caption as="span" className="ms-2">
+                    <span className="ml-2 text-xs text-[var(--text-muted)]">
                       {s.path}
-                    </Caption>
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -122,6 +122,6 @@ export default function NotFoundPage() {
           </Button>
         </div>
       </GlassPanel>
-    </PageLayout>
+    </PageContainer>
   )
 }

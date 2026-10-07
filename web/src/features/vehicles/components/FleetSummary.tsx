@@ -7,9 +7,8 @@ import { AnimatedNumber } from '@/components/data-display/AnimatedNumber';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fetchVehicleState } from '@/api/hooks/useVehicles';
-import { asFiniteNumber } from '@/lib/typeGuards';
 import type { Vehicle } from '@/api/types';
-import type { VehicleStateReadings } from '@/api/types';
+import type { VehicleState } from '@/api/types';
 
 interface FleetSummaryProps {
   vehicles: Vehicle[];
@@ -47,25 +46,21 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
 
   const { avgBattery, totalRangeMeters, chargingCount, onlineCount } = useMemo(() => {
     const states = (allStates ?? []).filter(
-      (s): s is VehicleStateReadings => s !== null && s !== undefined,
+      (s): s is VehicleState => s !== null && s !== undefined,
     );
-    const batteries = states.map((st) => asFiniteNumber(st.battery_level))
-      .filter((level): level is number => level != null);
-    const avg = batteries.length > 0
-      ? batteries.reduce((sum, level) => sum + level, 0) / batteries.length
-      : null;
-    const ranges = states.map((st) => asFiniteNumber(st.rated_range));
-    const rangeMeters = ranges.length > 0 && ranges.every((range) => range != null)
-      ? ranges.reduce((sum, range) => sum + (range ?? 0), 0)
-      : list.length === 0 ? 0 : null;
+    const avg =
+      states.length > 0
+        ? states.reduce((sum, st) => sum + (st.battery_level ?? 0), 0) / states.length
+        : 0;
+    // Sum is in SI metres (VehicleState.rated_range is metres). Convert at display.
+    const rangeMeters = states.reduce((sum, st) => sum + (st.rated_range ?? 0), 0);
     return {
       avgBattery: avg,
       totalRangeMeters: rangeMeters,
-      chargingCount: states.some((st) => st.is_charging == null)
-        ? null : states.filter((st) => st.is_charging === true).length,
-      onlineCount: states.some((st) => st.state == null) ? null : states.length,
+      chargingCount: states.filter((st) => st.is_charging).length,
+      onlineCount: states.length,
     };
-  }, [allStates, list.length]);
+  }, [allStates]);
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -74,7 +69,7 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
         <p className="text-2xl font-bold text-[var(--text-primary)]">
           <AnimatedNumber value={list.length} />
         </p>
-        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] tracking-wider">
+        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
           {t('fleet.vehicles', 'Vehicles')}
         </p>
       </GlassPanel>
@@ -82,31 +77,31 @@ export function FleetSummary({ vehicles }: FleetSummaryProps) {
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Battery aria-hidden="true" className="h-5 w-5 text-green-500 mx-auto mb-2" />
         <p className="text-2xl font-bold text-[var(--text-primary)]">
-          {avgBattery == null ? '—' : <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />}
+          <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />
         </p>
-        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] tracking-wider">
-          {t('fleet.avgBattery', 'Avg battery')}
+        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+          {t('fleet.avgBattery', 'Avg Battery')}
         </p>
       </GlassPanel>
 
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Gauge aria-hidden="true" className="h-5 w-5 text-purple-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-[var(--text-primary)]">
-          {totalRangeMeters == null ? '—' : <AnimatedNumber value={Math.round(convertDistanceFromSI(totalRangeMeters, unitPrefs.distance))} />}
+          <AnimatedNumber value={Math.round(convertDistanceFromSI(totalRangeMeters, unitPrefs.distance))} />
         </p>
-        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] tracking-wider">
-          {t('fleet.totalRange', 'Total range')} {unitPrefs.distance}
+        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+          {t('fleet.totalRange', 'Total Range')} {unitPrefs.distance}
         </p>
       </GlassPanel>
 
       <GlassPanel className="p-4 text-center hover:scale-[1.02] transition-transform duration-normal">
         <Zap aria-hidden="true" className="h-5 w-5 text-amber-400 mx-auto mb-2" />
         <p className="text-2xl font-bold text-green-500">
-          {chargingCount == null ? '—' : <AnimatedNumber value={chargingCount} />}{' '}
-          <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">/ {onlineCount ?? '—'}</span>
+          <AnimatedNumber value={chargingCount} />{' '}
+          <span className="text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">/ {onlineCount}</span>
         </p>
-        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] tracking-wider">
-          {t('fleet.chargingOnline', 'Charging / online')}
+        <p className="text-2xs text-[var(--text-muted)] dark:text-[var(--text-muted)] uppercase tracking-wider">
+          {t('fleet.chargingOnline', 'Charging / Online')}
         </p>
       </GlassPanel>
     </div>

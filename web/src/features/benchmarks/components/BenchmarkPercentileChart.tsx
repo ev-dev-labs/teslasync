@@ -3,6 +3,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ChartContainer,
   CHART_COLORS,
   ResponsiveContainer,
   Tooltip,
@@ -10,7 +11,6 @@ import {
   YAxis,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
 import type { BenchmarkMetricName, BenchmarkRelease } from '@/api/hooks/useBenchmarks';
 
 export function BenchmarkPercentileChart({
@@ -34,12 +34,10 @@ export function BenchmarkPercentileChart({
       percentile: metric.percentile,
     }));
   return (
-    <ChartCard
+    <ChartContainer
       title={t('benchmarks.chart.title', 'Noise-adjusted performance percentiles')}
       subtitle={t('benchmarks.chart.subtitle', 'Higher bars mean better relative performance')}
       height={280}
-      size="standard"
-      exportable
       loading={loading}
       empty={data.length === 0}
       ariaLabel={t(
@@ -74,6 +72,6 @@ export function BenchmarkPercentileChart({
           className="py-8"
         />
       )}
-    </ChartCard>
+    </ChartContainer>
   );
 }

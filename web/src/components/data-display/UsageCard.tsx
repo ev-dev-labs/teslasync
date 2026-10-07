@@ -10,8 +10,7 @@
  * separating that skeleton from each consumer's data derivation, we
  * keep the visual contract in one file and let the consumers focus
  * on "what numbers do I have" rather than "how do I render them".
- * Pure presentational: no API calls or domain-derived state.
- * Numeric preferences format the budget's accessible percentage summary.
+ * Pure presentational: no hooks, no API calls, no derived state.
  * Every dynamic value comes in via props so the card stays trivially
  * testable + Storybook-friendly without mounting a query client.
  */
@@ -19,7 +18,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ExternalLink } from 'lucide-react'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 /** Visual intent driving accent colour for bars / banners / values. */
 export type UsageCardIntent = 'normal' | 'warn' | 'danger'
@@ -220,7 +218,6 @@ export function UsageCard(props: UsageCardProps) {
 // ----------------------------------------------------------------------------
 
 function BudgetSection({ budget }: { budget: UsageCardBudget }) {
-  const { fmtPercent } = useNumberFormatting()
   const intent = budget.intent ?? 'normal'
   const barColor = intentBarBg[intent]
   // Preserve the unclamped pct in aria-valuenow so screen readers
@@ -248,7 +245,6 @@ function BudgetSection({ budget }: { budget: UsageCardBudget }) {
         className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
         role="progressbar"
         aria-valuenow={ariaPct}
-        aria-valuetext={Number.isFinite(budget.pct) ? fmtPercent(Math.max(0, budget.pct)) : '—'}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={budget.ariaLabel}
@@ -272,7 +268,7 @@ function BandsSection({ bands }: { bands: UsageCardBand[] }) {
         const intent = b.intent ?? 'normal'
         return (
           <div key={i} className={'rounded-lg p-3 ' + intentBandRing[intent]}>
-            <div className="flex items-center gap-1.5 text-xs tracking-wider text-[var(--text-muted)]">
+            <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
               {b.icon ? <span className="inline-flex h-3.5 w-3.5">{b.icon}</span> : null}
               {b.label}
             </div>
@@ -312,7 +308,7 @@ function TopListsSection({ topLists }: { topLists: UsageCardTopList[] }) {
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {topLists.map((tl) => (
         <div key={tl.key} className="rounded-lg bg-white/[0.03] p-3">
-          <div className="flex items-center gap-1.5 text-xs tracking-wider text-[var(--text-muted)]">
+          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
             {tl.icon ? <span className="inline-flex h-3.5 w-3.5">{tl.icon}</span> : null}
             {tl.title}
           </div>

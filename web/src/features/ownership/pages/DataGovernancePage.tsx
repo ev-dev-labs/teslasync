@@ -9,13 +9,13 @@ import {
   useUpsertRetentionPolicy,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import type {
   DatasetInventory,
@@ -23,14 +23,10 @@ import type {
   RetentionPolicy,
   RetentionRun,
 } from '@/types/ownership';
-import { EvidencePanel, MutationError, OwnershipPanel } from '../components';
-import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
-import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
+import { EvidencePanel, MutationError, OwnershipPanel, StatGrid } from '../components';
 import { daysToSeconds, formatBytes, formatPct, formatSpan, secondsToDays } from '../formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function DataGovernancePage() {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -43,7 +39,7 @@ export default function DataGovernancePage() {
     enabled: true,
   });
 
-  usePageTitle(t('ownership.governance.navTitle', 'Data retention governance'));
+  usePageTitle(t('ownership.governance.navTitle', 'Data Retention Governance'));
 
   const overviewQuery = useGovernanceOverview();
   const runsQuery = useRetentionRuns(50, 0);
@@ -128,8 +124,6 @@ export default function DataGovernancePage() {
     {
       key: 'dataset',
       header: t('ownership.governance.inventory.dataset', 'Dataset'),
-      filterValue: (row) => row.dataset,
-      filterValueLabel: (_value, row) => row.label,
       render: (row) => (
         <div>
           <div className="flex items-center gap-2">
@@ -156,30 +150,21 @@ export default function DataGovernancePage() {
     {
       key: 'rows',
       header: t('ownership.governance.inventory.rows', 'Rows'),
-      align: 'right',
-      filterValue: (row) => row.row_count,
-      filterValueLabel: (_value, row) => fmtInt(row.row_count),
-      render: (row) => <span className="tabular-nums">{fmtInt(row.row_count)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtNumber(row.row_count, 0)}</span>,
       sortable: true,
     },
     {
       key: 'bytes',
       header: t('ownership.governance.inventory.bytes', 'On disk'),
-      align: 'right',
-      filterValue: (row) => row.total_bytes,
-      filterValueLabel: (_value, row) => formatBytes(row.total_bytes),
       render: (row) => <span className="tabular-nums">{formatBytes(row.total_bytes)}</span>,
       sortable: true,
     },
     {
       key: 'perRow',
-      align: 'right',
-      filterValue: (row) => row.bytes_per_row,
-      filterValueLabel: (_value, row) => row.bytes_per_row != null ? fmtNumber(row.bytes_per_row) : '—',
       header: t('ownership.governance.inventory.perRow', 'Bytes / row'),
       render: (row) =>
         row.bytes_per_row != null ? (
-          <span className="tabular-nums">{fmtNumber(row.bytes_per_row)}</span>
+          <span className="tabular-nums">{fmtNumber(row.bytes_per_row, 0)}</span>
         ) : (
           '—'
         ),
@@ -187,7 +172,6 @@ export default function DataGovernancePage() {
     {
       key: 'span',
       header: t('ownership.governance.inventory.span', 'History span'),
-      align: 'right',
       render: (row) => (
         <div>
           <Text as="p" variant="caption">
@@ -205,7 +189,6 @@ export default function DataGovernancePage() {
     {
       key: 'dataset',
       header: t('ownership.governance.policy.dataset', 'Dataset'),
-      filterValue: (row) => row.dataset,
       render: (row) => (
         <div className="flex items-center gap-2">
           <Text as="span" variant="label">
@@ -226,26 +209,17 @@ export default function DataGovernancePage() {
     },
     {
       key: 'retention',
-      align: 'right',
-      filterValue: (row) => row.retention_s,
-      filterValueLabel: (_value, row) => formatSpan(row.retention_s),
       header: t('ownership.governance.policy.retention', 'Retention'),
       render: (row) => formatSpan(row.retention_s),
       sortable: true,
     },
     {
       key: 'downsample',
-      align: 'right',
-      filterValue: (row) => row.downsample_after_s,
-      filterValueLabel: (_value, row) => row.downsample_after_s != null ? formatSpan(row.downsample_after_s) : '—',
       header: t('ownership.governance.policy.downsample', 'Downsample after'),
       render: (row) => (row.downsample_after_s != null ? formatSpan(row.downsample_after_s) : '—'),
     },
     {
       key: 'bucket',
-      align: 'right',
-      filterValue: (row) => row.downsample_bucket_s,
-      filterValueLabel: (_value, row) => row.downsample_bucket_s != null ? formatSpan(row.downsample_bucket_s) : '—',
       header: t('ownership.governance.policy.bucket', 'Bucket'),
       render: (row) => (row.downsample_bucket_s != null ? formatSpan(row.downsample_bucket_s) : '—'),
     },
@@ -305,10 +279,9 @@ export default function DataGovernancePage() {
     {
       key: 'expiring',
       header: t('ownership.governance.impact.expiring', 'Rows expiring'),
-      align: 'right',
       render: (row) => (
         <div>
-          <span className="tabular-nums">{fmtInt(row.rows_expiring)}</span>
+          <span className="tabular-nums">{fmtNumber(row.rows_expiring, 0)}</span>
           <Text as="p" variant="caption">
             {t('ownership.governance.impact.retained', '{{count}} retained', {
               count: row.rows_retained,
@@ -321,13 +294,11 @@ export default function DataGovernancePage() {
     {
       key: 'downsampling',
       header: t('ownership.governance.impact.downsampling', 'Rows downsampled'),
-      align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtInt(row.rows_downsampling)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtNumber(row.rows_downsampling, 0)}</span>,
     },
     {
       key: 'reclaim',
       header: t('ownership.governance.impact.reclaim', 'Reclaimable'),
-      align: 'right',
       render: (row) => (
         <div>
           <span className="tabular-nums text-emerald-300">{formatBytes(row.bytes_reclaimable)}</span>
@@ -341,7 +312,6 @@ export default function DataGovernancePage() {
     {
       key: 'fidelity',
       header: t('ownership.governance.impact.fidelity', 'Fidelity lost'),
-      align: 'right',
       render: (row) => (
         <span
           className={`tabular-nums ${row.fidelity_loss_pct > 25 ? 'text-rose-300' : row.fidelity_loss_pct > 5 ? 'text-amber-300' : ''}`}
@@ -419,32 +389,30 @@ export default function DataGovernancePage() {
     {
       key: 'expiring',
       header: t('ownership.governance.run.expiring', 'Expiring'),
-      align: 'right',
-      render: (row) => <span className="tabular-nums">{fmtInt(row.rows_expiring)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtNumber(row.rows_expiring, 0)}</span>,
     },
     {
       key: 'bytes',
       header: t('ownership.governance.run.bytes', 'Reclaimable'),
-      align: 'right',
       render: (row) => <span className="tabular-nums">{formatBytes(row.bytes_reclaimable)}</span>,
     },
     {
       key: 'fidelity',
       header: t('ownership.governance.run.fidelity', 'Fidelity lost'),
-      align: 'right',
       render: (row) => formatPct(row.fidelity_loss_pct),
     },
   ];
 
   return (
-    <PageLayout
-      title={t('ownership.governance.title', 'Data retention & lifecycle governance')}
+    <PageContainer
+      title={t('ownership.governance.title', 'Data Retention & Lifecycle Governance')}
       subtitle={t(
         'ownership.governance.subtitle',
         'See exactly what every table costs you on disk, model a retention policy, and quantify the analytical fidelity you would trade away — before anything is deleted.',
       )}
-      query={[overviewQuery, runsQuery]}
-      primaryAction={
+      loading={overviewQuery.isLoading}
+      error={overviewQuery.error as Error | null}
+      actions={
         <Button
           variant="primary"
           size="sm"
@@ -467,50 +435,39 @@ export default function DataGovernancePage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.governance.summary.title', 'Storage posture')}
-          source={overviewQuery} empty={!overview} preserveSummary>
-          <OwnershipBrief
-            title={t('ownership.governance.brief.title', 'Governed storage and policy coverage')}
-            description={t('ownership.governance.brief.description', 'Policy coverage describes intent, not deletion. Legal holds remain exempt from every plan.')}
-            scope={t('ownership.governance.brief.scope', 'Current database catalog and retention policies; coverage does not imply enforcement')}
-            source={overviewQuery}
-            observedAt={overview?.as_of}
-            metrics={[
+        <OwnershipPanel title={t('ownership.governance.summary.title', 'Storage posture')}>
+          <StatGrid
+            stats={[
               {
-                occurrenceId: 'total', metricId: 'bytes',
+                key: 'total',
                 label: t('ownership.governance.stat.total', 'Total governed footprint'),
-                rawValue: overview?.total_bytes,
-                display: specialistDisplay(formatBytes),
+                value: formatBytes(overview?.total_bytes ?? 0),
               },
               {
-                occurrenceId: 'governed', metricId: 'bytes',
+                key: 'governed',
                 label: t('ownership.governance.stat.governed', 'Under a policy'),
-                rawValue: overview?.governed_bytes,
-                display: specialistDisplay(formatBytes),
-                context: formatPct(overview?.governed_share_pct),
+                value: formatBytes(overview?.governed_bytes ?? 0),
+                hint: formatPct(overview?.governed_share_pct ?? 0),
                 tone: 'positive',
               },
               {
-                occurrenceId: 'ungoverned', metricId: 'bytes',
+                key: 'ungoverned',
                 label: t('ownership.governance.stat.ungoverned', 'No policy'),
-                rawValue: overview?.ungoverned_bytes,
-                display: specialistDisplay(formatBytes),
+                value: formatBytes(overview?.ungoverned_bytes ?? 0),
                 tone: (overview?.ungoverned_bytes ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                occurrenceId: 'holds', metricId: 'count',
+                key: 'holds',
                 label: t('ownership.governance.stat.holds', 'Legal holds'),
-                rawValue: overview?.legal_hold_count,
-                display: specialistDisplay(fmtInt),
-                context: t('ownership.governance.stat.holdsHint', 'Exempt from every plan'),
+                value: fmtNumber(overview?.legal_hold_count ?? 0, 0),
+                hint: t('ownership.governance.stat.holdsHint', 'Exempt from every plan'),
               },
               {
-                occurrenceId: 'mode', metricId: 'status',
+                key: 'mode',
                 label: t('ownership.governance.stat.mode', 'Enforcement mode'),
-                rawValue: overview?.plan_only == null ? null : overview.plan_only
+                value: overview?.plan_only
                   ? t('ownership.governance.stat.planOnly', 'Plan only')
                   : t('ownership.governance.stat.enforcing', 'Enforcing'),
-                missingReason: t('ownership.governance.brief.modeUnknown', 'Enforcement mode unknown; this screen only computes dry-run plans.'),
                 tone: 'positive',
               },
             ]}
@@ -521,7 +478,6 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.governance.inventory.title', 'Dataset inventory')}
-          source={overviewQuery}
           description={t(
             'ownership.governance.inventory.subtitle',
             'Live sizes read from the database catalog. Toggle datasets to scope the dry run.',
@@ -535,7 +491,6 @@ export default function DataGovernancePage() {
         >
           <DataTable
             columns={inventoryColumns}
-            enableValueFilters
             mobileColumns={['dataset', 'bytes', 'span']}
             data={inventory}
             keyExtractor={(row) => row.dataset}
@@ -547,8 +502,6 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.governance.policies.title', 'Retention policies')}
-          source={overviewQuery}
-          editing={formOpen}
           description={t(
             'ownership.governance.policies.subtitle',
             'A policy declares intent. It becomes a plan only when you run the simulation.',
@@ -639,7 +592,6 @@ export default function DataGovernancePage() {
 
           <DataTable
             columns={policyColumns}
-            enableValueFilters
             mobileColumns={['dataset', 'retention', 'downsample']}
             data={policies}
             keyExtractor={(row) => row.id}
@@ -658,43 +610,35 @@ export default function DataGovernancePage() {
             'Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.',
           )}
           empty={impacts.length === 0}
-          preserveSummary
           emptyMessage={t(
             'ownership.governance.impact.empty',
             'Run the dry-run plan above to see what a policy would reclaim.',
           )}
         >
-          <OwnershipBrief
-            title={t('ownership.governance.impactBrief.title', 'Computed dry-run totals')}
-            description={t('ownership.governance.impact.subtitle', 'Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.')}
-            scope={t('ownership.governance.impactBrief.scope', 'Latest requested dry-run plan; no rows are deleted')}
-            source={simulate}
-            observedAt={simulate.data?.as_of}
-            metrics={[
+          <StatGrid
+            columns={4}
+            stats={[
               {
-                occurrenceId: 'rows', metricId: 'count',
+                key: 'rows',
                 label: t('ownership.governance.impactStat.rows', 'Rows in plan'),
-                rawValue: simulate.data?.total_rows_expiring,
-                display: specialistDisplay(fmtInt),
+                value: fmtNumber(simulate.data?.total_rows_expiring ?? 0, 0),
               },
               {
-                occurrenceId: 'bytes', metricId: 'bytes',
+                key: 'bytes',
                 label: t('ownership.governance.impactStat.bytes', 'Reclaimable'),
-                rawValue: simulate.data?.total_bytes_reclaimable,
-                display: specialistDisplay(formatBytes),
+                value: formatBytes(simulate.data?.total_bytes_reclaimable ?? 0),
                 tone: 'positive',
               },
               {
-                occurrenceId: 'fidelity', metricId: 'percent',
+                key: 'fidelity',
                 label: t('ownership.governance.impactStat.fidelity', 'Fidelity traded away'),
-                rawValue: simulate.data?.total_fidelity_loss_pct,
-                display: specialistDisplay(formatPct),
+                value: formatPct(simulate.data?.total_fidelity_loss_pct ?? 0),
                 tone: (simulate.data?.total_fidelity_loss_pct ?? 0) > 20 ? 'warning' : 'default',
               },
               {
-                occurrenceId: 'mode', metricId: 'status',
+                key: 'mode',
                 label: t('ownership.governance.impactStat.mode', 'Executed'),
-                rawValue: t('ownership.governance.impactStat.never', 'Never — dry run'),
+                value: t('ownership.governance.impactStat.never', 'Never — dry run'),
               },
             ]}
           />
@@ -714,7 +658,6 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.governance.runs.title', 'Plan ledger')}
-          source={runsQuery}
           description={t(
             'ownership.governance.runs.subtitle',
             'An append-only history of every plan computed, so retention decisions are auditable after the fact.',
@@ -735,7 +678,6 @@ export default function DataGovernancePage() {
 
       <FadeIn delay={0.25}>
         <EvidencePanel
-          source={overviewQuery}
           quality={overview?.quality}
           evidence={overview?.evidence}
           unsupported={[
@@ -751,6 +693,6 @@ export default function DataGovernancePage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageLayout>
+    </PageContainer>
   );
 }

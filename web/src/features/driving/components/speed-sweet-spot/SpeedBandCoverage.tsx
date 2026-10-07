@@ -9,12 +9,11 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type { SweetSpotResult } from '../../lib/speedSweetSpot';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface SpeedBandCoverageProps {
   summary: SweetSpotResult;
@@ -27,7 +26,6 @@ export function SpeedBandCoverage({
   state,
   className,
 }: SpeedBandCoverageProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { convertDistance, distanceUnit, formatBand } =
     useSpeedSweetSpotDisplay();
@@ -135,7 +133,7 @@ export function SpeedBandCoverage({
                   tickLine={false}
                   axisLine={false}
                   width={52}
-                  tickFormatter={(value) => fmtNumber(value)}
+                  tickFormatter={(value) => fmtNumber(value, 0)}
                 />
                 <YAxis
                   yAxisId="drives"
@@ -151,7 +149,7 @@ export function SpeedBandCoverage({
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === distanceName
-                          ? `${fmtNumber(value)} ${distanceUnit}`
+                          ? `${fmtNumber(value, 1)} ${distanceUnit}`
                           : t('sweetSpot.coverage.driveValue', '{{count}} drives', {
                               count: Number(value),
                             })

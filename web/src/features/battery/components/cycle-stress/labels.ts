@@ -5,12 +5,11 @@ import type {
   CycleEvidenceBand,
   CycleSource,
 } from '../../lib/cycleStress';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function cycleStressNumber(
   value: number | null | undefined,
   locale: string,
-  precision = getGlobalPrecision(),
+  precision = 1,
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   return new Intl.NumberFormat(locale, {

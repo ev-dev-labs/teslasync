@@ -1,7 +1,7 @@
 import { forwardRef, useMemo } from 'react';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
 
 export interface ThresholdBand {
   /** Band start, in the same units as `value`. */
@@ -36,8 +36,6 @@ export interface ThresholdBarProps {
   label: string;
   unit?: string;
   decimals?: number;
-  /** Unit-bearing values default to measurements; use count for counted units. */
-  kind?: 'measurement' | 'count';
   /**
    * Authoritative name for the reading's qualitative state.
    *
@@ -77,7 +75,7 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  */
 export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
   function ThresholdBar(
-    { value, min, max, bands, target, label, unit, decimals, kind, statusLabel, hideScale, className },
+    { value, min, max, bands, target, label, unit, decimals, statusLabel, hideScale, className },
     ref,
   ) {
     // Null-safety: callers forward optional API values that can be undefined /
@@ -129,11 +127,8 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
     // An explicit status always wins over the inferred band name.
     const stateLabel = statusLabel ?? activeBand?.label;
 
-    const { fmtNumber, fmtInt } = useNumberFormatting();
-    const isCount = kind === 'count' || (kind == null && !unit && Number.isInteger(clamped));
-    const formatScale = kind === 'measurement' || (kind == null && unit) ? fmtNumber : fmtInt;
-    const display = !Number.isFinite(value) ? '—' : decimals == null && isCount
-      ? fmtInt(clamped) : fmtNumber(clamped, decimals);
+    const d = decimals ?? (Number.isInteger(clamped) ? 0 : getGlobalPrecision());
+    const display = fmtNumber(clamped, d);
     const targetPct =
       target != null && Number.isFinite(target)
         ? ((Math.max(lo, Math.min(target, hi)) - lo) / span) * 100
@@ -198,7 +193,7 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
         {!hideScale && (
           <div className="flex items-center justify-between">
             <Text as="span" size="xs" color="muted">
-              {formatScale(lo)}
+              {fmtNumber(lo, 0)}
               {unit}
             </Text>
             {stateLabel && (
@@ -207,7 +202,7 @@ export const ThresholdBar = forwardRef<HTMLDivElement, ThresholdBarProps>(
               </Text>
             )}
             <Text as="span" size="xs" color="muted">
-              {formatScale(hi)}
+              {fmtNumber(hi, 0)}
               {unit}
             </Text>
           </div>

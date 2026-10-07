@@ -10,8 +10,8 @@
       "alt": "{{name}} photo"
     },
     "stat": {
-      "insideTemp": "Inside temp",
-      "outsideTemp": "Outside temp",
+      "insideTemp": "Inside Temp",
+      "outsideTemp": "Outside Temp",
       "odometer": "Odometer",
       "range": "Range",
       "status": "Status",
@@ -24,7 +24,7 @@
     "action": {
       "details": "Details",
       "commands": "Commands",
-      "liveMap": "Live map"
+      "liveMap": "Live Map"
     }
   }
 }

@@ -110,7 +110,7 @@ afterEach(() => cleanup());
 describe('FeatureConfigComposition — panel chrome', () => {
   it('always renders the panel title regardless of state', () => {
     renderComposition({ composition: COMPOSITION });
-    expect(screen.getByText('Enabled vs disabled by type')).toBeInTheDocument();
+    expect(screen.getByText('Enabled vs Disabled by Type')).toBeInTheDocument();
   });
 });
 
@@ -122,7 +122,7 @@ describe('FeatureConfigComposition — loading', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
     // The title still frames the panel while loading.
-    expect(screen.getByText('Enabled vs disabled by type')).toBeInTheDocument();
+    expect(screen.getByText('Enabled vs Disabled by Type')).toBeInTheDocument();
   });
 
   it('prioritises loading over populated rows (skeleton wins, chart withheld)', () => {

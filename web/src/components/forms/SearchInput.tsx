@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Search, X } from 'lucide-react';
-import { Input } from '@/components/ui/Input';
+import { Input } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import {
   recordSearch,
@@ -242,7 +242,7 @@ export function SearchInput({
   // as a *label* (which persists), then to a generic translated name,
   // so no call site can ship an unnamed search box.
   const accessibleName =
-    ariaLabel ?? placeholder ?? t('search.input.label', 'Search query');
+    ariaLabel ?? placeholder ?? t('search.input.aria', 'Search');
   const historyEnabled = Boolean(historyScope);
   const activeOptionId = activeIdx >= 0 ? `${listboxId}-opt-${activeIdx}` : undefined;
 
@@ -285,7 +285,7 @@ export function SearchInput({
         <div
           className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] shadow-lg"
         >
-          <div className="px-3 py-1.5 text-2xs tracking-wider text-[var(--text-muted)]">
+          <div className="px-3 py-1.5 text-2xs uppercase tracking-wider text-[var(--text-muted)]">
             {t('search.history.title', 'Recent searches')}
           </div>
           <ul

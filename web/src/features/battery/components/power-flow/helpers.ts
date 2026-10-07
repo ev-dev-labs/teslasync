@@ -12,8 +12,8 @@ import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 export function fmtWatts(watts: number | null | undefined): string {
   if (!isFiniteNumber(watts)) return '—';
   const abs = Math.abs(watts);
-  if (abs >= 1000) return `${fmtNumber(watts / 1000)} kW`;
-  return `${fmtNumber(watts)} W`;
+  if (abs >= 1000) return `${fmtNumber(watts / 1000, 1)} kW`;
+  return `${fmtNumber(watts, 0)} W`;
 }
 
 /**
@@ -23,6 +23,6 @@ export function fmtWatts(watts: number | null | undefined): string {
  */
 export function fmtWh(wh: number | null | undefined): string {
   if (!isFiniteNumber(wh)) return '—';
-  if (Math.abs(wh) >= 1000) return `${fmtNumber(wh / 1000)} kWh`;
-  return `${fmtNumber(wh)} Wh`;
+  if (Math.abs(wh) >= 1000) return `${fmtNumber(wh / 1000, 1)} kWh`;
+  return `${fmtNumber(wh, 0)} Wh`;
 }

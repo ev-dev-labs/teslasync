@@ -8,11 +8,9 @@
       "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
     },
     "log": {
-      "label": "Log",
       "desc": "Replayed from signal_log (durable history)."
     },
     "stale": {
-      "label": "Stale",
       "desc": "Redis-backed value older than the 2-minute freshness window."
     },
     "unknown": {

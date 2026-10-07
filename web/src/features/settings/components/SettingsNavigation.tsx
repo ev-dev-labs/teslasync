@@ -24,10 +24,10 @@ export function SettingsNavigation({ sections, activeSection, onSelect }: Props)
       </div>
       <nav aria-label={label} className="hidden space-y-1 lg:block">
         {sections.map(section => (
-          <Button key={section.id} variant={activeSection === section.id ? 'secondary' : 'ghost'} wrapLabel
+          <Button key={section.id} variant={activeSection === section.id ? 'secondary' : 'ghost'}
             aria-current={activeSection === section.id ? 'page' : undefined}
             aria-controls={`settings-category-${section.id}`}
-            className="h-auto w-full justify-start whitespace-normal px-3 py-3 text-start"
+            className="h-auto w-full justify-start whitespace-normal px-3 py-3 text-left"
             onClick={() => onSelect(section.id)}>
             <span className="min-w-0 space-y-1">
               <Text as="span" variant="body" weight="medium" className="block">{section.title}</Text>

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
-  EmbeddedChart,
+  ChartContainer,
   ChartTooltip,
   Line,
   LineChart,
@@ -43,7 +43,7 @@ export function ChargeAdvisorDailyTrend({ analysis, state }: ChargeAdvisorCompon
           {t('chargeAdvisor.trend.empty', 'No qualified local-day SoC-drop observations yet.')}
         </Text>
       ) : (
-        <EmbeddedChart toolbar exportable size="standard"
+        <ChartContainer
           title={t('chargeAdvisor.trend.chartTitle', 'Observed daily use')}
           ariaLabel={t(
             'chargeAdvisor.trend.aria',
@@ -74,7 +74,7 @@ export function ChargeAdvisorDailyTrend({ analysis, state }: ChargeAdvisorCompon
               />
             </LineChart>
           </ResponsiveContainer>
-        </EmbeddedChart>
+        </ChartContainer>
       )}
       <Text as="p" variant="caption" className="mt-3">
         <Activity className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />

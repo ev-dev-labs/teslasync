@@ -1,14 +1,20 @@
+import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, Grid } from '@/components/layout';
-import { Badge, MetricLabel, Text } from '@/components/ui';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+import { Grid } from '@/components/layout';
+import {
+  Badge,
+  GlassPanel,
+  MetricLabel,
+  MetricValue,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyExactAccountingProps {
   summary: ComfortConsistencySummary;
@@ -46,7 +52,6 @@ export function ComfortConsistencyExactAccounting({
   state,
   formatDuration,
 }: ComfortConsistencyExactAccountingProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = summary.rows;
   const intervals = summary.intervals;
@@ -61,7 +66,11 @@ export function ComfortConsistencyExactAccounting({
 
   return (
     <section data-testid="comfort-consistency-accounting">
-      <LayoutCard title={t('comfortConsistency.accounting.title', 'Exact source, interval, and window accounting')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('comfortConsistency.accounting.title', 'Exact source, interval, and window accounting')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.accounting.subtitle',
@@ -138,10 +147,10 @@ export function ComfortConsistencyExactAccounting({
                 'comfortConsistency.accounting.durationEquation',
                 '{{total}} observed = {{below}} below + {{within}} within + {{above}} above.',
                 {
-                  total: formatDuration(composition.observedActiveS),
-                  below: formatDuration(composition.belowBandS),
-                  within: formatDuration(composition.withinBandS),
-                  above: formatDuration(composition.aboveBandS),
+                  total: formatDuration(composition.observedActiveS, { precision: 2 }),
+                  below: formatDuration(composition.belowBandS, { precision: 2 }),
+                  within: formatDuration(composition.withinBandS, { precision: 2 }),
+                  above: formatDuration(composition.aboveBandS, { precision: 2 }),
                 },
               )}
               balanced={summary.identities.intervalDurationBalanced}
@@ -176,18 +185,16 @@ export function ComfortConsistencyExactAccounting({
           <Text as="h4" variant="label" className="mb-3 mt-5">
             {t('comfortConsistency.accounting.boundaries', 'Active-fragment boundary counts')}
           </Text>
-          <VehicleOperationalBrief embedded id="comfort-consistency-boundary-summary"
-            title={t('comfortConsistency.accounting.boundaries', 'Active-fragment boundary counts')}
-            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
-            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('comfortConsistency.accounting.subtitle', 'Independent identities keep returned rows, timestamps, intervals, duration, fragments, and stabilization outcomes distinct.') }}
-            metrics={boundaries.map(([label, rawValue], index) => ({
-              metricId: 'count' as const, occurrenceId: `boundary-${index}`, label, rawValue,
-              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
-            }))}
-          />
+          <Grid cols={{ default: 2, md: 5 }} gap={3}>
+            {boundaries.map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-[var(--border-subtle)] p-3">
+                <MetricLabel>{label}</MetricLabel>
+                <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
+              </div>
+            ))}
+          </Grid>
         </ComfortConsistencySectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

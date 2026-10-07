@@ -1,10 +1,10 @@
 import { Calculator, Factory, MoveRight, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { StatStrip } from '@/components/data-display';
+import { MetricCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -30,55 +30,75 @@ export function CarbonOpportunityMath({
         'Recommendation opportunity formula and scenario boundaries',
       )}
     >
-      <LayoutCard
-        title={t('carbon.opportunity.title', 'Opportunity math and boundaries')}
-        actions={<Calculator className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
-      >
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <Calculator
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
+          {t('carbon.opportunity.title', 'Opportunity math and boundaries')}
+        </PanelTitle>
         <CarbonSectionBody state={states.recommendation}>
           <CarbonSectionBody state={states.lifetime}>
-            <StatStrip
-              id="carbon-opportunity-metrics"
-              variant="embedded"
-              period={{
-                kind: 'alltime',
-                label: t('carbon.source.recommendationScope', 'Full vehicle history; independent of the selected range'),
-                provenance: t('carbon.source.recommendation', 'Green-window scenario'),
-              }}
-              metrics={[
-                {
-                  metricId: 'text', occurrenceId: 'carbon-opportunity-energy',
-                  label: t('carbon.opportunity.energy', 'Energy shifted'),
-                  rawValue: display.formatEnergy(recommendation.shiftedEnergyWh),
-                  context: <><Zap className="h-5 w-5" aria-hidden="true" />{t('carbon.opportunity.energyHint', 'All observed lifetime charging energy')}</>,
-                },
-                {
-                  metricId: 'text', occurrenceId: 'carbon-opportunity-current',
-                  label: t('carbon.opportunity.currentCo2', 'Current scenario CO₂'),
-                  rawValue: display.formatKg(recommendation.currentScenarioCo2Kg),
-                  context: <><Factory className="h-5 w-5" aria-hidden="true" />{t('carbon.opportunity.currentFormula', 'Energy × observed average intensity')}</>,
-                },
-                {
-                  metricId: 'text', occurrenceId: 'carbon-opportunity-shifted',
-                  label: t('carbon.opportunity.shiftedCo2', 'Shifted scenario CO₂'),
-                  rawValue: display.formatKg(recommendation.shiftedScenarioCo2Kg),
-                  context: <><MoveRight className="h-5 w-5" aria-hidden="true" />{t('carbon.opportunity.shiftedFormula', 'Energy × green-window average')}</>,
-                },
-                {
-                  metricId: 'text', occurrenceId: 'carbon-opportunity-recomputed',
-                  label: t('carbon.opportunity.recomputed', 'Recomputed saving'),
-                  rawValue: display.formatKg(recommendation.calculatedPotentialSavingKg),
-                  context: <><Calculator className="h-5 w-5" aria-hidden="true" />{t('carbon.opportunity.recomputedPct', '{{percentage}} by independent frontend formula', {
-                    percentage: display.formatPercent(recommendation.calculatedPotentialSavingPct),
-                  })}</>,
-                },
-                {
-                  metricId: 'text', occurrenceId: 'carbon-opportunity-residual',
-                  label: t('carbon.opportunity.residual', 'Reported minus recomputed'),
-                  rawValue: display.formatSignedKg(difference),
-                  context: <><Calculator className="h-5 w-5" aria-hidden="true" />{t('carbon.opportunity.residualHint', 'Evaluated against explicit wire-rounding tolerance')}</>,
-                },
-              ]}
-            />
+            <Grid cols={{ default: 1, sm: 2, xl: 5 }} gap={3}>
+              <MetricCard
+                label={t('carbon.opportunity.energy', 'Energy shifted')}
+                value={display.formatEnergy(recommendation.shiftedEnergyWh)}
+                subtitle={t(
+                  'carbon.opportunity.energyHint',
+                  'All observed lifetime charging energy',
+                )}
+                icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('carbon.opportunity.currentCo2', 'Current scenario CO₂')}
+                value={display.formatKg(recommendation.currentScenarioCo2Kg)}
+                subtitle={t(
+                  'carbon.opportunity.currentFormula',
+                  'Energy × observed average intensity',
+                )}
+                icon={<Factory className="h-5 w-5" aria-hidden="true" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('carbon.opportunity.shiftedCo2', 'Shifted scenario CO₂')}
+                value={display.formatKg(recommendation.shiftedScenarioCo2Kg)}
+                subtitle={t(
+                  'carbon.opportunity.shiftedFormula',
+                  'Energy × green-window average',
+                )}
+                icon={<MoveRight className="h-5 w-5" aria-hidden="true" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('carbon.opportunity.recomputed', 'Recomputed saving')}
+                value={display.formatKg(
+                  recommendation.calculatedPotentialSavingKg,
+                )}
+                subtitle={t(
+                  'carbon.opportunity.recomputedPct',
+                  '{{percentage}} by independent frontend formula',
+                  {
+                    percentage: display.formatPercent(
+                      recommendation.calculatedPotentialSavingPct,
+                    ),
+                  },
+                )}
+                icon={<Calculator className="h-5 w-5" aria-hidden="true" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('carbon.opportunity.residual', 'Reported minus recomputed')}
+                value={display.formatSignedKg(difference, 3)}
+                subtitle={t(
+                  'carbon.opportunity.residualHint',
+                  'Evaluated against explicit wire-rounding tolerance',
+                )}
+                icon={<Calculator className="h-5 w-5" aria-hidden="true" />}
+                color="purple"
+              />
+            </Grid>
             <AlertBanner className="mt-4" variant="warning">
               <Text as="p" variant="caption">
                 {t(
@@ -89,7 +109,7 @@ export function CarbonOpportunityMath({
             </AlertBanner>
           </CarbonSectionBody>
         </CarbonSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

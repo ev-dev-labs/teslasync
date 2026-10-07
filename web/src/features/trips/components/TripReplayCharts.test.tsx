@@ -96,10 +96,6 @@ vi.mock('react-i18next', () => {
 //    their children so the series/axis/data bindings surface as testable DOM;
 //    the sync hooks read hoisted state so the persistent-cursor bridge and the
 //    onMouseMove wiring can be driven from a test. ──
-vi.mock('@/components/layout', async () => ({
-  ChartCard: (await import('@/components/charts')).ChartContainer,
-}));
-
 vi.mock('@/components/charts', () => {
   const Inert = () => null;
   return {

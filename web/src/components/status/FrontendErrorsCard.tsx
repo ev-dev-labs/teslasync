@@ -2,12 +2,10 @@ import { Bug } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui'
 import { Skeleton } from '@/components/feedback/Skeleton'
-
+import { fmtInt } from '@/lib/numberFormat'
 import { useWebErrorsSummary } from '@/api/hooks/useAdmin'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function FrontendErrorsCard() {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
   const { data, isLoading } = useWebErrorsSummary()
 

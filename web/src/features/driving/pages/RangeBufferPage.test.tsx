@@ -261,16 +261,6 @@ beforeEach(() => {
 });
 
 describe('RangeBufferPage', () => {
-  it('retains all arrival evidence and the selected window when its refresh is paused', () => {
-    h.drives = { ...query({ data: readyDrives() }), fetchStatus: 'paused' };
-    renderPage();
-    expectEverySection();
-    const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
-    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
-    expect(refetch).toHaveBeenCalledTimes(1);
-  });
-
   it('renders all thirteen shells with exact local-window bounds and a capped request', () => {
     renderPage();
 
@@ -301,7 +291,7 @@ describe('RangeBufferPage', () => {
     const support = within(
       screen.getByTestId('range-buffer-evidence-support'),
     );
-    expect(support.getByText('0.17 days')).toBeInTheDocument();
+    expect(support.getByText('0.2 days')).toBeInTheDocument();
 
     vi.mocked(Date.now).mockReturnValue(
       FROZEN_NOW + 30 * 86_400_000,
@@ -319,14 +309,14 @@ describe('RangeBufferPage', () => {
     expect(
       within(
         screen.getByTestId('range-buffer-evidence-support'),
-      ).getByText('0.17 days'),
+      ).getByText('0.2 days'),
     ).toBeInTheDocument();
   });
 
   it('recomputes every threshold-dependent surface from the selector', () => {
     renderPage();
     const kpis = within(screen.getByTestId('range-buffer-kpis'));
-    expect(kpis.getByText('16.67%')).toBeInTheDocument();
+    expect(kpis.getByText('16.7%')).toBeInTheDocument();
 
     fireEvent.change(
       screen.getByRole('combobox', {
@@ -335,7 +325,7 @@ describe('RangeBufferPage', () => {
       { target: { value: '30' } },
     );
 
-    expect(kpis.getByText('33.33%')).toBeInTheDocument();
+    expect(kpis.getByText('33.3%')).toBeInTheDocument();
     expect(
       within(
         screen.getByTestId('range-buffer-methodology'),
@@ -418,7 +408,7 @@ describe('RangeBufferPage', () => {
     ).toHaveLength(1);
     expect(
       within(screen.getByTestId('range-buffer-kpis')).getByText(
-        '40.00%',
+        '40.0%',
       ),
     ).toBeInTheDocument();
   });

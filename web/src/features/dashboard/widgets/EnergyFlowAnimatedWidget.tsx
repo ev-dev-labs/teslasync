@@ -1,16 +1,52 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Battery, Zap, Plug } from 'lucide-react';
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { DataProvenanceBadge } from '@/components/data-display';
-import { knownNumber } from '@/api/dataState';
+import { EmptyState } from '@/components/feedback';
 import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
-import { useDataState } from '@/hooks/useDataState';
-import { useUnits } from '@/hooks/useUnits';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber, WidgetStatGrid, WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
+import { WidgetFlowDiagram, type FlowNode, type FlowArrow } from './shared';
 import type { WidgetProps } from './types';
+
+/* ── Compact fallback (1-column / small) ────────────────────── */
+
+function CompactView({ power, chargerPower, isCharging, batteryLevel, t }: {
+  power: number;
+  chargerPower: number;
+  isCharging: boolean;
+  batteryLevel: number;
+  t: (key: string, fallback: string) => string;
+}) {
+  const isConsuming = power > 0.5;
+  const isRegen = power < -0.5;
+
+  return (
+    <div className="h-full flex flex-col items-center justify-center gap-2 py-2">
+      <div className="text-xl font-bold text-[var(--text-primary)]">{batteryLevel}%</div>
+      {isCharging && (
+        <div className="flex items-center gap-1 text-xs text-amber-400">
+          <Plug className="h-3 w-3" />
+          <span>{fmtNumber(chargerPower, 1)} kW</span>
+        </div>
+      )}
+      {isConsuming && (
+        <div className="flex items-center gap-1 text-xs text-cyan-400">
+          <Zap className="h-3 w-3" />
+          <span>{fmtNumber(power, 1)} kW</span>
+        </div>
+      )}
+      {isRegen && (
+        <div className="flex items-center gap-1 text-xs text-emerald-400">
+          <Battery className="h-3 w-3" />
+          <span>{fmtNumber(Math.abs(power), 1)} kW</span>
+        </div>
+      )}
+      {!isConsuming && !isRegen && !isCharging && (
+        <span className="text-xs text-[var(--text-muted)]">{t('widget.energyFlowAnimated.idle', 'Idle')}</span>
+      )}
+    </div>
+  );
+}
 
 /* ── Constants ── */
 
@@ -20,127 +56,112 @@ const AMBER = 'text-amber-400';
 
 /* ── Main widget ────────────────────────────────────────────── */
 
-export default function EnergyFlowAnimatedWidget({ vehicleId, size, config }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+export default function EnergyFlowAnimatedWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { formatPower } = useUnits();
-  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
-  const id = vehicleId ?? config?.vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const query = useVehicleState(id, { refetchInterval: 5_000 });
-  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = query;
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
+  const { data: stateData, isLoading, isFetching, isStale, isError, error, dataUpdatedAt, refetch } = useVehicleState(id, { refetchInterval: 5_000 });
   const state = stateData?.state;
 
-  const verified = stateData?.verifiedFields;
-  const power = verified && !verified.includes('power') ? null : knownNumber(state?.power);
-  const chargerPower = verified && !verified.includes('charger_power') ? null : knownNumber(state?.charger_power);
-  const batteryLevel = verified && !verified.includes('battery_level') ? null : knownNumber(state?.battery_level);
-  const isCharging = (!verified || verified.includes('is_charging')) && (state?.is_charging ?? false);
-  const isConsuming = power != null && power > 500;
-  const isRegen = power != null && power < -500;
-  const absPower = power == null ? null : Math.abs(power);
-  const loading = isLoading || (!id && vehiclesLoading);
-  const queryError = error ?? (!id ? vehiclesError : null);
-  const dataState = useDataState({
-    ...query,
-    data: state ?? (loading || queryError || isError ? undefined : null),
-    error: queryError,
-  }, {
-    provenance: stateData?.live ? 'live' : 'cached',
-    partial: !!state && (power == null || batteryLevel == null || (isCharging && chargerPower == null)),
-  });
+  const power = state?.power ?? 0;
+  const chargerPower = state?.charger_power ?? 0;
+  const batteryLevel = state?.battery_level ?? 0;
+  const isCharging = state?.is_charging ?? false;
+  const isConsuming = power > 0.5;
+  const isRegen = power < -0.5;
+  const absPower = Math.abs(power);
 
   const isCompact = size.cols < 2;
-  const driveLabel = isConsuming
-    ? t('widget.energyFlowAnimated.drive', 'Drive')
-    : isRegen
-      ? t('widget.energyFlowAnimated.regen', 'Regen')
-      : power == null
-        ? t('hero.unknownStatus', 'Unknown')
-        : t('widget.energyFlowAnimated.idle', 'Idle');
-  const driveValue = formatPower(absPower);
-  // charger_power still uses kW; pack power is already canonical W.
-  const chargerValue = formatPower(chargerPower == null ? null : chargerPower * 1000);
 
   const nodes = useMemo<FlowNode[]>(() => [
     {
       id: 'battery',
       label: t('widget.energyFlowAnimated.battery', 'Battery'),
-      value: batteryLevel ?? 0,
-      formattedValue: batteryLevel == null ? '—' : `${fmtNumber(batteryLevel)}%`,
+      value: batteryLevel,
+      formattedValue: `${batteryLevel}%`,
       icon: <Battery className="h-2.5 w-2.5" />,
       position: 'left',
     },
     {
       id: 'drive',
-      label: driveLabel,
-      value: absPower ?? 0,
-      formattedValue: driveValue,
+      label: isConsuming
+        ? t('widget.energyFlowAnimated.drive', 'Drive')
+        : isRegen
+          ? t('widget.energyFlowAnimated.regen', 'Regen')
+          : t('widget.energyFlowAnimated.idle', 'Idle'),
+      value: absPower,
+      formattedValue: isConsuming || isRegen ? `${fmtNumber(absPower, 1)} kW` : '—',
       icon: <Zap className="h-2.5 w-2.5" />,
       position: 'right',
     },
     {
       id: 'charger',
       label: t('widget.energyFlowAnimated.charger', 'Charger'),
-      value: chargerPower ?? 0,
-      formattedValue: isCharging ? chargerValue : '—',
+      value: chargerPower,
+      formattedValue: isCharging ? `${fmtNumber(chargerPower, 0)} kW` : '—',
       icon: <Plug className="h-2.5 w-2.5" />,
       position: 'top',
     },
-  ], [batteryLevel, absPower, chargerPower, driveLabel, driveValue, chargerValue, isCharging, t, fmtNumber]);
+  ], [batteryLevel, absPower, chargerPower, isConsuming, isRegen, isCharging, t]);
 
   const arrows = useMemo<FlowArrow[]>(() => [
     {
       from: 'battery',
       to: 'drive',
-      value: isConsuming ? absPower ?? 0 : 0,
+      value: isConsuming ? absPower : 0,
       active: isConsuming,
       color: CYAN,
     },
     {
       from: 'drive',
       to: 'battery',
-      value: isRegen ? absPower ?? 0 : 0,
+      value: isRegen ? absPower : 0,
       active: isRegen,
       color: GREEN,
     },
     {
       from: 'charger',
       to: 'battery',
-      value: isCharging ? chargerPower ?? 0 : 0,
-      active: isCharging && chargerPower != null && chargerPower > 0,
+      value: isCharging ? chargerPower : 0,
+      active: isCharging,
       color: AMBER,
     },
   ], [absPower, chargerPower, isConsuming, isRegen, isCharging]);
 
   return (
     <WidgetShell
-      title={t('widget.energyFlowAnimated.title', 'Energy flow')}
+      title={t('widget.energyFlowAnimated.title', 'Energy Flow')}
       icon={<Zap className="h-3.5 w-3.5 text-cyan-400" />}
-      status={!isCompact && <DataProvenanceBadge provenance={dataState.provenance} status={dataState.status} />}
-      loading={loading}
-      loadingContent={<Skeleton className="h-full min-h-16 rounded-shape-sm" />}
-      dataState={dataState}
+      // Fold the vehicle-list fetch into the loading state so the initial load
+      // shows the shell skeleton instead of flashing the "No energy data"
+      // empty state while the vehicle id is still resolving.
+      loading={isLoading || vehiclesLoading}
+      // Surface a genuine initial-load failure (no state yet) as a real error
+      // panel instead of the misleading "No energy data available" empty state.
+      // With cached state present, a background-refetch error stays a subtle
+      // freshness signal so valid data is never blanked out.
+      error={isError && !state ? String(error ?? t('widget.energyFlowAnimated.error', 'Unable to load energy data')) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
+      noPadding
     >
       {state ? (
         isCompact ? (
-          <div className="flex h-full min-w-0 flex-col gap-2">
-            <WidgetBigNumber value={batteryLevel == null ? null : `${fmtNumber(batteryLevel)}%`} align="center" />
-            <WidgetStatGrid compact stats={[
-              ...(isCharging ? [{ label: t('widget.energyFlowAnimated.charger', 'Charger'), value: chargerValue, icon: <Plug className="size-3.5" /> }] : []),
-              ...(!isCharging || isConsuming || isRegen ? [{ label: driveLabel, value: driveValue, icon: <Zap className="size-3.5" /> }] : []),
-            ]} />
-          </div>
+          <CompactView
+            power={power}
+            chargerPower={chargerPower}
+            isCharging={isCharging}
+            batteryLevel={batteryLevel}
+            t={t}
+          />
         ) : (
-          <div className="mx-auto h-full min-h-0 w-full max-w-72 px-5 py-7 [&>svg]:overflow-visible [&_text]:fill-[var(--text-secondary)] [&_circle]:fill-[var(--surface-2)] [&_circle]:stroke-[var(--border-default)] motion-reduce:[&_.flow-active]:animate-none">
+          <div className="h-full w-full px-2 pb-2">
             <WidgetFlowDiagram
               nodes={nodes}
               arrows={arrows}
-              ariaLabel={`${t('widget.energyFlowAnimated.title', 'Energy flow')}: ${nodes.map((node) => `${node.label} ${node.formattedValue}`).join(', ')}`}
               emptyMessage={t('widget.energyFlowAnimated.noData', 'No energy data available')}
             />
           </div>

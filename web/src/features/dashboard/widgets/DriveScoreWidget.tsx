@@ -2,20 +2,18 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { TrendingUp } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { LinearGauge } from '@/components/charts';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
-import { knownNumber } from '@/api/dataState';
-import { useDataState } from '@/hooks/useDataState';
-import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
-import { isFiniteNumber } from '@/lib/numberFormat';
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import { WidgetShell } from './WidgetShell';
-import { WidgetStatGrid, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
+import { WidgetGaugeHero, type GaugeHeroConfig, type GaugeHeroStat } from './shared';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Average consumption (Wh/km, SI) that maps to a perfect 100 score. */
 const SCORE_REFERENCE_WH_KM = 250;
+
+/** Kilometres per mile — the exact factor for expressing Wh/km as Wh/mi. */
+const KM_PER_MILE = 1.609344;
 
 /**
  * Derive a 0–100 drive-efficiency score from average consumption expressed in
@@ -45,24 +43,20 @@ export function scoreColor(score: number): string {
  */
 export function toEfficiencyDisplay(whPerKm: number, isMiles: boolean): number {
   if (!isFiniteNumber(whPerKm)) return 0;
-  return convertEfficiencyFromSI(whPerKm, isMiles ? 'mi' : 'km');
+  return isMiles ? whPerKm * KM_PER_MILE : whPerKm;
 }
 
 export default function DriveScoreWidget({ size }: WidgetProps) {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const query = useFleetAnalytics(7);
   const {
     data: analytics,
     isLoading,
     isFetching,
     isStale,
     isError,
-    error,
     dataUpdatedAt,
     refetch,
-  } = query;
-  const trust = useDataState({ ...query, data: analytics ?? undefined }, { provenance: 'inferred' });
+  } = useFleetAnalytics(7);
   const { unitPrefs } = useUnits();
 
   const isMiles = unitPrefs.distance === 'mi';
@@ -72,12 +66,12 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
   // a non-finite value, so guard before it reaches the score/display math —
   // `?? 0` alone would let NaN/Infinity through.
   const rawEfficiency = analytics?.avg_efficiency_wh_km;
-  const efficiency = knownNumber(rawEfficiency);
-  const score = driveScoreFromEfficiency(efficiency ?? 0);
+  const efficiency = isFiniteNumber(rawEfficiency) ? rawEfficiency : 0;
+  const score = driveScoreFromEfficiency(efficiency);
 
   // A 0 score is unreachable by a real drive, so it only ever means "no drives
   // to score". Surface the empty state instead of a misleading red 0/100 gauge.
-  const hasScore = efficiency != null && efficiency > 0;
+  const hasScore = efficiency > 0;
 
   const isCompact = size.cols === 1 && size.rows === 1;
 
@@ -86,7 +80,6 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
   }, [refetch]);
 
   const gauge = useMemo<GaugeHeroConfig>(() => ({
-    preserveReadingAndScale: true,
     value: score,
     max: 100,
     label: t('widget.score', 'Score'),
@@ -97,16 +90,14 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
   const stats = useMemo<GaugeHeroStat[]>(() => [
     {
       label: t('widget.efficiency', 'Efficiency'),
-      value: efficiency == null ? '—' : fmtNumber(toEfficiencyDisplay(efficiency, isMiles)),
+      value: fmtNumber(toEfficiencyDisplay(efficiency, isMiles), 0),
       unit: efficiencyUnit,
     },
-  ], [t, efficiency, isMiles, efficiencyUnit, fmtNumber, displayPrecision, displayLocale]);
+  ], [t, efficiency, isMiles, efficiencyUnit]);
 
   return (
     <WidgetShell
-      title={t('widget.driveScoreGauge.title', 'Drive score')}
       loading={isLoading}
-      dataState={analytics != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -114,11 +105,7 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
       onRefresh={handleRefresh}
     >
       {hasScore ? (
-        <div className="flex min-w-0 flex-col gap-3">
-          <div className="flex flex-col items-center justify-center gap-2">
-            <LinearGauge {...gauge} kind="measurement" size={isCompact ? 70 : 100} />
-          </div>
-        </div>
+        <WidgetGaugeHero gauge={gauge} stats={stats} compact={isCompact} />
       ) : (
         // no-action: the score is generated automatically after a qualifying drive.
         <EmptyState
@@ -131,7 +118,6 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
           className="py-4"
         />
       )}
-      {!isCompact && analytics != null && <WidgetStatGrid stats={stats} />}
     </WidgetShell>
   );
 }

@@ -21,11 +21,9 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldAlert, Globe, MonitorSmartphone, Network } from 'lucide-react'
 
-import { PageLayout } from '@/components/layout'
-import { deriveDataState } from '@/api/dataState'
+import { PageContainer } from '@/components/layout'
 import { Button, ConfirmDialog, SectionTitle } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { DataStateNotice } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import {
   useSessions,
@@ -65,9 +63,8 @@ export default function ActiveSessionsPage() {
   const stats = useMemo(() => computeSessionStats(sessions), [sessions])
   const hasOthers = stats.otherCount > 0
 
-  const sessionsState = deriveDataState(sessionsQuery)
-  const isLoading = sessionsState.status === 'initial'
-  const isError = sessionsState.fatalError != null
+  const isLoading = sessionsQuery.isLoading
+  const isError = sessionsQuery.isError
   const refetch = () => {
     void sessionsQuery.refetch()
   }
@@ -81,7 +78,6 @@ export default function ActiveSessionsPage() {
     isSessionMode && hasOthers ? (
       <Button
         variant="secondary"
-        wrapLabel
         onClick={() => setShowAllOthersConfirm(true)}
         disabled={revokeAllOthersMut.isPending}
         icon={<ShieldAlert className="h-4 w-4" aria-hidden="true" />}
@@ -94,17 +90,16 @@ export default function ActiveSessionsPage() {
     ) : undefined
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('account.sessions.title', 'Active sessions')}
       subtitle={t(
         'account.sessions.subtitle',
         'Devices currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else.',
       )}
-      destructiveActions={actions}
+      actions={actions}
       query={sessionsQuery}
       copyLink
     >
-      {sessionsState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       {isOpenMode ? (
         <FadeIn>
           <SessionsOpenModeNotice />
@@ -119,9 +114,7 @@ export default function ActiveSessionsPage() {
               lastActive={stats.lastActive}
               isLoading={isLoading}
               isError={isError}
-              retained={sessionsState.status === 'stale'}
-              sourceAvailable={isSessionMode}
-              error={sessionsState.fatalError}
+              error={sessionsQuery.error}
               onRetry={refetch}
             />
           </FadeIn>
@@ -139,7 +132,7 @@ export default function ActiveSessionsPage() {
                   total={stats.total}
                   isLoading={isLoading}
                   isError={isError}
-                  error={sessionsState.fatalError}
+                  error={sessionsQuery.error}
                   onRetry={refetch}
                   emptyMessage={t(
                     'account.sessions.breakdownEmpty',
@@ -154,7 +147,7 @@ export default function ActiveSessionsPage() {
                   total={stats.total}
                   isLoading={isLoading}
                   isError={isError}
-                  error={sessionsState.fatalError}
+                  error={sessionsQuery.error}
                   onRetry={refetch}
                   emptyMessage={t(
                     'account.sessions.breakdownEmpty',
@@ -169,7 +162,7 @@ export default function ActiveSessionsPage() {
                   total={stats.total}
                   isLoading={isLoading}
                   isError={isError}
-                  error={sessionsState.fatalError}
+                  error={sessionsQuery.error}
                   onRetry={refetch}
                   emptyMessage={t(
                     'account.sessions.breakdownEmpty',
@@ -188,7 +181,7 @@ export default function ActiveSessionsPage() {
               revokingId={revokingId}
               isLoading={isLoading}
               isError={isError}
-              error={sessionsState.fatalError}
+              error={sessionsQuery.error}
               onRetry={refetch}
             />
           </FadeIn>
@@ -246,6 +239,6 @@ export default function ActiveSessionsPage() {
         }}
         onCancel={() => setShowAllOthersConfirm(false)}
       />
-    </PageLayout>
+    </PageContainer>
   )
 }

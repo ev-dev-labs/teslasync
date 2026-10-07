@@ -205,24 +205,6 @@ describe('catalog splitter validation', () => {
     )
   })
 
-  it('rejects corrupted shared copies while preserving their authoritative fallback', () => {
-    const manifest = {
-      ...fixtureManifest(),
-      featureRequiredKeys: { battery: ['toast.done'] },
-      composedNamespaces: { battery: ['toast'] },
-    }
-    const files = fixtureFiles()
-    files.set('locale-battery.json', JSON.stringify({
-      battery: fixtureCatalog.battery,
-      toast: { done: 'Changed without updating the catalog' },
-    }))
-    files.set('runtime-manifest.json', fixtureRuntime({ composed: { battery: ['toast'] } }))
-    const errors = validateManifest(fixtureCatalog, files, manifest)
-    expect(errors).toContain('composed catalog key inconsistent in battery: toast.done')
-    expect(errors).toContain('feature closure key missing or inconsistent in battery: toast.done')
-    expect(errors).not.toContain('namespace toast maps to detail-toast but ships in battery')
-  })
-
   it('rejects an unsorted or duplicated known-missing list', () => {
     const manifest = fixtureManifest()
     manifest.knownMissingKeys = ['toast.zeta', 'toast.absent']
@@ -330,14 +312,10 @@ describe('known-missing key selection and ratchet', () => {
 })
 
 describe('checked-in locale artifacts', () => {
-  it('emits every catalog leaf key into exactly one authoritative fallback artifact', () => {
+  it('emits every catalog leaf key into exactly one loadable artifact', () => {
     const owners = new Map<string, string[]>()
     for (const [bundle, resource] of emitted) {
       for (const key of leafKeys(resource) as string[]) {
-        const namespace = key.split('.')[0]
-        if (usageManifest.namespaceFallbackBundles[
-          namespace as keyof typeof usageManifest.namespaceFallbackBundles
-        ] !== bundle) continue
         owners.set(key, [...(owners.get(key) ?? []), bundle])
       }
     }
@@ -357,32 +335,6 @@ describe('checked-in locale artifacts', () => {
     }
     expect(missing).toEqual([])
     expect(duplicated).toEqual([])
-  })
-
-  it('packs feature source closures without changing narrow fallback ownership', () => {
-    for (const [bundle, keys] of Object.entries(usageManifest.featureRequiredKeys)) {
-      const resource = emitted.get(bundle)
-      expect(resource, bundle).toBeDefined()
-      for (const key of keys) {
-        if (nested(shell, key) !== undefined) continue
-        expect(nested(resource, key), `${bundle}: ${key}`).toEqual(nested(catalog, key))
-      }
-    }
-    expect(runtimeManifest.routes).toMatchObject({
-      '/': 'dashboard',
-      '/drives': 'driving',
-      '/charging': 'charging',
-      '/vehicles': 'vehicles',
-    })
-    expect(usageManifest.namespaceFallbackBundles.chart).toBe('detail-chart')
-    expect(nested(emitted.get('detail-chart'), 'chart.noDataDescription')).toEqual(catalog.chart.noDataDescription)
-  })
-
-  it('keeps auto-open changelog UI readable without loading release-note content', () => {
-    expect(runtimeManifest.complete).toContain('changelog')
-    expect(shell.changelog).toEqual(catalog.changelog)
-    expect(emitted.has('detail-changelog')).toBe(false)
-    expect(shell).not.toHaveProperty('changelogEntries')
   })
 
   it('gives every shell and shared namespace a per-namespace fallback chunk', () => {

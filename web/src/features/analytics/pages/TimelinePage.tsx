@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import {
-  Clock, Car, BatteryCharging, RefreshCw, AlertCircle,
+  Clock, ArrowRightLeft, Car, BatteryCharging, Moon, RefreshCw, AlertCircle,
   Activity, BarChart3, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
-import { PageLayout, CardGrid, LayoutCard, ChartCard } from '@/components/layout';
-import { Badge, Button, DataTable, Text, Caption, type Column } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
 
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
@@ -14,37 +15,38 @@ import {
   DataFreshnessAuto,
   EntityPreviewDrawer,
   MetricBar,
-  CompositionRail,
+  MetricCard,
 } from '@/components/data-display';
-import { EmptyState, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  ChartLegend, ChartTooltip,
+  ChartLegend, ChartTooltip, EmbeddedChart,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
-import {
-  useTimelinePageTimeline, useTimelinePageSummary,
-  type TransitionRecord, type ByStateRow,
-} from '@/api/hooks/useTimelinePage';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtPercent } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
+import { request } from '@/api/client';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { localDayKey } from '@/lib/drivesAggregation';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import type { StatPeriod } from '@/lib/metric-reference';
-import { TimelineSource, type TimelineSourceFacts } from '../components/timeline-modernization';
-import { OperationalBrief, type StatMetric } from '@/components/data-display';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ─── Types matching actual API responses ────────────────── */
 
-/** The API hook returns point-in-time FSM transitions, not state durations.
- * Dwell-time metrics continue to use the independent summary endpoint. */
+/** GET /vehicle-states/timeline → { vehicle_id, days, transitions: TransitionRecord[] }.
+ *  Each record is a single FSM transition event — point-in-time, NOT a state with
+ *  duration. To compute "time spent in state X" we use the summary endpoint instead. */
+interface TransitionRecord {
+  ts: string;
+  from_state: string;
+  to_state: string;
+  trigger_field: string | null;
+  trigger_value: string | null;
+}
 
 /** Indexed transition row for the table. Adds the timestamp of the
  *  *next* transition so the table can compute "duration spent in
@@ -54,6 +56,21 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 interface TransitionRow extends TransitionRecord {
   index: number;
   next_ts: string | null;
+}
+
+/** GET /vehicle-states/summary → { vehicle_id, days, total_seconds, by_state: ByStateRow[] }. */
+interface ByStateRow {
+  state: string;
+  total_seconds: number;
+  percentage: number;
+  transition_count: number;
+}
+
+interface SummaryResponse {
+  vehicle_id: number;
+  days: number;
+  total_seconds: number;
+  by_state: ByStateRow[];
 }
 
 /* ─── Constants ──────────────────────────────────────────── */
@@ -112,7 +129,6 @@ function transitionDuration(row: TransitionRow): string {
 /* ─── Component ──────────────────────────────────────────── */
 
 export default function TimelinePage() {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
 
@@ -130,60 +146,43 @@ export default function TimelinePage() {
   const [previewTransition, setPreviewTransition] = useState<TransitionRow | null>(null);
   const previewDay = localDayKey(previewTransition?.ts);
 
+  const rangeQuery = `vehicle_id=${activeId}&start=${encodeURIComponent(startInstant)}&end=${encodeURIComponent(endInstantExclusive)}`;
+
   const { error: vehiclesError } = useVehicles();
 
-  // API integrator's exact extracted contract: string ID, both range operands,
-  // original cache keys/enabled/default policies and unforwarded cancellation.
-  const timelineQuery = useTimelinePageTimeline(activeId, startInstant, endInstantExclusive);
+  const timelineQuery = useQuery({
+    queryKey: ['vehicle-timeline', activeId, startInstant, endInstantExclusive],
+    queryFn: () =>
+      request<{ transitions: TransitionRecord[] }>(
+        `/vehicle-states/timeline?${rangeQuery}`,
+      ),
+    enabled,
+  });
   const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
-  const summaryQuery = useTimelinePageSummary(activeId, startInstant, endInstantExclusive);
-  const { data: summaryData, isLoading: sumLoading, error: summaryError } = summaryQuery;
+  const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
+    queryKey: ['vehicle-summary', activeId, startInstant, endInstantExclusive],
+    queryFn: () =>
+      request<SummaryResponse>(
+        `/vehicle-states/summary?${rangeQuery}`,
+      ),
+    enabled,
+  });
 
   /* Defensive coercion — even with TanStack handling network errors, an
    * unexpected response shape (e.g. backend returns an array, or an error
    * envelope object) would otherwise crash with "X is not iterable" inside
    * the for/of loops below. */
   const transitionsRaw = Array.isArray(timelineData?.transitions)
-    ? timelineData.transitions
+    ? (timelineData!.transitions as TransitionRecord[])
     : [];
   const summaryRows: ByStateRow[] = Array.isArray(summaryData?.by_state)
-    ? summaryData.by_state
+    ? (summaryData!.by_state as ByStateRow[])
     : [];
   const totalSeconds = summaryData?.total_seconds ?? 0;
 
-  const timelineSource: TimelineSourceFacts = {
-    enabled,
-    available: Array.isArray(timelineData?.transitions),
-    loading: tlLoading,
-    paused: timelineQuery.isPaused,
-    error: timelineError,
-  };
-  const summarySource: TimelineSourceFacts = {
-    enabled,
-    available: Array.isArray(summaryData?.by_state),
-    loading: sumLoading,
-    paused: summaryQuery.isPaused,
-    error: summaryError,
-  };
-  const distributionSource: TimelineSourceFacts = {
-    ...summarySource,
-    available: summarySource.available && Number.isFinite(summaryData?.total_seconds),
-  };
-  const summaryPeriod: StatPeriod = {
-    kind: 'analysis',
-    label: t('timeline.summary.period', '{{start}} – {{end}} (exclusive) · {{timezone}}', {
-      start: formatDateTime(startInstant, { tz: timezone }),
-      end: formatDateTime(endInstantExclusive, { tz: timezone }),
-      timezone,
-    }),
-    start: startInstant,
-    endExclusive: endInstantExclusive,
-    timezone,
-    // A requested analysis window is not proof of complete vehicle observation.
-    completeness: 'unknown',
-    provenance: t('timeline.summary.provenance', 'Vehicle FSM summary for the requested window; continuous observation coverage is unknown'),
-  };
+  const anyError = [vehiclesError, timelineError, summaryError].find(Boolean);
+  const isLoading = tlLoading || sumLoading;
 
   // Indexed transition rows for the table — sorted ASC by ts so duration
   // computations point to the correct neighbour. The DataTable's own
@@ -266,30 +265,6 @@ export default function TimelinePage() {
   const sleepingSec = (summaryByState.asleep?.totalSeconds ?? 0) +
     (summaryByState.sleeping?.totalSeconds ?? 0) +
     (summaryByState.offline?.totalSeconds ?? 0);
-  const summaryMetrics: StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'timeline-total-transitions',
-      label: t('timeline.totalTransitions', 'Total transitions'),
-      description: t('timeline.summary.transitionDescription', 'Sum of transition counts returned by the state summary for this window'),
-      rawValue: summarySource.available ? totalTransitions : null },
-    { metricId: 'duration', occurrenceId: 'timeline-driving-time',
-      label: t('timeline.drivingTime', 'Driving time'),
-      description: t('timeline.summary.drivingDescription', 'Time in the driving state, rounded to whole minutes'),
-      rawValue: summarySource.available ? drivingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
-    { metricId: 'duration', occurrenceId: 'timeline-charging-time',
-      label: t('timeline.chargingTime', 'Charging time'),
-      description: t('timeline.summary.chargingDescription', 'Time in the charging state, rounded to whole minutes'),
-      rawValue: summarySource.available ? chargingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
-    { metricId: 'duration', occurrenceId: 'timeline-idle-sleep-time',
-      label: t('timeline.idleSleepTime', 'Idle / sleep time'),
-      description: t('timeline.summary.idleSleepDescription', 'Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes'),
-      rawValue: summarySource.available ? idleSec + sleepingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
-  ];
-  const summaryOperationalMetrics = useOperationalMetrics(summaryMetrics.map(metric => ({
-    ...metric, missingReason: t('timeline.summary.missing', 'No state summary is available for this window'),
-  })));
 
   /* ─── Table columns ─── */
 
@@ -305,25 +280,17 @@ export default function TimelinePage() {
       },
       {
         key: 'from_state',
-        filterValue: (row) => row.from_state,
-        header: t('timeline.fromState', 'From state'),
+        header: t('timeline.fromState', 'From State'),
         sortable: true,
-        render: (row) => {
-          const fromState = row.from_state;
-          if (fromState == null) {
-            return <Badge variant="neutral" size="sm">—</Badge>;
-          }
-          return (
-            <Badge variant={STATE_BADGE[fromState] ?? 'neutral'} size="sm">
-              {fromState}
-            </Badge>
-          );
-        },
+        render: (row) => (
+          <Badge variant={STATE_BADGE[row.from_state] ?? 'neutral'} size="sm">
+            {row.from_state}
+          </Badge>
+        ),
       },
       {
         key: 'to_state',
-        filterValue: (row) => row.to_state,
-        header: t('timeline.toState', 'To state'),
+        header: t('timeline.toState', 'To State'),
         sortable: true,
         render: (row) => (
           <Badge variant={STATE_BADGE[row.to_state] ?? 'neutral'} size="sm">
@@ -333,7 +300,6 @@ export default function TimelinePage() {
       },
       {
         key: 'duration',
-        align: 'right',
         header: t('timeline.duration', 'Duration'),
         sortable: false,
         render: (row) => {
@@ -348,7 +314,6 @@ export default function TimelinePage() {
       },
       {
         key: 'trigger_field',
-        filterValue: (row) => row.trigger_field ?? null,
         header: t('timeline.trigger', 'Trigger'),
         sortable: true,
         render: (row) => (
@@ -366,11 +331,10 @@ export default function TimelinePage() {
             type="button"
             variant="ghost"
             size="sm"
-            className="min-h-11"
             aria-label={t(
               'timeline.inspectTransition',
               'Inspect transition {{from}} to {{to}}',
-              { from: row.from_state ?? '—', to: row.to_state },
+              { from: row.from_state, to: row.to_state },
             )}
             onClick={() => setPreviewTransition(row)}
           >
@@ -382,109 +346,98 @@ export default function TimelinePage() {
     [t],
   );
 
-  /* ─── Refresh action ─── */
+  /* ─── Actions (vehicle selector + refresh) ─── */
 
   const actions = (
+    <div className="flex items-center gap-3">
+      <DataFreshnessAuto query={timelineQuery} />
       <Button
         variant="ghost"
-        className="min-h-11 min-w-11"
         onClick={() => refetch()}
         aria-label={t('timeline.refresh', 'Refresh timeline')}
       >
         <RefreshCw className="h-4 w-4" aria-hidden="true" />
       </Button>
+    </div>
   );
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('timeline.title', 'Timeline')}
       subtitle={t('timeline.subtitle', 'Vehicle state history and transitions')}
-      metadataActions={<DataFreshnessAuto query={timelineQuery} />}
-      secondaryActions={actions}
+      actions={actions}
+      loading={isLoading && transitions.length === 0}
     >
-      {vehiclesError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(vehiclesError)}
+      {anyError && (
+        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
-      {/* Independent summary source: unknown never masquerades as a zero. */}
+      {/* Summary metric cards — full-width KPI band */}
       <FadeIn>
-        <OperationalBrief compact testId="timeline-summary"
-          eyebrow={t('timeline.title', 'Timeline')}
-          title={t('timeline.kpis', 'Summary metrics')}
-          description={t('timeline.summary.provenance', 'Vehicle FSM summary for the requested window; continuous observation coverage is unknown')}
-          statusLabel={summarySource.available
-            ? summarySource.error ? t('timeline.brief.retained', 'Retained state summary')
-              : summarySource.paused ? t('timeline.brief.pausedRetained', 'State summary refresh paused')
-                : t('timeline.brief.available', 'Returned state summary')
-            : summarySource.paused ? t('timeline.brief.paused', 'State summary paused')
-              : summarySource.loading ? t('timeline.brief.loading', 'Loading state summary')
-                : t('timeline.brief.unavailable', 'State summary unavailable')}
-          statusTone={summarySource.error || summarySource.paused ? 'warning' : 'neutral'}
-          metrics={summaryOperationalMetrics}
-          scope={summaryPeriod.label}
-          provenance={summaryPeriod.provenance}
-          loading={summarySource.enabled && summarySource.loading && !summarySource.paused && !summarySource.available}
-        />
-        {(!summarySource.available && (!summarySource.loading || summarySource.paused)
-          || summarySource.available && (summarySource.error || summarySource.paused)) && (
-          <TimelineSource source={summarySource} label={t('timeline.kpis', 'Summary metrics')}>{null}</TimelineSource>
-        )}
+        <section aria-label={t('timeline.kpis', 'Summary metrics')} className="mb-4 grid grid-cols-2 gap-4 sm:mb-6 lg:grid-cols-4">
+          <MetricCard
+            label={t('timeline.totalTransitions', 'Total Transitions')}
+            value={totalTransitions}
+            icon={<ArrowRightLeft className="h-5 w-5" />}
+          />
+          <MetricCard
+            label={t('timeline.drivingTime', 'Driving Time')}
+            value={formatHoursFromSeconds(drivingSec)}
+            icon={<Car className="h-5 w-5" />}
+            color="green"
+          />
+          <MetricCard
+            label={t('timeline.chargingTime', 'Charging Time')}
+            value={formatHoursFromSeconds(chargingSec)}
+            icon={<BatteryCharging className="h-5 w-5" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('timeline.idleSleepTime', 'Idle / Sleep Time')}
+            value={formatHoursFromSeconds(idleSec + sleepingSec)}
+            icon={<Moon className="h-5 w-5" />}
+          />
+        </section>
       </FadeIn>
 
       {/* State timeline bar — proportional state distribution from summary */}
       <FadeIn delay={0.1}>
-        <CardGrid label={t('timeline.stateTimeline', 'State distribution')} items={[{
-          id: 'timeline-state-distribution',
-          size: 'full',
-          content: <LayoutCard title={t('timeline.stateTimeline', 'State distribution')}>
-            <TimelineSource source={distributionSource} label={t('timeline.stateTimeline', 'State distribution')}>
+        <GlassPanel className="mb-4 p-4 sm:mb-6 sm:p-5">
+          <PanelTitle className="mb-3">
+            {t('timeline.stateTimeline', 'State Distribution')}
+          </PanelTitle>
           {summaryRows.length === 0 || totalSeconds === 0 ? (
+            sumLoading ? (
+              <Skeleton height={32} />
+            ) : (
               <EmptyState /* no-action: transient empty state — surfaces when no recent state activity exists for the vehicle */
                 icon={<Clock className="h-8 w-8" />}
                 message={t('timeline.noStateData', 'No state distribution available yet')}
               />
-          ) : summaryRows.some((row) =>
-            !Number.isFinite(row.total_seconds)
-            || (totalSeconds > 0 && (row.total_seconds < 0 || row.total_seconds > totalSeconds))
-          ) ? (
-            <div className="space-y-3">
-              <Text variant="bodySm">
-                {t('timeline.invalidComposition', 'Proportional track unavailable for the returned dwell totals; individual state evidence remains visible.')}
-              </Text>
-              <ul className="flex list-none flex-wrap gap-x-5 gap-y-2 p-0">
-                {summaryRows.map((row, index) => (
-                  <li key={`${row.state}:${index}`} className="min-w-0 break-words">
-                    <Text variant="bodySm" className="block">{row.state}</Text>
-                    <Text variant="caption" className="block">
-                      {Number.isFinite(row.total_seconds) && row.total_seconds >= 0
-                        ? formatDurationFromSeconds(row.total_seconds)
-                        : '—'} ({fmtPercent(row.percentage)})
-                    </Text>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            )
           ) : (
-            <CompositionRail
-              size="lg"
-              summary={t('timeline.stateTimeline', 'State distribution')}
-              segments={summaryRows.map((row, index) => {
+            <div className="flex h-8 overflow-hidden rounded-full">
+              {summaryRows.map((row) => {
                 const pct = totalSeconds > 0
                   ? (row.total_seconds / totalSeconds) * 100
                   : 0;
-                return {
-                  id: `${row.state}:${index}`,
-                  label: row.state,
-                  widthPercent: pct,
-                  hideFromTrack: pct < 0.3,
-                  color: STATE_COLORS[row.state] ?? STATE_COLORS.offline,
-                  detail: `${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage)})`,
-                };
+                if (pct < 0.3) return null;
+                return (
+                  <div
+                    key={row.state}
+                    className={cn('relative transition-all')}
+                    style={{
+                      width: `${pct}%`,
+                      backgroundColor:
+                        STATE_COLORS[row.state] ?? STATE_COLORS.offline,
+                    }}
+                    title={`${row.state}: ${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage, 1)})`}
+                  />
+                );
               })}
-            />
+            </div>
           )}
-            </TimelineSource>
           <div className="mt-3 flex flex-wrap gap-3">
             {Object.entries(STATE_COLORS).map(([state, color]) => (
               <div key={state} className="flex items-center gap-1.5">
@@ -492,42 +445,37 @@ export default function TimelinePage() {
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: color }}
                 />
-                <Text variant="bodySm">
+                <Text variant="bodySm" className="capitalize">
                   {state}
                 </Text>
               </div>
             ))}
           </div>
-          </LayoutCard>,
-        }]} />
+        </GlassPanel>
       </FadeIn>
 
       {/* Daily breakdown — stacked transition counts per day, grouped
           into the four high-level state buckets shown in the legend. */}
       <FadeIn delay={0.2}>
-        <CardGrid label={t('timeline.dailyBreakdown', 'Daily breakdown')} items={[{
-          id: 'timeline-daily-breakdown',
-          size: 'full',
-          content: <ChartCard
-              title={t('timeline.dailyBreakdown', 'Daily breakdown')}
-              subtitle={t('timeline.daily.utcNote', 'Transition counts grouped by UTC day; state durations come from the summary')}
+        <section className="mb-4 grid grid-cols-1 gap-4 sm:mb-6 xl:grid-cols-3">
+        <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('timeline.dailyBreakdown', 'Daily Breakdown')}
+          </PanelTitle>
+          {dailyBreakdown.length === 0 ? (
+            tlLoading ? (
+              <Skeleton height={220} />
+            ) : (
+              <EmptyState /* no-action: transient empty state — surfaces when no transitions exist in the lookback window */
+                icon={<BarChart3 className="h-8 w-8" />}
+                message={t('timeline.noDailyData', 'No daily transition activity yet')}
+              />
+            )
+          ) : (
+            <EmbeddedChart
+              title={t('timeline.dailyBreakdown', 'Daily Breakdown')}
               ariaLabel={t('timeline.dailyBreakdownAria', 'Daily transition counts by vehicle state')}
-              loading={enabled && tlLoading && !timelineSource.available && !timelineSource.paused}
-              error={!timelineSource.available ? timelineError : undefined}
-              empty={dailyBreakdown.length === 0}
-              emptyIcon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
-              emptyMessage={!enabled
-                ? t('timeline.source.selectVehicle', 'Select a vehicle to view its state history')
-                : !timelineSource.available && timelineSource.paused
-                  ? t('timeline.source.paused', '{{section}} is paused while the connection is unavailable', { section: t('timeline.dailyBreakdown', 'Daily breakdown') })
-                  : !timelineSource.available && !tlLoading && !timelineError
-                    ? t('timeline.source.unknown', '{{section}} is unavailable because the response did not contain the expected records', { section: t('timeline.dailyBreakdown', 'Daily breakdown') })
-                    : t('timeline.noDailyData', 'No daily transition activity yet')}
-              footer={timelineSource.available && (timelineSource.error || timelineSource.paused)
-                ? <TimelineSource source={timelineSource} label={t('timeline.dailyBreakdown', 'Daily breakdown')}>{null}</TimelineSource>
-                : timelineError
-                  ? <Text as="p" variant="bodySm">{getErrorMessage(timelineError)}</Text>
-                : undefined}
               data={dailyBreakdown}
               dataColumns={[
                 { key: 'day', label: t('timeline.day', 'Day') },
@@ -536,13 +484,15 @@ export default function TimelinePage() {
                 { key: 'idle', label: t('timeline.idle', 'Idle') },
                 { key: 'sleeping', label: t('timeline.sleeping', 'Sleeping') },
               ]}
+              height={256}
+              mobileHeight={224}
               chartKey="timeline-daily-breakdown"
             >
               {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyBreakdown}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="day" minTickGap={64} interval="preserveStartEnd" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <ChartLegend />
@@ -553,23 +503,26 @@ export default function TimelinePage() {
                   </BarChart>
                 </ResponsiveContainer>
               )}
-            </ChartCard>,
-        }]} />
-      </FadeIn>
+            </EmbeddedChart>
+          )}
+        </GlassPanel>
 
-        {/* Keep the independent dwell-time source full-width rather than pairing
-            a variable-length list with the bounded chart plot. */}
-      <FadeIn delay={0.25}>
-        <CardGrid label={t('timeline.timeByState', 'Time by state')} items={[{
-          id: 'timeline-time-by-state',
-          size: 'full',
-          content: <LayoutCard title={t('timeline.timeByState', 'Time by state')}>
-            <TimelineSource source={summarySource} label={t('timeline.timeByState', 'Time by state')}>
+        {/* Time-by-state — dwell time per FSM state, derived from the same
+            summary payload; fills the width beside the daily chart on wide screens. */}
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('timeline.timeByState', 'Time by State')}
+          </PanelTitle>
           {timeByState.length === 0 ? (
+            sumLoading ? (
+              <Skeleton height={220} />
+            ) : (
               <EmptyState /* no-action: transient — no dwell data in the window */
                 icon={<Clock className="h-8 w-8" />}
                 message={t('timeline.noStateData', 'No state distribution available yet')}
               />
+            )
           ) : (
             <div className="space-y-3">
               {timeByState.map((row) => (
@@ -579,27 +532,22 @@ export default function TimelinePage() {
                   value={row.total_seconds}
                   max={totalSeconds || row.total_seconds}
                   color={row.color}
-                  sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage)}`}
+                  sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage, 1)}`}
                 />
               ))}
             </div>
           )}
-            </TimelineSource>
-          </LayoutCard>,
-        }]} />
+        </GlassPanel>
+        </section>
       </FadeIn>
 
       {/* State transitions table — full-width detail band */}
       <FadeIn delay={0.3}>
-        <CardGrid label={t('timeline.stateTransitions', 'State transitions')} items={[{
-          id: 'timeline-state-transitions',
-          size: 'full',
-          content: <LayoutCard title={t('timeline.stateTransitions', 'State transitions')}>
-            <TimelineSource source={timelineSource} label={t('timeline.stateTransitions', 'State transitions')}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-3">
+            {t('timeline.stateTransitions', 'State Transitions')}
+          </PanelTitle>
           <DataTable
-            variant="embedded"
-            name={t('timeline.stateTransitions', 'State transitions')}
-            enableValueFilters
             tableId="analytics:timeline-transitions"
             columns={columns}
             mobileColumns={['ts', 'from_state', 'to_state']}
@@ -607,34 +555,8 @@ export default function TimelinePage() {
             keyExtractor={(row) => row.index}
             emptyMessage={t('timeline.noTransitions', 'No state transitions recorded')}
             pagination
-            mobilePresentation={{
-              roles: {
-                ts: 'title', to_state: 'badge', from_state: 'meta',
-                duration: 'primary', trigger_field: 'meta', actions: 'hidden',
-              },
-              displayValue: (row, key) => {
-                if (key === 'ts') return formatDateTime(row.ts);
-                if (key === 'from_state') return row.from_state ?? '—';
-                if (key === 'to_state') return row.to_state;
-                if (key === 'duration') return transitionDuration(row);
-                if (key === 'trigger_field') return row.trigger_field ?? '—';
-                return null;
-              },
-              onOpenRow: (row) => setPreviewTransition(row),
-              inlineActions: (row) => <Button
-                type="button" variant="ghost" size="sm" className="min-h-11"
-                aria-label={t('timeline.inspectTransition', 'Inspect transition {{from}} to {{to}}', { from: row.from_state ?? '—', to: row.to_state })}
-                onClick={() => setPreviewTransition(row)}
-              >{t('timeline.inspect', 'Inspect')}</Button>,
-              allDetails: (row) => [
-                // Existing columns supply every other field in shared Quick view.
-                { key: 'trigger_value', label: t('timeline.preview.triggerValue', 'Trigger value'), value: row.trigger_value ?? '—' },
-              ],
-            }}
           />
-            </TimelineSource>
-          </LayoutCard>,
-        }]} />
+        </GlassPanel>
       </FadeIn>
 
       <EntityPreviewDrawer
@@ -647,7 +569,7 @@ export default function TimelinePage() {
                 'timeline.preview.title',
                 '{{from}} → {{to}}',
                 {
-                  from: previewTransition.from_state ?? '—',
+                  from: previewTransition.from_state,
                   to: previewTransition.to_state,
                 },
               )
@@ -673,12 +595,12 @@ export default function TimelinePage() {
             ? [
                 {
                   key: 'from-state',
-                  label: t('timeline.fromState', 'From state'),
-                  value: previewTransition.from_state ?? '—',
+                  label: t('timeline.fromState', 'From State'),
+                  value: previewTransition.from_state,
                 },
                 {
                   key: 'to-state',
-                  label: t('timeline.toState', 'To state'),
+                  label: t('timeline.toState', 'To State'),
                   value: previewTransition.to_state,
                 },
                 {
@@ -766,6 +688,6 @@ export default function TimelinePage() {
             : []
         }
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

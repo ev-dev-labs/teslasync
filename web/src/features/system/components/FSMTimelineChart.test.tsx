@@ -210,7 +210,7 @@ describe('<FSMTimelineChart>', () => {
       />,
     );
 
-    expect(screen.getByRole('figure', { name: /Transitions over time/ })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: /Transitions Over Time/ })).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: /FSM transitions over time/ }),
     ).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe('<FSMTimelineChart>', () => {
       <FSMTimelineChart transitions={[tx('driving', minutesAgo(5))]} hours={Infinity} />,
     );
 
-    expect(screen.getByRole('figure', { name: /Transitions over time/ })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: /Transitions Over Time/ })).toBeInTheDocument();
     expect(screen.queryByText('No transition data for timeline')).not.toBeInTheDocument();
   });
 });

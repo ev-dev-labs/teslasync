@@ -33,10 +33,6 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-vi.mock('@/hooks/useSettings', async importOriginal => ({
-  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
-  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
-}));
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -215,7 +211,7 @@ function lastPostBody(url: string): SubmitBody {
 /** Return the metric card wrapper (`div.flex-1`) that owns a given label so
  *  the value paragraph can be asserted without cross-card collisions. */
 function metricCard(label: string): HTMLElement {
-  const el = screen.getByText(label).closest('[data-operational-metric]');
+  const el = screen.getByText(label).closest('.flex-1');
   if (!el) throw new Error(`no metric card for "${label}"`);
   return el as HTMLElement;
 }
@@ -253,89 +249,42 @@ afterEach(() => {
 });
 
 describe('DataExportPage — Project Apex elevation', () => {
-  it('uses a native grouped radio for every export type while retaining descriptions and selection', async () => {
-    renderPage();
-    const group = await screen.findByRole('radiogroup', { name: 'STEP 1 — select data type' });
-    const choices = within(group).getAllByRole('radio');
-    expect(choices.length).toBeGreaterThan(1);
-    expect(choices.every((choice) => choice.tagName === 'INPUT' && choice.getAttribute('name') === 'export-type')).toBe(true);
-    expect(within(group).getByRole('radio', { name: 'Drives' })).toBeChecked();
-    const charging = within(group).getByRole('radio', { name: 'Charging' });
-    charging.focus();
-    expect(charging).toHaveFocus();
-    fireEvent.click(charging);
-    expect(charging).toBeChecked();
-    expect(within(group).getByRole('radio', { name: 'Drives' })).not.toBeChecked();
-  });
-
   it('renders the KPI band, export wizard and history once data resolves', async () => {
     renderPage();
 
     // The KPI tiles only leave their loading skeletons once the jobs query
     // resolves — gate on one of them before the synchronous assertions.
-    expect(await screen.findByText('Total exports')).toBeInTheDocument();
-    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
-    expect(screen.getByText('New export')).toBeInTheDocument();
+    expect(await screen.findByText('Total Exports')).toBeInTheDocument();
+    expect(screen.getByText('New Export')).toBeInTheDocument();
 
-    expect(screen.getByText('Total size')).toBeInTheDocument();
-    expect(screen.getByText('Most exported')).toBeInTheDocument();
-    expect(screen.getByText('Last export')).toBeInTheDocument();
+    expect(screen.getByText('Total Size')).toBeInTheDocument();
+    expect(screen.getByText('Most Exported')).toBeInTheDocument();
+    expect(screen.getByText('Last Export')).toBeInTheDocument();
 
-    expect(screen.getByText('Export history')).toBeInTheDocument();
+    expect(screen.getByText('Export History')).toBeInTheDocument();
     // Failed row surfaces its error message as visible + title text.
     expect(screen.getByText('disk full')).toBeInTheDocument();
   });
 
   it('aggregates the stat tiles from job data (count, summed bytes, top type)', async () => {
     renderPage();
-    await screen.findByText('Total exports');
-    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
+    await screen.findByText('Total Exports');
 
     // 3 jobs total.
-    expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
+    expect(within(metricCard('Total Exports')).getByText('3')).toBeInTheDocument();
     // 2048 + 0 + 5_000_000 bytes → "4.8 MB".
-    expect(within(metricCard('Total size')).getByText('4.77 MB')).toBeInTheDocument();
+    expect(within(metricCard('Total Size')).getByText('4.8 MB')).toBeInTheDocument();
     // drives x2 beats charging x1 — rendered lower-cased from the type key.
-    expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
-  });
-
-  it('opens the real export review drawer with recorded bytes and by-count type context', async () => {
-    renderPage();
-    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
-    const summary = screen.getByRole('region', { name: 'Export summary metrics' });
-    expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-    expect(within(metricCard('Most exported')).getByText('By count')).toBeInTheDocument();
-    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'value');
-    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('4.77 MB')).toBeInTheDocument();
-    expect(within(drawer).getByText('By count')).toBeInTheDocument();
-    expect(within(drawer).getByText('Loaded export jobs; no server-wide total or reporting window is supplied.')).toBeInTheDocument();
-  });
-
-  it('keeps all four export metrics and creation/download controls after a failed background refresh', async () => {
-    renderPage();
-    await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
-    jobsError = new Error('background export refresh failed');
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await screen.findByTestId('stale-refresh-warning');
-    const summary = screen.getByRole('region', { name: 'Export summary metrics' });
-    expect(within(summary).getByText('Retained source')).toBeInTheDocument();
-    expect(within(metricCard('Total exports')).getByText('3')).toBeInTheDocument();
-    expect(within(metricCard('Total size')).getByText('4.77 MB')).toBeInTheDocument();
-    expect(within(metricCard('Most exported')).getByText('drives')).toBeInTheDocument();
-    expect(metricCard('Last export')).toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+    expect(within(metricCard('Most Exported')).getByText('drives')).toBeInTheDocument();
   });
 
   it('submits a new export with the chosen type, format and default 30-day window', async () => {
     renderPage();
-    await screen.findByText('New export');
+    await screen.findByText('New Export');
 
     fireEvent.click(screen.getByRole('button', { name: 'JSON' }));
     fireEvent.click(screen.getByRole('radio', { name: 'Charging' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -351,10 +300,10 @@ describe('DataExportPage — Project Apex elevation', () => {
 
   it('omits the date range when the "All Time" preset is selected', async () => {
     renderPage();
-    await screen.findByText('New export');
+    await screen.findByText('New Export');
 
-    fireEvent.click(screen.getByRole('button', { name: 'All time' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'All Time' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -368,11 +317,11 @@ describe('DataExportPage — Project Apex elevation', () => {
 
   it('forwards a custom date range when the user supplies one', async () => {
     renderPage();
-    await screen.findByText('New export');
+    await screen.findByText('New Export');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Custom range' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Custom Range' }));
     fireEvent.change(screen.getByLabelText('Start'), { target: { value: '2025-03-01' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -396,7 +345,7 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(screen.getByTestId('export-column-select-all')).toBeDisabled();
 
     fireEvent.click(screen.getByTestId('export-column-checkbox-distance_m'));
-    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start Export' }));
 
     await waitFor(() => {
       expect(postCalls.some((c) => c.url === '/export/jobs')).toBe(true);
@@ -424,11 +373,9 @@ describe('DataExportPage — Project Apex elevation', () => {
     jobsData = [];
     renderPage();
 
-    expect(await screen.findByText('No exports yet')).toBeInTheDocument();
+    expect(await screen.findByText('No Exports Yet')).toBeInTheDocument();
     expect(screen.getByText('Create your first export above to get started.')).toBeInTheDocument();
-    expect(within(metricCard('Total exports')).getByText('0')).toBeInTheDocument();
-    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'value');
-    expect(metricCard('Total size').querySelector('[data-operational-value]')).toHaveTextContent('0 B');
+    expect(within(metricCard('Total Exports')).getByText('0')).toBeInTheDocument();
   });
 
   it('surfaces a load-error banner without crashing the rest of the page', async () => {
@@ -437,9 +384,7 @@ describe('DataExportPage — Project Apex elevation', () => {
 
     expect(await screen.findByText('Failed to load export jobs')).toBeInTheDocument();
     // The wizard (fed by the still-successful vehicles query) keeps working.
-    expect(screen.getByText('New export')).toBeInTheDocument();
-    expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'missing');
-    expect(metricCard('Total size')).toHaveAttribute('data-value-state', 'missing');
+    expect(screen.getByText('New Export')).toBeInTheDocument();
   });
 
   it('opens the artifact URL for a ready job', async () => {
@@ -495,7 +440,7 @@ describe('DataExportPage — Project Apex elevation', () => {
 
   it('gates the scheduled-exports section behind auth mode (open mode → placeholder)', async () => {
     renderPage();
-    await screen.findByText('New export');
+    await screen.findByText('New Export');
 
     // In open mode the RequiresAuth wrapper renders its stable placeholder and
     // never mounts the underlying scheduled-exports panel.

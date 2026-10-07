@@ -11,8 +11,6 @@ import {
   activateShellOverlayGuard,
   getShellFocusableElements,
   hideBackgroundFrom,
-  isShellPortalActive,
-  registerShellPortal,
   trapFocusWithin,
 } from '../shellFocusTrap'
 
@@ -91,44 +89,6 @@ describe('getShellFocusableElements', () => {
 
   it('is null-safe', () => {
     expect(getShellFocusableElements(null)).toEqual([])
-  })
-
-  it('excludes descendants of hidden or inert ancestors', () => {
-    mount(`
-      <div id="panel">
-        <button id="visible">visible</button>
-        <div aria-hidden="true"><button id="aria-hidden">hidden</button></div>
-        <div inert><button id="inert">inert</button></div>
-        <div hidden><button id="hidden">hidden</button></div>
-        <div style="display: none"><button id="display-none">hidden</button></div>
-        <div style="visibility: hidden"><button id="invisible">hidden</button></div>
-      </div>
-    `)
-    expect(getShellFocusableElements(document.getElementById('panel'))).toHaveLength(1)
-    expect(getShellFocusableElements(document.getElementById('panel'))[0].id).toBe('visible')
-  })
-
-  it('allows an explicitly visible child of a visibility-hidden ancestor in the fallback', () => {
-    mount(`
-      <div id="panel">
-        <div style="visibility: hidden">
-          <button id="visible-child" style="visibility: visible">visible</button>
-        </div>
-      </div>
-    `)
-    const button = document.getElementById('visible-child')
-    Object.defineProperty(button, 'checkVisibility', { value: undefined })
-    expect(getShellFocusableElements(document.getElementById('panel'))).toEqual([button])
-  })
-
-  it('uses native visibility checking when the browser supplies it', () => {
-    mount('<div id="panel"><button id="not-rendered">hidden</button></div>')
-    const visibility = vi.fn().mockReturnValue(false)
-    Object.defineProperty(document.getElementById('not-rendered'), 'checkVisibility', {
-      value: visibility,
-    })
-    expect(getShellFocusableElements(document.getElementById('panel'))).toEqual([])
-    expect(visibility).toHaveBeenCalledWith({ checkVisibilityCSS: true })
   })
 
   it('agrees with the Modal selector contract', () => {
@@ -222,111 +182,6 @@ describe('trapFocusWithin', () => {
     ;(document.getElementById('outside') as HTMLElement).focus()
     track(trapFocusWithin(document.getElementById('panel') as HTMLElement))
     expect(document.activeElement?.id).toBe('outside')
-  })
-
-  it('does not steal Tab from a nested portaled modal', () => {
-    setup()
-    const dialog = document.createElement('div')
-    dialog.setAttribute('role', 'dialog')
-    dialog.setAttribute('aria-modal', 'true')
-    dialog.innerHTML = '<button id="modal-first">first</button><button id="modal-last">last</button>'
-    document.body.append(dialog)
-    ;(document.getElementById('modal-first') as HTMLElement).focus()
-    pressTab()
-    expect(document.activeElement?.id).toBe('modal-first')
-    ;(document.getElementById('modal-last') as HTMLElement).focus()
-    pressTab(true)
-    expect(document.activeElement?.id).toBe('modal-last')
-
-    dialog.remove()
-    ;(document.getElementById('last') as HTMLElement).focus()
-    pressTab()
-    expect(document.activeElement?.id).toBe('first')
-  })
-
-  it('traps a modal whose semantic dialog is inside the focus boundary', () => {
-    mount(`
-      <div id="panel">
-        <div role="dialog" aria-modal="true">
-          <button id="first">first</button><button id="last">last</button>
-        </div>
-      </div>
-    `)
-    track(trapFocusWithin(document.getElementById('panel')))
-    ;(document.getElementById('last') as HTMLElement).focus()
-    pressTab()
-    expect(document.activeElement?.id).toBe('first')
-  })
-})
-
-describe('shell-owned nonmodal portals', () => {
-  function setup() {
-    mount(`
-      <div id="panel">
-        <button id="before">before</button>
-        <button id="anchor">view settings</button>
-        <button id="after">after</button>
-      </div>
-      <main id="background">background</main>
-      <div id="popover" role="dialog" aria-modal="false">
-        <input id="date" /><button id="apply">apply</button>
-      </div>
-    `)
-    const panel = document.getElementById('panel') as HTMLElement
-    const anchor = document.getElementById('anchor') as HTMLElement
-    const popover = document.getElementById('popover') as HTMLElement
-    const close = vi.fn()
-    const unregister = track(registerShellPortal(popover, anchor, close))
-    const release = track(activateShellOverlayGuard({ focusContainer: panel }))
-    return { panel, anchor, popover, close, unregister, release }
-  }
-
-  it('preserves an owned existing portal and lets its interior Tab remain native', () => {
-    const { panel, anchor, popover } = setup()
-    expect(popover).not.toHaveAttribute('inert')
-    expect(document.getElementById('background')).toHaveAttribute('inert')
-    expect(isShellPortalActive(panel, anchor)).toBe(true)
-    const date = document.getElementById('date') as HTMLElement
-    anchor.focus()
-    pressTab()
-    expect(date).toHaveFocus()
-    pressTab()
-    expect(date).toHaveFocus()
-  })
-
-  it('returns forward focus after the owning trigger and closes only its popup', () => {
-    const { close } = setup()
-    ;(document.getElementById('apply') as HTMLElement).focus()
-    pressTab()
-    expect(document.activeElement?.id).toBe('after')
-    expect(close).toHaveBeenCalledOnce()
-  })
-
-  it('returns reverse focus to the owning trigger without escaping the drawer', () => {
-    const { anchor, close } = setup()
-    ;(document.getElementById('date') as HTMLElement).focus()
-    pressTab(true)
-    expect(anchor).toHaveFocus()
-    expect(close).toHaveBeenCalledOnce()
-  })
-
-  it('dismisses owned popups when the outer overlay closes and restores its background', () => {
-    const { close, release } = setup()
-    release()
-    expect(close).toHaveBeenCalledOnce()
-    expect(document.getElementById('background')).not.toHaveAttribute('inert')
-    release()
-    expect(close).toHaveBeenCalledOnce()
-  })
-
-  it('restores portal ownership markers safely after a replacement registration', () => {
-    const { panel, anchor, popover, unregister } = setup()
-    const replacement = track(registerShellPortal(popover, anchor, vi.fn()))
-    unregister()
-    expect(isShellPortalActive(panel, anchor)).toBe(true)
-    replacement()
-    expect(isShellPortalActive(panel, anchor)).toBe(false)
-    expect(popover).not.toHaveAttribute('data-shell-portal')
   })
 })
 

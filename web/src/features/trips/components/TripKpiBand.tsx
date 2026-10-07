@@ -1,21 +1,21 @@
 import { useTranslation } from 'react-i18next';
-import { deriveDataState, type DataState } from '@/api/dataState';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { TripOperationalBrief } from './operationalbrief-all/TripOperationalBrief';
+import { MapPin, Zap, Gauge, Clock, Route, DollarSign } from 'lucide-react';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { TripDetail } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TripKpiBandProps {
   trip: TripDetail | undefined;
   isLoading: boolean;
-  source?: DataState<TripDetail>;
 }
+
+const GRID_CLASS =
+  'grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 3xl:grid-cols-6';
 
 /**
  * Clamp a KPI input to a safe, non-negative, finite number.
@@ -40,13 +40,21 @@ export function safeMetric(value: number | null | undefined): number {
  * displays. Efficiency is derived at the display boundary (Wh per the
  * user's distance unit) so no magic mile/km factor is needed.
  */
-export function TripKpiBand({ trip, isLoading, source: suppliedSource }: TripKpiBandProps) {
-  const { fmtInt } = useNumberFormatting();
+export function TripKpiBand({ trip, isLoading }: TripKpiBandProps) {
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
 
-  const source = suppliedSource ?? deriveDataState({ data: trip, isLoading }, { provenance: 'historical' });
+  if (isLoading && !trip) {
+    return (
+      <div className={GRID_CLASS} aria-hidden="true">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-24 rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
   const distanceM = safeMetric(trip?.total_distance_m);
   const energyWh = safeMetric(trip?.total_energy_wh);
   const durationS = safeMetric(trip?.total_duration_s);
@@ -57,42 +65,50 @@ export function TripKpiBand({ trip, isLoading, source: suppliedSource }: TripKpi
   const distanceDisplay = convertDistanceFromSI(distanceM, unitPrefs.distance);
   const efficiencyUnit = `Wh/${unitPrefs.distance}`;
   const efficiency = distanceDisplay > 0 ? energyWh / distanceDisplay : 0;
-  const scope = trip
-    ? t('trips.brief.detail.scope', 'Trip #{{id}} · {{start}} – {{end}}', {
-      id: trip.id, start: trip.start_date, end: trip.end_date ?? t('trips.detail.inProgress', 'In progress'),
-    })
-    : t('trips.brief.detail.missingScope', 'Trip record unavailable; event bounds unknown.');
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'distance', occurrenceId: 'distance', rawValue: trip?.total_distance_m != null ? distanceM : null,
-      label: t('trips.detail.distance', 'Distance'), description: scope,
-      display: { formatter: raw => ({ value: fmtInt(convertDistanceFromSI(raw, unitPrefs.distance)), unit: unitPrefs.distance }) },
-      context: trip?.drive_count != null ? t('trips.detail.kpi.driveCount', '{{count}} drives', { count: driveCount }) : undefined },
-    { metricId: 'energy', occurrenceId: 'energy', rawValue: trip?.total_energy_wh != null ? energyWh : null,
-      label: t('trips.detail.energy', 'Energy Used'), description: scope,
-      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
-    { metricId: 'efficiency', occurrenceId: 'efficiency', rawValue: trip?.total_energy_wh != null && distanceM > 0 ? energyWh / distanceM : null,
-      label: t('trips.detail.efficiency', 'Efficiency'), description: scope,
-      missingReason: t('trips.brief.detail.efficiencyReason', 'Efficiency requires a positive trip distance.'),
-      display: { formatter: () => ({ value: fmtInt(efficiency), unit: efficiencyUnit }) } },
-    { metricId: 'duration', occurrenceId: 'duration', rawValue: trip && durationS > 0 ? durationS : null,
-      label: t('trips.detail.duration', 'Duration'), description: scope,
-      display: { formatter: raw => ({ value: formatDurationSecondsAsMinutes(raw), unit: '' }) } },
-    { metricId: 'count', occurrenceId: 'drives', rawValue: trip?.drive_count != null ? driveCount : null,
-      label: t('trips.detail.drives', 'Drives'), description: scope,
-      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-      context: trip?.charge_count != null ? t('trips.detail.kpi.chargeCount', '{{count}} charges', { count: chargeCount }) : undefined },
-    { metricId: 'currency', occurrenceId: 'cost', rawValue: trip?.total_cost != null ? cost : null,
-      label: t('trips.detail.cost', 'Cost'), description: scope,
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
-  ];
-  const operationalMetrics = useOperationalMetrics(metrics);
+
   return (
-    <section aria-label={t('trips.detail.kpi.label', 'Trip summary metrics')}>
-      <TripOperationalBrief source={source} loading={isLoading && !trip} metrics={operationalMetrics} scope={scope}
-        eyebrow={t('trips.brief.detail.eyebrow', 'Trip record')}
-        title={t('trips.brief.detail.title', 'Trip totals')}
-        description={t('trips.brief.detail.description', 'Recorded trip totals, with distance-based efficiency and the original drive and charging counts.')}
-        provenance={t('trips.brief.detail.provenance', 'Stored trip detail; malformed non-negative totals retain the existing zero-clamp display policy.')} />
+    <section
+      aria-label={t('trips.detail.kpi.label', 'Trip summary metrics')}
+      className={GRID_CLASS}
+    >
+      <MetricCard
+        label={t('trips.detail.distance', 'Distance')}
+        value={`${fmtInt(distanceDisplay)} ${unitPrefs.distance}`}
+        icon={<MapPin className="h-4 w-4" aria-hidden="true" />}
+        color="cyan"
+        subtitle={t('trips.detail.kpi.driveCount', '{{count}} drives', { count: driveCount })}
+      />
+      <MetricCard
+        label={t('trips.detail.energy', 'Energy Used')}
+        value={formatEnergy(energyWh)}
+        icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+        color="amber"
+      />
+      <MetricCard
+        label={t('trips.detail.efficiency', 'Efficiency')}
+        value={distanceDisplay > 0 ? `${fmtInt(efficiency)} ${efficiencyUnit}` : '—'}
+        icon={<Gauge className="h-4 w-4" aria-hidden="true" />}
+        color="purple"
+      />
+      <MetricCard
+        label={t('trips.detail.duration', 'Duration')}
+        value={durationS > 0 ? formatDurationSecondsAsMinutes(durationS) : '—'}
+        icon={<Clock className="h-4 w-4" aria-hidden="true" />}
+        color="blue"
+      />
+      <MetricCard
+        label={t('trips.detail.drives', 'Drives')}
+        value={fmtInt(driveCount)}
+        icon={<Route className="h-4 w-4" aria-hidden="true" />}
+        color="green"
+        subtitle={t('trips.detail.kpi.chargeCount', '{{count}} charges', { count: chargeCount })}
+      />
+      <MetricCard
+        label={t('trips.detail.cost', 'Cost')}
+        value={formatCurrency(cost)}
+        icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
+        color="green"
+      />
     </section>
   );
 }

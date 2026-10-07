@@ -1,10 +1,16 @@
-import { LayoutCard } from '@/components/layout';
+import { ListTree } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, MetricLabel, Text } from '@/components/ui';
+import {
+  Badge,
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type {
   ComfortConsistencySummary,
   ComfortRunBoundary,
@@ -14,7 +20,6 @@ import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyWindowDirectoryProps {
   summary: ComfortConsistencySummary;
@@ -40,7 +45,6 @@ export function ComfortConsistencyWindowDirectory({
   formatDuration,
   formatDelta,
 }: ComfortConsistencyWindowDirectoryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.windowDirectory;
   const boundaryLabel = (boundary: ComfortRunBoundary) => {
@@ -61,7 +65,11 @@ export function ComfortConsistencyWindowDirectory({
 
   return (
     <section data-testid="comfort-consistency-window-directory">
-      <LayoutCard title={t('comfortConsistency.directory.title', 'Stabilization-window directory')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <ListTree className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('comfortConsistency.directory.title', 'Stabilization-window directory')}
+        </PanelTitle>
         <Text as="p" variant="caption">
           {t(
             'comfortConsistency.directory.subtitle',
@@ -127,7 +135,7 @@ export function ComfortConsistencyWindowDirectory({
                   />
                   <Detail
                     label={t('comfortConsistency.directory.span', 'Sample span')}
-                    value={formatDuration(window.sampleSpanS)}
+                    value={formatDuration(window.sampleSpanS, { precision: 2 })}
                   />
                   <Detail
                     label={t('comfortConsistency.directory.samples', 'Samples')}
@@ -139,7 +147,7 @@ export function ComfortConsistencyWindowDirectory({
                   />
                   <Detail
                     label={t('comfortConsistency.directory.timeToBand', 'Observed time to sustained band')}
-                    value={formatDuration(window.timeToBandS)}
+                    value={formatDuration(window.timeToBandS, { precision: 2 })}
                   />
                   <Detail
                     label={t('comfortConsistency.directory.overshoot', 'Observed overshoot')}
@@ -158,7 +166,7 @@ export function ComfortConsistencyWindowDirectory({
             ))}
           </ol>
         </ComfortConsistencySectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Area,
   AreaChart,
+  ChartContainer,
   ChartGradient,
   ChartTooltip,
   ReferenceLine,
@@ -15,7 +16,6 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -56,8 +56,7 @@ export function CarbonIntensityCurve({
         'Built-in hourly grid intensity model curve',
       )}
     >
-      <ChartCard
-        size="standard"
+      <ChartContainer
         title={t('carbon.curve.title', '24-hour grid intensity curve')}
         subtitle={t(
           'carbon.curve.subtitle',
@@ -95,6 +94,7 @@ export function CarbonIntensityCurve({
             label: t('carbon.curve.rankColumn', 'Cleanest rank'),
             format: (value) => display.formatNumber(
               typeof value === 'number' ? value : null,
+              0,
             ),
           },
         ]}
@@ -131,7 +131,7 @@ export function CarbonIntensityCurve({
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
-                  tickFormatter={(value: number) => display.formatNumber(value)}
+                  tickFormatter={(value: number) => display.formatNumber(value, 0)}
                 />
                 <Tooltip
                   content={(
@@ -179,7 +179,7 @@ export function CarbonIntensityCurve({
             />
           )}
         </CarbonSectionBody>
-      </ChartCard>
+      </ChartContainer>
     </section>
   );
 }

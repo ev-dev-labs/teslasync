@@ -3,19 +3,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useDataState } from '@/hooks/useDataState';
-import { StaleRefreshWarning } from '@/components/feedback';
-import { EmptyState, QueryError } from '@/components/feedback';
-import { useUnits } from '@/hooks/useUnits';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 
 import {
   DurationDistributionChart,
@@ -23,6 +17,7 @@ import {
   MonthlyDwellTrend,
   OvernightParkingContext,
   ParkingCoverageMethodology,
+  ParkingKpiBand,
   ParkingTemporalProfile,
   TopParkingLocations,
   type ParkingSectionState,
@@ -36,9 +31,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function ParkingAnalyticsPage() {
   const { t } = useTranslation();
-  const { fmtInt, fmtNumber } = useNumberFormatting();
-  const { formatDuration } = useUnits();
-  usePageTitle(t('parking.title', 'Parking analytics'));
+  usePageTitle(t('parking.title', 'Parking Analytics'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -54,7 +47,6 @@ export default function ParkingAnalyticsPage() {
     limit: PARKING_DRIVE_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
       summarizeParking(drives, {
@@ -72,11 +64,12 @@ export default function ParkingAnalyticsPage() {
   const sectionState = useMemo<ParkingSectionState>(
     () => ({
       isLoading: drivesQuery.isLoading,
-      error: drivesState.fatalError,
+      error: drivesQuery.isError ? drivesQuery.error : null,
       onRetry,
     }),
     [
-      drivesState.fatalError,
+      drivesQuery.error,
+      drivesQuery.isError,
       drivesQuery.isLoading,
       onRetry,
     ],
@@ -84,62 +77,21 @@ export default function ParkingAnalyticsPage() {
 
   if (vehicleId == null) {
     return (
-      <NoVehicleSelected pageTitle={t('parking.title', 'Parking analytics')} />
+      <NoVehicleSelected pageTitle={t('parking.title', 'Parking Analytics')} />
     );
   }
 
   return (
-    <PageLayout
-      title={t('parking.title', 'Parking analytics')}
+    <PageContainer
+      title={t('parking.title', 'Parking Analytics')}
       subtitle={t(
         'parking.subtitle',
         'Where your car spends its time between drives',
       )}
       query={drivesQuery}
     >
-      <StaleRefreshWarning state={drivesState} label={t('parking.title', 'Parking analytics')} />
       <FadeIn>
-        <section data-testid="parking-kpis" aria-label={t('parking.kpis', 'Parking summary metrics')}>
-          {sectionState.error ? <QueryError error={sectionState.error} onRetry={onRetry} /> : null}
-          <VehicleEvidenceBrief id="parking-summary"
-            title={t('parking.kpis', 'Parking summary metrics')}
-            description={t('parking.briefDescription', 'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.')}
-            status={drivesState.status} loading={drivesQuery.isLoading}
-            provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
-            scope={t('parking.briefWindow', '{{sample}} · {{start}} → {{end}} · {{timezone}}', {
-              sample: t('parking.kpis.observedSample', '{{drives}} usable drives · {{stints}} reconstructed stints', {
-                drives: fmtInt(summary.coverage.validDrives), stints: fmtInt(summary.stints.length),
-              }),
-              start: start || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
-              end: end || t('vehicles.evidenceBrief.unbounded', 'Unbounded'), timezone: tz,
-            })}
-            metrics={[
-              { metricId: 'percent', occurrenceId: 'parked-share', label: t('parking.parkedShare', 'Time parked'),
-                rawValue: drivesState.data == null || summary.parkedShare == null ? null : summary.parkedShare * 100,
-                display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
-                context: t('parking.kpis.observedSample', '{{drives}} usable drives · {{stints}} reconstructed stints', {
-                  drives: fmtInt(summary.coverage.validDrives), stints: fmtInt(summary.stints.length),
-                }) },
-              { metricId: 'percent', occurrenceId: 'night-share', label: t('parking.nightShare', 'Overnight share'),
-                rawValue: drivesState.data == null || summary.nightShare == null ? null : summary.nightShare * 100,
-                display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
-                context: t('parking.kpis.overnightSample', '22:00–06:00 · {{count}} stints', { count: summary.stints.length }) },
-              { metricId: 'duration', occurrenceId: 'longest-stint', label: t('parking.longestStint', 'Longest stint'),
-                rawValue: drivesState.data == null || !summary.longestStint ? null : summary.longestStint.durationMs / 1000,
-                display: { formatter: raw => ({ value: formatDuration(raw), unit: '' }) },
-                context: summary.longestStint ? t('parking.kpis.longestSample', '{{location}} · longest of {{count}} stints', {
-                  location: summary.longestStint.location ?? t('parking.unknown', 'Unknown location'), count: summary.stints.length,
-                }) : null },
-              { metricId: 'count', occurrenceId: 'locations', label: t('parking.locations', 'Locations'),
-                rawValue: drivesState.data == null ? null : summary.locations.filter(location => location.location != null).length,
-                context: t('parking.kpis.locationQuality', '{{known}} located · {{missing}} missing', {
-                  known: fmtInt(summary.coverage.knownLocationStints), missing: fmtInt(summary.coverage.missingLocationStints),
-                }) },
-            ]} />
-          {!drivesQuery.isLoading && !sectionState.error && summary.stints.length === 0 ? <EmptyState
-            message={t('parking.noData', 'Not enough drives in this period to reconstruct parking.')}
-            actionTo={{ label: t('parking.browseDrives', 'Browse drives'), to: '/drives' }} /> : null}
-        </section>
+        <ParkingKpiBand summary={summary} {...sectionState} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
@@ -175,6 +127,6 @@ export default function ParkingAnalyticsPage() {
           rangeEnd={end}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

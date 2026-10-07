@@ -1,5 +1,4 @@
 import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
 import { HelpIcon, type HelpIconProps } from './HelpIcon';
@@ -9,8 +8,7 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   /**
    * Optional `<HelpIcon>` rendered immediately after the label. The
    * HelpIcon's `for` defaults to the input's resolved id so screen
-   * For an implicit id, the accessible name uses the visible label. Explicit
-   * id/help target/name overrides retain their existing precedence.
+   * readers announce "Help for {{id}}" when the trigger is focused.
    */
   help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
@@ -48,10 +46,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     'aria-describedby': ariaDescribedBy,
     ...props
   }, ref) => {
-    const { t } = useTranslation();
     const reactId = useId();
-    // Labels can repeat or change with locale; they must not own field identity.
-    const inputId = id || `input-${reactId}`;
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || `input-${reactId}`;
     const feedbackId = error
       ? `${inputId}-error`
       : hint
@@ -69,15 +65,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             >
               {label}
             </Label>
-            {help && (
-              <HelpIcon
-                {...help}
-                for={help.for ?? inputId}
-                ariaLabel={help.ariaLabel ?? (!id && help.for == null && label
-                  ? t('a11y.helpFor', { field: label, defaultValue: `Help for ${label}` })
-                  : undefined)}
-              />
-            )}
+            {help && <HelpIcon {...help} for={help.for ?? inputId} />}
           </div>
         )}
         <div className="relative">

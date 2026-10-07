@@ -7,7 +7,7 @@ import {
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { DepartureDirectoryItem } from '../../lib/preconditioningEffectiveness';
 import {
   preconditioningDispositionLabel,
@@ -15,7 +15,6 @@ import {
   preconditioningRegimeLabel,
 } from './labels';
 import type { TemperatureDeltaFormatter } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface PreconditioningDepartureCardProps {
   item: DepartureDirectoryItem;
@@ -41,7 +40,6 @@ export function PreconditioningDepartureCard({
   formatDuration,
   formatDelta,
 }: PreconditioningDepartureCardProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -91,15 +89,15 @@ export function PreconditioningDepartureCard({
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.firstLead', 'First-state lead')}
-          value={formatDuration(item.firstSampleLeadS)}
+          value={formatDuration(item.firstSampleLeadS, { precision: 2 })}
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.finalLead', 'Final-state lead')}
-          value={formatDuration(item.lastSampleLeadS)}
+          value={formatDuration(item.lastSampleLeadS, { precision: 2 })}
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.span', 'Observation span')}
-          value={formatDuration(item.observationSpanS)}
+          value={formatDuration(item.observationSpanS, { precision: 2 })}
         />
         <Detail
           label={t('preconditioningEffectiveness.directory.targetShift', 'Target shift')}

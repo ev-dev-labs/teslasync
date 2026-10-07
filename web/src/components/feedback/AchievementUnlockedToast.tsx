@@ -142,8 +142,8 @@ export function AchievementUnlockedToast({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <Trophy className="h-3.5 w-3.5 text-yellow-300" aria-hidden="true" />
-            <p className="text-2xs font-semibold tracking-wider text-yellow-300/90">
-              {t('achievements.toastEyebrow', 'Achievement unlocked')}
+            <p className="text-2xs font-semibold uppercase tracking-wider text-yellow-300/90">
+              {t('achievements.toastEyebrow', 'Achievement Unlocked')}
             </p>
           </div>
           <p className="mt-1 text-sm font-semibold text-[var(--text-primary)] leading-tight">
@@ -197,7 +197,7 @@ export function AchievementUnlockedToastStack({
       className="fixed top-4 right-4 sm:top-6 sm:right-6 z-[110] flex flex-col gap-3 pointer-events-none safe-bottom"
       data-print-hide
     >
-      <AnimatePresence mode="sync">
+      <AnimatePresence mode="popLayout">
         {events.map(e => (
           <AchievementUnlockedToast
             key={e.achievement.id}

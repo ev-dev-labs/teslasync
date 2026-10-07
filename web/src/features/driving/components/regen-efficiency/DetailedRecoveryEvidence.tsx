@@ -9,11 +9,10 @@ import {
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtPercent } from '@/lib/numberFormat';
 
 import type { RegenEfficiencyModel } from '../../lib/regenEfficiency';
 import type { RegenSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DetailedRecoveryEvidenceProps {
   model: RegenEfficiencyModel;
@@ -24,7 +23,6 @@ export function DetailedRecoveryEvidence({
   model,
   state,
 }: DetailedRecoveryEvidenceProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
 
@@ -75,7 +73,7 @@ export function DetailedRecoveryEvidence({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-xl bg-white/[0.03] p-3">
                 <MetricValue>
-                  {formatEnergy(model.totalMeasuredRegenWh)}
+                  {formatEnergy(model.totalMeasuredRegenWh, { precision: 1 })}
                 </MetricValue>
                 <MetricLabel>
                   {t('regen.overview.sampleRecovered', 'Sample recovered')}
@@ -83,7 +81,9 @@ export function DetailedRecoveryEvidence({
               </div>
               <div className="rounded-xl bg-white/[0.03] p-3">
                 <MetricValue>
-                  {formatEnergy(model.totalMeasuredDriveEnergyWh)}
+                  {formatEnergy(model.totalMeasuredDriveEnergyWh, {
+                    precision: 1,
+                  })}
                 </MetricValue>
                 <MetricLabel>
                   {t(
@@ -95,7 +95,7 @@ export function DetailedRecoveryEvidence({
               <div className="rounded-xl bg-white/[0.03] p-3">
                 <MetricValue>
                   {model.energyWeightedRatioPct != null
-                    ? fmtPercent(model.energyWeightedRatioPct)
+                    ? fmtPercent(model.energyWeightedRatioPct, 1)
                     : '—'}
                 </MetricValue>
                 <MetricLabel>
@@ -114,15 +114,15 @@ export function DetailedRecoveryEvidence({
                   {
                     q1:
                       model.ratioStatistics.q1Pct != null
-                        ? fmtPercent(model.ratioStatistics.q1Pct)
+                        ? fmtPercent(model.ratioStatistics.q1Pct, 1)
                         : '—',
                     median:
                       model.ratioStatistics.medianPct != null
-                        ? fmtPercent(model.ratioStatistics.medianPct)
+                        ? fmtPercent(model.ratioStatistics.medianPct, 1)
                         : '—',
                     q3:
                       model.ratioStatistics.q3Pct != null
-                        ? fmtPercent(model.ratioStatistics.q3Pct)
+                        ? fmtPercent(model.ratioStatistics.q3Pct, 1)
                         : '—',
                   },
                 )}

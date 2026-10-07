@@ -1,8 +1,7 @@
 import { Building2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Button, Text, StatusPill } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { Button, GlassPanel, PanelTitle, StatusPill } from '@/components/ui';
 import type {
   FleetCostCenter,
   FleetReservation,
@@ -40,7 +39,9 @@ export function CostCenterAllocation({
   const { t } = useTranslation();
   const allocations = costCenterAllocations(costCenters, reservations, workOrders);
   return (
-    <LayoutCard title={t('fleetOps.costCenters.title', 'Cost-center allocation')} actions={
+    <GlassPanel className="p-5">
+      <div className="flex items-center justify-between gap-3">
+        <PanelTitle>{t('fleetOps.costCenters.title', 'Cost-center allocation')}</PanelTitle>
         <Button
           type="button"
           size="sm"
@@ -51,7 +52,7 @@ export function CostCenterAllocation({
         >
           {t('fleetOps.costCenters.add', 'Add cost center')}
         </Button>
-      }>
+      </div>
       {loading ? <Skeleton lines={5} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.costCenters.resource', 'Cost centers')} />
       ) : allocations.length === 0 ? (
@@ -65,11 +66,11 @@ export function CostCenterAllocation({
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {allocations.map((allocation) => (
-            <div key={allocation.cost_center.id} className="min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+            <div key={allocation.cost_center.id} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <Text as="p" weight="semibold" className="break-words">{allocation.cost_center.name}</Text>
-                  <Text as="p" variant="caption">{allocation.cost_center.code}</Text>
+                  <p className="font-semibold text-[var(--text-primary)]">{allocation.cost_center.name}</p>
+                  <p className="text-xs text-[var(--text-muted)]">{allocation.cost_center.code}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <StatusPill color={allocation.cost_center.active ? 'bg-emerald-500' : 'bg-slate-500'}>
@@ -105,21 +106,21 @@ export function CostCenterAllocation({
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <Text as="p" variant="caption">{t('fleetOps.costCenters.bookings', 'Bookings')}</Text>
-                  <Text as="p" weight="semibold">{allocation.reservation_count}</Text>
+                  <p className="text-[var(--text-muted)]">{t('fleetOps.costCenters.bookings', 'Bookings')}</p>
+                  <p className="font-semibold">{allocation.reservation_count}</p>
                 </div>
-                <Text as="p" variant="caption" className="mt-3">
+                <p className="mt-3 text-xs text-violet-200">
                   {t('fleetOps.costCenters.maintenanceCost', 'Maintenance cost')}: {formatMinorUnits(allocation.cost_minor, allocation.currency)}
-                </Text>
+                </p>
                 <div>
-                  <Text as="p" variant="caption">{t('fleetOps.costCenters.openOrders', 'Open orders')}</Text>
-                  <Text as="p" weight="semibold">{allocation.open_work_order_count}</Text>
+                  <p className="text-[var(--text-muted)]">{t('fleetOps.costCenters.openOrders', 'Open orders')}</p>
+                  <p className="font-semibold">{allocation.open_work_order_count}</p>
                 </div>
               </div>
             </div>
           ))}
         </div>
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

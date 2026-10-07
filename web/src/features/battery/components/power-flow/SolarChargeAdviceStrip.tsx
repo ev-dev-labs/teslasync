@@ -3,8 +3,7 @@ import { Sun, PlugZap } from 'lucide-react';
 
 import { Badge, Text } from '@/components/ui';
 import { useSolarChargeAdvice } from '@/api/hooks/useEnergy';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface SolarChargeAdviceStripProps {
   siteId?: number;
@@ -29,7 +28,6 @@ function verdictVariant(verdict: string): 'success' | 'info' | 'warning' | 'neut
  * covers those states.
  */
 export function SolarChargeAdviceStrip({ siteId }: SolarChargeAdviceStripProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { data } = useSolarChargeAdvice(siteId);
 
@@ -51,7 +49,7 @@ export function SolarChargeAdviceStrip({ siteId }: SolarChargeAdviceStripProps) 
       </Badge>
       <Text as="span" variant="caption" className="tabular-nums">
         {t('powerFlow.surplus', '{{kw}} kW surplus · ~{{amps}}A solar-matched', {
-          kw: fmtNumber(data.surplus_w / 1000),
+          kw: fmtNumber(data.surplus_w / 1000, 1),
           amps: data.recommended_amps,
         })}
       </Text>

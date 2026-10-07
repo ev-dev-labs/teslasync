@@ -1,17 +1,15 @@
 import { useCallback } from 'react';
 
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import type { CompareMetricKey } from '../../lib/driveCompare';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export type CompareMetricFormatter = (key: CompareMetricKey, value: number | null) => string;
 
 /** Unit-aware formatter shared by the scorecard and full comparison grid. */
 export function useCompareMetricFormatter(): CompareMetricFormatter {
-  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const {
     formatDistance,
     formatDuration,
@@ -25,27 +23,27 @@ export function useCompareMetricFormatter(): CompareMetricFormatter {
     if (value == null) return '—';
     switch (key) {
       case 'distanceM':
-        return formatDistance(value);
+        return formatDistance(value, { precision: 1 });
       case 'durationS':
-        return formatDuration(value);
+        return formatDuration(value, { precision: 0 });
       case 'avgSpeedMps':
       case 'maxSpeedMps':
-        return formatSpeed(value);
+        return formatSpeed(value, { precision: 0 });
       case 'energyUsedWh':
-        return formatEnergy(value);
+        return formatEnergy(value, { precision: 1 });
       case 'whPerKm': {
         const displayDistancePerKm = convertDistanceFromSI(1_000, unitPrefs.distance);
         const consumption = displayDistancePerKm > 0 ? value / displayDistancePerKm : value;
-        return `${fmtNumber(consumption)} Wh/${unitPrefs.distance}`;
+        return `${fmtNumber(consumption, 0)} Wh/${unitPrefs.distance}`;
       }
       case 'regenShare':
-        return fmtPercent(value * 100);
+        return fmtPercent(value * 100, 0);
       case 'socUsed':
-        return fmtPercent(value);
+        return fmtPercent(value, 0);
       case 'outsideTempAvgC':
-        return formatTemperature(value);
+        return formatTemperature(value, { precision: 0 });
       case 'score':
-        return `${fmtNumber(value)}/100`;
+        return `${fmtNumber(value, 0)}/100`;
     }
   }, [
     formatDistance,
@@ -53,6 +51,6 @@ export function useCompareMetricFormatter(): CompareMetricFormatter {
     formatEnergy,
     formatSpeed,
     formatTemperature,
-    unitPrefs.distance, fmtNumber, fmtPercent,
+    unitPrefs.distance,
   ]);
 }

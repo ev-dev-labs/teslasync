@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -77,7 +77,6 @@ vi.mock('react-i18next', async () => {
 import { request, ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import ActiveSessionsPage from './ActiveSessionsPage'
-import { sessionKeys } from '@/api/hooks/useSessions'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -88,7 +87,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  const rendered = render(
+  return render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -97,7 +96,6 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   )
-  return { ...rendered, client: qc }
 }
 
 beforeEach(() => {
@@ -174,7 +172,6 @@ describe('ActiveSessionsPage — forward-auth + non-empty list', () => {
     ).toBeTruthy()
     // Header "all others" shows because hasOthers=true.
     expect(screen.getByTestId('active-sessions-revoke-all-others')).toBeTruthy()
-    expect(screen.getByTestId('active-sessions-revoke-all-others').closest('[data-action-group="destructive"]')).not.toBeNull()
   })
 
   it('per-row revoke opens confirm and fires DELETE on confirm', async () => {
@@ -340,42 +337,9 @@ describe('ActiveSessionsPage — empty list', () => {
     // DataTable's empty state surfaces our message verbatim once the query
     // resolves (during load it shows a skeleton instead).
     await waitFor(() => {
-      expect(screen.getByText(/No Active sessions for this account\./i)).toBeTruthy()
+      expect(screen.getByText(/No active sessions for this account\./i)).toBeTruthy()
     })
     expect(screen.getByTestId('active-sessions-section')).toBeTruthy()
     expect(screen.queryByTestId('active-sessions-revoke-all-others')).toBeNull()
-  })
-})
-
-describe('ActiveSessionsPage — retained source', () => {
-  it('keeps device rows, breakdowns and confirmed-only actions after refresh failure', async () => {
-    mockedRequest.mockResolvedValue({
-      mode: 'session',
-      sessions: [
-        { id: 'retained-current', user_agent: 'Firefox', ip: '10.0.0.1', current: true,
-          created_at: '2026-05-05T10:00:00Z', last_seen_at: '2026-05-05T12:00:00Z' },
-        { id: 'retained-other', user_agent: 'Chrome', ip: '10.0.0.2', current: false,
-          created_at: '2026-05-04T10:00:00Z', last_seen_at: '2026-05-05T11:00:00Z' },
-      ],
-    })
-    const { client, container } = renderPage()
-    await screen.findByTestId('active-sessions-revoke-retained-other')
-    expect(container.querySelector('[data-layout-reference]')).not.toBeNull()
-
-    mockedRequest.mockRejectedValue(new Error('Refresh unavailable'))
-    await act(async () => {
-      await client.invalidateQueries({ queryKey: sessionKeys.list })
-    })
-    await waitFor(() => expect(client.getQueryState(sessionKeys.list)?.status).toBe('error'))
-
-    expect(await screen.findByText('Data may be stale')).toBeInTheDocument()
-    expect(screen.getByTestId('active-sessions-current-pill-retained-current')).toBeInTheDocument()
-    expect(screen.getByTestId('active-sessions-revoke-retained-other')).toBeInTheDocument()
-    expect(screen.getByText('By browser')).toBeInTheDocument()
-    expect(screen.getByText('By platform')).toBeInTheDocument()
-    expect(screen.getByText('By network')).toBeInTheDocument()
-    fireEvent.click(screen.getByTestId('active-sessions-revoke-retained-other'))
-    expect(await screen.findByRole('dialog')).toBeInTheDocument()
-    expect(mockedRequest.mock.calls.some(call => call[1]?.method === 'DELETE')).toBe(false)
   })
 })

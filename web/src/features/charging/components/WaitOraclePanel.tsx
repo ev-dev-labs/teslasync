@@ -22,8 +22,7 @@ import {
 } from '@/components/charts';
 import { Badge, Button, GlassPanel, Input, PanelTitle, Select, Text } from '@/components/ui';
 import { ChartSkeleton, EmptyState, QueryError } from '@/components/feedback';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 type ArrivalPreset = 'now' | 60 | 120 | 180;
 
@@ -61,7 +60,6 @@ function toIsoOrNull(local: string): string | null {
  * demand), the best nearby arrival hour, and the full-day wait curve.
  */
 export function WaitOraclePanel() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [site, setSite] = useState<string | null>(null);
   const [preset, setPreset] = useState<ArrivalPreset>('now');
@@ -173,7 +171,7 @@ export function WaitOraclePanel() {
             <div className="flex flex-wrap items-center gap-2">
               <Text as="span" size="xl" className="font-semibold tabular-nums">
                 {t('wait_oracle.expectedWait', '{{min}} min expected wait', {
-                  min: fmtNumber((forecast.expected_wait_s ?? 0) / 60),
+                  min: fmtNumber((forecast.expected_wait_s ?? 0) / 60, 0),
                 })}
               </Text>
               <Badge variant={verdictVariant(forecast.verdict)}>{forecast.verdict}</Badge>
@@ -185,7 +183,7 @@ export function WaitOraclePanel() {
             </div>
             <Text as="p" size="sm" color="secondary" className="mt-2">
               {t('wait_oracle.waitProb', '{{pct}}% chance of any wait · ~{{stalls}} stalls', {
-                pct: fmtNumber(forecast.wait_probability_pct),
+                pct: fmtNumber(forecast.wait_probability_pct, 0),
                 stalls: forecast.stalls_estimated,
               })}
             </Text>
@@ -198,7 +196,7 @@ export function WaitOraclePanel() {
                     'Arrive {{hour}}:00 UTC instead to save ~{{min}} min.',
                     {
                       hour: String(forecast.best_hour_utc).padStart(2, '0'),
-                      min: fmtNumber((forecast.save_s ?? 0) / 60),
+                      min: fmtNumber((forecast.save_s ?? 0) / 60, 0),
                     },
                   )}
                 </Text>
@@ -221,7 +219,7 @@ export function WaitOraclePanel() {
               {
                 key: 'wait',
                 label: t('wait_oracle.chart.col.wait', 'Expected wait (min)'),
-                format: (v) => fmtNumber(v as number),
+                format: (v) => fmtNumber(v as number, 1),
               },
             ]}
             height={220}

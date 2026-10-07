@@ -119,11 +119,6 @@ vi.mock('@/components/charts', () => {
 
 import { SpeedHistogramChart } from './SpeedHistogramChart';
 
-vi.mock('@/components/layout', async () => {
-  const charts = await import('@/components/charts');
-  return { ChartCard: charts.ChartContainer };
-});
-
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const BUCKETS: SpeedHistogramBucket[] = [
@@ -188,7 +183,7 @@ describe('SpeedHistogramChart — populated bars', () => {
     expect(bar).toHaveAttribute('data-fill', '#a855f7');
     const name = bar.getAttribute('data-name') ?? '';
     expect(name).toContain('%');
-    expect(name).toContain('of speed samples');
+    expect(name).toContain('of drive');
   });
 
   it('binds the x-axis to the bucket range label', () => {
@@ -213,7 +208,7 @@ describe('SpeedHistogramChart — populated bars', () => {
     );
     expect(columns).toEqual([
       { key: 'range', label: 'Speed range' },
-      { key: 'pct', label: '% of speed samples' },
+      { key: 'pct', label: '% of drive' },
     ]);
   });
 

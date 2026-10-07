@@ -8,39 +8,51 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  Smartphone, Calendar, Clock, ExternalLink,
-  RefreshCw, ListChecks,
+  Download, CheckCircle, Smartphone, Calendar, Clock, ExternalLink,
+  ArrowUpCircle, CalendarClock, RefreshCw, BarChart3, ListChecks, History,
 } from 'lucide-react';
 
-import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
-import { Badge, Button, Pagination, Text, Caption } from '@/components/ui';
-import { type StatMetric } from '@/components/data-display';
-import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Badge, Button, Pagination, PanelTitle, Text, Caption } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai';
+import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai/AISoftwareUpdateChangelogSummarizer';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { neonColorMap } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
-import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/hooks/useSoftwareUpdatesPage';
+import { request } from '@/api/client';
 
-import { type CadencePoint } from '../components/SoftwareUpdateCadenceChart';
-import { SoftwareCadenceCard } from '../components/software-updates-modernization/SoftwareCadenceCard';
-import { SoftwareHistoryItem } from '../components/software-updates-modernization/SoftwareHistoryItem';
-import { observedCount, softwareSourceState } from '../components/software-updates-modernization/presenter';
+import {
+  SoftwareUpdateCadenceChart,
+  type CadencePoint,
+} from '../components/SoftwareUpdateCadenceChart';
 import { SoftwareUpdateStatusBreakdown } from '../components/SoftwareUpdateStatusBreakdown';
 import { getUpdateStatus } from '../components/softwareUpdateStatus';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { deriveDataState } from '@/api/dataState';
-import { VehicleSourceContent } from '../components/VehicleSourceContent';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+/** Wire shape from GET /software-updates (snake_case, matching Go JSON tags). */
+interface SoftwareUpdate {
+  id: number;
+  vehicle_id: number;
+  version: string;
+  status: string;
+  installed_at: string | null;
+  scheduled_at: string | null;
+  created_at: string;
+}
+
+const PAGE_SIZE = 50;
 
 /** `YYYY-MM` → short label, e.g. `Mar '25`. */
 function monthLabel(key: string): string {
@@ -55,9 +67,8 @@ function monthLabel(key: string): string {
 // ─── Page component ──────────────────────────────────────────────────────────
 
 export default function SoftwareUpdatesPage() {
-  const { fmtInt, locale } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('softwareUpdates.title', 'Software updates'));
+  usePageTitle(t('softwareUpdates.title', 'Software Updates'));
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
@@ -67,10 +78,21 @@ export default function SoftwareUpdatesPage() {
     defaultPresetId: 'all',
   });
 
-  const updatesQuery = useSoftwareUpdatesPage(vehicleId, page, start, end);
+  const updatesQuery = useQuery({
+    queryKey: ['software-updates', vehicleId, page, start, end],
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        limit: String(PAGE_SIZE),
+        offset: String((page - 1) * PAGE_SIZE),
+        start,
+        end,
+      });
+      return request<SoftwareUpdate[]>(`/software-updates?${params.toString()}`, { signal });
+    },
+    enabled: vehicleId !== null,
+  });
   const { data, isLoading, isError, error, refetch } = updatesQuery;
-  const source = softwareSourceState(data, isLoading, isError);
-  const historySource = deriveDataState(updatesQuery, { provenance: 'historical' });
 
   // Defensive coercion — an unexpected non-array response shape must not crash
   // the derivations below.
@@ -108,9 +130,12 @@ export default function SoftwareUpdatesPage() {
       .map((u) => (u.installed_at ? new Date(u.installed_at).getTime() : NaN))
       .filter((n) => Number.isFinite(n))
       .sort((a, b) => a - b);
-    if (ms.length < 2) return null;
-    return (ms[ms.length - 1] - ms[0]) / 1000 / (ms.length - 1);
-  }, [installedUpdates]);
+    if (ms.length < 2) return '—';
+    const spanDays = (ms[ms.length - 1] - ms[0]) / 86_400_000;
+    return t('softwareUpdates.kpi.cadenceDays', '{{days}}d', {
+      days: fmtInt(spanDays / (ms.length - 1)),
+    });
+  }, [installedUpdates, t]);
 
   // ── Cadence chart (updates per calendar month) ──
   const cadence = useMemo<CadencePoint[]>(() => {
@@ -163,76 +188,64 @@ export default function SoftwareUpdatesPage() {
     </div>
   );
 
-  // Specialist version/date/cadence strings retain their original formatters.
-  // Occurrence IDs describe this page's facts, not new glossary semantics.
-  const metrics: StatMetric[] = [
-    { metricId: 'text', occurrenceId: 'software-current-version', label: t('softwareUpdates.kpi.currentVersion', 'Current version'), description: t('softwareUpdates.kpi.versionHelp', 'Version from the first returned update; not an independently observed installed firmware snapshot.'), rawValue: updates.length > 0 ? latestVersion : null },
-    { metricId: 'count', occurrenceId: 'software-total-updates', label: t('softwareUpdates.kpi.totalUpdates', 'Total updates'), description: t('softwareUpdates.kpi.totalHelp', 'Number of updates on the loaded page.'), rawValue: observedCount(source.available, totalUpdates), display: { units: { locale } } },
-    { metricId: 'count', occurrenceId: 'software-installed', label: t('softwareUpdates.kpi.installed', 'Installed'), description: t('softwareUpdates.kpi.installedHelp', 'Loaded updates whose status is installed.'), rawValue: observedCount(source.available, installedCount), display: { units: { locale } } },
-    { metricId: 'count', occurrenceId: 'software-pending', label: t('softwareUpdates.kpi.pending', 'Pending'), description: t('softwareUpdates.kpi.pendingHelp', 'All loaded updates minus installed updates; includes every other status.'), rawValue: observedCount(source.available, pendingCount), display: { units: { locale } } },
-    { metricId: 'text', occurrenceId: 'software-last-installed', label: t('softwareUpdates.kpi.lastInstalled', 'Last installed'), description: t('softwareUpdates.kpi.lastHelp', 'Latest nonempty installation date among loaded installed updates.'), rawValue: lastInstalledAt ? formatDate(lastInstalledAt) : null },
-    { metricId: 'duration', occurrenceId: 'software-average-cadence', label: t('softwareUpdates.kpi.avgCadence', 'Avg cadence'), description: t('softwareUpdates.kpi.cadenceHelp', 'Span in days divided by the number of intervals between valid installation dates on this page.'), rawValue: avgCadence, display: { formatter: raw => ({ value: t('softwareUpdates.kpi.cadenceDays', '{{days}}d', { days: fmtInt(raw / 86400) }), unit: '' }) } },
-  ];
-  const retryContent = isError ? <QueryError error={error} onRetry={handleRetry} /> : undefined;
-  const resetAction = presetId !== 'all'
-    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
-    : undefined;
-  const unavailableMessage = t('softwareUpdates.source.unavailable', 'Update history is not available. Select a vehicle to load its history.');
-  const unavailableContent = <EmptyState message={unavailableMessage}
-    action={vehicleId != null ? { label: t('common.refresh', 'Refresh'), onClick: handleRetry } : undefined}
-    actionTo={vehicleId == null ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;
-
   return (
-    <PageLayout
-      title={t('softwareUpdates.title', 'Software updates')}
+    <PageContainer
+      title={t('softwareUpdates.title', 'Software Updates')}
       subtitle={t('softwareUpdates.subtitle', 'Track firmware versions and update history')}
-      secondaryActions={actions}
+      actions={actions}
       query={updatesQuery}
     >
       {/* 1 — KPI band ─────────────────────────────────────────────── */}
       <FadeIn>
-        <VehicleOperationalBrief
-          id="software-update-summary"
-          title={t('softwareUpdates.kpi.label', 'Software update summary')}
-          metrics={metrics}
-          loading={source.initialLoading}
-          available={source.available}
-          retained={source.retained}
-          error={isError ? t('softwareUpdates.source.failed', 'Update history could not be refreshed. Retry to recover.') : null}
-          period={{
-            kind: 'unknown',
-            label: t('softwareUpdates.source.period', 'Loaded update history'),
-            reason: t('softwareUpdates.source.scope', 'Summary and charts describe this page of up to 50 updates in the selected range, not the complete fleet history.'),
-          }}
-          footer={!source.available && !isLoading ? retryContent ?? unavailableContent : undefined}
-        />
+        <section
+          aria-label={t('softwareUpdates.kpi.label', 'Software update summary')}
+          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
+        >
+          <MetricCard icon={<Smartphone className="h-5 w-5" />} label={t('softwareUpdates.kpi.currentVersion', 'Current Version')} value={latestVersion} color="cyan" />
+          <MetricCard icon={<Download className="h-5 w-5" />} label={t('softwareUpdates.kpi.totalUpdates', 'Total Updates')} value={fmtInt(totalUpdates)} color="purple" />
+          <MetricCard icon={<CheckCircle className="h-5 w-5" />} label={t('softwareUpdates.kpi.installed', 'Installed')} value={fmtInt(installedCount)} color="green" />
+          <MetricCard icon={<ArrowUpCircle className="h-5 w-5" />} label={t('softwareUpdates.kpi.pending', 'Pending')} value={fmtInt(pendingCount)} color="amber" />
+          <MetricCard icon={<Calendar className="h-5 w-5" />} label={t('softwareUpdates.kpi.lastInstalled', 'Last Installed')} value={lastInstalledAt ? formatDate(lastInstalledAt) : '—'} color="blue" />
+          <MetricCard icon={<CalendarClock className="h-5 w-5" />} label={t('softwareUpdates.kpi.avgCadence', 'Avg Cadence')} value={avgCadence} color="cyan" />
+        </section>
       </FadeIn>
 
       {/* 2 — Cadence chart + status breakdown ─────────────────────── */}
       <FadeIn delay={0.1}>
-        <CardGrid label={t('softwareUpdates.kpi.label', 'Software update summary')} items={[
-          { id: 'software-cadence', size: 'half', content: (
-            <SoftwareCadenceCard
-              data={cadence}
-              loading={source.initialLoading}
-              error={source.fatalError ? error : undefined}
-              onRetry={handleRetry}
-              errorContent={source.retained ? retryContent : undefined}
-              emptyMessage={source.available ? t('softwareUpdates.cadence.empty', 'No update activity in this range') : unavailableMessage}
-              emptyContent={source.available && resetAction ? <Button variant="outline" onClick={resetAction.onClick}>{resetAction.label}</Button> : undefined}
-            />
-          ) },
-
-          { id: 'software-status', size: 'half', content: (
-          <LayoutCard title={t('softwareUpdates.breakdown.title', 'By status')}>
-            <VehicleSourceContent source={historySource} enabled={vehicleId != null}
-              label={t('softwareUpdates.breakdown.title', 'By status')}>
-            {source.initialLoading ? (
-              <Skeleton height={160} />
-            ) : source.fatalError ? (
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('softwareUpdates.cadence.title', 'Update Cadence')}
+            </PanelTitle>
+            {isLoading ? (
+              <Skeleton height={224} />
+            ) : isError ? (
               <QueryError error={error} onRetry={handleRetry} />
-            ) : !source.available ? (
-              unavailableContent
+            ) : cadence.length === 0 ? (
+              <EmptyState
+                icon={<BarChart3 className="h-8 w-8" />}
+                message={t('softwareUpdates.cadence.empty', 'No update activity in this range')}
+                action={
+                  presetId !== 'all'
+                    ? { label: t('softwareUpdates.resetRangeCta', 'View all time'), onClick: resetRange }
+                    : undefined
+                }
+              />
+            ) : (
+              <SoftwareUpdateCadenceChart data={cadence} />
+            )}
+          </GlassPanel>
+
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('softwareUpdates.breakdown.title', 'By Status')}
+            </PanelTitle>
+            {isLoading ? (
+              <Skeleton height={160} />
+            ) : isError ? (
+              <QueryError error={error} onRetry={handleRetry} />
             ) : totalUpdates === 0 ? (
               <EmptyState
                 icon={<ListChecks className="h-8 w-8" />}
@@ -246,10 +259,8 @@ export default function SoftwareUpdatesPage() {
             ) : (
               <SoftwareUpdateStatusBreakdown counts={statusCounts} total={totalUpdates} />
             )}
-            </VehicleSourceContent>
-          </LayoutCard>
-          ) },
-        ]} />
+          </GlassPanel>
+        </section>
       </FadeIn>
 
       {/* 3 — Helix changelog summarizer (opt-in; absent in ai_mode=off) */}
@@ -259,17 +270,17 @@ export default function SoftwareUpdatesPage() {
 
       {/* 4 — Update timeline (responsive card grid) ───────────────── */}
       <FadeIn delay={0.3}>
-        <LayoutCard title={t('softwareUpdates.timeline.title', 'Update timeline')}>
-          <VehicleSourceContent source={historySource} enabled={vehicleId != null}
-            label={t('softwareUpdates.timeline.title', 'Update timeline')}>
-          {source.initialLoading ? (
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-4 flex items-center gap-2">
+            <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('softwareUpdates.timeline.title', 'Update Timeline')}
+          </PanelTitle>
+          {isLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
               {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
             </div>
-          ) : source.fatalError ? (
+          ) : isError ? (
             <QueryError error={error} onRetry={handleRetry} />
-          ) : !source.available ? (
-            unavailableContent
           ) : updates.length === 0 ? (
             <EmptyState
               icon={<Smartphone className="h-12 w-12" />}
@@ -283,15 +294,16 @@ export default function SoftwareUpdatesPage() {
             />
           ) : (
             <>
-              <div role="list" aria-label={t('softwareUpdates.timeline.title', 'Update timeline')}>
-              <CardGrid label={t('softwareUpdates.timeline.title', 'Update timeline')} items={updates.map((u) => {
+              <ol className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+                {updates.map((u) => {
                   const meta = getUpdateStatus(u.status);
                   const Icon = meta.icon;
                   const nc = neonColorMap[meta.color];
                   const vName = vehicleMap.get(u.vehicle_id)
                     ?? t('softwareUpdates.timeline.vehicleFallback', 'Vehicle {{id}}', { id: u.vehicle_id });
-                  return { id: String(u.id), size: 'quarter' as const, content: (
-                      <SoftwareHistoryItem version={u.version}>
+                  return (
+                    <li key={u.id}>
+                      <GlassPanel className="flex h-full flex-col p-4 transition-colors hover:border-[var(--border-default)]">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex min-w-0 items-start gap-3">
                             <span className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1', nc.bg, nc.ring)}>
@@ -299,9 +311,10 @@ export default function SoftwareUpdatesPage() {
                             </span>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
+                                <Text size="sm" weight="semibold" color="primary" className="tabular-nums">{u.version}</Text>
                                 <Badge variant={meta.badgeVariant} size="sm">{t(meta.labelKey, meta.labelFallback)}</Badge>
                               </div>
-                              <Caption className="mt-0.5 block break-words">{vName}</Caption>
+                              <Caption className="mt-0.5 block truncate">{vName}</Caption>
                             </div>
                           </div>
                           <a
@@ -309,7 +322,7 @@ export default function SoftwareUpdatesPage() {
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={t('softwareUpdates.timeline.releaseNotes', 'Release notes for {{version}}', { version: u.version })}
-                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
+                            className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40"
                           >
                             <ExternalLink className="h-4 w-4" aria-hidden="true" />
                           </a>
@@ -325,8 +338,8 @@ export default function SoftwareUpdatesPage() {
                           )}
                           {u.scheduled_at && !u.installed_at && (
                             <div className="flex items-center gap-1.5">
-                              <Clock className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-                              <Text size="xs">
+                              <Clock className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
+                              <Text size="xs" className="text-amber-300">
                                 {t('softwareUpdates.timeline.scheduledFor', 'Scheduled {{date}}', { date: formatDate(u.scheduled_at) })}
                               </Text>
                             </div>
@@ -335,10 +348,11 @@ export default function SoftwareUpdatesPage() {
                             {t('softwareUpdates.timeline.detected', 'Detected {{date}}', { date: formatDate(u.created_at) })}
                           </Caption>
                         </div>
-                      </SoftwareHistoryItem>
-                  ) };
-                })} />
-              </div>
+                      </GlassPanel>
+                    </li>
+                  );
+                })}
+              </ol>
               <Pagination
                 page={page}
                 pageSize={PAGE_SIZE}
@@ -347,9 +361,8 @@ export default function SoftwareUpdatesPage() {
               />
             </>
           )}
-          </VehicleSourceContent>
-        </LayoutCard>
+        </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

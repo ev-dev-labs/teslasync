@@ -201,7 +201,7 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     renderDataRepairPage();
 
     // 1) Page title surfaces.
-    expect(await screen.findByText('Data repair')).toBeInTheDocument();
+    expect(await screen.findByText('Data Repair')).toBeInTheDocument();
 
     // 1b) The deep-diagnostics workspace is deferred behind the Diagnostics
     // tab (it lazy-loads and only then issues the suggestion/stale scans), so
@@ -213,10 +213,10 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     // "Suggested Repairs" appears only on the metric card; the boundary
     // labels also appear as panel headings, so use getAllByText for those.
     expect(
-      await screen.findByText(/Suggested repairs/i, undefined, { timeout: 3000 }),
+      await screen.findByText(/Suggested Repairs/i, undefined, { timeout: 3000 }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/Drive boundaries/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Charging boundaries/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Drive Boundaries/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Charging Boundaries/i).length).toBeGreaterThan(0);
 
     // 3) Both deterministic worklist panels — Charging Sessions +
     // Drives — render as section headings inside the diagnostics
@@ -224,7 +224,7 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     // assert the panel headings (exact accessible names avoid matching the
     // "All charging sessions are complete" empty-state heading).
     expect(
-      screen.getByRole('heading', { name: 'Charging sessions' }),
+      screen.getByRole('heading', { name: 'Charging Sessions' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Drives' }),

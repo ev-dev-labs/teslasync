@@ -5,15 +5,13 @@ import { Grid } from '@/components/layout';
 import { Badge, Card, CardHeader } from '@/components/ui';
 import { InlineMetric, KVList } from '@/components/data-display';
 import { Skeleton } from '@/components/feedback';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { getTelemetryStatus, getExtendedHealth } from '@/api/devtools';
 import { AccordionSection } from './AccordionSection';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DASH = '—';
 
 export function InfrastructureSection() {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const {
@@ -85,7 +83,7 @@ export function InfrastructureSection() {
         <Grid cols={{ default: 1, md: 2 }} gap={4}>
           <Card>
             <CardHeader
-              title={t('systemStatus.infrastructure.sseTitle', 'SSE connection')}
+              title={t('systemStatus.infrastructure.sseTitle', 'SSE Connection')}
               action={
                 sseConnected ? (
                   <Wifi aria-hidden="true" className="h-4 w-4 text-green-400" />
@@ -97,7 +95,7 @@ export function InfrastructureSection() {
             <KVList
               items={[
                 {
-                  label: t('systemStatus.infrastructure.connectionState', 'Connection state'),
+                  label: t('systemStatus.infrastructure.connectionState', 'Connection State'),
                   value: (
                     <Badge variant={sseConnected ? 'success' : 'danger'} size="sm">
                       {sseConnected ? t('common.connected', 'Connected') : t('common.disconnected', 'Disconnected')}
@@ -106,14 +104,14 @@ export function InfrastructureSection() {
                 },
                 { label: t('systemStatus.infrastructure.endpoint', 'Endpoint'), value: telemetry?.endpoint || DASH },
                 { label: t('systemStatus.infrastructure.protocol', 'Protocol'), value: telemetry?.protocol || DASH },
-                { label: t('systemStatus.infrastructure.fallbackMode', 'Fallback mode'), value: isPolling ? t('systemStatus.infrastructure.fallbackYes', 'Yes — polling') : t('common.no', 'No') },
+                { label: t('systemStatus.infrastructure.fallbackMode', 'Fallback Mode'), value: isPolling ? t('systemStatus.infrastructure.fallbackYes', 'Yes — Polling') : t('common.no', 'No') },
               ]}
             />
           </Card>
 
           <Card>
             <CardHeader
-              title={t('systemStatus.infrastructure.pollingTitle', 'Polling engine')}
+              title={t('systemStatus.infrastructure.pollingTitle', 'Polling Engine')}
               action={
                 <Badge variant={isPolling ? 'success' : 'neutral'} size="sm">
                   {isPolling ? t('common.active', 'Active') : t('systemStatus.infrastructure.standby', 'Standby')}
@@ -123,9 +121,9 @@ export function InfrastructureSection() {
             <KVList
               items={[
                 { label: t('systemStatus.mode', 'Mode'), value: displayMode },
-                { label: t('systemStatus.infrastructure.speedComparison', 'Speed comparison'), value: speed?.speedup || DASH },
-                { label: t('systemStatus.infrastructure.fleetLatency', 'Fleet Telemetry latency'), value: speed?.fleet_telemetry_latency || DASH },
-                { label: t('systemStatus.infrastructure.fleetPolling', 'Fleet API polling'), value: speed?.fleet_api_polling || DASH },
+                { label: t('systemStatus.infrastructure.speedComparison', 'Speed Comparison'), value: speed?.speedup || DASH },
+                { label: t('systemStatus.infrastructure.fleetLatency', 'Fleet Telemetry Latency'), value: speed?.fleet_telemetry_latency || DASH },
+                { label: t('systemStatus.infrastructure.fleetPolling', 'Fleet API Polling'), value: speed?.fleet_api_polling || DASH },
               ]}
             />
           </Card>
@@ -138,7 +136,7 @@ export function InfrastructureSection() {
             <InlineMetric
               icon={<Database aria-hidden="true" className="h-4 w-4 text-cyan-400" />}
               value={fmtInt(pool.total_conns)}
-              label={t('systemStatus.infrastructure.totalConns', 'Total conns')}
+              label={t('systemStatus.infrastructure.totalConns', 'Total Conns')}
             />
             <InlineMetric
               icon={<Activity aria-hidden="true" className="h-4 w-4 text-green-400" />}

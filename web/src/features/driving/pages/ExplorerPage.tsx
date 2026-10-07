@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -50,7 +48,6 @@ export default function ExplorerPage() {
       }),
     [historyQuery.data],
   );
-  const sourceState = useDataState(historyQuery, { provenance: 'historical' });
 
   if (vehicleId == null) {
     return (
@@ -61,15 +58,15 @@ export default function ExplorerPage() {
   }
 
   const sectionState: ExplorerSectionState = {
-    isLoading: sourceState.status === 'initial',
-    error: sourceState.fatalError,
+    isLoading: historyQuery.isLoading,
+    error: historyQuery.isError ? historyQuery.error : null,
     onRetry: () => {
       void historyQuery.refetch();
     },
   };
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('explorer.title', 'Explorer')}
       subtitle={t(
         'explorer.subtitle',
@@ -77,13 +74,11 @@ export default function ExplorerPage() {
       )}
       query={historyQuery}
     >
-      <StaleRefreshWarning state={sourceState} label={t('explorer.title', 'Explorer')} />
       <FadeIn>
         <ExplorerKpis
           summary={summary}
           state={sectionState}
           formatDistance={formatDistance}
-          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
 
@@ -135,6 +130,6 @@ export default function ExplorerPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

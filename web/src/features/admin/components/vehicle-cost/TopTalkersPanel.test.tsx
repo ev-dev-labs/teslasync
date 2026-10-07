@@ -143,7 +143,7 @@ describe('TopTalkersPanel — chrome', () => {
     for (const s of statuses) {
       const { unmount } = renderPanel(s);
 
-      const heading = screen.getByRole('heading', { name: /Top talkers/i });
+      const heading = screen.getByRole('heading', { name: /top talkers/i });
       expect(heading).toBeInTheDocument();
 
       // The Flame glyph is presentational — it must not pollute the accessible
@@ -252,11 +252,11 @@ describe('TopTalkersPanel — derivation', () => {
     expect(bars.map((b) => b.value)).toEqual(['6000', '3000', '1000']);
     // max is the fleet total for every bar so the widths are comparable.
     expect(bars.map((b) => b.max)).toEqual(['10000', '10000', '10000']);
-    // Integer counts (no spurious decimals) + Settings precision for shares.
+    // Integer counts (no spurious decimals) + one-decimal share of the total.
     expect(bars.map((b) => b.sublabel)).toEqual([
-      '6,000 · 60.00%',
-      '3,000 · 30.00%',
-      '1,000 · 10.00%',
+      '6,000 · 60.0%',
+      '3,000 · 30.0%',
+      '1,000 · 10.0%',
     ]);
   });
 
@@ -272,8 +272,8 @@ describe('TopTalkersPanel — derivation', () => {
     const bars = readBars();
     // max === biggest talker (400): the leader fills the bar at 100%.
     expect(bars.map((b) => b.max)).toEqual(['400', '400']);
-    expect(bars[0].sublabel).toBe('400 · 100.00%');
-    expect(bars[1].sublabel).toBe('100 · 25.00%');
+    expect(bars[0].sublabel).toBe('400 · 100.0%');
+    expect(bars[1].sublabel).toBe('100 · 25.0%');
   });
 
   it('cycles the colour palette and wraps back to the first colour after eight bars', () => {
@@ -308,10 +308,10 @@ describe('TopTalkersPanel — hardening', () => {
     });
 
     const bars = readBars();
-    expect(bars[0].sublabel).toBe('5,000 · 100.00%'); // clamped, not 500%
+    expect(bars[0].sublabel).toBe('5,000 · 100.0%'); // clamped, not 500%
     expect(bars[1].value).toBe('0'); // rows ?? 0
     expect(bars[1].label).toBe('—'); // name ?? '—'
-    expect(bars[1].sublabel).toBe('0 · 0.00%');
+    expect(bars[1].sublabel).toBe('0 · 0.0%');
   });
 
   it('renders the empty state instead of crashing when talkers/totalRows are undefined', () => {
@@ -340,7 +340,7 @@ describe('TopTalkersPanel — accessibility', () => {
       ],
     });
 
-    const list = screen.getByRole('list', { name: /Top talkers ranked by ingested rows/i });
+    const list = screen.getByRole('list', { name: /top talkers ranked by ingested rows/i });
     expect(list).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });

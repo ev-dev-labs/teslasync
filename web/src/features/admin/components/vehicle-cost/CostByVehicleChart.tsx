@@ -27,9 +27,8 @@ import {
 } from '@/components/charts';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
-
+import { formatBytes } from '@/lib/numberFormat';
 import { type SectionState, type VehicleCostBar } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CostByVehicleChartProps extends SectionState {
   bars: VehicleCostBar[];
@@ -46,7 +45,6 @@ const CHART_MARGIN = { top: 4, right: 16, left: 8, bottom: 4 };
 const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 };
 
 export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehicleChartProps) {
-  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Null-safe: a caller passing undefined/null must fall through to the empty

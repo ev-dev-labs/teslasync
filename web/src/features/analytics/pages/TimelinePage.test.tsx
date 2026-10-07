@@ -16,10 +16,10 @@
  *      render "1h" (never "60m").
  *   3. Empty payloads → every section shows its explicit EmptyState copy and
  *      the KPI band still renders zeroed values (never a hidden section).
- *   4. Both state queries pending → independent loading shells remain,
- *      without fabricated KPI measurements.
- *   5. A timeline fetch failure → section-specific error text and recovery,
- *      while the independent summary remains measured.
+ *   4. Both state queries pending → the page shows its spinner shell, never the
+ *      KPI band.
+ *   5. A timeline fetch failure → an <AlertBanner> with the error message,
+ *      while the page shell still renders.
  *   6. The icon-only refresh control exposes an accessible name and refetches.
  *   7. Changing the header-selected vehicle re-scopes both state queries.
  *
@@ -34,8 +34,12 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { Button } from '@/components/ui'
-import { containerPolicy } from '@/components/layout/layout-reference'
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>()
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles')
+  return { ...actual, ...chartTestDoubles }
+})
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -79,7 +83,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import TimelinePage from './TimelinePage'
 import type { Vehicle } from '@/types/vehicle'
 
-const mockedRequest = vi.mocked(request)
+const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
 /* ── Fixtures ─────────────────────────────────────────── */
 
@@ -203,7 +207,7 @@ function renderPage(path = '/timeline') {
 
 function HeaderVehicleSwitch() {
   const { setVehicleId } = useSelectedVehicle()
-  return <Button onClick={() => setVehicleId(2)}>Select Model Y in header</Button>
+  return <button onClick={() => setVehicleId(2)}>Select Model Y in header</button>
 }
 
 beforeEach(() => {
@@ -213,52 +217,6 @@ beforeEach(() => {
 })
 
 describe('TimelinePage', () => {
-  it('reviews original dwell rounding and source bounds in the real evidence drawer', async () => {
-    renderPage()
-    await screen.findByText('10', {}, { timeout: 8000 })
-    const brief = screen.getByTestId('timeline-summary')
-    expect(brief).toHaveAttribute('data-operational-brief')
-    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4)
-    expect(within(brief).getByText('2h')).toBeInTheDocument()
-    expect(within(brief).getByText('1h')).toBeInTheDocument()
-    expect(within(brief).getByText('25m')).toBeInTheDocument()
-    const calls = mockedRequest.mock.calls.length
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
-    const drawer = await screen.findByRole('dialog')
-    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument()
-    expect(within(drawer).getByText('Time in the driving state, rounded to whole minutes')).toBeInTheDocument()
-    expect(within(drawer).getByText(/continuous observation coverage is unknown/)).toBeInTheDocument()
-    expect(mockedRequest.mock.calls.length).toBe(calls)
-  })
-
-  it('filters loaded transitions without recomputing dwell from the remaining rows', async () => {
-    renderPage()
-    await screen.findByText('10', {}, { timeout: 8000 })
-    const filterButton = screen.getByRole('button', { name: 'To state filter' })
-    const table = screen.getByRole('table', { name: 'State transitions' })
-    const firstRow = (await within(table).findByText('asleep')).closest('tr')!
-    expect(within(firstRow).getByText('1h')).toBeInTheDocument()
-
-    fireEvent.click(filterButton)
-    const filter = screen.getByRole('dialog', { name: 'To state filter' })
-    fireEvent.click(within(filter).getByRole('checkbox', { name: 'charging' }))
-    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }))
-
-    expect(within(table).getAllByRole('row')).toHaveLength(3)
-    const filteredFirstRow = within(table).getByText('asleep').closest('tr')!
-    expect(within(filteredFirstRow).getByText('1h')).toBeInTheDocument()
-    await waitFor(() => {
-      expect(screen.getByRole('region', { name: 'Summary metrics' })).toHaveTextContent('10')
-    })
-
-    fireEvent.click(filterButton)
-    const reopened = screen.getByRole('dialog', { name: 'To state filter' })
-    expect(within(reopened).getByRole('checkbox', { name: 'charging' })).not.toBeChecked()
-    fireEvent.click(within(reopened).getByRole('button', { name: 'Clear' }))
-    fireEvent.click(within(reopened).getByRole('button', { name: 'Done' }))
-    expect(within(table).getAllByRole('row')).toHaveLength(4)
-  })
-
   it('renders the KPI band, every section panel, and the transitions table', async () => {
     renderPage()
 
@@ -270,37 +228,31 @@ describe('TimelinePage', () => {
     // transition counts (4 + 3 + 2 + 1 = 10).
     expect(await screen.findByText('10', {}, { timeout: 8000 })).toBeInTheDocument()
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
-    expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
-    expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('Total Transitions')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('Total Transitions')).toBeInTheDocument()
 
     // All four section panels render their titles (never hidden).
-    for (const name of ['State distribution', 'Daily breakdown', 'Time by state', 'State transitions']) {
-      expect(screen.getAllByRole('heading', { name }).length).toBeGreaterThan(0)
-    }
+    expect(screen.getByText('State Distribution')).toBeInTheDocument()
+    expect(screen.getByText('Daily Breakdown')).toBeInTheDocument()
+    expect(screen.getByText('Time by State')).toBeInTheDocument()
+    expect(screen.getByText('State Transitions')).toBeInTheDocument()
 
-    // The real shared card applies its container-band height policy. Keep
-    // bounded desktop/mobile CSS heights, rather than testing mock-only
-    // attributes or the old page-owned dimensions.
-    const dailyChart = screen.getByRole('group', {
+    // Regression: EmbeddedChart used to default to fluid sizing, silently
+    // ignoring these explicit heights. ResponsiveContainer then measured an
+    // auto-sized grid track and expanded the chart down the entire page.
+    const dailyChart = screen.getByRole('img', {
       name: 'Daily transition counts by vehicle state',
     })
-    const figure = dailyChart.closest('figure')!
-    const grid = figure.closest('[data-card-grid]')!
-    expect(grid).toHaveAttribute('data-container-band', 'phone')
-    expect(dailyChart).toHaveStyle({
-      '--chart-height-desktop': `${containerPolicy(0).chartHeight}px`,
-      '--chart-height-mobile': `${containerPolicy(0).chartHeight}px`,
-    })
-    expect(figure).not.toHaveAttribute('data-chart-fluid')
-    expect(within(figure).getByRole('table')).toHaveTextContent('2025-03-01')
-    expect(within(figure).getByRole('table')).toHaveTextContent('2025-03-02')
+    expect(dailyChart).toHaveAttribute('data-chart-height', '256')
+    expect(dailyChart).toHaveAttribute('data-chart-mobile-height', '224')
+    expect(dailyChart).toHaveAttribute('data-chart-fluid', 'false')
 
     // With data present, sections are NOT showing their empty copy.
     expect(screen.queryByText('No daily transition activity yet')).toBeNull()
     expect(screen.queryByText('No state transitions recorded')).toBeNull()
 
     // Transitions table: one row per event, with trigger fields + state badges.
-    const table = screen.getByRole('table', { name: 'State transitions' })
+    const table = screen.getByRole('table')
     expect(within(table).getByText('shift_state')).toBeInTheDocument()
     expect(within(table).getByText('charge_state')).toBeInTheDocument()
     // 'driving' surfaces as row1 to_state AND row2 from_state.
@@ -336,7 +288,7 @@ describe('TimelinePage', () => {
 
     // The KPI band still renders zeroed values rather than vanishing.
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
-    expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('Total Transitions')).toBeInTheDocument()
     expect(within(kpiBand).getAllByText('0m').length).toBe(3)
   })
 
@@ -348,28 +300,22 @@ describe('TimelinePage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Timeline' }),
     ).toBeInTheDocument()
 
-    // Modernization keeps each independent source shell, with no measured
-    // values while pending. The summary label is not itself a measurement.
+    // Once the vehicle is auto-selected and the queries start fetching, the
+    // page swaps to its spinner shell — the KPI band is gone.
     await waitFor(() =>
-      expect(screen.getByRole('status', { name: 'Loading State transitions' })).toBeInTheDocument(),
+      expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument(),
     )
-    expect(screen.getByRole('status', { name: 'Loading State distribution' })).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading Time by state' })).toBeInTheDocument()
-    const summary = screen.getByRole('region', { name: 'Summary metrics' })
-    expect(summary).toHaveAttribute('aria-busy', 'true')
-    expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(0)
-    expect(within(summary).queryByText('10')).toBeNull()
-    expect(within(summary).queryByText('2h')).toBeNull()
-    expect(screen.getAllByRole('heading', { name: 'Daily breakdown' }).length).toBeGreaterThan(0)
+    expect(screen.queryByText('Total Transitions')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Summary metrics' })).toBeNull()
   })
 
   it('surfaces an AlertBanner when the timeline query fails', async () => {
     install({ timelineError: true })
     renderPage()
 
-    // Failure is scoped to timeline-fed panels, not the healthy summary.
+    // AlertBanner interpolates the fallback title + the normalised error text.
     expect(
-      await screen.findByText('Unable to load State transitions: timeline boom'),
+      await screen.findByText('Failed to load data: timeline boom'),
     ).toBeInTheDocument()
 
     // The banner does not replace the page — the shell + KPI band still render.
@@ -379,12 +325,6 @@ describe('TimelinePage', () => {
     expect(
       screen.getByRole('region', { name: 'Summary metrics' }),
     ).toBeInTheDocument()
-    expect(within(screen.getByRole('region', { name: 'Summary metrics' })).getByText('10')).toBeInTheDocument()
-    const before = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/timeline')).length
-    install()
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh timeline' }))
-    await waitFor(() => expect(mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/timeline')).length).toBeGreaterThan(before))
-    expect(await screen.findByRole('table', { name: 'State transitions' })).toHaveTextContent('shift_state')
   })
 
   it('refetches through the accessible icon-only refresh control', async () => {

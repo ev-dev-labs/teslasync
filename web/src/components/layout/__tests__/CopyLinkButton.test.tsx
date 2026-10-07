@@ -45,16 +45,6 @@ afterEach(() => {
 });
 
 describe('CopyLinkButton', () => {
-  it('keeps copy behavior and accessible feedback in icon-only mode', async () => {
-    render(<CopyLinkButton iconOnly />);
-    const button = screen.getByRole('button', { name: NAME });
-    expect(button).toHaveAttribute('aria-describedby');
-    expect(button).not.toHaveTextContent(IDLE_TEXT);
-    fireEvent.click(button);
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith(window.location.href));
-    expect(screen.getByRole('button', { name: COPIED_TEXT })).toBeInTheDocument();
-  });
-
   it('copies the current URL (path + query) via the Clipboard API and confirms', async () => {
     window.history.pushState({}, '', '/drives?range=7d&vehicle_id=3');
 

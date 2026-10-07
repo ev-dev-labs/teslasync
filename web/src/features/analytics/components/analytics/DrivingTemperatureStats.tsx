@@ -4,13 +4,11 @@ import { MetricCard } from '@/components/data-display';
 import { safe } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { convertTempFromSI } from '@/lib/unitConversion';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import type { FleetAnalyticsQuery } from './constants';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function DrivingTemperatureStats({ query }: { query: FleetAnalyticsQuery }) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
@@ -31,7 +29,7 @@ export function DrivingTemperatureStats({ query }: { query: FleetAnalyticsQuery 
 
   return (
     <AnalyticsPanel
-      title={t('analytics.driving.tempStats', 'Temperature stats')}
+      title={t('analytics.driving.tempStats', 'Temperature Stats')}
       icon={<Thermometer className="h-4 w-4" />}
       loading={isLoading}
       error={err}
@@ -42,43 +40,43 @@ export function DrivingTemperatureStats({ query }: { query: FleetAnalyticsQuery 
     >
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
         <MetricCard
-          label={t('analytics.driving.insideMin', 'Inside min')}
-          value={insideHasData ? fmtNumber(fromC(safe(insideTemp?.min))) : '—'}
+          label={t('analytics.driving.insideMin', 'Inside Min')}
+          value={insideHasData ? fmtNumber(fromC(safe(insideTemp?.min)), 1) : '—'}
           subtitle={tempUnit}
           icon={<Thermometer className="h-4 w-4" />}
           color="cyan"
         />
         <MetricCard
-          label={t('analytics.driving.insideAvg', 'Inside avg')}
-          value={insideHasData ? fmtNumber(fromC(safe(insideTemp?.avg))) : '—'}
+          label={t('analytics.driving.insideAvg', 'Inside Avg')}
+          value={insideHasData ? fmtNumber(fromC(safe(insideTemp?.avg)), 1) : '—'}
           subtitle={tempUnit}
           icon={<Thermometer className="h-4 w-4" />}
           color="green"
         />
         <MetricCard
-          label={t('analytics.driving.insideMax', 'Inside max')}
-          value={insideHasData ? fmtNumber(fromC(safe(insideTemp?.max))) : '—'}
+          label={t('analytics.driving.insideMax', 'Inside Max')}
+          value={insideHasData ? fmtNumber(fromC(safe(insideTemp?.max)), 1) : '—'}
           subtitle={tempUnit}
           icon={<Thermometer className="h-4 w-4" />}
           color="amber"
         />
         <MetricCard
-          label={t('analytics.driving.outsideMin', 'Outside min')}
-          value={outsideHasData ? fmtNumber(fromC(safe(outsideTemp?.min))) : '—'}
+          label={t('analytics.driving.outsideMin', 'Outside Min')}
+          value={outsideHasData ? fmtNumber(fromC(safe(outsideTemp?.min)), 1) : '—'}
           subtitle={tempUnit}
           icon={<Thermometer className="h-4 w-4" />}
           color="cyan"
         />
         <MetricCard
-          label={t('analytics.driving.outsideAvg', 'Outside avg')}
-          value={outsideHasData ? fmtNumber(fromC(safe(outsideTemp?.avg))) : '—'}
+          label={t('analytics.driving.outsideAvg', 'Outside Avg')}
+          value={outsideHasData ? fmtNumber(fromC(safe(outsideTemp?.avg)), 1) : '—'}
           subtitle={tempUnit}
           icon={<Thermometer className="h-4 w-4" />}
           color="green"
         />
         <MetricCard
-          label={t('analytics.driving.outsideMax', 'Outside max')}
-          value={outsideHasData ? fmtNumber(fromC(safe(outsideTemp?.max))) : '—'}
+          label={t('analytics.driving.outsideMax', 'Outside Max')}
+          value={outsideHasData ? fmtNumber(fromC(safe(outsideTemp?.max)), 1) : '—'}
           subtitle={tempUnit}
           icon={<Thermometer className="h-4 w-4" />}
           color="amber"

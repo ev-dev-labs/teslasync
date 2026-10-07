@@ -99,9 +99,9 @@ describe('classifyStatus', () => {
 
 describe('humanizeCommand', () => {
   it('renders snake, kebab and camel case as words', () => {
-    expect(humanizeCommand('honk_horn')).toBe('Honk horn');
-    expect(humanizeCommand('set-charge-limit')).toBe('Set charge limit');
-    expect(humanizeCommand('flashLights')).toBe('Flash lights');
+    expect(humanizeCommand('honk_horn')).toBe('Honk Horn');
+    expect(humanizeCommand('set-charge-limit')).toBe('Set Charge Limit');
+    expect(humanizeCommand('flashLights')).toBe('Flash Lights');
   });
 });
 

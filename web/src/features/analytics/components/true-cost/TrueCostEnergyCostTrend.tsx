@@ -98,7 +98,7 @@ export function TrueCostEnergyCostTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatCurrency(value)}
+                    tickFormatter={(value: number) => display.formatCurrency(value, 0)}
                   />
                   <YAxis
                     yAxisId="energy"
@@ -106,12 +106,12 @@ export function TrueCostEnergyCostTrend({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value: number) => display.formatNumber(value)}
+                    tickFormatter={(value: number) => display.formatNumber(value, 0)}
                   />
                   <Tooltip
                     content={<ChartTooltip valueFormatter={(value, name) =>
                       name === energySeries
-                        ? `${display.formatNumber(Number(value))} ${display.energyUnit}`
+                        ? `${display.formatNumber(Number(value), 2)} ${display.energyUnit}`
                         : display.formatCurrency(Number(value))} />}
                   />
                   <ChartLegend />

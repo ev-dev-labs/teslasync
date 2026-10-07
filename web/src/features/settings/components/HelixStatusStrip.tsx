@@ -11,12 +11,10 @@
 import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Power, Server, Cloud, Sparkles, Cpu, Wallet } from 'lucide-react'
-import type { StatMetric } from '@/components/data-display'
-import { SettingsSummaryBrief } from './operationalbrief-all/SettingsSummaryBrief'
+import { MetricCard } from '@/components/data-display'
 import { type NeonColor } from '@/lib/tokens'
 import { useAiUsageToday } from '@/api/hooks/useAiUsage'
 import { useFormatting } from '@/hooks/useFormatting'
-import { useDataState } from '@/hooks/useDataState'
 
 type AiMode = 'off' | 'local' | 'cloud'
 
@@ -32,24 +30,23 @@ const PROVIDER_LABELS: Record<string, string> = {
   google: 'Google',
 }
 
+function microCentsToDollars(mc: number | null | undefined): number {
+  if (mc == null || !Number.isFinite(mc)) return 0
+  return mc / 1_000_000
+}
+
 interface Props {
   mode: AiMode
   enabledCount: number
   providerName: string
-  settingsLoading?: boolean
-  settingsUnavailable?: boolean
-  settingsRetained?: boolean
 }
 
-export function HelixStatusStrip({ mode, enabledCount, providerName,
-  settingsLoading = false, settingsUnavailable = false, settingsRetained = false }: Props) {
+export function HelixStatusStrip({ mode, enabledCount, providerName }: Props) {
   const { t } = useTranslation('settings')
   const { formatCurrency } = useFormatting()
   // Skip the fetch entirely when Helix is off — the endpoint 403s and the
   // spend tile shows an em-dash regardless.
-  const query = useAiUsageToday({ enabled: mode !== 'off' })
-  const usageState = useDataState(query, { provenance: 'historical' })
-  const data = mode === 'off' ? undefined : usageState.data
+  const { data } = useAiUsageToday({ enabled: mode !== 'off' })
 
   const status = useMemo<{ value: string; color: NeonColor; icon: ReactNode }>(() => {
     if (mode === 'local') {
@@ -85,37 +82,43 @@ export function HelixStatusStrip({ mode, enabledCount, providerName,
 
   // Guard the count so a non-finite value never reaches the tile as a
   // literal "NaN".
-  const unavailable = settingsLoading || settingsUnavailable
-  const sourceCost = data?.cost_micro_cents
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'status', occurrenceId: 'helix-mode', rawValue: unavailable ? null : status.value,
-      label: t('helix.status.mode', 'Status'), context: status.icon },
-    { metricId: 'count', occurrenceId: 'helix-features', rawValue: unavailable ? null : enabledCount,
-      label: t('helix.status.features', 'Features enabled'),
-      context: <Sparkles className="h-5 w-5" aria-hidden="true" /> },
-    { metricId: 'text', occurrenceId: 'helix-provider', rawValue: unavailable || providerValue === PLACEHOLDER ? null : providerValue,
-      label: t('helix.status.provider', 'Provider'), context: <Cpu className="h-5 w-5" aria-hidden="true" /> },
-    { metricId: 'currency', occurrenceId: 'helix-spend', rawValue: sourceCost == null ? null : sourceCost / 1_000_000,
-      label: t('helix.status.spendToday', 'Spend today'),
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
-      missingReason: mode === 'off' ? t('ai.settings.usage.off', 'Helix is off. Enable it and make a call to see usage.')
-        : usageState.status === 'initial' ? t('ai.settings.usage.loading', 'Loading today’s usage…') : undefined,
-      context: <><Wallet className="h-5 w-5" aria-hidden="true" />{t('ai.settings.usage.utc', 'Today · UTC')}</> },
-  ]
+  const featureCount = Number.isFinite(enabledCount) ? enabledCount : 0
+
+  const spendValue =
+    mode === 'off' || data == null
+      ? PLACEHOLDER
+      : formatCurrency(microCentsToDollars(data.cost_micro_cents))
 
   return (
     <section
       aria-label={t('helix.status.label', 'Helix status')}
+      className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
       data-testid="helix-status-strip"
     >
-      <SettingsSummaryBrief title={t('helix.brief.title', 'Helix configuration and spend')}
-        description={t('helix.brief.description', 'Features and provider reflect the current draft; mode respects the saved off-mode guard. Spend is independently audited usage. Editing a draft does not save it.')}
-        source={t('helix.brief.source', 'Configuration draft and audited usage')}
-        scope={t('helix.brief.scope', 'Current draft · spend today in UTC; these sources do not share a historical range')}
-        metrics={metrics} loading={settingsLoading}
-        unavailable={settingsUnavailable || (mode !== 'off' && !data)}
-        retained={settingsRetained || (mode !== 'off' && usageState.status === 'stale')}
-        testId="helix-summary" />
+      <MetricCard
+        label={t('helix.status.mode', 'Status')}
+        value={status.value}
+        icon={status.icon}
+        color={status.color}
+      />
+      <MetricCard
+        label={t('helix.status.features', 'Features enabled')}
+        value={featureCount}
+        icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
+        color="purple"
+      />
+      <MetricCard
+        label={t('helix.status.provider', 'Provider')}
+        value={providerValue}
+        icon={<Cpu className="h-5 w-5" aria-hidden="true" />}
+        color="amber"
+      />
+      <MetricCard
+        label={t('helix.status.spendToday', 'Spend today')}
+        value={spendValue}
+        icon={<Wallet className="h-5 w-5" aria-hidden="true" />}
+        color="cyan"
+      />
     </section>
   )
 }

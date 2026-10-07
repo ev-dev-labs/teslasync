@@ -13,8 +13,6 @@ Every other page in the product is a deeper dive into one of those questions.
 
 The dashboard is a customizable canvas built from a catalogue of widgets organised into 16 categories. Drag widgets to arrange them, or use each widget's **Arrange** menu for one-click and keyboard move/resize controls.
 
-The layout selector, refresh, and customization actions share the compact page header so the widget canvas follows without a separate workspace introduction. Vehicle and date scope remain in the application header.
-
 Select **Customize**, then **Add Widget** to open the docked widget picker. On a wide screen it sits beside the dashboard, not over it; on a narrow screen it follows the dashboard in the page flow. Search by widget name, description, or category, or choose a category. Click a card to add it, drag it onto a desktop grid cell to choose its position (existing widgets move aside), or drop it on the hint above the grid to add and auto-arrange in one step. Touch and keyboard users can add by clicking or pressing Enter; the **Arrange** menu handles positioning without dragging. Newly added widgets grow to fit content when possible, up to their size limit; a manual resize takes precedence.
 
 | Category        | Widgets | Examples                                                                  |
@@ -42,18 +40,6 @@ Every widget that's already on the active dashboard is badged **Added** in the p
 
 Widgets are self-rendering: each one declares which signals it depends on, and if the underlying signal isn't reporting (for example, a fleet without solar will never publish a Powerwall reading), the widget renders an empty state with a one-click path to the first thing you can do. We never collapse the widget away — hiding empty widgets makes the product feel "broken on day one", which is the worst onboarding experience we can ship.
 
-Missing battery readings, degradation trends, motor history, cost forecasts, and signal-health data expose a **Refresh** action that retries their actual source queries. Successful observations with no signal gaps and missing read-only model subsections do not suggest corrective actions. Partial system-health results remain visible while another source loads; unknown readings are not replaced by zeros.
-
-Energy-flow widgets format signed pack power directly from canonical watts. The animated flow retains its 500 W idle threshold; charger power is converted separately from its existing kW response field.
-
-Widget headings remain available at compact widths and in loading, empty, and error states. The populated Vehicle Hero uses its vehicle-name heading rather than duplicating it in panel chrome. The energy-statistics chart has its own bounded height, with summary metrics laid out below, not over, the plot.
-
-Tire-pressure history reads the API's `created_at` observation timestamps and converts canonical pressure readings only for display. Missing pressures remain unknown; a measured zero is not discarded.
-
-The Digital Twin fits its photo and wheel positions to the actual available panel width. Reduced motion stops wheel loops and entrance animation without changing the displayed driving state.
-
-Map widgets share the mobile panel's available height and recalculate their viewport when that container resizes, keeping locations and clusters aligned with the visible map. Geofence maps use the shared CSS vehicle marker rather than relying on Leaflet's default image-path detection.
-
 ## Multiple dashboards
 
 Use **New blank layout** or **New from template** in the Personal workspace layout menu to open one creation flow. Choose **Blank Dashboard** to start with no widgets, or search and preview a starter such as Operations Desk, Battery Care, Winter Ready, Daily Commuter, or Fleet Manager; name it before creating it. When the `nl-dashboard-composer` Helix feature is enabled, you can also describe the layout in the creation dialog. Helix proposes up to 16 widgets from the available catalog; review the responsive preview and name, then choose **Create layout** to save it. Helix never replaces the current layout automatically. The starter creates its widgets and responsive grid positions together. **Add Widget** adds individual widgets to the current layout instead. The **Personal workspace** menu also lets you switch, rename, and duplicate layouts; **Customize** reveals the drag handles and always-visible **Arrange**, settings, and remove controls. **Auto Arrange** fills the earliest available cells at each breakpoint without resetting widget widths or heights. Each dashboard has its own widgets and layout. Common patterns:
@@ -75,20 +61,6 @@ If the SSE connection drops (network blip, proxy timeout, server restart), every
 
 If the browser or API goes offline, the dashboard stays visible with a small notice at the top when its app shell is cached. A failed connectivity check no longer signs you out as though your session expired. The service worker can reuse a previously visited app page for another dashboard URL; a first visit without any cached shell still shows the standalone offline page until the server is reachable again. Cached data is marked separately so it is not mistaken for live telemetry.
 
-Digital twin widgets retain measured telemetry when vehicle discovery fails to refresh and show a nonblocking warning. Refresh and Retry include vehicle discovery as well as state, security, and charging reads. Vehicle metadata alone does not replace an initial failure of every telemetry source with a seemingly healthy twin.
-
-The Fleet stats bar shows the current online count and percentage as captions, not comparison trends. A current reading alone does not imply that its value is unchanged from an earlier period.
-
-Charge-history charts identify sessions by their actual start timestamps, formatted in the selected locale and timezone on both the axis and tooltip. Missing or invalid timestamps remain unknown rather than becoming an unexplained session index.
-
-Charge-session charts and session details use the same charger-source classification: AC, DC, or Supercharger. Missing or unrecognized types remain Unknown; a connector name or Tesla branding alone does not establish the charging source. Charts include an Unknown legend entry when needed.
-
-Charging-cost and speed-profile count labels use the loaded catalogue's plural forms, including "1 session" and "1 drive". This changes the label only, not the underlying counts, calculations, or selected periods.
-
-Drive-efficiency charts label the overall-average reference separately from the rolling-average series. The rolling-average legend appears only when computed rolling values exist; a single measured day does not imply a known rolling average.
-
-Live signals and the tire-pressure visual both convert the endpoint's Pascal readings through the same pressure formatter. Changing bar/psi preference or decimal precision changes the display, not the underlying measurements.
-
 ## How layout adapts
 
 | Available canvas width | Behaviour |
@@ -99,19 +71,11 @@ Live signals and the tire-pressure visual both convert the endpoint's Pascal rea
 | Above 1200 px         | Four-column responsive grid |
 | Print                  | Sidebar and chrome are stripped (see [Printing](/guide/printing)) |
 
-The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height. New widgets fit their content against a fixed reference size, rather than repeatedly stretching to fill an already enlarged panel. Reference-size measurements temporarily disable transitions and settle the restored box before re-enabling them, so reduced-motion preferences do not change the measured content size or briefly recenter content. Oversized saved panels without an explicit resize are fitted back to their content on load (including older 9-row Vehicle Cards); deliberate resizes remain in place.
-
-In view mode, widget headers reserve space for the 44-pixel Expand control so it does not cover Refresh, status, or freshness controls. Expand is also visible when keyboard-focused; fullscreen and edit-mode headers retain their normal spacing.
-
-Expanded widgets use the shared fullscreen dialog above the mobile appbar. Exit fullscreen and Escape close it, keyboard focus stays within it while open, and focus returns to Expand on close.
+The grid responds to the **canvas width**, not the device's screen width, so opening or collapsing the sidebar can change the column count. Resizing a widget carries its dimensions to the other grid widths while respecting each widget's allowed sizes; the phone stack uses its content height instead of a fixed grid row height. New widgets fit their content against a fixed reference size, rather than repeatedly stretching to fill an already enlarged panel. Oversized saved panels without an explicit resize are fitted back to their content on load (including older 9-row Vehicle Cards); deliberate resizes remain in place.
 
 ## Units, dates, currency
 
 Nothing on the dashboard is hardcoded with a unit. Every value is stored in SI inside the API and converted at the React render boundary via `useUnits()`, `useFormatting()`, and `useDateFormat()`. The user's preferences (km vs mi, °C vs °F, ISO vs locale dates, currency symbol, decimal precision, timezone, locale) are honoured everywhere — including inside chart tick formatters, tooltip callbacks, and CSV exports launched from the dashboard's quick-action menu.
-
-Speed-profile, drive-telemetry, charging-detail, and charge-history axes reserve space for complete formatted labels and remeasure after fonts load, including separate widths for left and right axes. Shared area charts keep their left margin inside the chart viewport rather than clipping leading digits. Tick sizing does not shorten values or override saved decimal precision.
-
-Fluid chart viewports flex-fill their responsive plots, so content-height mobile widgets do not rely on a definite percentage-height ancestor. Fixed chart heights and the shared mobile/desktop minimum heights remain unchanged.
 
 If you ever see "km" on a UI that's set to imperial, that's a bug — file it. The contract is enforced by lint and by the Phase-42 final-gate test suite.
 

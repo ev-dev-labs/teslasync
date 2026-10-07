@@ -1,13 +1,19 @@
+import { ListChecks } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard } from '@/components/layout';
-import { Badge, Text } from '@/components/ui';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
-
+import { Grid } from '@/components/layout';
+import {
+  Badge,
+  GlassPanel,
+  MetricLabel,
+  MetricValue,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
+import { fmtInt } from '@/lib/numberFormat';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type { ComfortConsistencyQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyRowDispositionProps {
   summary: ComfortConsistencySummary;
@@ -18,7 +24,6 @@ export function ComfortConsistencyRowDisposition({
   summary,
   state,
 }: ComfortConsistencyRowDispositionProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = summary.rows;
   const outcomes = [
@@ -35,8 +40,12 @@ export function ComfortConsistencyRowDisposition({
 
   return (
     <section data-testid="comfort-consistency-row-disposition">
-      <LayoutCard title={t('comfortConsistency.rows.title', 'Returned-row disposition')}>
+      <GlassPanel className="p-4 sm:p-5">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <PanelTitle className="flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('comfortConsistency.rows.title', 'Returned-row disposition')}
+          </PanelTitle>
           <Badge variant={summary.identities.rowsBalanced ? 'success' : 'danger'}>
             {summary.identities.rowsBalanced
               ? t('comfortConsistency.rows.balanced', 'Exact balance')
@@ -50,16 +59,17 @@ export function ComfortConsistencyRowDisposition({
           )}
         </Text>
         <ComfortConsistencySectionBody summary={summary} state={state}>
-          <VehicleOperationalBrief embedded id="comfort-consistency-disposition-summary"
-            title={t('comfortConsistency.rows.title', 'Returned-row disposition')}
-            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
-            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('comfortConsistency.rows.subtitle', 'Ordered, mutually exclusive outcomes explain why each endpoint row is analyzed or withheld.') }}
-            metrics={outcomes.map(([label, rawValue], index) => ({
-              metricId: 'count', occurrenceId: `outcome-${index}`, label, rawValue,
-              display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
-            }))}
-          />
+          <Grid cols={{ default: 2, md: 3, xl: 5 }} gap={3}>
+            {outcomes.map(([label, value]) => (
+              <div
+                key={label}
+                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+              >
+                <MetricLabel>{label}</MetricLabel>
+                <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
+              </div>
+            ))}
+          </Grid>
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'comfortConsistency.rows.identity',
@@ -73,7 +83,7 @@ export function ComfortConsistencyRowDisposition({
             )}
           </Text>
         </ComfortConsistencySectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

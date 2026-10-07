@@ -134,14 +134,14 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
       open
       onClose={requestClose}
       size="lg"
-      title={isEdit ? t('notifications.channels.editTitle', 'Edit channel') : t('notifications.channels.addTitle', 'Add channel')}
+      title={isEdit ? t('notifications.channels.editTitle', 'Edit Channel') : t('notifications.channels.addTitle', 'Add Channel')}
     >
       <FadeIn>
         <form className="space-y-4" onSubmit={handleSubmit}>
           {!isEdit && (
             <div>
               <Text as="span" id="channel-type-label" size="xs" weight="medium" color="secondary" className="mb-2 block">
-                {t('notifications.channels.typeLabel', 'Channel type')}
+                {t('notifications.channels.typeLabel', 'Channel Type')}
               </Text>
               <div
                 role="radiogroup"
@@ -185,7 +185,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
           )}
 
           <Input
-            label={t('notifications.channels.nameLabel', 'Channel name')}
+            label={t('notifications.channels.nameLabel', 'Channel Name')}
             help={{
               i18nKey: 'help.fields.channels.nameLabel',
               content: 'Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.',
@@ -241,7 +241,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 content='Use the "Send Test" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery.'
                 for={`channel-test-${meta.value}`}
               />
-              {t('notifications.channels.testHint', 'Save then click "Send test" to verify the configuration.')}
+              {t('notifications.channels.testHint', 'Save then click "Send Test" to verify the configuration.')}
             </Text>
           </div>
 
@@ -280,7 +280,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
                 loading={testMut.isPending || webhookTestMut.isPending}
                 onClick={handleTest}
               >
-                {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.test', 'Test connection')}
+                {testMut.isPending || webhookTestMut.isPending ? t('notifications.channels.testing', 'Testing…') : t('notifications.channels.test', 'Test Connection')}
               </Button>
             )}
             <div className="flex-1" />

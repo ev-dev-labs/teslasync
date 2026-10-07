@@ -10,7 +10,7 @@
 
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -113,7 +113,6 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import ScienceLabPage from './ScienceLabPage';
-import * as operationalMetrics from '@/hooks/useOperationalMetrics';
 import type {
   ScienceElectrochem,
   ScienceNotebook,
@@ -231,23 +230,6 @@ beforeEach(() => {
 });
 
 describe('ScienceLabPage', () => {
-  it('keeps canonical card shells and all source anchors during independent failures', () => {
-    scienceMocks.thermal.mockReturnValue(queryState({
-      data: undefined, isPending: true, isSuccess: false, fetchStatus: 'fetching',
-    }));
-    scienceMocks.tires.mockReturnValue(queryState({
-      data: undefined, error: new Error('TPMS unavailable'), isError: true, isSuccess: false,
-    }));
-    renderPage();
-    for (const id of ['overview', 'electrochem', 'thermal', 'weather', 'tires', 'notebook']) {
-      expect(screen.getByTestId(`science-${id}`).querySelector('[data-card]')).toBeInTheDocument();
-    }
-    const tire = screen.getByTestId('science-tires');
-    expect(within(tire).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
-    expect(tire).not.toHaveTextContent('0 kPa');
-    expect(screen.getByTestId('science-electrochem')).toHaveTextContent('Rest-voltage evidence');
-    expect(screen.getByTestId('science-weather').querySelector('a[href="/drives/7"]')).toBeInTheDocument();
-  });
   it('renders all five domain panels with data', () => {
     renderPage();
     const overview = screen.getByTestId('science-overview');
@@ -380,26 +362,6 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-tires').textContent).toMatch(/bar/);
   });
 
-  it('preserves notebook parameter identities, values, and intervals in shared semantic tables', async () => {
-    const data = notebook();
-    data.entries[0].parameters = { raw_case_Field: 1.23456, source: 'Tesla API Identity', omitted: null };
-    data.entries[0].ci = { low: -2, high: 0 };
-    scienceMocks.notebook.mockReturnValue(queryState({ data }));
-    const { fireEvent } = await import('@testing-library/react');
-    renderPage();
-    fireEvent.click(screen.getByText(/electrochem · Rest voltage maps SOC/));
-
-    const parameters = screen.getByRole('table', { name: 'Parameters' });
-    expect(within(parameters).getAllByRole('rowheader')).toHaveLength(2);
-    expect(within(parameters).getByRole('rowheader', { name: 'raw_case_Field' })).toBeInTheDocument();
-    expect(parameters).toHaveTextContent('1.235');
-    expect(parameters).toHaveTextContent('Tesla API Identity');
-    const intervals = screen.getByRole('table', { name: 'Confidence intervals' });
-    expect(within(intervals).getAllByRole('rowheader')).toHaveLength(2);
-    expect(within(intervals).getByRole('rowheader', { name: 'high' }).closest('tr')).toHaveTextContent('0');
-    expect(screen.getByTestId('science-notebook')).toHaveTextContent('Fit.');
-  });
-
   it('shows psi pressures in imperial mode', () => {
     settingsMock.unit_of_pressure = 'psi';
     renderPage();
@@ -433,7 +395,7 @@ describe('ScienceLabPage', () => {
     renderPage();
     expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('science-electrochem').textContent).toMatch(/n=0/);
-    expect(screen.getByTestId('science-thermal').textContent).toMatch(/No park cooldown/);
+    expect(screen.getByTestId('science-thermal').textContent).toMatch(/No Park cooldown/);
     expect(screen.getByTestId('science-notebook').textContent).toMatch(/No notebook rows/);
     expect(screen.getByTestId('science-overview')).toHaveTextContent('0 rest points · 0 resistance steps');
   });
@@ -460,129 +422,5 @@ describe('ScienceLabPage', () => {
     const chart = screen.getByTestId('science-electrochem').querySelector('.recharts-wrapper svg');
     expect(chart).not.toBeNull();
     expect(container.querySelector('.recharts-area-curve')).not.toBeNull();
-  });
-
-  it('renders every genuine summary through the real brief and typed raw bridge', () => {
-    const bridge = vi.spyOn(operationalMetrics, 'useOperationalMetrics');
-    renderPage();
-    for (const id of ['evidence', 'electrochem', 'arrhenius', 'aging', 'weather', 'tires']) {
-      const brief = screen.getByTestId(`science-${id}-brief`);
-      expect(brief).toHaveAttribute('data-operational-brief');
-      expect(within(brief).getByRole('button', { name: 'Review details' })).toBeInTheDocument();
-    }
-    const rawMetrics = bridge.mock.calls.flatMap(([metrics]) => metrics);
-    expect(rawMetrics).toEqual(expect.arrayContaining([
-      expect.objectContaining({ occurrenceId: 'front-left', metricId: 'pressure', rawValue: 290 }),
-      expect.objectContaining({ occurrenceId: 'extra-rolling', metricId: 'energy', rawValue: 35 }),
-      expect.objectContaining({ occurrenceId: 'rest-duration', metricId: 'duration', rawValue: 144000 }),
-      expect.objectContaining({ occurrenceId: 'throughput', metricId: 'energy', rawValue: 50000 }),
-      expect.objectContaining({ occurrenceId: 'underinflation', metricId: 'percent', rawValue: 0.07 * 100 }),
-      expect.objectContaining({ occurrenceId: 'density-correlation', metricId: 'ratio', rawValue: null }),
-    ]));
-    expect(screen.getByTestId('science-tires-brief').querySelector('[data-operational-metric="front-left"]'))
-      .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-weather-brief').querySelector('[data-operational-metric="density-correlation"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    bridge.mockRestore();
-  });
-
-  it('opens the real science review drawer with model caveats and no fabricated confidence score', async () => {
-    const { fireEvent } = await import('@testing-library/react');
-    renderPage();
-    const brief = screen.getByTestId('science-tires-brief');
-    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog', { name: 'Tire / contact mechanics details' });
-    expect(drawer).toHaveTextContent('Model sensitivity, not a confidence interval');
-    expect(drawer).toHaveTextContent('Extra rolling energy is model sensitivity, not measured loss.');
-    expect(drawer).toHaveTextContent('placard');
-    expect(drawer).toHaveTextContent('Front left');
-    expect(drawer).toHaveTextContent('2.9 bar');
-    expect(drawer).toHaveTextContent('Not scored');
-    expect(drawer).toHaveTextContent('Historical inputs and derived fits');
-    expect(drawer).not.toHaveTextContent('100%');
-  });
-
-  it('retains uncertainty, specialist quantities and signed correlation without turning them into health scores', async () => {
-    const report = electrochem();
-    report.arrhenius = {
-      ...report.arrhenius, ea_j_per_mol: 12345.678,
-      ea_ci95_low: 10000, ea_ci95_high: 15000, unknown: false,
-    };
-    report.aging = { ...report.aging, proxy_slope_wh_per_day: -125.75, proxy_n: 8, unknown: false };
-    report.capacity_proxy_unknown = false;
-    report.capacity_proxy_wh = 70000;
-    scienceMocks.electrochem.mockReturnValue(queryState({ data: report }));
-    scienceMocks.weather.mockReturnValue(queryState({ data: weather({ density_r: -0.6, wind_r: 0 }) }));
-    renderPage();
-    const arrhenius = screen.getByTestId('science-arrhenius-brief');
-    expect(arrhenius).toHaveTextContent('12,345.68 J/mol');
-    expect(arrhenius).toHaveTextContent('10,000.00…15,000.00 J/mol');
-    const aging = screen.getByTestId('science-aging-brief');
-    expect(aging).toHaveTextContent('-125.75 Wh/day');
-    expect(aging).toHaveTextContent('n=8.00');
-    const weatherBrief = screen.getByTestId('science-weather-brief');
-    const density = weatherBrief.querySelector('[data-operational-metric="density-correlation"]');
-    const wind = weatherBrief.querySelector('[data-operational-metric="wind-correlation"]');
-    expect(density).toHaveAttribute('data-value-state', 'value');
-    expect(density?.querySelector('[data-operational-value]')).toHaveTextContent('-0.60');
-    expect(wind).toHaveAttribute('data-value-state', 'value');
-    expect(wind?.querySelector('[data-operational-value]')).toHaveTextContent('0.00');
-    expect(density?.querySelector('[data-operational-value]')).not.toHaveTextContent('%');
-    const { fireEvent } = await import('@testing-library/react');
-    fireEvent.click(within(arrhenius).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog', { name: 'Temperature dependence of pack resistance details' });
-    expect(drawer).toHaveTextContent('10,000.00…15,000.00 J/mol');
-    expect(drawer).toHaveTextContent('Not scored');
-  });
-
-  it('keeps retained raw readings and distinct per-source trust while a refresh is paused', () => {
-    scienceMocks.tires.mockReturnValue(queryState({
-      data: tires(), fetchStatus: 'paused', isFetching: false,
-    }));
-    renderPage();
-    const tiresBrief = screen.getByTestId('science-tires-brief');
-    expect(tiresBrief).toHaveTextContent('Cached · refresh paused');
-    expect(tiresBrief.querySelector('[data-operational-metric="front-left"]'))
-      .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-evidence-brief')).toHaveTextContent('Cached · refresh paused');
-    expect(screen.getByTestId('science-electrochem-brief')).toHaveTextContent('Evidence available');
-    expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
-  });
-
-  it('does not turn absent summaries into zero while preserving successful peers and genuine zeros', () => {
-    scienceMocks.electrochem.mockReturnValue(queryState({
-      data: undefined, isPending: true, status: 'pending', fetchStatus: 'fetching',
-    }));
-    scienceMocks.weather.mockReturnValue(queryState({ data: weather({ density_r: 0, wind_r: null }) }));
-    renderPage();
-    const battery = screen.getByTestId('science-electrochem-brief');
-    expect(battery).toHaveAttribute('aria-busy', 'true');
-    expect(battery.querySelector('[data-operational-value]')).toBeNull();
-    const overview = screen.getByTestId('science-evidence-brief');
-    expect(overview).not.toHaveAttribute('aria-busy');
-    expect(overview.querySelector('[data-operational-metric="science-electrochem"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(overview.querySelector('[data-operational-metric="science-weather"]'))
-      .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-weather-brief').querySelector('[data-operational-metric="density-correlation"]'))
-      .toHaveAttribute('data-value-state', 'value');
-    expect(screen.getByTestId('science-weather-brief').querySelector('[data-operational-metric="wind-correlation"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-  });
-
-  it('keeps nullable fit ledgers unknown and exposes invalid readings rather than displaying zero', () => {
-    const report = electrochem();
-    Object.assign(report, { arrhenius: null, aging: null });
-    scienceMocks.electrochem.mockReturnValue(queryState({ data: report }));
-    scienceMocks.tires.mockReturnValue(queryState({ data: tires({ fl_kpa: Number.NaN, extra_model_low: null, extra_model_high: null }) }));
-    renderPage();
-    expect(screen.getByTestId('science-arrhenius-brief').querySelector('[data-operational-metric="temperature-span"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByTestId('science-aging-brief').querySelector('[data-operational-metric="throughput"]'))
-      .toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByTestId('science-tires-brief').querySelector('[data-operational-metric="front-left"]'))
-      .toHaveAttribute('data-value-state', 'invalid');
-    expect(screen.getByTestId('science-tires-brief')).toHaveTextContent('unknown…unknown');
-    expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();
   });
 });

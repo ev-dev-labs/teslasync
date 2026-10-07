@@ -1,6 +1,6 @@
 import { formatDateShort } from '@/lib/dateFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
-import { getChargerCategory } from '@/lib/chargingAggregation';
+import { getChargerCategory } from '../ChargingSessionCard';
 import type { ChargingSession } from '@/api/types';
 import { durationMinutes } from '../charging-curve/helpers';
 import { convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
@@ -26,7 +26,7 @@ export interface ChargingStats {
 export interface AcDcBucket {
   energy: number;
   energyUsed: number;
-  cost: number | null;
+  cost: number;
   count: number;
   totalDuration: number;
   freeCount: number;
@@ -36,7 +36,7 @@ export interface AcDcBucket {
 export interface AcDcBreakdown {
   ac: AcDcBucket;
   dc: AcDcBucket;
-  total: { energy: number; cost: number | null; freeEnergy: number; freeCount: number };
+  total: { energy: number; cost: number; freeEnergy: number; freeCount: number };
 }
 
 export interface ChargeRateStats {
@@ -166,17 +166,15 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   const ac: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   const dc: AcDcBucket = { energy: 0, energyUsed: 0, cost: 0, count: 0, totalDuration: 0, freeCount: 0, freeEnergy: 0 };
   sessions.forEach((s) => {
-    const explicitAC = !!s.charger_type && getChargerCategory(s.charger_type) === 'home';
-    const isDC = !explicitAC && !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22_000));
+    const isDC = !!(s.charger_type || (s.peak_power_w && s.peak_power_w > 22_000));
     const bucket = isDC ? dc : ac;
     const energyKwh = convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh');
     bucket.energy += energyKwh;
     bucket.energyUsed += energyKwh;
-    bucket.cost = bucket.cost != null && s.cost_decimal != null
-      ? bucket.cost + s.cost_decimal : null;
+    bucket.cost += s.cost_decimal ?? 0;
     bucket.count++;
     bucket.totalDuration += durationMinutes(s.started_at, s.ended_at);
-    if (s.cost_decimal === 0) {
+    if (!s.cost_decimal || s.cost_decimal === 0) {
       bucket.freeCount++;
       bucket.freeEnergy += energyKwh;
     }
@@ -186,7 +184,7 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
     dc,
     total: {
       energy: ac.energy + dc.energy,
-      cost: ac.cost != null && dc.cost != null ? ac.cost + dc.cost : null,
+      cost: ac.cost + dc.cost,
       freeEnergy: ac.freeEnergy + dc.freeEnergy,
       freeCount: ac.freeCount + dc.freeCount,
     },

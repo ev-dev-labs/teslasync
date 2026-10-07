@@ -52,23 +52,6 @@ beforeEach(() => {
 })
 
 describe('MetricCard — label + value', () => {
-  it('reserves the same compact value and comparison tracks with or without a delta', () => {
-    const { container, rerender } = render(
-      <MetricCard compact label="Drives" value={13} delta={{ metric: 'trip_count', previous: 15 }} />,
-    )
-    const trackClasses = '@[26rem]/metric:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem]'
-    expect(container.querySelector('[data-role="metric-value"]')?.parentElement)
-      .toHaveClass(trackClasses)
-    expect(container.querySelector('[data-role="metric-comparison"]'))
-      .toHaveClass('@[26rem]/metric:col-start-3')
-    rerender(<MetricCard compact label="Efficiency grade" value="B" />)
-    const value = container.querySelector('[data-role="metric-value"]')
-    expect(value?.parentElement).toHaveClass(trackClasses)
-    expect(value).toHaveClass('@[26rem]/metric:col-start-2', '@[26rem]/metric:text-center')
-    expect(container.querySelector('[data-role="metric-comparison"]')).toBeNull()
-    expect(screen.getByText('B')).toBeInTheDocument()
-  })
-
   it('renders the label and a string value', () => {
     render(<MetricCard label="Battery Health" value="87%" />)
     expect(screen.getByText('Battery Health')).toBeInTheDocument()

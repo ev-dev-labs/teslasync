@@ -42,7 +42,7 @@ export function pctChange(a: number, b: number): PctChange {
   if (b === 0) return { value: '—', positive: true, neutral: true };
   const pct = ((a - b) / b) * 100;
   return {
-    value: `${pct > 0 ? '+' : ''}${fmtNumber(pct)}%`,
+    value: `${pct > 0 ? '+' : ''}${fmtNumber(pct, 1)}%`,
     positive: pct >= 0,
     neutral: false,
   };

@@ -11,8 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart,
   Bar,
@@ -49,25 +48,23 @@ interface BucketSegment {
 export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPanelProps) {
   const { t } = useTranslation();
   const { query, buckets } = analysis;
-  const sourceState = useDataState(query, { provenance: 'live' });
 
   const segments = useMemo<BucketSegment[]>(
     () => [
       { key: 'active', label: t('signalGap.active', 'Active (<30s)'), count: buckets.active ?? 0, fill: GAP_BUCKET_COLORS.active },
       { key: 'aging', label: t('signalGap.aging', 'Aging (<5min)'), count: buckets.aging ?? 0, fill: GAP_BUCKET_COLORS.aging },
       { key: 'stale', label: t('signalGap.stale', 'Stale (>5min)'), count: buckets.stale ?? 0, fill: GAP_BUCKET_COLORS.stale },
-      { key: 'never', label: t('signalGap.neverReceived', 'Never received'), count: buckets.never ?? 0, fill: GAP_BUCKET_COLORS.never },
+      { key: 'never', label: t('signalGap.neverReceived', 'Never Received'), count: buckets.never ?? 0, fill: GAP_BUCKET_COLORS.never },
     ],
     [buckets, t],
   );
 
   return (
-    <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
+    <GlassPanel className="p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex items-center gap-2">
         <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('signalGap.distributionTitle', 'Signal health distribution')}
+        {t('signalGap.distributionTitle', 'Signal Health Distribution')}
       </PanelTitle>
-      {hasVehicle && <StaleRefreshWarning state={sourceState} label={t('signalGap.distributionTitle', 'Signal health distribution')} />}
 
       {!hasVehicle ? (
         <EmptyState
@@ -77,8 +74,8 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
         />
       ) : query.isLoading ? (
         <Skeleton height={260} />
-      ) : sourceState.fatalError ? (
-        <QueryError error={sourceState.fatalError} onRetry={() => query.refetch()} />
+      ) : query.isError ? (
+        <QueryError error={query.error} onRetry={() => query.refetch()} />
       ) : (buckets.total ?? 0) === 0 ? (
         // no-action: transient — the distribution fills once this vehicle streams its first signal; nothing the user can trigger sooner.
         <EmptyState
@@ -138,7 +135,7 @@ function DistributionBody({ segments, buckets }: { segments: BucketSegment[]; bu
       </div>
 
       <EmbeddedChart
-        title={t('signalGap.distributionTitle', 'Signal health distribution')}
+        title={t('signalGap.distributionTitle', 'Signal Health Distribution')}
         ariaLabel={t('signalGap.chartAria', 'Signal staleness bucket counts by category')}
         data={chartRows}
         dataColumns={[

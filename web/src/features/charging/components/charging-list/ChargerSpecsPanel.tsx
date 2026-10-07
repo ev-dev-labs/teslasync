@@ -2,9 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Zap, Activity, Cable, Plug, Gauge } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
-
+import { fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import type { ChargerSpecsData } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargerSpecsPanelProps {
   specs: ChargerSpecsData | null;
@@ -70,7 +69,6 @@ interface SpecColumnProps {
 }
 
 function SpecColumn({ icon, label, items, emptyMsg, showAvgPower }: SpecColumnProps) {
-  const { fmtInt, fmtWithUnit } = useNumberFormatting();
   const { t } = useTranslation();
   const list = items ?? [];
 

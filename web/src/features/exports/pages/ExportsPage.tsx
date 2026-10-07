@@ -1,23 +1,23 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard, PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
+  GlassPanel,
   Badge,
   Button,
   DataTable,
+  PanelTitle,
   Text,
   ConfirmDialog,
   type Column,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
-import { AIPiiRedactionSharedExports } from '@/components/ai';
+import { AIPiiRedactionSharedExports } from '@/components/ai/AIPiiRedactionSharedExports';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useConfirm } from '@/hooks/useConfirm';
-import { useDataState } from '@/hooks/useDataState';
-import { StaleRefreshWarning } from '@/components/feedback';
 
 import {
   useExportJobs,
@@ -27,12 +27,11 @@ import {
 } from '@/api/hooks/useExports';
 import { Icons } from '@/lib/icons';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { formatBytes } from '@/lib/numberFormat';
 
 import { ExportKpiBand } from '../components/ExportKpiBand';
 import { ExportStatusBreakdown } from '../components/ExportStatusBreakdown';
 import { deriveExportStats, statusBadgeVariant } from '../components/exportStats';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * ExportsPage — full-width command view over past export jobs.
@@ -44,20 +43,11 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
  * `POST /export/jobs/bulk` for bulk deletion.
  */
 export default function ExportsPage() {
-  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('exportsList.title', 'Exports'));
 
   const jobsQuery = useExportJobs();
-  const jobsState = useDataState(jobsQuery);
-  const { data: jobsRaw, refetch } = jobsQuery;
-  const isLoading = !jobsState.hasData && jobsQuery.isLoading;
-  const error = jobsState.fatalError;
-  const unresolvedMessage = !jobsState.hasData && !isLoading && !error
-    ? jobsQuery.fetchStatus === 'paused'
-      ? t('exportsList.source.paused', 'The export-job query is paused; no empty result is inferred.')
-      : t('exportsList.source.unresolved', 'Export-job availability has not resolved yet.')
-    : undefined;
+  const { data: jobsRaw, isLoading, error, refetch } = jobsQuery;
   const jobs: ExportJobSummary[] = useMemo(() => jobsRaw ?? [], [jobsRaw]);
   const stats = useMemo(() => deriveExportStats(jobs), [jobs]);
 
@@ -98,7 +88,6 @@ export default function ExportsPage() {
     () => [
       {
         key: 'type',
-        filterValue: (j) => j.type || null,
         header: t('exportsList.col.type', 'Type'),
         sortable: true,
         visibleOnMobile: true,
@@ -110,21 +99,16 @@ export default function ExportsPage() {
       },
       {
         key: 'format',
-        filterValue: (j) => j.format || null,
-        filterValueLabel: (_value, j) => j.format?.toUpperCase() || '—',
         header: t('exportsList.col.format', 'Format'),
         sortable: true,
         render: (j) => (
-          <Text color="secondary" className="">
+          <Text color="secondary" className="uppercase">
             {j.format || '—'}
           </Text>
         ),
       },
       {
         key: 'file_size',
-        filterValue: (j) => j.file_size ?? null,
-        filterValueLabel: (_value, j) => j.file_size == null ? '—' : formatBytes(j.file_size),
-        groupStart: true,
         header: t('exportsList.col.size', 'Size'),
         align: 'right',
         sortable: true,
@@ -136,8 +120,6 @@ export default function ExportsPage() {
       },
       {
         key: 'created_at',
-        filterValue: (j) => j.created_at ?? null,
-        filterValueLabel: (_value, j) => formatDateTime(j.created_at),
         header: t('exportsList.col.created', 'Created'),
         sortable: true,
         render: (j) => (
@@ -146,8 +128,6 @@ export default function ExportsPage() {
       },
       {
         key: 'status',
-        filterValue: (j) => j.status ?? null,
-        filterValueLabel: (_value, j) => t(`exportsList.status.${j.status}`, j.status),
         header: t('exportsList.col.status', 'Status'),
         sortable: true,
         visibleOnMobile: true,
@@ -180,7 +160,7 @@ export default function ExportsPage() {
           ),
       },
     ],
-    [t, formatBytes],
+    [t],
   );
 
   const actions = (
@@ -194,20 +174,19 @@ export default function ExportsPage() {
   );
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('exportsList.title', 'Exports')}
       subtitle={t(
         'exportsList.subtitle',
         'Manage your past export jobs. Select rows to delete in bulk.',
       )}
-      secondaryActions={actions}
+      actions={actions}
       query={jobsQuery}
     >
       <div className="space-y-6">
-        <StaleRefreshWarning state={jobsState} />
-        {/* 1 — Loaded-list summary; independent of table filters and selection. */}
+        {/* 1 — KPI band: full-width, reflows up to 5 columns on wide screens. */}
         <FadeIn>
-          <ExportKpiBand stats={stats} isLoading={isLoading} hasData={jobsState.hasData} retained={jobsState.status === 'stale'} sourceState={jobsState} />
+          <ExportKpiBand stats={stats} isLoading={isLoading} />
         </FadeIn>
 
         {/* 2 — Opt-in Helix PII-redaction advisor. Renders null when AI is off,
@@ -216,8 +195,12 @@ export default function ExportsPage() {
 
         {/* 3 — Detail bento: jobs table (hero, spans 2 cols) + status breakdown. */}
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-          <FadeIn delay={0.1} className="min-w-0 xl:col-span-2">
-            <LayoutCard title={t('exportsList.jobs.title', 'Export jobs')}>
+          <FadeIn delay={0.1} className="xl:col-span-2">
+            <GlassPanel className="flex h-full flex-col overflow-hidden p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <Icons.package className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('exportsList.jobs.title', 'Export Jobs')}
+              </PanelTitle>
 
               {isLoading ? (
                 <div className="space-y-2">
@@ -231,8 +214,6 @@ export default function ExportsPage() {
                   onRetry={onRetry}
                   resourceName={t('exportsList.resource', 'Exports')}
                 />
-              ) : unresolvedMessage ? (
-                <Text as="p" variant="bodySm" role="status">{unresolvedMessage}</Text>
               ) : jobs.length === 0 ? (
                 <EmptyState /* no-action: stale-list view — exports appear automatically once generated; nothing for the user to do here */
                   icon={<Icons.package className="h-8 w-8" aria-hidden="true" />}
@@ -247,7 +228,6 @@ export default function ExportsPage() {
                   tableId="exports:jobs"
                   columns={columns}
                   data={jobs}
-                  enableValueFilters
                   keyExtractor={(j) => j.id}
                   mobileColumns={['type', 'status', 'actions']}
                   pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
@@ -278,7 +258,7 @@ export default function ExportsPage() {
                   )}
                 />
               )}
-            </LayoutCard>
+            </GlassPanel>
           </FadeIn>
 
           <FadeIn delay={0.15}>
@@ -287,13 +267,12 @@ export default function ExportsPage() {
               isLoading={isLoading}
               error={error}
               onRetry={onRetry}
-              unresolvedMessage={unresolvedMessage ?? undefined}
             />
           </FadeIn>
         </section>
       </div>
 
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageLayout>
+    </PageContainer>
   );
 }

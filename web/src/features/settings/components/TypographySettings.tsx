@@ -69,7 +69,6 @@ function Segmented<T extends string | number>({
           <Button
             key={String(opt.value)}
             variant="ghost"
-            wrapLabel
             onClick={() => onChange(opt.value)}
             aria-pressed={active}
             className={cn(
@@ -205,7 +204,7 @@ export function TypographySettings() {
           </div>
           <div className="flex flex-wrap gap-2">
             {presets.map((p) => (
-              <Button key={p.id} variant="secondary" size="sm" wrapLabel onClick={() => applyPreset(p.id)}>
+              <Button key={p.id} variant="secondary" size="sm" onClick={() => applyPreset(p.id)}>
                 {p.label}
               </Button>
             ))}
@@ -322,7 +321,7 @@ export function TypographySettings() {
                 />
               </div>
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <HelperText>
                 {agentCtx.verification
                   ? tAgent('settings.typographyAgent.loopStatus', 'Loop verified · score {{score}}/100', {
@@ -330,7 +329,7 @@ export function TypographySettings() {
                     })
                   : tAgent('settings.typographyAgent.loopPending', 'Loop calibrating…')}
               </HelperText>
-              <Button variant="ghost" size="sm" wrapLabel onClick={() => agentCtx.setHudOpen(true)}>
+              <Button variant="ghost" size="sm" onClick={() => agentCtx.setHudOpen(true)}>
                 <Type className="mr-2 h-4 w-4" aria-hidden="true" />
                 {tAgent('settings.typographyAgent.openHud', 'Open ambient HUD')}
               </Button>
@@ -339,9 +338,9 @@ export function TypographySettings() {
         )}
 
         {/* Reset */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-4">
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--glass-border)] pt-4">
           <HelperText>{t('typography.reset.help', 'Restore the default font, size, and spacing.')}</HelperText>
-          <Button variant="ghost" size="sm" wrapLabel onClick={reset}>
+          <Button variant="ghost" size="sm" onClick={reset}>
             <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
             {t('typography.reset.action', 'Reset to defaults')}
           </Button>

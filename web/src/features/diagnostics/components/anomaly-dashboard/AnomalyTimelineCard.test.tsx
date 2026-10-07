@@ -86,11 +86,11 @@ describe('AnomalyTimelineCard', () => {
     expect(text).toContain('2.00'); // fmtNumber(2, 2)
   });
 
-  it('shows the z-score sigma chip at the selected precision when z_score > 0', () => {
+  it('shows the z-score sigma chip at one decimal when z_score > 0', () => {
     const { container } = renderCard(makeAnomaly({ z_score: 4.27 }));
     const text = container.textContent ?? '';
-    expect(text).toContain('4.27\u03c3');
-    expect(text).not.toContain('4.3\u03c3');
+    expect(text).toContain('4.3\u03c3'); // fmtNumber(4.27, 1) = '4.3'
+    expect(text).not.toContain('4.27\u03c3');
   });
 
   it('hides the sigma chip for a range violation (z_score === 0)', () => {

@@ -444,7 +444,7 @@ describe('fun fact', () => {
     expect(result.current.funFact).toEqual({
       from: 'New York',
       to: 'Boston',
-      times: '0.43', // fmtNumber(150 / 350), Settings precision
+      times: '0.4', // fmtNumber(150 / 350, 1)
     });
   });
 

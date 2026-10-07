@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartTooltip,
+  ChartContainer, ChartTooltip,
   AREA_DEFAULTS, areaGradient,
   AreaChart, Area, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -9,8 +9,6 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
-import { ChartCard } from '@/components/layout';
-import { Text } from '@/components/ui';
 import type { ChartDataPoint } from './types';
 
 interface SocChartProps {
@@ -26,18 +24,16 @@ export function SocChart({ chartData }: SocChartProps) {
   // down `undefined` transiently (drive still loading) — guard before `.length`
   // so a mid-fetch render never throws on the missing array.
   const points = chartData ?? [];
-  const hasSeries = points.filter((row) => row.battery != null).length > 1;
+  const hasSeries = points.length > 1;
 
   return (
     <FadeIn className="h-full">
       {/* chart-a11y:no-table dense per-sample SOC trace; start/end SOC visible in the drive summary tiles */}
-      <ChartCard
-        title={t('driveDetail.socOverTime', 'SOC % over time')}
+      <ChartContainer
+        title={t('driveDetail.socOverTime', 'SOC % Over Time')}
         ariaLabel={t('driveDetail.socOverTime.aria', 'State of charge percent over time area chart')}
         height={220}
-        mobileHeight={220}
-        toolbar
-        exportable
+        className="h-full"
       >
         {hasSeries ? (
           <ResponsiveContainer width="100%" height="100%">
@@ -66,12 +62,12 @@ export function SocChart({ chartData }: SocChartProps) {
             </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
             <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
-            <Text variant="caption">{t('driveDetail.noChartData', 'No telemetry data available')}</Text>
+            <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
           </div>
         )}
-      </ChartCard>
+      </ChartContainer>
     </FadeIn>
   );
 }

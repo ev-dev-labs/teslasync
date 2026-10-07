@@ -139,7 +139,7 @@ describe('DigitalTwinPanel', () => {
     for (const s of states) {
       const { unmount } = renderPanel(s)
       expect(
-        screen.getByRole('heading', { name: /Digital twin/i }),
+        screen.getByRole('heading', { name: /digital twin/i }),
       ).toBeInTheDocument()
       unmount()
     }
@@ -149,7 +149,7 @@ describe('DigitalTwinPanel', () => {
     renderPanel({ hasData: false, isLoading: false, error: null })
 
     expect(
-      screen.getByText(/No Live Vehicle state available yet/i),
+      screen.getByText(/no live vehicle state available yet/i),
     ).toBeInTheDocument()
     expect(screen.queryByTestId('vehicle-twin')).not.toBeInTheDocument()
     expect(
@@ -166,7 +166,7 @@ describe('DigitalTwinPanel', () => {
     // The twin and empty branches must NOT render in the loading state.
     expect(screen.queryByTestId('vehicle-twin')).not.toBeInTheDocument()
     expect(
-      screen.queryByText(/no Live Vehicle state/i),
+      screen.queryByText(/no live vehicle state/i),
     ).not.toBeInTheDocument()
   })
 

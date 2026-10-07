@@ -34,7 +34,7 @@
       "monoFont": {
         "label": "Monospace font",
         "customAria": "Custom monospace font stack",
-        "customPlaceholder": "e.g. 'Cascadia code', ui-monospace, monospace"
+        "customPlaceholder": "e.g. 'Cascadia Code', ui-monospace, monospace"
       },
       "scale": {
         "label": "Text scale"
@@ -66,8 +66,7 @@
       "deleteConfirm": {
         "title": "Delete this quiet-hours window?",
         "message": "Notifications will no longer be deferred during this window. This cannot be undone."
-      },
-      "unavailable": "Quiet-hours windows unavailable."
+      }
     },
     "tours": {
       "label": "Product tours",
@@ -110,7 +109,7 @@
       "costs": "Energy & comparison costs"
     },
     "fleetSetup": {
-      "title": "Fleet setup",
+      "title": "Fleet Setup",
       "subtitle": "Connect Tesla, keep the token fresh, subscribe a vehicle, then wait for telemetry.",
       "heroAria": "Connect Tesla and follow setup",
       "subscribeAria": "Subscribe telemetry",
@@ -122,9 +121,9 @@
         "notConnected": "Not connected",
         "token": "Access token",
         "tokenFresh": "Auto-refresh on",
-        "tokenHint": "TeslaSync refreshes the fleet token before it expires.",
+        "tokenHint": "TeslaSync refreshes the Fleet token before it expires.",
         "tokenMissing": "Missing",
-        "tokenMissingHint": "Connect Tesla to store a refreshable fleet token.",
+        "tokenMissingHint": "Connect Tesla to store a refreshable Fleet token.",
         "domainKey": "Partner public key",
         "keyReady": "Published",
         "keyMissing": "Not published",
@@ -138,7 +137,7 @@
         "streamUnknownHint": "Subscribe a VIN, then wait for the car to wake."
       },
       "guide": {
-        "title": "How fleet setup works",
+        "title": "How Fleet Setup works",
         "subtitle": "Connect → domain TLS → subscribe VIN → stream on wake.",
         "step1": {
           "title": "Connect Tesla",
@@ -166,7 +165,7 @@
           "cta": "Connect now"
         },
         "token": {
-          "title": "Keep the fleet token fresh",
+          "title": "Keep the Fleet token fresh",
           "body": "A valid access token is required for subscribe. TeslaSync refreshes it in the background.",
           "cta": "Refresh token"
         },
@@ -189,21 +188,20 @@
         "wellKnown": "Well-known path",
         "fingerprint": "Fingerprint",
         "ca": "Default telemetry CA",
-        "caValue": "Let’s Encrypt ISRG root X1",
+        "caValue": "Let’s Encrypt ISRG Root X1",
         "body": "Subscribe leaves hostname and CA empty on purpose: TeslaSync sends FLEET_TELEMETRY_HOST (port 4443) and the Let’s Encrypt root. Override those only if your telemetry endpoint uses a different certificate.",
         "advancedTitle": "Partner key vs virtual key",
         "advancedBody": "The well-known PEM is for Tesla partner registration and virtual-key pairing. Telemetry streaming does not wait on a phone key pair. Pairing is only required if you want TeslaSync to send vehicle commands.",
-        "openDevTools": "Open Fleet API tools",
-        "unavailable": "Partner public-key status unavailable."
+        "openDevTools": "Open Fleet API tools"
       },
       "subscribe": {
         "title": "Subscribe telemetry",
         "subtitle": "Pick signals (or a preset), then tell Tesla which VIN should stream to this host.",
         "configureSignals": "Configure signals",
         "signalsHint": "Optional. Open the signal picker to choose fields and intervals. Leave empty to use TeslaSync’s default set.",
-        "signalsPicked": "{{count}} signals selected. Presets (balanced, low power, Track Mode, …) set intervals per category.",
+        "signalsPicked": "{{count}} signals selected. Presets (Balanced, Low Power, Track Mode, …) set intervals per category.",
         "unnamed": "Vehicle",
-        "needAuth": "Connect Tesla first. Subscribe uses the stored fleet token.",
+        "needAuth": "Connect Tesla first. Subscribe uses the stored Fleet token.",
         "needVehicle": "No vehicles yet. Sync vehicles after connecting Tesla.",
         "vehicle": "Vehicle",
         "placeholder": "Select a vehicle",
@@ -227,11 +225,7 @@
         "advancedHint": "Leave blank to use FLEET_TELEMETRY_HOST, port 4443, and the Let’s Encrypt root CA.",
         "hostname": "Hostname",
         "port": "Port",
-        "ca": "CA certificate (PEM)",
-        "vehiclesUnavailable": "Vehicle list unavailable.",
-        "configUnavailable": "Telemetry configuration unavailable.",
-        "errorsLabel": "Tesla telemetry errors",
-        "errorsUnavailable": "Tesla telemetry error status unavailable."
+        "ca": "CA certificate (PEM)"
       },
       "stream": {
         "title": "Streaming",
@@ -244,10 +238,8 @@
         "staleMessage": "Telemetry was seen before, but nothing arrived in the last 24 hours. Wake the car or start a drive.",
         "waitingMessage": "No stream yet. After subscribe, Tesla delivers the first batch when the vehicle next wakes.",
         "openSignals": "Open live signals",
-        "note": "Virtual key pairing is not part of this step. Use it later if you want TeslaSync to send commands.",
-        "unavailable": "Telemetry status unavailable."
-      },
-      "tokenUnavailable": "Fleet access-token status unavailable."
+        "note": "Virtual key pairing is not part of this step. Use it later if you want TeslaSync to send commands."
+      }
     },
     "tab": {
       "heading": "Browser tab signals",
@@ -336,45 +328,39 @@
         "verified": "TOTP enabled. Save your backup codes!",
         "disabled": "TOTP disabled.",
         "backupRegenerated": "Backup codes regenerated."
-      },
-      "copy": {
-        "manualHint": "Clipboard unavailable. Select the displayed text and copy it manually."
       }
     },
-    "electricityCost": "Electricity cost (per kWh)",
+    "electricityCost": "Electricity Cost (per kWh)",
     "typographyAgent": {
       "hudLabel": "Typography agent controller",
-      "title": "Typography agent",
+      "title": "Typography Agent",
       "subtitle": "Connected harmonic runtime",
       "verified": "Harmony verified",
       "healing": "Self-healing engaged",
       "score": "Score: {{score}}/100",
       "ratio": "Harmonic ratio",
-      "ratio_minorSecond": "Minor second",
-      "ratio_majorSecond": "Major second",
-      "ratio_minorThird": "Minor third",
-      "ratio_majorThird": "Major third",
-      "ratio_perfectFourth": "Perfect fourth",
-      "ratio_goldenRatio": "Golden ratio",
+      "ratio_minorSecond": "Minor Second",
+      "ratio_majorSecond": "Major Second",
+      "ratio_minorThird": "Minor Third",
+      "ratio_majorThird": "Major Third",
+      "ratio_perfectFourth": "Perfect Fourth",
+      "ratio_goldenRatio": "Golden Ratio",
       "baseSize": "Base text size ({{size}}px)",
       "density": "Density",
       "density_compact": "Compact",
       "density_comfortable": "Comfortable",
       "density_relaxed": "Relaxed",
-      "densityHint": "Density tunes type leading only; workspace spacing stays in display settings.",
+      "densityHint": "Density tunes type leading only; workspace spacing stays in Display settings.",
       "specimen": "Live specimen",
       "specimenHeading": "Harmonized headings scale fluidly",
       "specimenBody": "Body copy follows the modular ratio across viewports.",
       "findings": "Loop findings ({{count}})",
       "sectionTitle": "Harmonic scale",
-      "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+shift+T).",
+      "sectionSubtitle": "A modular-ratio fluid scale compiled to live tokens. Same store as the ambient HUD (Ctrl/⌘+Shift+T).",
       "loopStatus": "Loop verified · score {{score}}/100",
       "loopPending": "Loop calibrating…",
       "reset": "Reset to defaults",
       "openHud": "Open ambient HUD"
-    },
-    "tesla": {
-      "statusUnavailable": "Tesla account status unavailable."
     }
   }
 }

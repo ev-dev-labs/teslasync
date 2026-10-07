@@ -1,7 +1,7 @@
 import { Badge, MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import { useTranslation } from 'react-i18next';
 
@@ -11,7 +11,6 @@ import {
   cabinRejectionLabel,
   formatTemperatureDelta,
 } from './labels';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalCandidateRowProps {
   candidate: CandidateWindow;
@@ -39,7 +38,6 @@ export function CabinThermalCandidateRow({
   formatTemperature,
   formatDuration,
 }: CabinThermalCandidateRowProps) {
-  const { fmtInt, fmtScientificNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const status = candidate.reason != null
     ? cabinRejectionLabel(t, candidate.reason)
@@ -73,13 +71,13 @@ export function CabinThermalCandidateRow({
         />
         <Detail
           label={t('cabinThermal.directory.duration', 'Duration')}
-          value={formatDuration(candidate.durationMin * 60)}
+          value={formatDuration(candidate.durationMin * 60, { precision: 1 })}
         />
         <Detail
           label={t('cabinThermal.directory.startAmbient', 'Start / ambient')}
           value={t('cabinThermal.directory.temperaturePair', '{{start}} / {{ambient}}', {
-            start: formatTemperature(candidate.startInsideC),
-            ambient: formatTemperature(candidate.ambientC),
+            start: formatTemperature(candidate.startInsideC, { precision: 1 }),
+            ambient: formatTemperature(candidate.ambientC, { precision: 1 }),
           })}
         />
         <Detail
@@ -94,15 +92,15 @@ export function CabinThermalCandidateRow({
           label={t('cabinThermal.directory.slopeR2', 'Slope / R²')}
           value={candidate.slopePerMin != null && candidate.r2 != null
             ? t('cabinThermal.directory.fitPair', '{{slope}} / {{r2}}', {
-                slope: fmtScientificNumber(candidate.slopePerMin, 5, locale),
-                r2: fmtPercent(candidate.r2 * 100),
+                slope: fmtNumber(candidate.slopePerMin, 5, locale),
+                r2: fmtPercent(candidate.r2 * 100, 1),
               })
             : '—'}
         />
         <Detail
           label={t('cabinThermal.directory.tau', 'Derived τ')}
           value={candidate.tauMin != null
-            ? formatDuration(candidate.tauMin * 60)
+            ? formatDuration(candidate.tauMin * 60, { precision: 1 })
             : '—'}
         />
       </div>

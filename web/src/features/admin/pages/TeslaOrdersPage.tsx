@@ -14,17 +14,16 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ShoppingCart, LayoutGrid, ListOrdered } from 'lucide-react';
 
-import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Button, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser';
-import { deriveDataState } from '@/api/dataState';
-import { OrdersOperationalBrief } from '../components/statstrip-tesla-account-privacy/OrdersOperationalBrief';
 
 import {
+  TeslaOrdersKpiBand,
   OrderStatusBreakdown,
   DeliveryOutlookPanel,
   OrdersBoard,
@@ -36,11 +35,10 @@ import {
 
 export default function TeslaOrdersPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.teslaOrders.pageTitle', 'Tesla orders'));
+  usePageTitle(t('admin.teslaOrders.pageTitle', 'Tesla Orders'));
 
   const ordersQuery = useTeslaUserOrders();
   const ordersRefresh = useRefreshTeslaOrders();
-  const ordersState = deriveDataState(ordersQuery);
 
   const orders = useMemo(
     () => ordersQuery.data?.orders ?? [],
@@ -51,9 +49,9 @@ export default function TeslaOrdersPage() {
 
   // Each data section renders its own affordance from this single discriminator
   // rather than gating the whole page behind one `{data && …}`.
-  const status: OrderSectionStatus = ordersState.status === 'initial'
+  const status: OrderSectionStatus = ordersQuery.isLoading
     ? 'loading'
-    : ordersState.fatalError
+    : ordersQuery.isError
       ? 'error'
       : orders.length === 0
         ? 'empty'
@@ -89,7 +87,6 @@ export default function TeslaOrdersPage() {
         onClick={() => ordersRefresh.mutate()}
         disabled={ordersRefresh.isPending}
         aria-busy={ordersRefresh.isPending || undefined}
-        wrapLabel
       >
         {t('admin.teslaOrders.refresh', 'Refresh')}
       </Button>
@@ -97,22 +94,19 @@ export default function TeslaOrdersPage() {
   );
 
   return (
-    <PageLayout
-      title={t('admin.teslaOrders.pageTitle', 'Tesla orders')}
+    <PageContainer
+      title={t('admin.teslaOrders.pageTitle', 'Tesla Orders')}
       subtitle={t(
         'admin.teslaOrders.subtitle',
         'Vehicle orders and delivery tracking pulled from your Tesla account.',
       )}
-      secondaryActions={actions}
+      actions={actions}
       query={ordersQuery}
-      dataSources={[{ id: 'tesla-orders', label: t('admin.teslaOrders.pageTitle', 'Tesla orders'), query: ordersQuery }]}
     >
       {/* 1 — KPI band: full-width responsive metric grid (always visible) */}
       <FadeIn>
         <section aria-label={t('admin.teslaOrders.kpis', 'Order summary')}>
-          <OrdersOperationalBrief stats={ordersState.hasData && Array.isArray(ordersQuery.data?.orders) ? stats : null}
-            fetchedAt={fetchedAt} loading={ordersState.status === 'initial'}
-            sourceStatus={ordersState.status} />
+          <TeslaOrdersKpiBand stats={stats} />
         </section>
       </FadeIn>
 
@@ -126,14 +120,14 @@ export default function TeslaOrdersPage() {
             <OrderStatusBreakdown
               stats={stats}
               status={status}
-              error={ordersState.fatalError}
+              error={ordersQuery.error}
               onRetry={onRetry}
               emptyIcon={emptyIcon}
             />
             <DeliveryOutlookPanel
               stats={stats}
               status={status}
-              error={ordersState.fatalError}
+              error={ordersQuery.error}
               onRetry={onRetry}
               fetchedAt={fetchedAt}
               emptyIcon={emptyIcon}
@@ -145,11 +139,14 @@ export default function TeslaOrdersPage() {
       {/* 3 — Hero board: auto-fit grid of order cards (full-bleed) */}
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="tesla-orders-board">
-          <LayoutCard title={t('admin.teslaOrders.panels.board', 'Orders')}
-            actions={<LayoutGrid className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('admin.teslaOrders.panels.board', 'Orders')}
+            </PanelTitle>
             <OrdersSectionState
               status={status}
-              error={ordersState.fatalError}
+              error={ordersQuery.error}
               onRetry={onRetry}
               skeletonHeight={200}
               emptyIcon={emptyIcon}
@@ -159,18 +156,21 @@ export default function TeslaOrdersPage() {
             >
               <OrdersBoard orders={orders} />
             </OrdersSectionState>
-          </LayoutCard>
+          </GlassPanel>
         </SectionErrorBoundary>
       </FadeIn>
 
       {/* 4 — Detail band: full-width filterable table */}
       <FadeIn delay={0.3}>
         <SectionErrorBoundary name="tesla-orders-table">
-          <LayoutCard title={t('admin.teslaOrders.panels.details', 'Order details')}
-            actions={<ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3 flex items-center gap-2">
+              <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              {t('admin.teslaOrders.panels.details', 'Order Details')}
+            </PanelTitle>
             <OrdersSectionState
               status={status}
-              error={ordersState.fatalError}
+              error={ordersQuery.error}
               onRetry={onRetry}
               skeletonHeight={320}
               emptyIcon={emptyIcon}
@@ -180,9 +180,9 @@ export default function TeslaOrdersPage() {
             >
               <OrdersTable orders={orders} />
             </OrdersSectionState>
-          </LayoutCard>
+          </GlassPanel>
         </SectionErrorBoundary>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -9,11 +9,10 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { CareScore } from '../../lib/batteryCare';
 import type { BatteryCareSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface MonthlyCareTrendProps {
   care: CareScore;
   state: BatteryCareSectionState;
@@ -25,7 +24,6 @@ export function MonthlyCareTrend({
   care,
   state,
 }: MonthlyCareTrendProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -64,7 +62,7 @@ export function MonthlyCareTrend({
         format: (value: unknown) => fmtInt(value),
       },
     ],
-    [driveName, scoreName, sessionName, t, fmtInt],
+    [driveName, scoreName, sessionName, t],
   );
 
   return (
@@ -149,7 +147,7 @@ export function MonthlyCareTrend({
                           ? t(
                               'batteryCare.trend.scoreValue',
                               '{{score}} / 100',
-                              { score: fmtNumber(value) },
+                              { score: fmtNumber(value, 0) },
                             )
                           : t(
                               'batteryCare.trend.sampleValue',

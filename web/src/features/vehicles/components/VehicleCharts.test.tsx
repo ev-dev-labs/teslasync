@@ -358,7 +358,7 @@ describe('VehicleCharts — vehicle configuration', () => {
       }),
     })
 
-    expect(screen.getByRole('heading', { name: 'Vehicle configuration' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Vehicle Configuration' })).toBeInTheDocument()
     expect(within(cardFor('Model')).getByText('Model 3')).toBeInTheDocument()
     expect(within(cardFor('Color')).getByText('Pearl White')).toBeInTheDocument()
     // `<nil>` is scrubbed by cleanNil → the em-dash fallback.
@@ -375,10 +375,10 @@ describe('VehicleCharts — vehicle configuration', () => {
       }),
     })
 
-    expect(cardFor('Europe vehicle')).toHaveTextContent('Yes')
-    expect(cardFor('Right-hand drive')).toHaveTextContent('No')
-    expect(cardFor('Remote start')).toHaveTextContent('—')
-    expect(cardFor('Offroad lightbar')).toHaveTextContent('—')
+    expect(cardFor('Europe Vehicle')).toHaveTextContent('Yes')
+    expect(cardFor('Right-Hand Drive')).toHaveTextContent('No')
+    expect(cardFor('Remote Start')).toHaveTextContent('—')
+    expect(cardFor('Offroad Lightbar')).toHaveTextContent('—')
   })
 
   it('renders Active/Off and Present labels and formats SW percentages', () => {
@@ -391,23 +391,23 @@ describe('VehicleCharts — vehicle configuration', () => {
       }),
     })
 
-    expect(cardFor('Remote start')).toHaveTextContent('Active')
-    expect(cardFor('Offroad lightbar')).toHaveTextContent('Present')
-    expect(cardFor('SW download')).toHaveTextContent('45%')
+    expect(cardFor('Remote Start')).toHaveTextContent('Active')
+    expect(cardFor('Offroad Lightbar')).toHaveTextContent('Present')
+    expect(cardFor('SW Download')).toHaveTextContent('45%')
     // 0 is a real percentage (not nullish) → "0%", not the em dash.
-    expect(cardFor('SW install')).toHaveTextContent('0%')
+    expect(cardFor('SW Install')).toHaveTextContent('0%')
   })
 
   it('falls back to "Not Installed" / "None" for absent sunroof + SW version', () => {
     renderCharts({ vehicleConfigData: makeConfig({}) })
 
-    expect(cardFor('Sunroof')).toHaveTextContent('Not installed')
-    expect(cardFor('SW update')).toHaveTextContent('None')
+    expect(cardFor('Sunroof')).toHaveTextContent('Not Installed')
+    expect(cardFor('SW Update')).toHaveTextContent('None')
   })
 
   it('hides the configuration panel when no snapshot is provided', () => {
     renderCharts({ vehicleConfigData: null })
-    expect(screen.queryByRole('heading', { name: 'Vehicle configuration' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Vehicle Configuration' })).toBeNull()
     expect(screen.queryByText('Model')).toBeNull()
   })
 })
@@ -424,17 +424,17 @@ describe('VehicleCharts — car display preferences', () => {
       }),
     })
 
-    expect(screen.getByRole('heading', { name: 'Car display preferences' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Car Display Preferences' })).toBeInTheDocument()
     expect(within(cardFor('Distance')).getByText('Miles')).toBeInTheDocument()
     expect(within(cardFor('Temperature')).getByText('Celsius')).toBeInTheDocument()
-    expect(within(cardFor('Charge unit')).getByText('Percent')).toBeInTheDocument()
-    expect(within(cardFor('Tire pressure')).getByText('PSI')).toBeInTheDocument()
+    expect(within(cardFor('Charge Unit')).getByText('Percent')).toBeInTheDocument()
+    expect(within(cardFor('Tire Pressure')).getByText('PSI')).toBeInTheDocument()
     expect(screen.getByText(/These are your vehicle's display settings/)).toBeInTheDocument()
   })
 
   it('renders the 24h-time flag as Yes / No / —', () => {
     const { rerender } = renderCharts({ userPrefData: makePrefs({ setting_24hr_time: true }) })
-    expect(cardFor('24h time')).toHaveTextContent('Yes')
+    expect(cardFor('24h Time')).toHaveTextContent('Yes')
 
     rerender(
       <VehicleCharts
@@ -444,7 +444,7 @@ describe('VehicleCharts — car display preferences', () => {
         userPrefData={makePrefs({ setting_24hr_time: false })}
       />,
     )
-    expect(cardFor('24h time')).toHaveTextContent('No')
+    expect(cardFor('24h Time')).toHaveTextContent('No')
 
     rerender(
       <VehicleCharts
@@ -454,12 +454,12 @@ describe('VehicleCharts — car display preferences', () => {
         userPrefData={makePrefs({ setting_24hr_time: undefined })}
       />,
     )
-    expect(cardFor('24h time')).toHaveTextContent('—')
+    expect(cardFor('24h Time')).toHaveTextContent('—')
   })
 
   it('hides the preferences panel when no snapshot is provided', () => {
     renderCharts({ userPrefData: null })
-    expect(screen.queryByRole('heading', { name: 'Car display preferences' })).toBeNull()
+    expect(screen.queryByRole('heading', { name: 'Car Display Preferences' })).toBeNull()
   })
 })
 
@@ -527,7 +527,7 @@ describe('VehicleCharts — speed history', () => {
 
   it('always renders the speed-history heading even with no data', () => {
     renderCharts({ positions: undefined })
-    expect(screen.getByRole('heading', { name: 'Speed history' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Speed History' })).toBeInTheDocument()
   })
 })
 

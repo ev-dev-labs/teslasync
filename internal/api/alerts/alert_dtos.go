@@ -134,18 +134,8 @@ type snoozeAlertRuleRequest struct {
 }
 
 type alertTestRequest struct {
-	Name            string                  `json:"name"`
-	SignalName      string                  `json:"signal_name"`
-	Op              string                  `json:"op"`
-	ValueNum        *float64                `json:"value_num"`
-	ValueText       *string                 `json:"value_text"`
-	ValueBool       *bool                   `json:"value_bool"`
-	ValueMin        *float64                `json:"value_min"`
-	ValueMax        *float64                `json:"value_max"`
-	VehicleName     string                  `json:"vehicle_name"`
-	VehicleTimezone string                  `json:"vehicle_timezone"`
-	Message         string                  `json:"message"`
-	Target          *alertTestTargetRequest `json:"target"`
+	Message string                  `json:"message"`
+	Target  *alertTestTargetRequest `json:"target"`
 
 	// When Kind == 'computed_metric' and the metric_* fields are set, the
 	// handler computes the metric value and returns a preview instead of

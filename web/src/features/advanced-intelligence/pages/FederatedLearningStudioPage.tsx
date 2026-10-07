@@ -1,24 +1,22 @@
 import { type FormEvent, useState } from 'react';
-import { LockKeyhole } from 'lucide-react';
+import { LockKeyhole, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   useFederatedModelCards,
   useStartFederatedRound,
 } from '@/api/hooks/useAdvancedIntelligence';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageLayout } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Table, Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, Input, Pagination, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { EvidencePanel, InsightPanel, MutationError } from '../components';
 import { formatEfficiencyFromSI } from '../formatters';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 
 const PAGE_SIZE = 12;
 
@@ -32,7 +30,6 @@ interface RoundForm {
 }
 
 export default function FederatedLearningStudioPage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -49,19 +46,7 @@ export default function FederatedLearningStudioPage() {
   const query = useFederatedModelCards(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const mutation = useStartFederatedRound();
   const cards = query.data?.items ?? [];
-  const summaryMetrics: readonly StatMetric[] = [
-    { occurrenceId: 'epsilon-budget', metricId: 'ratio', rawValue: query.data?.total_epsilon_budget,
-      label: t('advancedIntelligence.federated.budget.total', 'Total epsilon budget'),
-      description: t('advancedIntelligence.federated.brief.total', 'Returned subject-scoped privacy budget in dimensionless epsilon, not a percentage.') },
-    { occurrenceId: 'epsilon-spent', metricId: 'ratio', rawValue: query.data?.total_epsilon_spent,
-      label: t('advancedIntelligence.federated.budget.spent', 'Epsilon spent'),
-      description: t('advancedIntelligence.federated.brief.spent', 'Returned local aggregate privacy spend for this subject and vehicle.') },
-    { occurrenceId: 'epsilon-remaining', metricId: 'ratio', rawValue: query.data
-      ? Math.max(0, query.data.total_epsilon_budget - query.data.total_epsilon_spent) : null,
-      label: t('advancedIntelligence.federated.budget.remaining', 'Epsilon remaining'),
-      description: t('advancedIntelligence.federated.brief.remaining', 'Existing budget minus spend, floored at zero; unresolved budget is not zero remaining.') },
-  ];
-  usePageTitle(t('advancedIntelligence.federated.title', 'Federated learning studio'));
+  usePageTitle(t('advancedIntelligence.federated.title', 'Federated Learning Studio'));
 
   const requestConfirmation = (event: FormEvent) => {
     event.preventDefault();
@@ -77,12 +62,14 @@ export default function FederatedLearningStudioPage() {
   };
 
   return (
-    <PageLayout
-      title={t('advancedIntelligence.federated.title', 'Federated learning studio')}
+    <PageContainer
+      title={t('advancedIntelligence.federated.title', 'Federated Learning Studio')}
       subtitle={t(
         'advancedIntelligence.federated.subtitle',
         'Manage subject-scoped local aggregate model rounds within explicit privacy budgets.',
       )}
+      loading={vehicleId != null && query.isLoading}
+      error={query.error instanceof Error ? query.error : null}
     >
       <AlertBanner
         variant="success"
@@ -96,29 +83,36 @@ export default function FederatedLearningStudioPage() {
       </AlertBanner>
 
       <FadeIn>
-        <AnalysisBrief
-          id="advanced-intelligence-federated-brief"
-          query={vehicleId != null ? query : undefined}
+        <InsightPanel
           title={t('advancedIntelligence.federated.budget.title', 'Subject privacy budget')}
-          description={t('advancedIntelligence.federated.brief.description', 'Subject-scoped local privacy accounting, independent of the paginated model-card count and proposed next round.')}
-          metrics={summaryMetrics}
-          vehicleId={query.data?.vehicle_id ?? vehicleId}
-          hasResult={query.data != null}
-          quality={query.data?.data_quality}
-          evidence={query.data?.evidence}
-          limitations={cards.flatMap((card) => card.limitations ?? [])}
-          generatedAt={query.data?.generated_at}
-          provenance={t('advancedIntelligence.federated.brief.source', 'Local subject privacy accounting')}
+          empty={!query.data}
           emptyMessage={vehicleId == null
             ? t('advancedIntelligence.vehicle.empty', 'Select a vehicle to load intelligence.')
             : t('advancedIntelligence.federated.budget.empty', 'Privacy budget status is unavailable.')}
-        />
+        >
+          <Grid minItemWidth="standard" gap={4}>
+            <StatCard
+              label={t('advancedIntelligence.federated.budget.total', 'Total epsilon budget')}
+              value={query.data ? fmtNumber(query.data.total_epsilon_budget, 2) : null}
+            />
+            <StatCard
+              label={t('advancedIntelligence.federated.budget.spent', 'Epsilon spent')}
+              value={query.data ? fmtNumber(query.data.total_epsilon_spent, 2) : null}
+            />
+            <StatCard
+              label={t('advancedIntelligence.federated.budget.remaining', 'Epsilon remaining')}
+              value={query.data
+                ? fmtNumber(Math.max(0, query.data.total_epsilon_budget - query.data.total_epsilon_spent), 2)
+                : null}
+              icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+            />
+          </Grid>
+        </InsightPanel>
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <InsightPanel
           title={t('advancedIntelligence.federated.cards.title', 'Subject-scoped model cards')}
-          query={vehicleId != null ? query : undefined}
           empty={cards.length === 0}
           emptyMessage={t(
             'advancedIntelligence.federated.cards.empty',
@@ -137,32 +131,32 @@ export default function FederatedLearningStudioPage() {
                     {card.latest_status ?? t('advancedIntelligence.federated.status.none', 'No round')}
                   </Badge>
                 </div>
-                <Table aria-label={t('advancedIntelligence.federated.title', 'Federated learning studio')}><tbody>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.epsilon', 'Epsilon')}
-                    </th>
-                    <td className="text-right">{fmtNumber(card.epsilon_spent)} / {fmtNumber(card.epsilon_budget)}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                    </dt>
+                    <dd>{fmtNumber(card.epsilon_spent, 2)} / {fmtNumber(card.epsilon_budget, 2)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.rounds', 'Rounds')}
-                    </th>
-                    <td className="text-right">{fmtInt(card.round_count)}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                    </dt>
+                    <dd>{fmtNumber(card.round_count, 0)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.samples', 'Latest local samples')}
-                    </th>
-                    <td className="text-right">{card.latest_sample_count != null ? fmtInt(card.latest_sample_count) : '—'}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row" className="text-[var(--text-muted)]">
+                    </dt>
+                    <dd>{card.latest_sample_count != null ? fmtNumber(card.latest_sample_count, 0) : '—'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.aggregate', 'Local aggregate')}
-                    </th>
-                    <td className="text-right">{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</td>
-                  </tr>
-                </tbody></Table>
+                    </dt>
+                    <dd>{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</dd>
+                  </div>
+                </dl>
                 <Button
                   type="button"
                   variant="secondary"
@@ -281,6 +275,6 @@ export default function FederatedLearningStudioPage() {
         onConfirm={confirmRound}
         onCancel={() => setConfirmOpen(false)}
       />
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -8,7 +8,6 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
 import { useUnits } from '@/hooks/useUnits';
 import type { DayLogEvent } from '@/api/types';
-import { humanizeManagementLabel } from '../vehicle-management/managementData';
 import {
   DAY_LOG_CATEGORIES,
   DAY_LOG_EVENT_TITLE,
@@ -389,6 +388,15 @@ interface PayloadDetailsProps {
   formatDuration: (v: number | null | undefined) => string;
 }
 
+/** snake_case key → Title Words for payload keys with no catalog label. */
+function labelize(key: string): string {
+  return key
+    .split('_')
+    .filter((w) => w.length > 0)
+    .map((w) => w.slice(0, 1).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
 function scalarText(v: unknown): string | null {
   if (v == null) return null;
   if (typeof v === 'string') return v;
@@ -487,7 +495,7 @@ function PayloadDetails({ event, subtitle, t, formatDistance, formatEnergy, form
   for (const key of Object.keys(p)) {
     if (seen.has(key)) continue;
     const v = scalarText(p[key]);
-    if (v != null) rows.push({ label: humanizeManagementLabel(key), value: v });
+    if (v != null) rows.push({ label: labelize(key), value: v });
   }
 
   if (rows.length === 0) {

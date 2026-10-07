@@ -34,7 +34,7 @@ import { StatusTile, type StatusTileProps } from './StatusTile';
 function renderTile(overrides: Partial<StatusTileProps> = {}) {
   const props: StatusTileProps = {
     icon: <svg data-testid="tile-icon" />,
-    label: 'Lock status',
+    label: 'Lock Status',
     value: 'Locked',
     tone: 'green',
     ...overrides,
@@ -62,12 +62,12 @@ const TONES: Array<{ tone: TileTone; chip: string; value: string }> = [
 describe('StatusTile — content + structure', () => {
   it('renders the label, value and description as visible text', () => {
     renderTile({
-      label: 'Sentry mode',
+      label: 'Sentry Mode',
       value: 'Active',
       description: 'Camera surveillance system',
     });
 
-    expect(screen.getByText('Sentry mode')).toBeInTheDocument();
+    expect(screen.getByText('Sentry Mode')).toBeInTheDocument();
     expect(screen.getByText('Active')).toBeInTheDocument();
     expect(screen.getByText('Camera surveillance system')).toBeInTheDocument();
   });

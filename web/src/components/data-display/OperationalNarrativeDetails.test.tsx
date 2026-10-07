@@ -1,10 +1,7 @@
-import { act, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails';
-import { setGlobalPrecision } from '@/lib/numberFormat';
-
-beforeEach(() => setGlobalPrecision(2));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -44,13 +41,6 @@ const narrative: OperationalNarrative = {
 };
 
 describe('OperationalNarrativeDetails', () => {
-  it('updates confidence for a mounted narrative while record IDs and authored strings stay intact', () => {
-    render(<OperationalNarrativeDetails narrative={narrative} />);
-    act(() => setGlobalPrecision(3));
-    expect(screen.getByText('High · 91.000%')).toBeInTheDocument();
-    expect(screen.getByText('Record 42', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(narrative.whatChanged)).toBeInTheDocument();
-  });
   it('renders the complete decision-support contract with semantic provenance', () => {
     render(<OperationalNarrativeDetails narrative={narrative} />);
     const region = screen.getByRole('region', { name: 'Decision narrative' });
@@ -58,7 +48,7 @@ describe('OperationalNarrativeDetails', () => {
     expect(within(region).getByText('What changed')).toBeInTheDocument();
     expect(within(region).getByText(narrative.whatChanged)).toBeInTheDocument();
     expect(within(region).getByText('Why it matters')).toBeInTheDocument();
-    expect(within(region).getByText('High · 91.00%')).toBeInTheDocument();
+    expect(within(region).getByText('High · 91%')).toBeInTheDocument();
     expect(
       within(region).getByText('Cause is not established by the available evidence.'),
     ).toBeInTheDocument();

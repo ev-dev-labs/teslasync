@@ -5,10 +5,9 @@ import { EmptyState } from '@/components/feedback';
 import { MetricLabel, MetricValue, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RhythmCoverageSummaryProps {
   summary: DrivingRhythm;
@@ -17,7 +16,6 @@ interface RhythmCoverageSummaryProps {
 export function RhythmCoverageSummary({
   summary,
 }: RhythmCoverageSummaryProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
 

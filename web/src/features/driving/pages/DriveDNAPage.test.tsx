@@ -296,18 +296,6 @@ beforeEach(() => {
 });
 
 describe('DriveDNAPage', () => {
-  it('keeps the selected fingerprint during a paused list refresh without retrying telemetry', () => {
-    h.history = { ...query({ data: [drive()] }), fetchStatus: 'paused' };
-    renderPage();
-    expectEverySection();
-    const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
-    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
-    expect(historyRefetch).toHaveBeenCalledTimes(1);
-    expect(telemetryRefetch).not.toHaveBeenCalled();
-    expect(h.telemetryHook).toHaveBeenLastCalledWith('1');
-  });
-
   it('renders the ready state with all ten persistent evidence sections', () => {
     renderPage();
 

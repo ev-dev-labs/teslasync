@@ -9,9 +9,4 @@ Sidebar group **Automation**. In the app, expand this section in the left nav (o
 | Alert Rules | `/notifications/rules` | Manage existing alert rules. | Renders an empty state when no data is available — the page is not hidden. |
 | Comfort calendar | `/automations` | ICS-driven climate windows (Comfort panel on Automations). | Needs a reachable https ICS URL; loopback and metadata hosts are blocked. |
 
-Numeric **Set setting** actions use the locale and decimal precision from Settings.
-Display formatting does not round the stored value. Switching a text value to
-numeric mode parses the selected locale; blank or invalid input stays unset and
-cannot be saved as a fabricated zero.
-
 [← All groups](./catalogue.md)

@@ -18,7 +18,6 @@ import (
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
-	"go.opentelemetry.io/otel"
 )
 
 // alertmsgMaxTemplateLength mirrors alertmsg.MaxTemplateLength at the
@@ -589,9 +588,6 @@ func resolveSnoozeUntil(body snoozeAlertRuleRequest) (*time.Time, error) {
 // previews the computed metric and returns the current value without sending
 // any notifications (used by the rule builder UI's live preview).
 func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
-	requestCtx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.test_rule")
-	defer span.End()
-	r = r.WithContext(requestCtx)
 	var body alertTestRequest
 	if _, err := decodeStrictAlertRequest(r, &body, forbiddenAlertTestFields); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
@@ -624,17 +620,9 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	prefs, prefsErr := alertmsg.LoadPreferences(r.Context(), h.messageSettings)
-	if prefsErr != nil {
-		log.Warn().Err(prefsErr).Msg("alert test: formatting settings unavailable; using defaults")
-	}
-	renderSignals := map[string]any{}
 	// Render template with current signal values from the live-state boundary.
 	if h.liveSignals != nil {
 		for _, vid := range h.liveSignals.LocalVehicleIDs() {
-			if body.VehicleID != nil && vid != *body.VehicleID {
-				continue
-			}
 			values, err := h.liveSignals.GetAll(r.Context(), vid, signal.LiveSignalReadDistributed)
 			if err != nil {
 				log.Warn().Err(err).Int64("vehicle_id", vid).Msg("alert test: live signal read failed")
@@ -642,31 +630,14 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 			}
 			raw := apisignal.LiveSignalValuesToRaw(values)
 			if len(raw) > 0 {
-				renderSignals = raw
+				message = alertmsg.Substitute(message, raw)
 				break
 			}
 		}
 	}
 
 	const severity = "info"
-	testRule := &alertmodel.AlertRule{Name: "Test Rule", Severity: severity, Kind: "signal",
-		SignalName: body.SignalName, Op: body.Op, ValueNum: body.ValueNum,
-		ValueText: body.ValueText, ValueBool: body.ValueBool, ValueMin: body.ValueMin, ValueMax: body.ValueMax,
-		MsgTemplate: body.MsgTemplate, IncludeTitle: body.IncludeTitle == nil || *body.IncludeTitle,
-	}
-	if body.Name != "" {
-		testRule.Name = body.Name
-	}
-	renderCtx := alertmsg.BuildContext(testRule, body.VehicleName, renderSignals, nil, prefs.WithVehicleTimezone(body.VehicleTimezone))
-	if body.SignalName != "" {
-		message = alertmsg.RenderBody(testRule, renderCtx)
-		if message == "" && !testRule.IncludeTitle {
-			message = testRule.Name
-		}
-	} else {
-		message = alertmsg.Substitute(message, renderCtx)
-	}
-	title := "[TEST] " + alertmsg.RenderTitle(testRule, renderCtx)
+	title := "[TEST] Test Rule"
 	// include_title=false suppresses the transport bold-header but keeps
 	// the canonical title for notification_logs
 	// + the SSE toast, matching the production dispatch path.

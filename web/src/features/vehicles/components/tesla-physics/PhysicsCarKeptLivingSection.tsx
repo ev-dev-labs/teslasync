@@ -31,7 +31,7 @@ export default function PhysicsCarKeptLivingSection({ physics }: { physics: Phys
         <Badge variant={living?.replay_preserves_event_time ? 'info' : 'warning'} size="sm">
           {living?.replay_preserves_event_time ? t('teslaOnly.replay', 'Replay keeps event time') : t('teslaOnly.replayUnverified', 'Replay event-time preservation not confirmed')}</Badge>
       </div>
-      <Text as="p" variant="bodySm">{t('teslaOnly.livingClockComparison', 'Three clocks latest event: {{value}} · matches last telemetry: {{match}}', {
+      <Text as="p" variant="bodySm">{t('teslaOnly.livingClockComparison', 'Three Clocks latest event: {{value}} · matches last telemetry: {{match}}', {
         value: time(clockLast, t), match: sameLast == null ? unknown(t) : sameLast ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
       })}</Text>
       <Text as="p" variant="bodySm">{t('teslaOnly.livingClockOffset', 'Absolute difference between returned last-event clocks: {{value}}', { value: seconds(clockOffset, t) })}</Text>

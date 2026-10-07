@@ -73,11 +73,11 @@ describe('SecurityPanel — structure & heading', () => {
 
     expect(screen.getByRole('heading', { name: /Security/i })).toBeInTheDocument()
     expect(screen.getByText('Vehicle lock status')).toBeInTheDocument()
-    expect(screen.getByText('Sentry mode')).toBeInTheDocument()
+    expect(screen.getByText('Sentry Mode')).toBeInTheDocument()
     expect(screen.getByText('Doors')).toBeInTheDocument()
     expect(screen.getByText('Windows')).toBeInTheDocument()
-    expect(screen.getByText('User present')).toBeInTheDocument()
-    expect(screen.getByText('Remote start')).toBeInTheDocument()
+    expect(screen.getByText('User Present')).toBeInTheDocument()
+    expect(screen.getByText('Remote Start')).toBeInTheDocument()
   })
 })
 
@@ -232,7 +232,7 @@ describe('SecurityPanel — remote start', () => {
   it('shows Active when remoteStartActive is true', () => {
     render(<SecurityPanel securityData={makeSecurity()} remoteStartActive={true} />)
 
-    expect(screen.getByText('Remote start active')).toBeInTheDocument()
+    expect(screen.getByText('Remote Start Active')).toBeInTheDocument()
     expect(screen.getByText('Active')).toBeInTheDocument()
   })
 })
@@ -251,18 +251,18 @@ describe('SecurityPanel — empty & partial states', () => {
     render(<SecurityPanel securityData={undefined} />)
 
     expect(screen.getByText('No security data available')).toBeInTheDocument()
-    expect(screen.queryByText('Sentry mode')).toBeNull()
+    expect(screen.queryByText('Sentry Mode')).toBeNull()
   })
 
   it('shows only the remote-start row when securityData is null but a remote flag exists', () => {
     render(<SecurityPanel securityData={null} remoteStartEnabled={true} />)
 
     // Remote start still renders...
-    expect(screen.getByText('Remote start')).toBeInTheDocument()
+    expect(screen.getByText('Remote Start')).toBeInTheDocument()
     expect(screen.getByText('Enabled')).toBeInTheDocument()
     // ...but the lock/sentry section is skipped and the empty state is not shown.
     expect(screen.queryByText('Vehicle lock status')).toBeNull()
-    expect(screen.queryByText('Sentry mode')).toBeNull()
+    expect(screen.queryByText('Sentry Mode')).toBeNull()
     expect(screen.queryByRole('status')).toBeNull()
   })
 })

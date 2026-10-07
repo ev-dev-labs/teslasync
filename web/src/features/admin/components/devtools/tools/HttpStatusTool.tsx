@@ -47,9 +47,7 @@ export function HttpStatusTool() {
     () => [
       {
         key: 'code',
-        filterValue: (r) => r.code ?? null,
-        align: 'right',
-        header: t('devtools.utils.httpStatusCode', 'Status code'),
+        header: t('devtools.utils.httpStatusCode', 'Status Code'),
         sortable: true,
         render: (r) => (
           <Badge variant={badgeVariant(r.code)} size="sm">
@@ -59,13 +57,11 @@ export function HttpStatusTool() {
       },
       {
         key: 'text',
-        filterValue: (r) => r.text ?? null,
-        header: t('devtools.utils.httpStatusText', 'Status text'),
+        header: t('devtools.utils.httpStatusText', 'Status Text'),
         render: (r) => <span className="text-sm font-medium text-[var(--text-primary)]">{r.text}</span>,
       },
       {
         key: 'desc',
-        filterValue: (r) => r.desc ?? null,
         header: t('devtools.utils.httpStatusDescription', 'Description'),
         render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.desc}</span>,
       },
@@ -77,7 +73,7 @@ export function HttpStatusTool() {
     <ToolCard
       icon={Network}
       color="amber"
-      title={t('devtools.utils.httpStatus', 'HTTP status')}
+      title={t('devtools.utils.httpStatus', 'HTTP Status')}
       description={t('devtools.utils.httpStatusDesc', 'Reference for HTTP response status codes')}
     >
       <div className="space-y-3">
@@ -93,8 +89,6 @@ export function HttpStatusTool() {
           columns={columns}
           mobileColumns={['code', 'text']}
           data={filtered}
-          enableValueFilters
-          filterData={HTTP_CODES}
           keyExtractor={(r) => r.code}
           sortKey={sortKey}
           sortDir={sortDir}

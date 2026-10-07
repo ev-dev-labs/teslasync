@@ -18,7 +18,6 @@ import {
 } from './labels';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressCompositionProps {
   result: CycleStressResult;
@@ -31,7 +30,6 @@ export function CycleStressComposition({
   state,
   locale,
 }: CycleStressCompositionProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const composition = result.summary.composition;
   const halfEfcShare =
@@ -73,6 +71,7 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.fullCycleRecords,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.composition.closedRanges',
@@ -89,6 +88,7 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.halfCycleRecords,
                 locale,
+                0,
               )}
               subtitle={t(
                 'cycleStress.composition.residualRanges',
@@ -122,6 +122,7 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.fullEquivalentFullCycles,
                 locale,
+                2,
               )}
               subtitle={t(
                 'cycleStress.composition.closedContribution',
@@ -138,6 +139,7 @@ export function CycleStressComposition({
               value={cycleStressNumber(
                 composition.halfEquivalentFullCycles,
                 locale,
+                2,
               )}
               subtitle={t(
                 'cycleStress.composition.boundaryContribution',

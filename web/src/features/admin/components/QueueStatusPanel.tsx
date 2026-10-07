@@ -24,13 +24,12 @@ import { GlassPanel, Button } from '@/components/ui'
 import { Heading, Text, Caption } from '@/components/ui/Typography'
 import { MetricBar } from '@/components/data-display'
 import { Skeleton } from '@/components/feedback'
-
-import { formatRelative } from '@/lib/dateFormat'
+import { fmtNumber } from '@/lib/numberFormat'
+import { formatRelative, formatDurationMsLong } from '@/lib/dateFormat'
 import { useQueueStatus } from '@/api/hooks/useSystemQueues'
 import type { QueueHeartbeatSeverity, QueueStat } from '@/api/types'
 
 import { QueueJobDrawer } from './QueueJobDrawer'
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Severity → hex colour passed into MetricBar (which expects a raw
 // string for its dynamic gradient + glow). Hex rather than CSS
@@ -57,8 +56,6 @@ interface WorkerCardProps {
 }
 
 function WorkerCard({ stat, onOpen }: WorkerCardProps) {
-  const { formatDurationMsLong } = useNumberFormatting();
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation()
   const tone = SEVERITY_TONE_CLASS[stat.heartbeat_severity]
   const color = SEVERITY_COLOR[stat.heartbeat_severity]
@@ -83,7 +80,7 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
     return t('queueStatus.oldestPending', 'Oldest pending: {{duration}}', {
       duration: formatDurationMsLong(stat.oldest_pending_age_seconds * 1000),
     })
-  }, [stat.oldest_pending_age_seconds, t, formatDurationMsLong])
+  }, [stat.oldest_pending_age_seconds, t])
 
   const handleOpen = () => onOpen(stat.worker)
 

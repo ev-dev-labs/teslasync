@@ -13,7 +13,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    * Width preset for `≥ sm` viewports. Below `sm` (640px) the modal is always
    * full-screen regardless of this prop — see MOBILE_GUIDELINES.md.
    */
-  size?: 'sm' | 'md' | 'lg' | 'full' | 'fullscreen';
+  size?: 'sm' | 'md' | 'lg' | 'full';
   children: ReactNode;
   /** Persistent actions outside the scrolling dialog body. */
   footer?: ReactNode;
@@ -54,7 +54,6 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
   ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, ...props }, ref) => {
     const { t } = useTranslation();
-    const fullscreen = size === 'fullscreen';
     const dialogRef = useRef<HTMLDivElement | null>(null);
     const titleId = useId();
     // Compose the forwarded ref with our internal ref so callers and the
@@ -73,7 +72,6 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       md:   'sm:max-w-lg',
       lg:   'sm:max-w-2xl',
       full: 'sm:max-w-[min(96vw,1100px)]',
-      fullscreen: 'max-w-none',
     };
 
     // Portal to <body> so the modal escapes any ancestor that creates a
@@ -102,10 +100,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
           onClick={onClose}
           aria-hidden="true"
         />
-        <div className={cn(
-          'relative flex min-h-full justify-center',
-          fullscreen ? 'items-stretch' : 'items-end pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4',
-        )}>
+        <div className="relative flex min-h-full items-end justify-center pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4">
           <div
             ref={dialogRef}
             role="dialog"
@@ -122,9 +117,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
               'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
               // Below sm: bottom sheet that fills width, capped to viewport height.
               // From sm and up: rounded card, auto height up to 90vh, centered.
-              fullscreen ? 'h-[100dvh] max-h-[100dvh] rounded-none'
-                : 'max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
-              footer && !fullscreen && 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]',
+              'max-h-[100dvh] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-lg',
+              footer && 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]',
               sizes[size],
               className,
             )}
@@ -150,9 +144,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
             )}
             <div
               data-modal-scroll-body="true"
-              className={fullscreen
-                ? 'flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 safe-bottom'
-                : 'flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom'}
+              className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom"
             >
               {children}
             </div>

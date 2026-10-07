@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
-import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
-import { GlassPanel, Text } from '@/components/ui';
-
+import { MetricCard } from '@/components/data-display';
+import { GlassPanel, SectionTitle, Text } from '@/components/ui';
+import { Skeleton } from '@/components/feedback';
+import { Icons } from '@/lib/icons';
+import { fmtInt } from '@/lib/numberFormat';
 import { ACTIVITY_KINDS, ACTIVITY_KIND_LABELS, type ActivityItem } from '@/types/activity';
 import { ymdInTz } from '@/lib/dateFormat';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ActivityOverviewProps {
   items: readonly ActivityItem[];
@@ -13,51 +14,46 @@ interface ActivityOverviewProps {
   loading: boolean;
   error: boolean;
   timezone?: string;
-  available?: boolean;
-  retained?: boolean;
-  scope?: string;
 }
 
-export function ActivityOverview({ items, total, offset, loading, error, timezone, available = !error, retained = false, scope }: ActivityOverviewProps) {
-  const { fmtInt } = useNumberFormatting();
+export function ActivityOverview({ items, total, offset, loading, error, timezone }: ActivityOverviewProps) {
   const { t } = useTranslation();
   const activeDays = new Set(items.map((item) => ymdInTz(new Date(item.occurred_at), timezone))).size;
   const criticalAlerts = items.filter((item) => item.kind === 'alert' && item.severity === 'critical').length;
-  const pageCoverage = t('activity.timeline.overview.scope', 'Counts below describe only the loaded page (events {{start}}–{{end}} of {{total}}), not the entire selected range.', {
-    start: items.length ? offset + 1 : 0,
-    end: items.length ? offset + items.length : 0,
-    total: error ? '—' : fmtInt(total),
-  });
+  const value = (n: number) => error ? '—' : fmtInt(n);
 
   return (
     <section aria-label={t('activity.timeline.overview.aria', 'Activity overview')} className="space-y-4">
-          <SystemSummaryBrief
-            title={t('activity.timeline.brief.countTitle', 'Range and page counts')}
-            description={t('activity.timeline.brief.description', 'The server total covers the selected range; loaded events, days, and critical alerts describe this page only.')}
-            scope={scope ?? t('activity.timeline.brief.scope', 'Selected range and current loaded page have different coverage.')}
-            available={available} loading={loading} retained={retained}
-            metrics={[
-              { metricId: 'count', occurrenceId: 'range-total', rawValue: available ? total : null, label: t('activity.timeline.overview.total', 'Events in selected range') },
-              { metricId: 'count', occurrenceId: 'page-events', rawValue: available ? items.length : null, label: t('activity.timeline.overview.shown', 'Events on this page') },
-              { metricId: 'count', occurrenceId: 'page-days', rawValue: available ? activeDays : null, label: t('activity.timeline.overview.days', 'Days on this page') },
-              { metricId: 'count', occurrenceId: 'page-critical', rawValue: available ? criticalAlerts : null, label: t('activity.timeline.overview.critical', 'Critical alerts on this page') },
-            ]}
-          />
+      {loading ? (
+        <Skeleton lines={3} />
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricCard label={t('activity.timeline.overview.total', 'Events in selected range')} value={value(total)} icon={<Icons.activity className="h-5 w-5" aria-hidden="true" />} />
+            <MetricCard label={t('activity.timeline.overview.shown', 'Events on this page')} value={value(items.length)} icon={<Icons.workflow className="h-5 w-5" aria-hidden="true" />} />
+            <MetricCard label={t('activity.timeline.overview.days', 'Days on this page')} value={value(activeDays)} icon={<Icons.calendar className="h-5 w-5" aria-hidden="true" />} />
+            <MetricCard label={t('activity.timeline.overview.critical', 'Critical alerts on this page')} value={value(criticalAlerts)} icon={<Icons.warning className="h-5 w-5" aria-hidden="true" />} />
+          </div>
           <GlassPanel className="p-4 sm:p-6">
+            <SectionTitle>{t('activity.timeline.overview.mix', 'Event types on this page')}</SectionTitle>
             <Text as="p" variant="caption" className="mb-4">
-              {pageCoverage}
+              {t('activity.timeline.overview.scope', 'Counts below describe only the loaded page (events {{start}}–{{end}} of {{total}}), not the entire selected range.', {
+                start: items.length ? offset + 1 : 0,
+                end: items.length ? offset + items.length : 0,
+                total: error ? '—' : fmtInt(total),
+              })}
             </Text>
-            <SystemSummaryBrief
-              title={t('activity.timeline.overview.mix', 'Event types on this page')}
-              description={t('activity.timeline.brief.mixDescription', 'Counts by event type describe only the loaded page, not the entire selected range.')}
-              scope={`${scope ?? t('activity.timeline.brief.scope', 'Selected range and current loaded page have different coverage.')} · ${pageCoverage}`}
-              available={available} loading={loading} retained={retained}
-              metrics={ACTIVITY_KINDS.map((kind) => ({
-                metricId: 'count', occurrenceId: kind, rawValue: available ? items.filter((item) => item.kind === kind).length : null,
-                label: t(`activity.timeline.kindFilter.${kind}`, ACTIVITY_KIND_LABELS[kind]),
-              }))}
-            />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+              {ACTIVITY_KINDS.map((kind) => (
+                <div key={kind} className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                  <Text as="p" variant="caption">{t(`activity.timeline.kindFilter.${kind}`, ACTIVITY_KIND_LABELS[kind])}</Text>
+                  <Text as="p" variant="bodySm">{value(items.filter((item) => item.kind === kind).length)}</Text>
+                </div>
+              ))}
+            </div>
           </GlassPanel>
+        </>
+      )}
     </section>
   );
 }

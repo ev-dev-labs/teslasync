@@ -17,13 +17,12 @@ import {
   axisTick,
   chartGrid,
 } from '@/components/charts';
-
+import { fmtNumber, fmtPercent } from '@/lib/numberFormat';
 
 import type {
   MonthlyRecoveryChartRow,
   RegenSectionState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyRecoveryChartProps {
   rows: MonthlyRecoveryChartRow[];
@@ -46,7 +45,6 @@ export function MonthlyRecoveryChart({
   isEnergyHidden,
   isRatioHidden,
 }: MonthlyRecoveryChartProps) {
-  const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   const dataColumns = useMemo<ChartDataColumn[]>(
@@ -55,15 +53,15 @@ export function MonthlyRecoveryChart({
       {
         key: 'recoveredEnergy',
         label: energySeries,
-        format: (v) => (v != null ? `${fmtNumber(v as number)} ${energyUnit}` : '—'),
+        format: (v) => (v != null ? `${fmtNumber(v as number, 1)} ${energyUnit}` : '—'),
       },
       {
         key: 'recoveryRatio',
         label: ratioSeries,
-        format: (v) => (v != null ? fmtPercent(v as number) : '—'),
+        format: (v) => (v != null ? fmtPercent(v as number, 1) : '—'),
       },
     ],
-    [t, energySeries, ratioSeries, energyUnit, fmtNumber, fmtPercent],
+    [t, energySeries, ratioSeries, energyUnit],
   );
 
   return (
@@ -102,7 +100,7 @@ export function MonthlyRecoveryChart({
               tick={axisTick}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => fmtNumber(value)}
+              tickFormatter={(value) => fmtNumber(value, 0)}
             />
             <YAxis
               yAxisId="ratio"
@@ -110,15 +108,15 @@ export function MonthlyRecoveryChart({
               tick={axisTick}
               tickLine={false}
               axisLine={false}
-              tickFormatter={(value) => `${fmtNumber(value)}%`}
+              tickFormatter={(value) => `${fmtNumber(value, 0)}%`}
             />
             <Tooltip
               content={
                 <ChartTooltip
                   valueFormatter={(value, name) =>
                     name === energySeries
-                      ? `${fmtNumber(value)} ${energyUnit}`
-                      : fmtPercent(value)
+                      ? `${fmtNumber(value, 1)} ${energyUnit}`
+                      : fmtPercent(value, 1)
                   }
                 />
               }

@@ -112,10 +112,10 @@ describe('group taxonomy', () => {
 
   it('parks admin/developer/experimental destinations in advanced groups', () => {
     expect([...ADVANCED_GROUP_TITLES]).toEqual([
-      'Advanced intelligence',
+      'Advanced Intelligence',
       'Administration',
       'Developer',
-      'Settings & account',
+      'Settings & Account',
     ])
   })
 
@@ -239,11 +239,11 @@ describe('compact group mapping table', () => {
   it('routes admin/data destinations to Administration and diagnostics to Developer', () => {
     expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Data']).toBe('Administration')
     expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Diagnostics']).toBe('Developer')
-    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Advanced intelligence']).toBe(
-      'Advanced intelligence',
+    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Advanced Intelligence']).toBe(
+      'Advanced Intelligence',
     )
-    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Ownership intelligence']).toBe(
-      'Advanced intelligence',
+    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Ownership Intelligence']).toBe(
+      'Advanced Intelligence',
     )
   })
 })

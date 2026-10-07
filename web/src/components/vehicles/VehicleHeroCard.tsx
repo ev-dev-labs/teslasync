@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { isFiniteNumber } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { LinearGauge } from '@/components/charts/LinearGauge';
 import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
@@ -15,9 +15,8 @@ import { Grid } from '@/components/layout/Grid';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FSM_REGISTRY } from '@/types/fsm';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertPowerFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { VehicleStatus } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   vehicle: {
@@ -28,18 +27,17 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
     state: string;
   };
   vehicleState?: {
-    battery_level?: number | null;
-    rated_range?: number | null;
-    inside_temp?: number | null;
-    outside_temp?: number | null;
-    odometer?: number | null;
-    is_charging?: boolean | null;
-    is_locked?: boolean | null;
-    sentry_mode?: boolean | null;
-    software_version?: string | null;
-    /** Signed pack power in watts (SI). */
-    power?: number | null;
-    state?: string | null;
+    battery_level: number;
+    rated_range: number;
+    inside_temp: number;
+    outside_temp: number;
+    odometer: number;
+    is_charging: boolean;
+    is_locked: boolean;
+    sentry_mode: boolean;
+    software_version: string;
+    power: number;
+    state?: string;
   } | null;
   /**
    * Optional URL for the user-uploaded hero photo. Passed in as a prop so
@@ -67,7 +65,6 @@ function toStatus(state: string): VehicleStatus {
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
   ({ vehicle, vehicleState, photoUrl, className, ...props }, ref) => {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
     const { t } = useTranslation();
     const { unitPrefs } = useUnits();
     const vs = vehicleState;
@@ -78,19 +75,14 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     const distanceLabel = unitPrefs.distance;        // 'mi' | 'km'
     const temperatureLabel = unitPrefs.temperature;  // '°F' | '°C'
 
-    const batteryReading = isFiniteNumber(vs?.battery_level) ? vs.battery_level : null;
-    const odometerDisplay = isFiniteNumber(vs?.odometer)
-      ? fmtInt(Math.round(convertDistanceFromSI(vs.odometer, distanceLabel)))
+    const odometerDisplay = vs
+      ? fmtInt(Math.round(convertDistanceFromSI(vs.odometer ?? 0, distanceLabel)))
       : '—';
-    const rangeDisplay = isFiniteNumber(vs?.rated_range)
-      ? Math.round(convertDistanceFromSI(vs.rated_range, distanceLabel))
-      : null;
-    const insideTempDisplay = isFiniteNumber(vs?.inside_temp)
-      ? Math.round(convertTempFromSI(vs.inside_temp, temperatureLabel))
-      : null;
-    const outsideTempDisplay = isFiniteNumber(vs?.outside_temp)
-      ? Math.round(convertTempFromSI(vs.outside_temp, temperatureLabel))
-      : null;
+    const rangeDisplay = vs
+      ? Math.round(convertDistanceFromSI(vs.rated_range ?? 0, distanceLabel))
+      : 0;
+    const insideTempDisplay = vs ? Math.round(convertTempFromSI(vs.inside_temp ?? 0, temperatureLabel)) : 0;
+    const outsideTempDisplay = vs ? Math.round(convertTempFromSI(vs.outside_temp ?? 0, temperatureLabel)) : 0;
 
     /* Range gauge max scales with display unit so the arc fills meaningfully
      * — Tesla long-range packs cap around 400 mi ≈ 644 km. */
@@ -106,8 +98,6 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     return (
       <GlassPanel
         ref={ref}
-        role="group"
-        aria-label={vehicle.display_name}
         glow="cyan"
         hover
         className={cn('p-6 space-y-6', className)}
@@ -127,10 +117,10 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         ) : null}
 
         {/* Vehicle identity and status summary */}
-        <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex min-w-0 flex-wrap items-center gap-3">
-              <Heading level="section" className="min-w-0 break-words">
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <Heading level="section" className="text-xl font-bold">
                 {vehicle.display_name}
               </Heading>
               <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
@@ -151,11 +141,11 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           <>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
               <LinearGauge
-                value={batteryReading}
+                value={vs.battery_level ?? 0}
                 max={100}
                 label={t('vehicleHero.gauge.battery', 'Battery')}
                 unit="%"
-                tone={batteryReading == null ? undefined : batteryReading > 20 ? 'accent' : 'danger'}
+                tone={(vs.battery_level ?? 0) > 20 ? 'accent' : 'danger'}
                 size={100}
               />
               <LinearGauge
@@ -186,8 +176,8 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
 
             {/* Detail cards mirror the same display-unit conversions as the gauges */}
             <Grid cols={STAT_GRID_COLS} gap={3}>
-              <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside temp')} value={insideTempDisplay ?? '—'} unit={temperatureLabel} />
-              <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside temp')} value={outsideTempDisplay ?? '—'} unit={temperatureLabel} />
+              <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={insideTempDisplay} unit={temperatureLabel} />
+              <StatCard label={t('vehicleHero.stat.outsideTemp', 'Outside Temp')} value={outsideTempDisplay} unit={temperatureLabel} />
               <StatCard
                 label={t('vehicleHero.stat.odometer', 'Odometer')}
                 value={odometerDisplay}
@@ -195,23 +185,19 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               />
               <StatCard
                 label={t('vehicleHero.stat.range', 'Range')}
-                value={rangeDisplay ?? '—'}
+                value={rangeDisplay}
                 unit={distanceLabel}
               />
               <StatCard
                 label={t('vehicleHero.stat.status', 'Status')}
-                value={vs.is_locked == null ? '—' : vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
+                value={vs.is_locked ? t('vehicleHero.locked', 'Locked') : t('vehicleHero.unlocked', 'Unlocked')}
               />
               <StatCard
                 label={t('vehicleHero.stat.sentry', 'Sentry')}
-                value={vs.sentry_mode == null ? '—' : vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
+                value={vs.sentry_mode ? t('common.on', 'On') : t('common.off', 'Off')}
               />
-              <StatCard label={t('vehicleHero.stat.firmware', 'Firmware')} value={vs.software_version?.trim() || '—'} />
-              <StatCard
-                label={t('vehicleHero.stat.power', 'Power')}
-                value={isFiniteNumber(vs.power) ? fmtNumber(convertPowerFromSI(vs.power, unitPrefs.power)) : '—'}
-                unit={unitPrefs.power}
-              />
+              <StatCard label={t('vehicleHero.stat.firmware', 'Firmware')} value={vs.software_version || '—'} />
+              <StatCard label={t('vehicleHero.stat.power', 'Power')} value={fmtNumber(vs.power ?? 0)} unit="kW" />
             </Grid>
           </>
         ) : (
@@ -222,11 +208,11 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         )}
 
         {/* Navigation actions for the vehicle */}
-        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
+        <div className="flex items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
           <Link
             to={`/vehicles/${vehicle.id}`}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
               'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
             )}
           >
@@ -235,7 +221,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           <Link
             to={`/vehicles/${vehicle.id}/commands`}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
               'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
             )}
           >
@@ -244,11 +230,11 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           <Link
             to={`/vehicles/${vehicle.id}/map`}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
               'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
             )}
           >
-            {t('vehicleHero.action.liveMap', 'Live map')}
+            {t('vehicleHero.action.liveMap', 'Live Map')}
           </Link>
         </div>
       </GlassPanel>

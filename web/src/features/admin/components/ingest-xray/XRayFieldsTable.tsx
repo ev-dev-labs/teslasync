@@ -16,10 +16,9 @@ import {
   type Column,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-
+import { fmtInt } from '@/lib/numberFormat';
 import { formatValueKind } from '@/api/hooks/useIngestXRay';
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface XRayFieldsTableProps {
   rows: IngestXRayFieldStat[];
@@ -40,7 +39,6 @@ function lastSeenEpoch(value: string | null | undefined): number {
 }
 
 export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { sortKey, sortDir, onSort } = useSortToggle('sample_count', 'desc');
 
@@ -69,7 +67,6 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
     () => [
       {
         key: 'field',
-        filterValue: (row) => row.field ?? null,
         header: t('admin.xray.fields.cols.field', 'Field'),
         sortable: true,
         visibleOnMobile: true,
@@ -81,8 +78,6 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
       },
       {
         key: 'sample_count',
-        filterValue: (row) => row.sample_count ?? null,
-        filterValueLabel: (_value, row) => fmtInt(row.sample_count),
         header: t('admin.xray.fields.cols.count', 'Samples'),
         sortable: true,
         align: 'right',
@@ -91,7 +86,6 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
       },
       {
         key: 'last_seen_at',
-        filterValue: (row) => row.last_seen_at ?? null,
         header: t('admin.xray.fields.cols.lastSeen', 'Last seen'),
         sortable: true,
         visibleOnMobile: true,
@@ -99,8 +93,6 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
       },
       {
         key: 'value_kind',
-        filterValue: (row) => row.value_kind ?? null,
-        filterValueLabel: (_value, row) => formatValueKind(row.value_kind ?? 0),
         header: t('admin.xray.fields.cols.kind', 'Kind'),
         sortable: true,
         render: (row) => (
@@ -108,7 +100,7 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
         ),
       },
     ],
-    [t, fmtInt],
+    [t],
   );
 
   return (
@@ -117,7 +109,6 @@ export function XRayFieldsTable({ rows, loading }: XRayFieldsTableProps) {
       name="xray-fields"
       columns={columns}
       data={sorted}
-      enableValueFilters
       keyExtractor={(row) => row.field ?? '—'}
       sortKey={sortKey}
       sortDir={sortDir}

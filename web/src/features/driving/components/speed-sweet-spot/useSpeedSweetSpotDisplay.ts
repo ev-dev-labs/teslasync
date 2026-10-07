@@ -2,18 +2,15 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import {
   convertDistanceFromSI,
   convertDistanceToSI,
   convertSpeedFromSI,
 } from '@/lib/unitConversion';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 /** Unit-aware render-boundary helpers for the SI-canonical evidence model. */
 export function useSpeedSweetSpotDisplay() {
-  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
@@ -42,36 +39,36 @@ export function useSpeedSweetSpotDisplay() {
   );
 
   const formatEfficiency = useCallback(
-    (whPerKm: number | null | undefined, precision = getGlobalPrecision()) =>
+    (whPerKm: number | null | undefined, precision = 0) =>
       whPerKm != null && Number.isFinite(whPerKm)
         ? `${fmtNumber(convertEfficiency(whPerKm), precision)} ${efficiencyUnit}`
         : '—',
-    [convertEfficiency, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
+    [convertEfficiency, efficiencyUnit],
   );
   const formatSignedEfficiency = useCallback(
-    (whPerKm: number | null | undefined, precision = getGlobalPrecision()) => {
+    (whPerKm: number | null | undefined, precision = 1) => {
       if (whPerKm == null || !Number.isFinite(whPerKm)) return '—';
       const converted = convertEfficiency(whPerKm);
       const sign = converted > 0 ? '+' : converted < 0 ? '−' : '';
       return `${sign}${fmtNumber(Math.abs(converted), precision)} ${efficiencyUnit}`;
     },
-    [convertEfficiency, efficiencyUnit, fmtNumber, displayPrecision, displayLocale],
+    [convertEfficiency, efficiencyUnit],
   );
   const formatDistance = useCallback(
-    (distanceM: number | null | undefined, precision = getGlobalPrecision()) =>
+    (distanceM: number | null | undefined, precision = 1) =>
       distanceM != null && Number.isFinite(distanceM)
         ? `${fmtNumber(convertDistance(distanceM), precision)} ${distanceUnit}`
         : '—',
-    [convertDistance, distanceUnit, fmtNumber, displayPrecision, displayLocale],
+    [convertDistance, distanceUnit],
   );
   const formatBand = useCallback(
     (fromKph: number, toKph: number) =>
       t('sweetSpot.band.range', '{{from}}–{{to}} {{unit}}', {
-        from: fmtNumber(convertBandSpeed(fromKph)),
-        to: fmtNumber(convertBandSpeed(toKph)),
+        from: fmtNumber(convertBandSpeed(fromKph), 0),
+        to: fmtNumber(convertBandSpeed(toKph), 0),
         unit: speedUnit,
       }),
-    [convertBandSpeed, speedUnit, t, fmtNumber],
+    [convertBandSpeed, speedUnit, t],
   );
   const formatMonth = useCallback(
     (month: string) => {

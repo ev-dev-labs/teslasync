@@ -1,55 +1,47 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Database, AlertTriangle,
+  Database, Table2, Layers, AlertTriangle, GitCommitHorizontal, Gauge,
   RefreshCw, ArrowUpDown, CheckCircle2, XCircle, ListChecks, Server,
 } from 'lucide-react';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, Button, DataTable, PanelTitle, Caption, Label, Text, type Column,
 } from '@/components/ui';
-import { MetricBar, TimeStamp } from '@/components/data-display';
+import { MetricCard, TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   ChartContainer, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip,
   ChartTooltip, axisTick, CHART_COLORS,
 } from '@/components/charts';
 import { useDBStats, useMigrations, useConnectionPool } from '@/api/hooks/useAdmin';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
+import { typography, type NeonColor } from '@/lib/tokens';
 import type { TableInfo } from '@/types/admin';
 import { VisuallyHidden } from '@/components/a11y';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
-import { DBHealthSummary } from '../components/statstrip-db-health/DBHealthSummary';
 
 const LARGE_TABLE_THRESHOLD = 100 * 1024 * 1024; // 100MB
 
 function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${fmtNumber(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
-  return `${fmtNumber((bytes / (1024 * 1024 * 1024)))} GB`;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
 type SortKey = 'size' | 'rows' | 'name';
 
 export default function DBHealthPage() {
-  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('dbHealth.title', 'DB health'));
+  usePageTitle(t('dbHealth.title', 'DB Health'));
   const [sortKey, setSortKey] = useState<SortKey>('size');
 
   const statsQuery = useDBStats();
   const migrationQuery = useMigrations();
   const poolQuery = useConnectionPool();
-  const statsState = useDataState(statsQuery);
-  const migrationState = useDataState(migrationQuery);
-  const poolState = useDataState(poolQuery);
   const dataSources = useMemo(
     () => [
       {
@@ -73,19 +65,16 @@ export default function DBHealthPage() {
 
   const {
     data: dbStats, isLoading: statsLoading, isFetching: statsFetching,
-    refetch: refetchStats,
+    error: statsError, refetch: refetchStats,
   } = statsQuery;
   const {
     data: migrationData, isLoading: migrationLoading,
-    refetch: refetchMigration,
+    error: migrationError, refetch: refetchMigration,
   } = migrationQuery;
   const {
     data: poolData, isLoading: poolLoading,
-    refetch: refetchPool,
+    error: poolError, refetch: refetchPool,
   } = poolQuery;
-  const statsError = statsState.fatalError;
-  const migrationError = migrationState.fatalError;
-  const poolError = poolState.fatalError;
 
   const refreshAll = () => {
     refetchStats();
@@ -113,7 +102,7 @@ export default function DBHealthPage() {
         .slice(0, 15)
         .map((tbl) => ({
           name: tbl.name.length > 20 ? tbl.name.slice(0, 18) + '…' : tbl.name,
-          rows: tbl.rowCount != null && Number.isFinite(tbl.rowCount) ? tbl.rowCount : null,
+          rows: tbl.rowCount ?? 0,
         })),
     [tables],
   );
@@ -123,36 +112,87 @@ export default function DBHealthPage() {
     (migrationData as Record<string, unknown> | undefined)?.version ??
     migrationData?.currentVersion ??
     '—';
-  const migrationDirty = typeof migrationData?.dirty === 'boolean' ? migrationData.dirty : null;
-  const migrationPending = migrationData?.pending ?? null;
+  const migrationDirty = migrationData?.dirty ?? false;
+  const migrationPending = migrationData?.pending ?? 0;
   const migrations = migrationData?.migrations ?? [];
 
   const pool = poolData;
   const poolUsage =
-    pool?.maxOpen != null && Number.isFinite(pool.maxOpen) && pool.maxOpen > 0 &&
-    pool.inUse != null && Number.isFinite(pool.inUse)
-      ? Math.min(Math.max((pool.inUse / pool.maxOpen) * 100, 0), 100)
-      : null;
+    pool?.maxOpen && pool.maxOpen > 0
+      ? Math.min(Math.max(((pool.inUse ?? 0) / pool.maxOpen) * 100, 0), 100)
+      : 0;
 
   const totalRows = useMemo(
-    () => dbStats?.tables != null && tables.every((tbl) => tbl.rowCount != null && Number.isFinite(tbl.rowCount))
-      ? tables.reduce((sum, tbl) => sum + tbl.rowCount, 0)
-      : null,
-    [dbStats?.tables, tables],
+    () => tables.reduce((sum, tbl) => sum + (tbl.rowCount ?? 0), 0),
+    [tables],
   );
-  const largeTables = dbStats?.tables != null && tables.every((tbl) => tbl.sizeBytes != null && Number.isFinite(tbl.sizeBytes))
-    ? tables.filter((tbl) => tbl.sizeBytes > LARGE_TABLE_THRESHOLD).length
-    : null;
+  const largeTables = tables.filter(
+    (tbl) => (tbl.sizeBytes ?? 0) > LARGE_TABLE_THRESHOLD,
+  ).length;
 
-  const dbSizeBytes = dbStats?.databaseSize != null && String(dbStats.databaseSize).trim() !== ''
-    ? Number(dbStats.databaseSize) : null;
+  // databaseSize is numeric bytes from the backend
+  const dbSizeDisplay = dbStats ? formatBytes(Number(dbStats.databaseSize) || 0) : '—';
+
+  // ── KPI band config — 6 metrics fill the width on wide screens ──
+  const kpis: Array<{
+    key: string; label: string; value: string; icon: React.ReactNode;
+    color: NeonColor; subtitle?: string;
+  }> = [
+    {
+      key: 'size',
+      label: t('dbHealth.totalSize', 'Total DB Size'),
+      value: dbSizeDisplay,
+      icon: <Database className="h-5 w-5" aria-hidden="true" />,
+      color: 'cyan',
+    },
+    {
+      key: 'tables',
+      label: t('dbHealth.tables', 'Tables'),
+      value: dbStats ? fmtInt(tables.length) : '—',
+      icon: <Table2 className="h-5 w-5" aria-hidden="true" />,
+      color: 'blue',
+    },
+    {
+      key: 'rows',
+      label: t('dbHealth.totalRows', 'Total Rows'),
+      value: dbStats ? fmtInt(totalRows) : '—',
+      icon: <Layers className="h-5 w-5" aria-hidden="true" />,
+      color: 'purple',
+    },
+    {
+      key: 'large',
+      label: t('dbHealth.largeTables', 'Large Tables'),
+      value: dbStats ? fmtInt(largeTables) : '—',
+      icon: <AlertTriangle className="h-5 w-5" aria-hidden="true" />,
+      color: 'amber',
+      subtitle: t('dbHealth.largeTablesHint', '> 100 MB'),
+    },
+    {
+      key: 'migration',
+      label: t('dbHealth.migration', 'Migration'),
+      value: migrationLoading ? '—' : String(migrationVersion),
+      icon: <GitCommitHorizontal className="h-5 w-5" aria-hidden="true" />,
+      color: migrationDirty ? 'red' : 'green',
+      subtitle: migrationLoading
+        ? undefined
+        : migrationDirty
+          ? t('dbHealth.dirtyShort', 'Dirty')
+          : t('dbHealth.cleanShort', 'Clean'),
+    },
+    {
+      key: 'pool',
+      label: t('dbHealth.poolUsage', 'Pool Usage'),
+      value: pool ? `${fmtInt(poolUsage)}%` : '—',
+      icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
+      color: poolUsage >= 80 ? 'red' : 'cyan',
+    },
+  ];
 
   const tableColumns: Column<TableInfo>[] = useMemo(
     () => [
       {
         key: 'name',
-        filterValue: (tbl) => tbl.name ?? null,
-        header: t('dbHealth.table.name', 'Hypertable'),
+        header: t('dbHealth.table.name', 'Table'),
         render: (tbl: TableInfo) => {
           const isLarge = (tbl.sizeBytes ?? 0) > LARGE_TABLE_THRESHOLD;
           return (
@@ -172,33 +212,24 @@ export default function DBHealthPage() {
       },
       {
         key: 'rows',
-        filterValue: (tbl) => tbl.rowCount ?? null,
-        filterValueLabel: (_value, tbl) => tbl.rowCount == null ? '—' : fmtInt(tbl.rowCount),
-        align: 'right',
-        groupStart: true,
         header: t('dbHealth.table.rows', 'Rows'),
         render: (tbl: TableInfo) => (
-          <Text mono color="secondary">{tbl.rowCount != null ? fmtInt(tbl.rowCount) : '—'}</Text>
+          <Text mono color="secondary">{fmtInt(tbl.rowCount ?? 0)}</Text>
         ),
         className: 'text-right',
       },
       {
         key: 'size',
-        filterValue: (tbl) => tbl.sizeBytes ?? null,
-        filterValueLabel: (_value, tbl) => tbl.sizeBytes == null ? '—' : formatBytes(tbl.sizeBytes),
-        align: 'right',
         header: t('dbHealth.table.size', 'Size'),
         render: (tbl: TableInfo) => (
           <Text mono color="secondary">
-            {tbl.sizeBytes != null ? formatBytes(tbl.sizeBytes) : '—'}
+            {tbl.sizeBytes ? formatBytes(tbl.sizeBytes) : '—'}
           </Text>
         ),
         className: 'text-right',
       },
       {
         key: 'indexes',
-        filterValue: (tbl) => tbl.indexCount ?? null,
-        align: 'right',
         header: t('dbHealth.table.indexes', 'Indexes'),
         render: (tbl: TableInfo) => (
           <Text mono color="muted">{tbl.indexCount ?? '—'}</Text>
@@ -207,15 +238,14 @@ export default function DBHealthPage() {
       },
       {
         key: 'vacuum',
-        filterValue: (tbl) => tbl.lastVacuum ?? null,
-        header: t('dbHealth.table.lastVacuum', 'Last vacuum'),
+        header: t('dbHealth.table.lastVacuum', 'Last Vacuum'),
         render: (tbl: TableInfo) => (
           <TimeStamp value={tbl.lastVacuum ?? null} className="text-[var(--text-muted)] whitespace-nowrap" />
         ),
         className: 'text-right',
       },
     ],
-    [t, fmtInt, displayPrecision, displayLocale],
+    [t],
   );
 
   const sortOptions: SortKey[] = ['size', 'rows', 'name'];
@@ -227,6 +257,13 @@ export default function DBHealthPage() {
 
   const actions = (
     <div className="flex items-center gap-2">
+      <Caption className="flex items-center gap-1.5">
+        <RefreshCw
+          className={cn('h-3.5 w-3.5', statsFetching && 'animate-spin')}
+          aria-hidden="true"
+        />
+        {t('dbHealth.autoRefresh', 'Auto-refresh 30s')}
+      </Caption>
       <Button
         variant="ghost"
         size="sm"
@@ -239,28 +276,34 @@ export default function DBHealthPage() {
   );
 
   return (
-    <PageLayout
-      title={t('dbHealth.title', 'DB health dashboard')}
+    <PageContainer
+      title={t('dbHealth.title', 'DB Health Dashboard')}
       subtitle={t('dbHealth.subtitle', 'Database health metrics and table statistics')}
-      metadataActions={
-        <Caption className="flex items-center gap-1.5">
-          <RefreshCw
-            className={cn('h-3.5 w-3.5', statsFetching && 'animate-spin')}
-            aria-hidden="true"
-          />
-          {t('dbHealth.autoRefresh', 'Auto-refresh 30s')}
-        </Caption>
-      }
-      secondaryActions={actions}
+      actions={actions}
       query={[statsQuery, migrationQuery, poolQuery]}
       dataSources={dataSources}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <DBHealthSummary stats={statsState} migration={migrationState} pool={poolState}
-          statsLoading={statsLoading} migrationLoading={migrationLoading} poolLoading={poolLoading}
-          sizeBytes={dbSizeBytes} totalRows={totalRows} largeTables={largeTables}
-          migrationVersion={migrationVersion} migrationDirty={migrationDirty} poolUsage={poolUsage} />
+        <section
+          aria-label={t('dbHealth.kpis', 'Summary metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-3 xl:grid-cols-6"
+        >
+          {statsLoading && !dbStats
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} height={84} className="rounded-xl" />
+              ))
+            : kpis.map((kpi) => (
+                <MetricCard
+                  key={kpi.key}
+                  label={kpi.label}
+                  value={kpi.value}
+                  icon={kpi.icon}
+                  color={kpi.color}
+                  subtitle={kpi.subtitle}
+                />
+              ))}
+        </section>
       </FadeIn>
 
       {/* 2 — Primary bento: hero table-size chart + migration status */}
@@ -272,21 +315,20 @@ export default function DBHealthPage() {
 
           {/* Hero — table sizes (spans 2 of 3 columns on wide screens) */}
           <div className="xl:col-span-2">
-            <StaleRefreshWarning state={statsState} label={t('dbHealth.chartTitle', 'Table sizes (top 15)')} />
             {statsError ? (
               <GlassPanel className="p-4 sm:p-5">
                 <PanelTitle className="mb-3">
-                  {t('dbHealth.chartTitle', 'Table sizes (top 15)')}
+                  {t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
                 </PanelTitle>
                 <QueryError error={statsError} onRetry={() => refetchStats()} />
               </GlassPanel>
             ) : (
               <ChartContainer
-                title={t('dbHealth.chartTitle', 'Table sizes (top 15)')}
+                title={t('dbHealth.chartTitle', 'Table Sizes (Top 15)')}
                 ariaLabel={t('dbHealth.chartTitle.aria', 'Top fifteen database table sizes horizontal bar chart')}
                 data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
                 dataColumns={[
-                  { key: 'name', label: t('dbHealth.col.table', 'Hypertable') },
+                  { key: 'name', label: t('dbHealth.col.table', 'Table') },
                   { key: 'rows', label: t('dbHealth.col.rows', 'Rows') },
                 ]}
                 loading={statsLoading}
@@ -324,9 +366,8 @@ export default function DBHealthPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('dbHealth.migrationTitle', 'Migration status')}
+              {t('dbHealth.migrationTitle', 'Migration Status')}
             </PanelTitle>
-            <StaleRefreshWarning state={migrationState} label={t('dbHealth.migrationTitle', 'Migration status')} />
             {migrationLoading ? (
               <Skeleton height={180} />
             ) : migrationError ? (
@@ -335,7 +376,7 @@ export default function DBHealthPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Caption>
-                    {t('dbHealth.currentVersion', 'Current version')}
+                    {t('dbHealth.currentVersion', 'Current Version')}
                   </Caption>
                   <Text mono size="sm" weight="bold" color="primary">
                     {String(migrationVersion)}
@@ -350,20 +391,20 @@ export default function DBHealthPage() {
                     weight="medium"
                     className={cn(
                       'inline-flex items-center gap-1.5',
-                      migrationDirty == null ? typography.color.muted : migrationDirty ? 'text-rose-300' : 'text-emerald-300',
+                      migrationDirty ? 'text-rose-300' : 'text-emerald-300',
                     )}
                   >
-                    {migrationDirty == null ? null : migrationDirty ? (
+                    {migrationDirty ? (
                       <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
                     ) : (
                       <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                     )}
-                    {migrationDirty == null ? '—' : migrationDirty
+                    {migrationDirty
                       ? t('dbHealth.dirty', 'Dirty')
                       : t('dbHealth.clean', 'Clean')}
                   </Text>
                 </div>
-                {migrationPending != null && migrationPending > 0 && (
+                {migrationPending > 0 && (
                   <div className="flex items-center justify-between">
                     <Caption>
                       {t('dbHealth.pending', 'Pending')}
@@ -375,7 +416,7 @@ export default function DBHealthPage() {
                 )}
                 <div className="mt-3 border-t border-white/[0.06] pt-3">
                   <Label className="mb-2 block">
-                    {t('dbHealth.recentMigrations', 'Recent migrations')}
+                    {t('dbHealth.recentMigrations', 'Recent Migrations')}
                   </Label>
                   {migrations.length > 0 ? (
                     <ul className="max-h-44 space-y-1.5 overflow-auto">
@@ -463,7 +504,6 @@ export default function DBHealthPage() {
                 columns={tableColumns}
                 mobileColumns={['name', 'size', 'rows']}
                 data={sortedTables}
-                enableValueFilters
                 keyExtractor={(tbl) => tbl.name}
                 compact
                 pagination
@@ -477,9 +517,8 @@ export default function DBHealthPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-4 flex items-center gap-2">
               <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('dbHealth.poolTitle', 'Connection pool')}
+              {t('dbHealth.poolTitle', 'Connection Pool')}
             </PanelTitle>
-            <StaleRefreshWarning state={poolState} label={t('dbHealth.poolTitle', 'Connection pool')} />
             {poolLoading ? (
               <Skeleton height={200} />
             ) : poolError ? (
@@ -487,14 +526,14 @@ export default function DBHealthPage() {
             ) : pool?.maxOpen != null ? (
               <div className="space-y-3">
                 {[
-                  { label: t('dbHealth.pool.maxOpen', 'Max open'), value: fmtInt(pool.maxOpen) },
-                  { label: t('dbHealth.pool.open', 'Open'), value: pool.open != null ? fmtInt(pool.open) : '—' },
-                  { label: t('dbHealth.pool.inUse', 'In use'), value: pool.inUse != null ? fmtInt(pool.inUse) : '—' },
-                  { label: t('dbHealth.pool.idle', 'Idle'), value: pool.idle != null ? fmtInt(pool.idle) : '—' },
-                  { label: t('dbHealth.pool.waitCount', 'Wait count'), value: pool.waitCount != null ? fmtInt(pool.waitCount) : '—' },
+                  { label: t('dbHealth.pool.maxOpen', 'Max Open'), value: fmtInt(pool.maxOpen ?? 0) },
+                  { label: t('dbHealth.pool.open', 'Open'), value: fmtInt(pool.open ?? 0) },
+                  { label: t('dbHealth.pool.inUse', 'In Use'), value: fmtInt(pool.inUse ?? 0) },
+                  { label: t('dbHealth.pool.idle', 'Idle'), value: fmtInt(pool.idle ?? 0) },
+                  { label: t('dbHealth.pool.waitCount', 'Wait Count'), value: fmtInt(pool.waitCount ?? 0) },
                   {
-                    label: t('dbHealth.pool.waitDuration', 'Wait duration'),
-                    value: pool.waitDurationMs != null ? `${fmtNumber(pool.waitDurationMs)}ms` : '—',
+                    label: t('dbHealth.pool.waitDuration', 'Wait Duration'),
+                    value: `${fmtInt(pool.waitDurationMs ?? 0)}ms`,
                   },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between">
@@ -507,18 +546,25 @@ export default function DBHealthPage() {
                 {/* Usage bar */}
                 <div className="mt-2">
                   <div className="mb-1 flex justify-between">
-                    <Text size="2xs" color="muted">{t('dbHealth.poolUsage', 'Pool usage')}</Text>
-                    <Text size="2xs" color="muted">{poolUsage != null ? `${fmtNumber(poolUsage)}%` : '—'}</Text>
+                    <Text size="2xs" color="muted">{t('dbHealth.poolUsage', 'Pool Usage')}</Text>
+                    <Text size="2xs" color="muted">{fmtInt(poolUsage)}%</Text>
                   </div>
-                  <MetricBar
-                    value={poolUsage}
-                    max={100}
-                    ariaLabel={t('dbHealth.poolUsage', 'Pool usage')}
-                    color={poolUsage != null && poolUsage >= 80 ? 'var(--neon-red)' : 'var(--neon-cyan)'}
-                    showHeader={false}
-                    size="slim"
-                    fill="solid"
-                  />
+                  <div
+                    className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]"
+                    role="progressbar"
+                    aria-label={t('dbHealth.poolUsage', 'Pool Usage')}
+                    aria-valuenow={Math.round(poolUsage)}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-all',
+                        poolUsage >= 80 ? 'bg-rose-400' : 'bg-cyan-400',
+                      )}
+                      style={{ width: `${poolUsage}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -529,6 +575,6 @@ export default function DBHealthPage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

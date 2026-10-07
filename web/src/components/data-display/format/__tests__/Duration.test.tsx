@@ -1,54 +1,40 @@
-import { act, cleanup, render } from '@testing-library/react';
-import { afterEach, beforeEach, describe, it, expect } from 'vitest';
+import { render } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { Duration } from '../Duration';
-import { fmtWithUnit, getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 /**
  * `Duration` is a pure display leaf: it delegates formatting to the
- * `formatDuration*` helpers in `@/lib/dateFormat` and adds a settings-formatted
- * millisecond hover title. It touches no network, so these tests need no
- * mocking — they exercise the genuine helper pipeline while pinning the
+ * `formatDuration*` helpers in `@/lib/dateFormat` and adds a raw-millisecond
+ * hover title. It reads no hooks and touches no network, so these tests need
+ * no mocking — they exercise the genuine helper pipeline while pinning the
  * component's own responsibilities: variant routing, the em-dash empty state,
  * the `title` contract, and `className` propagation.
  */
 
 const FALLBACK = '—';
 const span = (c: HTMLElement) => c.querySelector('span');
-let previousPreferences: ReturnType<typeof getFormatterPreferences>;
-
-beforeEach(() => {
-  previousPreferences = getFormatterPreferences();
-  setGlobalPrecision(2);
-  setGlobalLocale('en-US');
-});
-
-afterEach(() => {
-  cleanup();
-  setGlobalPrecision(previousPreferences.precision);
-  setGlobalLocale(previousPreferences.locale);
-});
 
 describe('Duration — short variant (default)', () => {
   it('renders sub-second values in milliseconds by default', () => {
     const { container } = render(<Duration ms={250} />);
-    expect(container.textContent).toBe('250.00ms');
+    expect(container.textContent).toBe('250ms');
   });
 
-  it('rolls values >= 1000ms over to settings-formatted seconds', () => {
+  it('rolls values >= 1000ms over to one-decimal seconds', () => {
     const { container } = render(<Duration ms={1500} />);
-    expect(container.textContent).toBe('1.50s');
+    expect(container.textContent).toBe('1.5s');
   });
 
   it('treats an explicit variant="short" identically to the default', () => {
     const explicit = render(<Duration ms={1500} variant="short" />);
     const implicit = render(<Duration ms={1500} />);
     expect(explicit.container.textContent).toBe(implicit.container.textContent);
-    expect(explicit.container.textContent).toBe('1.50s');
+    expect(explicit.container.textContent).toBe('1.5s');
   });
 
   it('treats zero as a valid duration, not an empty value', () => {
     const { container } = render(<Duration ms={0} />);
-    expect(container.textContent).toBe('0.00ms');
+    expect(container.textContent).toBe('0ms');
     expect(container.textContent).not.toBe(FALLBACK);
   });
 });
@@ -65,14 +51,14 @@ describe('Duration — long variant', () => {
     expect(container.textContent).toBe('2m 6s');
   });
 
-  it('formats sub-minute durations as settings-formatted seconds', () => {
+  it('formats sub-minute durations as one-decimal seconds', () => {
     const { container } = render(<Duration ms={45_000} variant="long" />);
-    expect(container.textContent).toBe('45.00s');
+    expect(container.textContent).toBe('45.0s');
   });
 
   it('formats sub-second durations in milliseconds', () => {
     const { container } = render(<Duration ms={500} variant="long" />);
-    expect(container.textContent).toBe('500.00ms');
+    expect(container.textContent).toBe('500ms');
   });
 
   it('rolls minutes past 60 without collapsing into hours', () => {
@@ -84,17 +70,17 @@ describe('Duration — long variant', () => {
 describe('Duration — compact variant', () => {
   it('keeps sub-second values in milliseconds', () => {
     const { container } = render(<Duration ms={250} variant="compact" />);
-    expect(container.textContent).toBe('250.00ms');
+    expect(container.textContent).toBe('250ms');
   });
 
-  it('shows settings-formatted seconds below a minute', () => {
+  it('shows one-decimal seconds below a minute', () => {
     const { container } = render(<Duration ms={30_000} variant="compact" />);
-    expect(container.textContent).toBe('30.00s');
+    expect(container.textContent).toBe('30.0s');
   });
 
-  it('rolls into settings-formatted minutes at/above a minute', () => {
+  it('rolls into one-decimal minutes at/above a minute', () => {
     const { container } = render(<Duration ms={120_000} variant="compact" />);
-    expect(container.textContent).toBe('2.00m');
+    expect(container.textContent).toBe('2.0m');
   });
 });
 
@@ -112,7 +98,7 @@ describe('Duration — clock variant', () => {
   it('renders 0:00 for a zero-length clock and keeps the hover title', () => {
     const { container } = render(<Duration ms={0} variant="clock" />);
     expect(container.textContent).toBe('0:00');
-    expect(span(container)?.getAttribute('title')).toBe(fmtWithUnit(0, 'ms'));
+    expect(span(container)?.getAttribute('title')).toBe('0 ms');
   });
 });
 
@@ -149,9 +135,9 @@ describe('Duration — empty / invalid input', () => {
 });
 
 describe('Duration — hover title contract', () => {
-  it('formats the millisecond title at settings precision on a valid value', () => {
+  it('exposes the raw millisecond value via the title on a valid value', () => {
     const { container } = render(<Duration ms={1500} />);
-    expect(span(container)?.getAttribute('title')).toBe(fmtWithUnit(1500, 'ms'));
+    expect(span(container)?.getAttribute('title')).toBe('1500 ms');
   });
 
   it('omits the title attribute on the null empty state', () => {
@@ -197,42 +183,8 @@ describe('Duration — className + structure', () => {
 
   it('recomputes the display when props change on rerender', () => {
     const { container, rerender } = render(<Duration ms={1500} />);
-    expect(container.textContent).toBe('1.50s');
+    expect(container.textContent).toBe('1.5s');
     rerender(<Duration ms={65_000} variant="long" />);
     expect(container.textContent).toBe('1m 5s');
-  });
-
-  describe('Duration — mounted settings updates', () => {
-    it('updates measured branches and titles while preserving clocks and unknown values', () => {
-      const { container } = render(
-        <>
-          <Duration ms={250.1256} className="milliseconds" />
-          <Duration ms={1500} className="seconds" />
-          <Duration ms={120_000} variant="compact" className="minutes" />
-          <Duration ms={45_000} variant="long" className="long-seconds" />
-          <Duration ms={125_500} variant="long" className="long-clock" />
-          <Duration ms={187_000} variant="clock" className="clock" />
-          <Duration ms={0} className="zero" />
-          <Duration ms={null} className="unknown" />
-        </>,
-      );
-      expect(container.querySelector('.milliseconds')).toHaveTextContent('250.13ms');
-      expect(container.querySelector('.seconds')).toHaveTextContent('1.50s');
-      expect(container.querySelector('.minutes')).toHaveTextContent('2.00m');
-      act(() => {
-        setGlobalPrecision(3);
-        setGlobalLocale('de-DE');
-      });
-      expect(container.querySelector('.milliseconds')).toHaveTextContent('250,126ms');
-      expect(container.querySelector('.seconds')).toHaveTextContent('1,500s');
-      expect(container.querySelector('.seconds')).toHaveAttribute('title', '1.500,000 ms');
-      expect(container.querySelector('.minutes')).toHaveTextContent('2,000m');
-      expect(container.querySelector('.long-seconds')).toHaveTextContent('45,000s');
-      expect(container.querySelector('.long-clock')).toHaveTextContent('2m 6s');
-      expect(container.querySelector('.clock')).toHaveTextContent('3:07');
-      expect(container.querySelector('.zero')).toHaveTextContent('0,000ms');
-      expect(container.querySelector('.unknown')).toHaveTextContent('—');
-      expect(container.querySelector('.unknown')).not.toHaveAttribute('title');
-    });
   });
 });

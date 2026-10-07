@@ -149,11 +149,11 @@ describe('YearSavingsPanel', () => {
       expect(within(electric).getByText('Electric cost')).toBeInTheDocument();
     });
 
-    it('formats each bar sublabel through formatCurrency using Settings precision', () => {
+    it('formats each bar sublabel through formatCurrency at zero decimals', () => {
       renderPanel(makeReview({ gas_savings: 1200, total_charging_cost: 300 }));
 
-      expect(h.formatCurrency).toHaveBeenCalledWith(1500);
-      expect(h.formatCurrency).toHaveBeenCalledWith(300);
+      expect(h.formatCurrency).toHaveBeenCalledWith(1500, 0);
+      expect(h.formatCurrency).toHaveBeenCalledWith(300, 0);
 
       const [gas, electric] = screen.getAllByTestId('metric-bar');
       expect(within(gas).getByTestId('metric-bar-sublabel')).toHaveTextContent('$1500');
@@ -209,7 +209,7 @@ describe('YearSavingsPanel', () => {
       );
 
       expect(screen.getByTestId('animated-number')).toHaveAttribute('data-value', '0');
-      expect(h.formatCurrency).toHaveBeenCalledWith(0);
+      expect(h.formatCurrency).toHaveBeenCalledWith(0, 0);
       expect(container.textContent).not.toContain('NaN');
     });
   });

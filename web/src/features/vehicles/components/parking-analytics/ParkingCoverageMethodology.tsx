@@ -9,13 +9,12 @@ import {
   MetricValue,
   PanelTitle,
 } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingMethodCaveats } from './ParkingMethodCaveats';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ParkingCoverageMethodologyProps {
   summary: ParkingSummary;
@@ -33,7 +32,6 @@ export function ParkingCoverageMethodology({
   rangeEnd,
   className,
 }: ParkingCoverageMethodologyProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
   const locationCoverage =
@@ -54,7 +52,7 @@ export function ParkingCoverageMethodology({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <PanelTitle className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-300" aria-hidden="true" />
-            {t('parking.coverage.title', 'Coverage & method')}
+            {t('parking.coverage.title', 'Coverage & Method')}
           </PanelTitle>
           <Badge
             variant={coverage.possiblyCapped ? 'warning' : 'success'}
@@ -103,7 +101,7 @@ export function ParkingCoverageMethodology({
               <div className="rounded-xl bg-[var(--surface-2)] p-3">
                 <MetricValue>
                   {locationCoverage != null
-                    ? `${fmtNumber(locationCoverage)}%`
+                    ? `${fmtNumber(locationCoverage, 0)}%`
                     : '—'}
                 </MetricValue>
                 <MetricLabel>

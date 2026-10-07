@@ -61,7 +61,7 @@ describe('FSMSubFSMPanel', () => {
   it('shows the empty state (heading + status message) when there are no active subs', () => {
     render(<FSMSubFSMPanel fsmType="vehicle" activeSubs={[]} />);
 
-    expect(screen.getByText('Active sub-FSMs')).toBeInTheDocument();
+    expect(screen.getByText('Active Sub-FSMs')).toBeInTheDocument();
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('No active drive or charge sessions');
     // No session rows render in the empty branch.
@@ -87,7 +87,7 @@ describe('FSMSubFSMPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Drive session')).toBeInTheDocument();
+    expect(screen.getByText('Drive Session')).toBeInTheDocument();
 
     const badge = screen.getByTestId('state-badge');
     expect(badge).toHaveAttribute('data-fsm-type', 'drive_session');
@@ -121,7 +121,7 @@ describe('FSMSubFSMPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Charge session')).toBeInTheDocument();
+    expect(screen.getByText('Charge Session')).toBeInTheDocument();
     expect(screen.getByTestId('state-badge')).toHaveAttribute(
       'data-fsm-type',
       'charge_session',
@@ -177,8 +177,8 @@ describe('FSMSubFSMPanel', () => {
       />,
     );
 
-    expect(screen.getByText('Drive session')).toBeInTheDocument();
-    expect(screen.getByText('Charge session')).toBeInTheDocument();
+    expect(screen.getByText('Drive Session')).toBeInTheDocument();
+    expect(screen.getByText('Charge Session')).toBeInTheDocument();
 
     const badges = screen.getAllByTestId('state-badge');
     expect(badges).toHaveLength(2);

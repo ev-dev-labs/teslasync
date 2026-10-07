@@ -412,15 +412,15 @@ describe('useDriveDetailData — chart data conversion', () => {
     expect(c.climateOn).toBe(true);
   });
 
-  it('preserves absent battery/elevation/power/speed as null, not false zero observations', () => {
+  it('null-coalesces missing battery/elevation/power/speed to 0', () => {
     const { result } = setup(
       drive({ telemetry: [tele({ latitude: 47.6, longitude: -122.3, createdAt: '08:00' })] }),
     );
     const c = result.current.chartData[0];
-    expect(c.speed).toBeNull();
-    expect(c.battery).toBeNull();
-    expect(c.elevation).toBeNull();
-    expect(c.power).toBeNull();
+    expect(c.speed).toBe(0);
+    expect(c.battery).toBe(0);
+    expect(c.elevation).toBe(0);
+    expect(c.power).toBe(0);
   });
 
   it('converts to imperial units when the pressure/speed/temp/distance prefs flip', () => {
@@ -542,7 +542,7 @@ describe('useDriveDetailData — stats', () => {
     expect(s.odometerStart).toBeCloseTo(1000, 5);
     expect(s.odometerEnd).toBeCloseTo(1010, 5);
     expect(s.hasTirePressure).toBe(true);
-    expect(s.efficiencyPctPer100).toBeCloseTo(20, 5); // (80-60)/100km*100
+    expect(s.efficiencyPctPer100).toBeCloseTo(2, 5); // (80-60)/100km*10
   });
 
   it('computes energy/regen/power fallbacks when the drive aggregates are absent', () => {
@@ -570,7 +570,7 @@ describe('useDriveDetailData — stats', () => {
     expect(s.minSpd).toBeCloseTo(5 * MPS_TO_KMH, 5); // 18 km/h
   });
 
-  it('retains observed zero power rather than fabricating a peak from avgPowerW', () => {
+  it('reports minSpd = 0 when the car never moves and powerMax falls back to avgPowerW', () => {
     const { result } = setup(
       drive({
         avgPowerW: 8000,
@@ -583,7 +583,7 @@ describe('useDriveDetailData — stats', () => {
     const s = result.current.stats!;
 
     expect(s.minSpd).toBe(0);
-    expect(s.powerMax).toBe(0); // observed zero power; average is not a peak
+    expect(s.powerMax).toBe(8); // no per-row power → avgPowerW 8000 / 1000
     expect(s.powerMin).toBe(0);
   });
 

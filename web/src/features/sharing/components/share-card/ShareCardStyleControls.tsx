@@ -1,7 +1,7 @@
+import { Palette } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { HelpTooltip, Label, Select, Button, Text } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, HelpTooltip, Label, PanelTitle, Select, Button, Text } from '@/components/ui';
 import { SHARE_CARD_THEMES, type ShareCardTheme } from '../../lib/shareCard';
 import type { ShareCardCompositionProps } from './types';
 
@@ -15,19 +15,19 @@ export function ShareCardStyleControls({
   return (
     <section
       data-testid="share-card-style-controls"
-      aria-label={t('shareCard.style.aria', 'Share card SVG style controls')}
+      aria-label={t('shareCard.style.aria', 'Share Card SVG style controls')}
     >
-      <LayoutCard
-        title={t('shareCard.style.title', 'SVG style controls')}
-        actions={(
+      <GlassPanel className="h-full p-4 sm:p-5">
+        <PanelTitle className="mb-3 flex items-center gap-2">
+          <Palette className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('shareCard.style.title', 'SVG style controls')}
           <HelpTooltip
             size="sm"
             i18nKey="shareCard.style.help"
             defaultValue="The deterministic 800 by 418 SVG is rendered locally. Theme colors are fixed into the exported file."
             ariaLabel={t('shareCard.style.helpLabel', 'More information about SVG style')}
           />
-        )}
-      >
+        </PanelTitle>
         <Label>
           {t('shareCard.style.theme', 'Theme')}
         </Label>
@@ -74,7 +74,7 @@ export function ShareCardStyleControls({
             'Metric values are converted from canonical SI only at this render and export boundary.',
           )}
         </Text>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

@@ -6,7 +6,7 @@
     "shortDay": "d",
     "justNow": "Just now",
     "clearTitle": "Recently viewed pages",
-    "clearBody": "Wipe the list of pages used by the status bar and the recent section in the command palette.",
+    "clearBody": "Wipe the list of pages used by the status bar and the Recent section in the command palette.",
     "clearButton": "Clear recent pages",
     "clearConfirmTitle": "Clear recent pages?",
     "clearConfirmBody": "This will wipe the list immediately. The status bar and palette Recent section will be empty until you visit new pages.",

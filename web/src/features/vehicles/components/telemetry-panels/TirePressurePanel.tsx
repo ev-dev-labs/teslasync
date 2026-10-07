@@ -37,7 +37,7 @@ export function TirePressurePanel({ tireData }: TirePressurePanelProps) {
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
         <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
-        {t('common.tirePressure', 'Tire pressure')}
+        {t('common.tirePressure', 'Tire Pressure')}
       </h3>
       {tireData ? (
         <TirePressureContent tireData={tireData} formatPressure={formatPressure} />
@@ -74,18 +74,18 @@ function TirePressureContent({
   const status = allGood
     ? {
         glyph: '✓',
-        label: t('telemetry.tireAllNormal', 'All normal'),
+        label: t('telemetry.tireAllNormal', 'All Normal'),
         className: 'border-green-500/30 bg-green-500/10 text-green-400',
       }
     : anyBad
       ? {
           glyph: '✗',
-          label: t('telemetry.tireAttentionNeeded', 'Attention needed'),
+          label: t('telemetry.tireAttentionNeeded', 'Attention Needed'),
           className: 'border-red-500/30 bg-red-500/10 text-red-400',
         }
       : {
           glyph: '⚠',
-          label: t('telemetry.tireCheckPressure', 'Check pressure'),
+          label: t('telemetry.tireCheckPressure', 'Check Pressure'),
           className: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
         }
 

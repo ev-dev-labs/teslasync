@@ -1,11 +1,7 @@
 import { type ReactNode } from 'react';
 import { Info } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { Text } from '@/components/ui';
-import { LayoutCard, SourceContent, type SourceState } from '@/components/layout';
-import type { DataStateSource } from '@/api/dataState';
-import { useDataState } from '@/hooks/useDataState';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 
 interface InsightPanelProps {
   title: string;
@@ -14,59 +10,26 @@ interface InsightPanelProps {
   emptyMessage?: string;
   children: ReactNode;
   className?: string;
-  sourceState?: SourceState;
-  error?: unknown;
-  onRetry?: () => void;
-  query?: DataStateSource<unknown>;
 }
 
 export function InsightPanel({
   title,
   description,
   empty = false,
-  emptyMessage,
+  emptyMessage = 'No supported data is available.',
   children,
   className,
-  sourceState,
-  error,
-  onRetry,
-  query,
 }: InsightPanelProps) {
-  const { t } = useTranslation();
-  const dataState = useDataState(query ?? {});
-  const retry = onRetry ?? dataState.retry ?? undefined;
-  const message = emptyMessage ?? t('advancedIntelligence.panel.empty', 'No supported data is available.');
-  const resolvedState = query
-    ? dataState.fatalError ? 'error'
-      : dataState.hasData ? dataState.status === 'stale' ? 'retained' : empty ? 'empty' : 'ready'
-      : query.isLoading || query.fetchStatus === 'fetching' ? 'loading' : 'empty'
-    : sourceState ?? (empty ? 'empty' : 'ready');
-  const emptyBody = query && !dataState.hasData && !dataState.fatalError
-    ? <Text as="p" variant="bodySm" role="status">
-      {query.fetchStatus === 'paused'
-        ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
-        : t('advancedIntelligence.panel.unresolved', 'Evidence availability has not resolved yet.')}
-    </Text>
-    : <EmptyState
-      icon={<Info className="h-6 w-6" aria-hidden="true" />}
-      message={message}
-      action={retry ? { label: t('common.refresh', 'Refresh'), onClick: retry } : undefined}
-    />;
   return (
-    <div className={className}>
-      <LayoutCard title={title} description={description}>
-        <SourceContent
-          state={resolvedState}
-          label={title}
-          emptyMessage={message}
-          errorMessage={t('advancedIntelligence.panel.error', 'Intelligence evidence could not be loaded.')}
-          error={dataState.fatalError ?? error}
-          errorRecovery={{ onRetry: retry }}
-          emptyContent={emptyBody}
-        >
-          {empty ? emptyBody : children}
-        </SourceContent>
-      </LayoutCard>
-    </div>
+    <GlassPanel className={className ?? 'p-5 md:p-6'}>
+      <div className="mb-4 space-y-1">
+        <PanelTitle>{title}</PanelTitle>
+        {description ? <Text as="p" variant="bodySm">{description}</Text> : null}
+      </div>
+      {empty ? (
+        // no-action: generic shared shell reused by many pages, each with its own empty predicate; fix belongs to the caller.
+        <EmptyState icon={<Info className="h-6 w-6" aria-hidden="true" />} message={emptyMessage} />
+      ) : children}
+    </GlassPanel>
   );
 }

@@ -3,19 +3,21 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Battery, Thermometer, Lock, Shield, Wifi, Car,
-  Gauge, ArrowLeftRight, Info, Calendar,
+  Gauge, Zap, TrendingUp, DollarSign, Leaf, Route,
+  ArrowLeftRight, Info, Calendar, BarChart3,
 } from 'lucide-react';
 
-import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, Select, Button, DataTable,
-  Text, Caption,
+  SectionTitle, PanelTitle, Text, Caption,
   type SelectOption, type Column,
 } from '@/components/ui';
+import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, ChartLegend, AREA_DEFAULTS,
+  ChartTooltip, ChartLegend, EmbeddedChart, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar,
   chartMarginLabeled, axisTick, chartAnimation,
@@ -29,19 +31,31 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import { severityTokens } from '@/lib/tokens';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleStateReadings } from '@/api/types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import {
-  FleetTrendCard, formatKnown, getWinner,
-  type ComparisonRow,
-} from '../components/fleet-compare-modernization';
-import { FleetComparisonBrief as FleetHighlights } from '../components/operationalbrief-a-m/FleetComparisonBrief';
+import type { VehicleState } from '@/api/types';
+
+/* ── Types ─────────────────────────────────────────────── */
+
+type WinnerSemantic = 'higher' | 'lower' | 'neutral';
+
+interface ComparisonRow {
+  metric: string;
+  valueA: string;
+  valueB: string;
+  rawA: number;
+  rawB: number;
+  winner: WinnerSemantic;
+}
 
 /* ── Helpers ───────────────────────────────────────────── */
+
+function getWinner(a: number, b: number, semantic: WinnerSemantic): 'a' | 'b' | 'tie' {
+  if (semantic === 'neutral' || a === b) return 'tie';
+  if (semantic === 'higher') return a > b ? 'a' : 'b';
+  return a < b ? 'a' : 'b';
+}
 
 function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
   const winner = getWinner(row.rawA, row.rawB, row.winner);
@@ -52,7 +66,7 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
       weight="medium"
       className={cn(
         'inline-flex items-center gap-1 tabular-nums',
-        isWinner ? severityTokens.success.fg : 'text-[var(--text-primary)]',
+        isWinner ? 'text-emerald-300' : 'text-[var(--text-primary)]',
       )}
     >
       {value}
@@ -82,9 +96,9 @@ function StatusRow({
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">{icon}</span>
-        <Text as="span" size="sm" color="secondary" className="break-words">{label}</Text>
+        <Text as="span" size="sm" color="secondary" className="truncate">{label}</Text>
       </div>
-      <div className="min-w-0 text-right">{children}</div>
+      <div className="shrink-0 text-right">{children}</div>
     </div>
   );
 }
@@ -102,7 +116,7 @@ function VehicleStatusCard({
   formatTemperature,
 }: {
   vehicle: Vehicle | undefined;
-  state: VehicleStateReadings | undefined;
+  state: VehicleState | undefined;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -111,33 +125,33 @@ function VehicleStatusCard({
   formatTemperature: (value: number | null | undefined, precision?: number) => string;
 }) {
   const { t } = useTranslation();
-  const title = vehicle?.display_name || vehicle?.vin || t('comparison.selectVehicle', 'Select a vehicle');
 
-  if (isLoading && !state) {
+  if (isLoading) {
     return (
-      <LayoutCard title={title}>
+      <GlassPanel className="p-4 sm:p-5">
         <Skeleton lines={5} />
-      </LayoutCard>
+      </GlassPanel>
     );
   }
 
   if (!vehicle) {
     return (
-      <LayoutCard title={title}>
+      <GlassPanel className="flex min-h-[16rem] items-center justify-center p-4 sm:p-5">
         <EmptyState
           /* no-action: transient empty state — surfaces before a vehicle is chosen */
           icon={<Car className="h-8 w-8" aria-hidden="true" />}
           message={t('comparison.selectVehicle', 'Select a vehicle')}
         />
-      </LayoutCard>
+      </GlassPanel>
     );
   }
 
-  if (isError && !state) {
+  if (isError) {
     return (
-      <LayoutCard title={title}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-3 truncate">{vehicle.display_name || vehicle.vin}</PanelTitle>
         <QueryError error={error} onRetry={onRetry} resourceName={t('comparison.vehicleState', 'Vehicle state')} />
-      </LayoutCard>
+      </GlassPanel>
     );
   }
 
@@ -148,22 +162,32 @@ function VehicleStatusCard({
   const isOnline = vehicle.state === 'online';
 
   return (
-    <LayoutCard title={title}>
-      <Caption className="block break-words">
-        {vehicle.model}{vehicle.trim_badging ? ` · ${vehicle.trim_badging}` : ''}
-      </Caption>
-      {isError && <QueryError error={error} onRetry={onRetry} resourceName={t('comparison.vehicleState', 'Vehicle state')} />}
+    <GlassPanel className="p-4 sm:p-5">
+      <div className="mb-4 flex items-center gap-3">
+        <div className={cn(
+          'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
+          isOnline ? 'bg-neon-green/10 ring-neon-green/20' : 'bg-white/[0.04] ring-white/[0.06]',
+        )}>
+          <Car className={cn('h-5 w-5', isOnline ? 'text-emerald-300' : 'text-[var(--text-muted)]')} aria-hidden="true" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <PanelTitle className="truncate">{vehicle.display_name || vehicle.vin}</PanelTitle>
+          <Caption className="block truncate">
+            {vehicle.model}{vehicle.trim_badging ? ` · ${vehicle.trim_badging}` : ''}
+          </Caption>
+        </div>
+      </div>
 
       <div className="space-y-3">
         {/* Battery */}
         <StatusRow icon={<Battery className="h-4 w-4" />} label={t('comparison.battery', 'Battery')}>
           <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
-            {formatKnown(batteryLevel, value => `${value}%`)}
+            {batteryLevel != null ? `${batteryLevel}%` : '—'}
           </Text>
         </StatusRow>
-        {batteryLevel != null && Number.isFinite(batteryLevel) && (
+        {batteryLevel != null && (
           <div
-            className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
+            className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
             role="progressbar"
             aria-valuenow={Math.round(batteryLevel)}
             aria-valuemin={0}
@@ -184,15 +208,15 @@ function VehicleStatusCard({
         {/* Range */}
         <StatusRow icon={<Gauge className="h-4 w-4" />} label={t('comparison.range', 'Range')}>
           <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
-            {formatKnown(range, formatDistance)}
+            {range != null ? formatDistance(range) : '—'}
           </Text>
         </StatusRow>
 
         {/* Temperature */}
         <StatusRow icon={<Thermometer className="h-4 w-4" />} label={t('comparison.temp', 'Temperature')}>
           <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
-            {formatKnown(insideTemp, formatTemperature)}
-            {outsideTemp != null ? ` / ${formatKnown(outsideTemp, formatTemperature)}` : ''}
+            {insideTemp != null ? formatTemperature(insideTemp) : '—'}
+            {outsideTemp != null ? ` / ${formatTemperature(outsideTemp)}` : ''}
           </Text>
         </StatusRow>
 
@@ -200,13 +224,11 @@ function VehicleStatusCard({
         <StatusRow icon={<Lock className="h-4 w-4" />} label={t('comparison.security', 'Security')}>
           {state ? (
             <div className="flex items-center justify-end gap-2">
-              <Text as="span" size="xs" weight="medium" className={cn(
-                state.is_locked == null ? 'text-[var(--text-muted)]' : state.is_locked ? severityTokens.success.fg : severityTokens.critical.fg,
-              )}>
-                {state.is_locked == null ? '—' : state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
+              <Text as="span" size="xs" weight="medium" className={state.is_locked ? 'text-emerald-300' : 'text-rose-300'}>
+                {state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
               </Text>
               {state.sentry_mode && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--text-primary)]">
+                <span className="inline-flex items-center gap-1 rounded-full border border-neon-cyan/20 bg-neon-cyan/10 px-1.5 py-0.5 text-cyan-300">
                   <Shield className="h-3 w-3" aria-hidden="true" />
                   <Text as="span" size="2xs" weight="medium">{t('comparison.sentry', 'Sentry')}</Text>
                 </span>
@@ -222,26 +244,25 @@ function VehicleStatusCard({
           <span className={cn(
             'inline-flex items-center rounded-full border px-2 py-0.5',
             isOnline
-              ? cn('border-[var(--border-default)] bg-[var(--surface-2)]', severityTokens.success.fg)
-              : 'border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-muted)]',
+              ? 'border-neon-green/20 bg-neon-green/10 text-emerald-300'
+              : 'border-white/[0.06] bg-white/[0.04] text-[var(--text-muted)]',
           )}>
-            <Text as="span" size="xs" weight="medium">
+            <Text as="span" size="xs" weight="medium" className="capitalize">
               {vehicle.state ?? t('comparison.unknown', 'Unknown')}
             </Text>
           </span>
         </StatusRow>
       </div>
-    </LayoutCard>
+    </GlassPanel>
   );
 }
 
 /* ── Main Component ────────────────────────────────────── */
 
 export default function FleetComparePage() {
-  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('comparison.title', 'Fleet comparison'));
+  usePageTitle(t('comparison.title', 'Fleet Comparison'));
 
   const {
     unitPrefs,
@@ -361,6 +382,7 @@ export default function FleetComparePage() {
   const monthlyA = monthlyQueryA.data;
   const monthlyB = monthlyQueryB.data;
 
+  const isLoading = vehiclesLoading;
   const statsLoading = statsQueryA.isLoading || statsQueryB.isLoading;
   const monthlyLoading = monthlyQueryA.isLoading || monthlyQueryB.isLoading;
   const monthlyError = monthlyQueryA.error ?? monthlyQueryB.error;
@@ -439,7 +461,7 @@ export default function FleetComparePage() {
   const nameA = vehicleA?.display_name ?? t('comparison.vehicleA', 'Vehicle A');
   const nameB = vehicleB?.display_name ?? t('comparison.vehicleB', 'Vehicle B');
 
-  const comparisonRows = useMemo<ComparisonRow[]>(() => {
+  const comparisonRows: ComparisonRow[] = useMemo(() => {
     const dsA = drivingStatsA;
     const dsB = drivingStatsB;
     const cA = costA;
@@ -447,90 +469,90 @@ export default function FleetComparePage() {
 
     return [
       {
-        metric: t('comparison.totalDrives', 'Total drives'),
-        valueA: formatKnown(dsA?.totalDrives, fmtInt),
-        valueB: formatKnown(dsB?.totalDrives, fmtInt),
-        rawA: dsA?.totalDrives ?? null,
-        rawB: dsB?.totalDrives ?? null,
-        winner: 'higher',
+        metric: t('comparison.totalDrives', 'Total Drives'),
+        valueA: fmtNumber(dsA?.totalDrives ?? 0),
+        valueB: fmtNumber(dsB?.totalDrives ?? 0),
+        rawA: dsA?.totalDrives ?? 0,
+        rawB: dsB?.totalDrives ?? 0,
+        winner: 'higher' as WinnerSemantic,
       },
       {
-        metric: t('comparison.totalDistance', 'Total distance'),
-        valueA: formatKnown(dsA?.totalDistanceKm, value => `${fmtNumber(fromKm(value))} ${distanceUnit}`),
-        valueB: formatKnown(dsB?.totalDistanceKm, value => `${fmtNumber(fromKm(value))} ${distanceUnit}`),
-        rawA: dsA?.totalDistanceKm ?? null,
-        rawB: dsB?.totalDistanceKm ?? null,
-        winner: 'higher',
+        metric: t('comparison.totalDistance', 'Total Distance'),
+        valueA: `${fmtNumber(fromKm(dsA?.totalDistanceKm ?? 0))} ${distanceUnit}`,
+        valueB: `${fmtNumber(fromKm(dsB?.totalDistanceKm ?? 0))} ${distanceUnit}`,
+        rawA: dsA?.totalDistanceKm ?? 0,
+        rawB: dsB?.totalDistanceKm ?? 0,
+        winner: 'higher' as WinnerSemantic,
       },
       {
-        metric: t('comparison.avgEfficiency', 'Avg efficiency'),
-        valueA: formatKnown(dsA?.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`),
-        valueB: formatKnown(dsB?.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`),
-        rawA: dsA?.avgEfficiencyWhKm ?? null,
-        rawB: dsB?.avgEfficiencyWhKm ?? null,
-        winner: 'lower',
+        metric: t('comparison.avgEfficiency', 'Avg Efficiency'),
+        valueA: `${fmtNumber(whPerKmToDisplay(dsA?.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`,
+        valueB: `${fmtNumber(whPerKmToDisplay(dsB?.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`,
+        rawA: dsA?.avgEfficiencyWhKm ?? 0,
+        rawB: dsB?.avgEfficiencyWhKm ?? 0,
+        winner: 'lower' as WinnerSemantic,
       },
       {
-        metric: t('comparison.avgSpeed', 'Avg speed'),
-        valueA: formatKnown(dsA?.avgSpeedKmh, value => `${fmtNumber(fromKmh(value))} ${speedUnit}`),
-        valueB: formatKnown(dsB?.avgSpeedKmh, value => `${fmtNumber(fromKmh(value))} ${speedUnit}`),
-        rawA: dsA?.avgSpeedKmh ?? null,
-        rawB: dsB?.avgSpeedKmh ?? null,
-        winner: 'neutral',
+        metric: t('comparison.avgSpeed', 'Avg Speed'),
+        valueA: `${fmtNumber(fromKmh(dsA?.avgSpeedKmh ?? 0))} ${speedUnit}`,
+        valueB: `${fmtNumber(fromKmh(dsB?.avgSpeedKmh ?? 0))} ${speedUnit}`,
+        rawA: dsA?.avgSpeedKmh ?? 0,
+        rawB: dsB?.avgSpeedKmh ?? 0,
+        winner: 'neutral' as WinnerSemantic,
       },
       {
-        metric: t('comparison.topSpeed', 'Top speed'),
-        valueA: formatKnown(dsA?.topSpeedKmh, value => `${fmtNumber(fromKmh(value))} ${speedUnit}`),
-        valueB: formatKnown(dsB?.topSpeedKmh, value => `${fmtNumber(fromKmh(value))} ${speedUnit}`),
-        rawA: dsA?.topSpeedKmh ?? null,
-        rawB: dsB?.topSpeedKmh ?? null,
-        winner: 'neutral',
+        metric: t('comparison.topSpeed', 'Top Speed'),
+        valueA: `${fmtNumber(fromKmh(dsA?.topSpeedKmh ?? 0))} ${speedUnit}`,
+        valueB: `${fmtNumber(fromKmh(dsB?.topSpeedKmh ?? 0))} ${speedUnit}`,
+        rawA: dsA?.topSpeedKmh ?? 0,
+        rawB: dsB?.topSpeedKmh ?? 0,
+        winner: 'neutral' as WinnerSemantic,
       },
       {
-        metric: t('comparison.regenRatio', 'Regen ratio'),
-        valueA: formatKnown(dsA?.regenRatio, value => `${fmtNumber(value * 100)}%`),
-        valueB: formatKnown(dsB?.regenRatio, value => `${fmtNumber(value * 100)}%`),
-        rawA: dsA?.regenRatio ?? null,
-        rawB: dsB?.regenRatio ?? null,
-        winner: 'higher',
+        metric: t('comparison.regenRatio', 'Regen Ratio'),
+        valueA: `${fmtNumber((dsA?.regenRatio ?? 0) * 100, 1)}%`,
+        valueB: `${fmtNumber((dsB?.regenRatio ?? 0) * 100, 1)}%`,
+        rawA: dsA?.regenRatio ?? 0,
+        rawB: dsB?.regenRatio ?? 0,
+        winner: 'higher' as WinnerSemantic,
       },
       {
-        metric: t('comparison.co2Saved', 'CO₂ saved'),
-        valueA: formatKnown(dsA?.co2SavedKg, value => `${fmtNumber(value)} kg`),
-        valueB: formatKnown(dsB?.co2SavedKg, value => `${fmtNumber(value)} kg`),
-        rawA: dsA?.co2SavedKg ?? null,
-        rawB: dsB?.co2SavedKg ?? null,
-        winner: 'higher',
+        metric: t('comparison.co2Saved', 'CO₂ Saved'),
+        valueA: `${fmtNumber(dsA?.co2SavedKg ?? 0)} kg`,
+        valueB: `${fmtNumber(dsB?.co2SavedKg ?? 0)} kg`,
+        rawA: dsA?.co2SavedKg ?? 0,
+        rawB: dsB?.co2SavedKg ?? 0,
+        winner: 'higher' as WinnerSemantic,
       },
       {
-        metric: t('comparison.chargingCost', 'Charging cost'),
-        valueA: formatKnown(cA?.total_charging_cost, formatCurrency),
-        valueB: formatKnown(cB?.total_charging_cost, formatCurrency),
-        rawA: cA?.total_charging_cost ?? null,
-        rawB: cB?.total_charging_cost ?? null,
-        winner: 'lower',
+        metric: t('comparison.chargingCost', 'Charging Cost'),
+        valueA: formatCurrency(cA?.total_charging_cost ?? 0, 0),
+        valueB: formatCurrency(cB?.total_charging_cost ?? 0, 0),
+        rawA: cA?.total_charging_cost ?? 0,
+        rawB: cB?.total_charging_cost ?? 0,
+        winner: 'lower' as WinnerSemantic,
       },
       {
-        metric: t('comparison.totalEnergy', 'Total energy'),
-        valueA: formatKnown(cA?.total_wh, formatEnergy),
-        valueB: formatKnown(cB?.total_wh, formatEnergy),
-        rawA: cA?.total_wh ?? null,
-        rawB: cB?.total_wh ?? null,
-        winner: 'neutral',
+        metric: t('comparison.totalEnergy', 'Total Energy'),
+        valueA: formatEnergy(cA?.total_wh ?? 0),
+        valueB: formatEnergy(cB?.total_wh ?? 0),
+        rawA: cA?.total_wh ?? 0,
+        rawB: cB?.total_wh ?? 0,
+        winner: 'neutral' as WinnerSemantic,
       },
       {
-        metric: t('comparison.chargeSessions', 'Charge sessions'),
-        valueA: formatKnown(cA?.total_sessions, fmtInt),
-        valueB: formatKnown(cB?.total_sessions, fmtInt),
-        rawA: cA?.total_sessions ?? null,
-        rawB: cB?.total_sessions ?? null,
-        winner: 'neutral',
+        metric: t('comparison.chargeSessions', 'Charge Sessions'),
+        valueA: fmtNumber(cA?.total_sessions ?? 0),
+        valueB: fmtNumber(cB?.total_sessions ?? 0),
+        rawA: cA?.total_sessions ?? 0,
+        rawB: cB?.total_sessions ?? 0,
+        winner: 'neutral' as WinnerSemantic,
       },
     ];
   }, [
     drivingStatsA, drivingStatsB, costA, costB,
     t, fromKm, fromKmh, whPerKmToDisplay, formatCurrency, formatEnergy,
-    distanceUnit, speedUnit, efficiencyUnit, currencySymbol, fmtNumber, fmtInt,
+    distanceUnit, speedUnit, efficiencyUnit, currencySymbol,
   ]);
 
   const tableColumns: Column<ComparisonRow>[] = useMemo(
@@ -538,21 +560,16 @@ export default function FleetComparePage() {
       {
         key: 'metric',
         header: t('comparison.metric', 'Metric'),
-        exportValue: r => r.metric,
         render: (r) => <Text as="span" weight="medium" color="primary">{r.metric}</Text>,
       },
       {
         key: 'valueA',
-        align: 'right',
         header: nameA,
-        exportValue: r => r.valueA,
         render: (r) => winnerCell(r.valueA, 'a', r),
       },
       {
         key: 'valueB',
-        align: 'right',
         header: nameB,
-        exportValue: r => r.valueB,
         render: (r) => winnerCell(r.valueB, 'b', r),
       },
     ],
@@ -561,23 +578,41 @@ export default function FleetComparePage() {
 
   /* ── Render ── */
 
+  // single-vehicle accounts can't usefully use Fleet Comparison. Show a
+  // focused EmptyState that explains *why* and offers a path forward
+  // (manage vehicles), instead of empty selectors with no data.
+  if (!vehiclesLoading && vehicleList.length < 2) {
+    return (
+      <PageContainer
+        title={t('comparison.title', 'Fleet Comparison')}
+        subtitle={t('comparison.subtitle', 'Compare two vehicles side by side')}
+      >
+        <FadeIn>
+          <GlassPanel className="p-6 sm:p-8">
+            <EmptyState
+              icon={<Car className="h-10 w-10" aria-hidden="true" />}
+              title={t('fleetCompare.singleVehicle.title', 'Add a second vehicle to compare')}
+              message={t(
+                'fleetCompare.singleVehicle.body',
+                'Fleet comparison shows two vehicles side-by-side. You currently have one vehicle in TeslaSync.',
+              )}
+              action={{
+                label: t('fleetCompare.singleVehicle.cta', 'Manage vehicles'),
+                onClick: () => navigate('/vehicles'),
+              }}
+            />
+          </GlassPanel>
+        </FadeIn>
+      </PageContainer>
+    );
+  }
+
   return (
-    <PageLayout
-      title={t('comparison.title', 'Fleet comparison')}
+    <PageContainer
+      title={t('comparison.title', 'Fleet Comparison')}
       subtitle={t('comparison.subtitle', 'Compare two vehicles side by side')}
-      busy={vehiclesLoading}
-      query={[vehiclesQuery, stateQueryA, stateQueryB, statsQueryA, statsQueryB, costQueryA, costQueryB, monthlyQueryA, monthlyQueryB]}
-      dataSources={[
-        { id: 'vehicles', label: t('comparison.selectVehicles', 'Select vehicles to compare'), query: vehiclesQuery },
-        { id: 'state-a', label: `${nameA} · ${t('comparison.vehicleState', 'Vehicle state')}`, query: stateQueryA, enabled: numIdA > 0 },
-        { id: 'state-b', label: `${nameB} · ${t('comparison.vehicleState', 'Vehicle state')}`, query: stateQueryB, enabled: numIdB > 0 },
-        { id: 'stats-a', label: `${nameA} · ${t('comparison.lifetimeStats', 'Lifetime statistics')}`, query: statsQueryA, enabled: !!vehicleIdA },
-        { id: 'stats-b', label: `${nameB} · ${t('comparison.lifetimeStats', 'Lifetime statistics')}`, query: statsQueryB, enabled: !!vehicleIdB },
-        { id: 'cost-a', label: `${nameA} · ${t('comparison.chargingCost', 'Charging cost')}`, query: costQueryA, enabled: !!vehicleIdA },
-        { id: 'cost-b', label: `${nameB} · ${t('comparison.chargingCost', 'Charging cost')}`, query: costQueryB, enabled: !!vehicleIdB },
-        { id: 'monthly-a', label: `${nameA} · ${t('comparison.monthlyDistance', 'Monthly distance')}`, query: monthlyQueryA, enabled: !!vehicleIdA },
-        { id: 'monthly-b', label: `${nameB} · ${t('comparison.monthlyDistance', 'Monthly distance')}`, query: monthlyQueryB, enabled: !!vehicleIdB },
-      ]}
+      loading={isLoading}
+      query={[statsQueryA, statsQueryB]}
     >
       {/* Disambiguation banner — points users who wanted the period view to the
           right page. Persists dismissal in localStorage. */}
@@ -591,9 +626,9 @@ export default function FleetComparePage() {
             {t('comparison.banner.toPeriodPrefix', 'Looking to compare time periods instead?')}{' '}
             <Link
               to="/period-compare"
-              className="font-medium text-[var(--text-primary)] underline underline-offset-2"
+              className="font-medium text-cyan-300 underline-offset-2 hover:underline"
             >
-              {t('comparison.banner.toPeriodCta', 'Open period comparison →')}
+              {t('comparison.banner.toPeriodCta', 'Open Period comparison →')}
             </Link>
           </AlertBanner>
         </FadeIn>
@@ -601,25 +636,9 @@ export default function FleetComparePage() {
 
       {/* ── Vehicle selector toolbar ── */}
       <FadeIn>
-        <Section id="fleet-compare-select" title={t('comparison.selectVehicles', 'Select vehicles to compare')}>
-          <GlassPanel className="p-3 @[640px]:p-4">
-            {vehiclesLoading && <Skeleton lines={2} />}
-            {vehiclesQuery.isError && <QueryError error={vehiclesQuery.error} onRetry={() => vehiclesQuery.refetch()} />}
-            {vehiclesQuery.isSuccess && vehicleList.length < 2 && (
-              <EmptyState
-                icon={<Car className="h-10 w-10" aria-hidden="true" />}
-                title={t('fleetCompare.singleVehicle.title', 'Add a second vehicle to compare')}
-                message={vehicleList.length === 1
-                  ? t('fleetCompare.singleVehicle.body', 'Fleet comparison shows two vehicles side-by-side. You currently have one vehicle in TeslaSync.')
-                  : t('comparison.noVehicles', 'Add vehicles to start a fleet comparison.')}
-                action={{
-                  label: t('fleetCompare.singleVehicle.cta', 'Manage vehicles'),
-                  onClick: () => navigate('/vehicles'),
-                }}
-              />
-            )}
-            {vehicleList.length >= 2 && (
-            <div className="flex flex-col gap-3 @[640px]:flex-row @[640px]:items-end @[640px]:gap-4">
+        <section aria-label={t('comparison.selectVehicles', 'Select vehicles to compare')}>
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
               <div className="min-w-0 flex-1">
                 <Select
                   label={t('comparison.vehicleA', 'Vehicle A')}
@@ -629,7 +648,7 @@ export default function FleetComparePage() {
                   className="w-full"
                 />
               </div>
-              <div className="flex justify-center @[640px]:pb-1">
+              <div className="flex justify-center sm:pb-1">
                 <Button
                   variant="ghost"
                   aria-label={t('comparison.swap', 'Swap vehicles')}
@@ -649,69 +668,60 @@ export default function FleetComparePage() {
                 />
               </div>
             </div>
-            )}
           </GlassPanel>
-        </Section>
+        </section>
       </FadeIn>
 
       {/* ── Key highlights (KPI band) ── */}
       <FadeIn delay={0.05}>
-        <Section id="fleet-compare-highlights-section" title={t('comparison.highlights', 'Key highlights')}>
-          <FleetHighlights nameA={nameA} nameB={nameB} items={[
-            {
-              id: 'battery-pair',
-              label: t('comparison.batteryDiff', 'Battery level'),
-              metricId: 'percent', rawA: stateA?.battery_level, rawB: stateB?.battery_level,
-              format: value => `${value}%`,
-              retained: (stateA != null && (stateQueryA.isError || stateQueryA.fetchStatus === 'paused'))
-                || (stateB != null && (stateQueryB.isError || stateQueryB.fetchStatus === 'paused')),
-              value: vs(formatKnown(stateA?.battery_level, value => `${value}%`), formatKnown(stateB?.battery_level, value => `${value}%`)),
-              loading: (stateQueryA.isLoading || stateQueryB.isLoading) && !stateA && !stateB,
-            },
-            {
-              id: 'efficiency-pair',
-              label: t('comparison.efficiencyDiff', 'Avg efficiency'),
-              metricId: 'efficiency',
-              rawA: drivingStatsA?.avgEfficiencyWhKm != null ? drivingStatsA.avgEfficiencyWhKm / 1000 : null,
-              rawB: drivingStatsB?.avgEfficiencyWhKm != null ? drivingStatsB.avgEfficiencyWhKm / 1000 : null,
-              format: value => `${fmtNumber(whPerKmToDisplay(value * 1000))} ${efficiencyUnit}`,
-              retained: (drivingStatsA != null && (statsQueryA.isError || statsQueryA.fetchStatus === 'paused'))
-                || (drivingStatsB != null && (statsQueryB.isError || statsQueryB.fetchStatus === 'paused')),
-              value: `${vs(
-                formatKnown(drivingStatsA?.avgEfficiencyWhKm, value => fmtNumber(whPerKmToDisplay(value))),
-                formatKnown(drivingStatsB?.avgEfficiencyWhKm, value => fmtNumber(whPerKmToDisplay(value))),
-              )} ${efficiencyUnit}`,
-              loading: statsLoading && !drivingStatsA && !drivingStatsB,
-            },
-            {
-              id: 'cost-pair',
-              label: t('comparison.costDiff', 'Charging cost'),
-              metricId: 'currency', rawA: costA?.total_charging_cost, rawB: costB?.total_charging_cost,
-              format: formatCurrency,
-              retained: (costA != null && (costQueryA.isError || costQueryA.fetchStatus === 'paused'))
-                || (costB != null && (costQueryB.isError || costQueryB.fetchStatus === 'paused')),
-              value: vs(formatKnown(costA?.total_charging_cost, formatCurrency), formatKnown(costB?.total_charging_cost, formatCurrency)),
-              loading: (costQueryA.isLoading || costQueryB.isLoading) && !costA && !costB,
-            },
-            {
-              id: 'co2-pair',
-              label: t('comparison.co2Diff', 'CO₂ saved'),
-              metricId: 'mass', rawA: drivingStatsA?.co2SavedKg, rawB: drivingStatsB?.co2SavedKg,
-              format: value => `${fmtNumber(value)} kg`,
-              retained: (drivingStatsA != null && (statsQueryA.isError || statsQueryA.fetchStatus === 'paused'))
-                || (drivingStatsB != null && (statsQueryB.isError || statsQueryB.fetchStatus === 'paused')),
-              value: `${vs(formatKnown(drivingStatsA?.co2SavedKg, fmtNumber), formatKnown(drivingStatsB?.co2SavedKg, fmtNumber))} kg`,
-              loading: statsLoading && !drivingStatsA && !drivingStatsB,
-            },
-          ]} />
-        </Section>
+        <section aria-label={t('comparison.highlights', 'Key Highlights')} className="space-y-3">
+          <SectionTitle>{t('comparison.highlights', 'Key Highlights')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+            <StatCard
+              label={t('comparison.batteryDiff', 'Battery Level')}
+              value={vs(`${stateA?.battery_level ?? '—'}%`, `${stateB?.battery_level ?? '—'}%`)}
+              icon={<Battery className="h-4 w-4" aria-hidden="true" />}
+              loading={(stateQueryA.isLoading && !!vehicleIdA) || (stateQueryB.isLoading && !!vehicleIdB)}
+            />
+            <StatCard
+              label={t('comparison.efficiencyDiff', 'Avg Efficiency')}
+              value={vs(
+                fmtNumber(whPerKmToDisplay(drivingStatsA?.avgEfficiencyWhKm ?? 0)),
+                fmtNumber(whPerKmToDisplay(drivingStatsB?.avgEfficiencyWhKm ?? 0)),
+              )}
+              unit={efficiencyUnit}
+              icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+              loading={statsLoading}
+            />
+            <StatCard
+              label={t('comparison.costDiff', 'Charging Cost')}
+              value={vs(
+                formatCurrency(costA?.total_charging_cost ?? 0, 0),
+                formatCurrency(costB?.total_charging_cost ?? 0, 0),
+              )}
+              icon={<DollarSign className="h-4 w-4" aria-hidden="true" />}
+              loading={costQueryA.isLoading || costQueryB.isLoading}
+            />
+            <StatCard
+              label={t('comparison.co2Diff', 'CO₂ Saved')}
+              value={vs(
+                fmtNumber(drivingStatsA?.co2SavedKg ?? 0),
+                fmtNumber(drivingStatsB?.co2SavedKg ?? 0),
+              )}
+              unit="kg"
+              icon={<Leaf className="h-4 w-4" aria-hidden="true" />}
+              loading={statsLoading}
+            />
+          </div>
+        </section>
       </FadeIn>
 
       {/* ── Current status (side-by-side hero) ── */}
       <FadeIn delay={0.1}>
-        <Section id="fleet-compare-status" title={t('comparison.currentStatus', 'Current status')}>
-          <CardGrid label={t('comparison.currentStatus', 'Current status')} items={[
-            { id: 'vehicle-a', size: 'half', content: <VehicleStatusCard
+        <section aria-label={t('comparison.currentStatus', 'Current Status')} className="space-y-3">
+          <SectionTitle>{t('comparison.currentStatus', 'Current Status')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5">
+            <VehicleStatusCard
               vehicle={vehicleA}
               state={stateA}
               isLoading={stateQueryA.isLoading && !!vehicleIdA}
@@ -720,8 +730,8 @@ export default function FleetComparePage() {
               onRetry={() => stateQueryA.refetch()}
               formatDistance={formatDistance}
               formatTemperature={formatTemperature}
-            /> },
-            { id: 'vehicle-b', size: 'half', content: <VehicleStatusCard
+            />
+            <VehicleStatusCard
               vehicle={vehicleB}
               state={stateB}
               isLoading={stateQueryB.isLoading && !!vehicleIdB}
@@ -730,30 +740,35 @@ export default function FleetComparePage() {
               onRetry={() => stateQueryB.refetch()}
               formatDistance={formatDistance}
               formatTemperature={formatTemperature}
-            /> },
-          ]} />
-        </Section>
+            />
+          </div>
+        </section>
       </FadeIn>
 
       {/* ── Trends (charts bento) ── */}
       <FadeIn delay={0.15}>
-        <Section
-          id="fleet-compare-trends"
-          title={t('comparison.trends', 'Trends over time')}
-          description={t(
-            'comparison.trendContext.scope',
-            'Monthly charts use the server’s default window starting 24 months ago, rounded to the start of that month. Distances are in km; lifetime statistics are not limited to this window.',
-          )}
-        >
-          <CardGrid label={t('comparison.trends', 'Trends over time')} items={[
-            { id: 'monthly-distance', size: 'half', content: (
-                <FleetTrendCard
-                  hasData={monthlyChartData.length > 0}
-                  loading={monthlyLoading}
-                  error={monthlyError}
-                  onRetry={retryMonthly}
-                  emptyMessage={t('comparison.noMonthlyData', 'No monthly data available yet')}
-                  title={t('comparison.monthlyDistance', 'Monthly distance')}
+        <section aria-label={t('comparison.trends', 'Trends over time')} className="space-y-3">
+          <SectionTitle>{t('comparison.trends', 'Trends over time')}</SectionTitle>
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+            {/* Monthly distance overlay */}
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('comparison.monthlyDistance', 'Monthly Distance')}
+              </PanelTitle>
+              {monthlyLoading ? (
+                <Skeleton height={260} />
+              ) : monthlyError ? (
+                <QueryError error={monthlyError} onRetry={retryMonthly} />
+              ) : monthlyChartData.length === 0 ? (
+                <EmptyState
+                  /* no-action: transient empty state — no monthly rollups yet */
+                  icon={<TrendingUp className="h-8 w-8" aria-hidden="true" />}
+                  message={t('comparison.noMonthlyData', 'No monthly data available yet')}
+                />
+              ) : (
+                <EmbeddedChart
+                  title={t('comparison.monthlyDistance', 'Monthly Distance')}
                   ariaLabel={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
                   data={monthlyChartData}
                   dataColumns={[
@@ -761,6 +776,8 @@ export default function FleetComparePage() {
                     { key: 'distA', label: nameA, format: (value) => fmtNumber(Number(value ?? 0)) },
                     { key: 'distB', label: nameB, format: (value) => fmtNumber(Number(value ?? 0)) },
                   ]}
+                  height={288}
+                  mobileHeight={256}
                   chartKey="fleet-compare-monthly-distance"
                 >
                   {({ hiddenSeries }) => (
@@ -773,15 +790,8 @@ export default function FleetComparePage() {
                           content={({ active, payload, label }) => (
                             <ChartTooltip
                               active={active}
-                              payload={payload?.map(entry => ({
-                                name: entry.name,
-                                value: entry.value,
-                                color: entry.color,
-                                fill: entry.fill,
-                                unit: typeof entry.unit === 'string' ? entry.unit : undefined,
-                                dataKey: entry.dataKey,
-                              }))}
-                              label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
+                              payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                              label={label as string}
                             />
                           )}
                         />
@@ -791,23 +801,38 @@ export default function FleetComparePage() {
                       </LineChart>
                     </ResponsiveContainer>
                   )}
-                </FleetTrendCard>
-            ) },
-            { id: 'monthly-drives', size: 'half', content: (
-                <FleetTrendCard
-                  hasData={drivesChartData.length > 0}
-                  loading={monthlyLoading}
-                  error={monthlyError}
-                  onRetry={retryMonthly}
-                  emptyMessage={t('comparison.noDrivesData', 'No drive data available yet')}
-                  title={t('comparison.drivesPerMonth', 'Drives per month')}
+                </EmbeddedChart>
+              )}
+            </GlassPanel>
+
+            {/* Drives per month */}
+            <GlassPanel className="p-4 sm:p-5">
+              <PanelTitle className="mb-3 flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                {t('comparison.drivesPerMonth', 'Drives per Month')}
+              </PanelTitle>
+              {monthlyLoading ? (
+                <Skeleton height={260} />
+              ) : monthlyError ? (
+                <QueryError error={monthlyError} onRetry={retryMonthly} />
+              ) : drivesChartData.length === 0 ? (
+                <EmptyState
+                  /* no-action: transient empty state — no drive rollups yet */
+                  icon={<Route className="h-8 w-8" aria-hidden="true" />}
+                  message={t('comparison.noDrivesData', 'No drive data available yet')}
+                />
+              ) : (
+                <EmbeddedChart
+                  title={t('comparison.drivesPerMonth', 'Drives per Month')}
                   ariaLabel={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
                   data={drivesChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },
-                    { key: 'drivesA', label: nameA, format: (value) => fmtInt(Number(value ?? 0)) },
-                    { key: 'drivesB', label: nameB, format: (value) => fmtInt(Number(value ?? 0)) },
+                    { key: 'drivesA', label: nameA, format: (value) => fmtNumber(Number(value ?? 0)) },
+                    { key: 'drivesB', label: nameB, format: (value) => fmtNumber(Number(value ?? 0)) },
                   ]}
+                  height={288}
+                  mobileHeight={256}
                   chartKey="fleet-compare-drives-per-month"
                 >
                   {({ hiddenSeries }) => (
@@ -820,16 +845,8 @@ export default function FleetComparePage() {
                           content={({ active, payload, label }) => (
                             <ChartTooltip
                               active={active}
-                              payload={payload?.map(entry => ({
-                                name: entry.name,
-                                value: entry.value,
-                                color: entry.color,
-                                fill: entry.fill,
-                                unit: typeof entry.unit === 'string' ? entry.unit : undefined,
-                                dataKey: entry.dataKey,
-                              }))}
-                              label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
-                              valueFormatter={(value) => fmtInt(Number(value ?? 0))}
+                              payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                              label={label as string}
                             />
                           )}
                         />
@@ -839,56 +856,39 @@ export default function FleetComparePage() {
                       </BarChart>
                     </ResponsiveContainer>
                   )}
-                </FleetTrendCard>
-            ) },
-          ]} />
-        </Section>
+                </EmbeddedChart>
+              )}
+            </GlassPanel>
+          </div>
+        </section>
       </FadeIn>
 
       {/* ── Lifetime statistics (detail band) ── */}
       <FadeIn delay={0.2}>
-        <Section id="fleet-compare-lifetime" title={t('comparison.lifetimeStats', 'Lifetime statistics')}>
-          <GlassPanel className="min-w-0 p-3 @[640px]:p-4">
+        <section aria-label={t('comparison.lifetimeStats', 'Lifetime statistics')} className="space-y-3">
+          <SectionTitle>{t('comparison.lifetimeStats', 'Lifetime statistics')}</SectionTitle>
+          <GlassPanel className="p-4 sm:p-5">
             <div className="mb-3 flex items-center gap-2">
               <Info className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
               <Caption>
                 {t('comparison.lifetimeNote', 'Statistics shown are lifetime totals across all tracked data.')}
               </Caption>
             </div>
-            {vehiclesLoading || (statsLoading && !drivingStatsA && !drivingStatsB && !costA && !costB) ? (
+            {statsLoading ? (
               <Skeleton lines={8} />
-            ) : !vehicleA || !vehicleB ? (
-              <EmptyState
-                /* no-action: choose the comparison vehicles in the existing controls above */
-                message={t('comparison.selectVehicle', 'Select a vehicle')}
-              />
             ) : (
               <DataTable
                 tableId="analytics:fleet-compare"
-                variant="embedded"
-                resizable={false}
-                columnReorder={false}
-                columnVisibility={false}
                 columns={tableColumns}
                 mobileColumns={['metric', 'valueA', 'valueB']}
-                mobilePresentation={{
-                  variant: 'keyValue',
-                  roles: { metric: 'title', valueA: 'primary', valueB: 'meta' },
-                  displayValue: (row, key) => key === 'metric' ? row.metric : key === 'valueA' ? row.valueA : key === 'valueB' ? row.valueB : null,
-                  allDetails: row => [
-                    { key: 'metric', label: t('comparison.metric', 'Metric'), value: row.metric },
-                    { key: 'valueA', label: nameA, value: winnerCell(row.valueA, 'a', row) },
-                    { key: 'valueB', label: nameB, value: winnerCell(row.valueB, 'b', row) },
-                  ],
-                }}
                 data={comparisonRows}
                 keyExtractor={(r) => r.metric}
                 compact
               />
             )}
           </GlassPanel>
-        </Section>
+        </section>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

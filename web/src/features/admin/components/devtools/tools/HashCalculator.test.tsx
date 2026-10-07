@@ -68,7 +68,7 @@ describe('HashCalculatorTool', () => {
     render(<HashCalculatorTool />)
 
     expect(
-      screen.getByRole('heading', { name: 'Hash calculator' }),
+      screen.getByRole('heading', { name: 'Hash Calculator' }),
     ).toBeInTheDocument()
 
     // The label is programmatically tied to the textarea (a11y), so a

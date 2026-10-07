@@ -1,6 +1,15 @@
 import { useCallback, useMemo } from 'react'
 import { useUnits, type UnitFormatter } from './useUnits'
-import { convertPressureFromSI, PASCALS_PER_KPA, type PressureUnitPref } from '@/lib/unitConversion'
+import { convertPressureFromSI, type PressureUnitPref } from '@/lib/unitConversion'
+
+/**
+ * Pascals per kilopascal. The Tesla telemetry pipeline persists pressure
+ * in Pascals (SI on disk) and the API returns it verbatim, but the
+ * `@/lib/unitConversion` converters operate on the kilopascal SI-floor.
+ * This factor bridges the API wire unit to the lib's expected input so a
+ * single source of truth governs both the numeric and formatted output.
+ */
+const PA_PER_KPA = 1000
 
 export interface UsePressureFormatResult {
   /** Pressure unit pref ('bar' | 'psi'). */
@@ -43,7 +52,7 @@ export interface UsePressureFormatResult {
  * path: the API returns pressure in Pascals (SI on disk), while the
  * `@/lib/unitConversion` converters operate on the kilopascal SI-floor
  * (`SI.pressure === 'kPa'`). Both projections apply the identical
- * `PASCALS_PER_KPA` bridge, so callers hand it raw API Pascals and never
+ * `PA_PER_KPA` bridge, so callers hand it raw API Pascals and never
  * re-derive the factor themselves.
  */
 export function usePressureFormat(): UsePressureFormatResult {
@@ -52,7 +61,7 @@ export function usePressureFormat(): UsePressureFormatResult {
   const toPressureValue = useCallback(
     (pa: number | null | undefined): number | null => {
       if (pa == null || !Number.isFinite(pa)) return null
-      return convertPressureFromSI(pa / PASCALS_PER_KPA, unitPrefs.pressure)
+      return convertPressureFromSI(pa / PA_PER_KPA, unitPrefs.pressure)
     },
     [unitPrefs.pressure],
   )
@@ -60,7 +69,7 @@ export function usePressureFormat(): UsePressureFormatResult {
   const formatPressureValue = useCallback<UnitFormatter>(
     (pa, options) =>
       formatPressure(
-        typeof pa === 'number' && Number.isFinite(pa) ? pa / PASCALS_PER_KPA : pa,
+        typeof pa === 'number' && Number.isFinite(pa) ? pa / PA_PER_KPA : pa,
         options,
       ),
     [formatPressure],

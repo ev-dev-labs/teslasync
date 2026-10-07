@@ -2,15 +2,14 @@ import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
-import { dashboardTokens } from '../../lib/dashboardTokens';
 
 export interface ChartSummaryStat {
   label: string;
-  value: string | number | null | undefined;
+  value: string | number;
   unit?: string;
 }
 
-export interface WidgetChartSummaryProps {
+interface WidgetChartSummaryProps {
   stats: ChartSummaryStat[];
   chart: ReactNode;
   compact?: boolean;
@@ -54,23 +53,25 @@ export function WidgetChartSummary({
   const safeStats = stats ?? [];
 
   return (
-    <div className="flex h-full min-w-0 flex-col">
+    <div className="flex h-full flex-col">
       {safeStats.length > 0 && (
         <div
           className={cn(
-            // Reflow against the widget width, including a narrow desktop column.
+            // Stat row: 2-col grid by default (mobile-safe). On wider widgets
+            // (@sm ≈ 24rem) it relaxes to a horizontal flex row so values can
+            // breathe. In compact mode (caller-driven) we always force 2-col.
             compact
-              ? 'grid grid-cols-1 gap-2 @xs:grid-cols-2'
-              : 'grid grid-cols-1 gap-2 @xs:grid-cols-2 @sm:flex @sm:flex-wrap @sm:gap-4',
+              ? 'grid grid-cols-2 gap-2'
+              : 'grid grid-cols-2 gap-2 @sm:flex @sm:gap-4',
           )}
         >
           {safeStats.map((stat, index) => (
             <div key={`${stat.label}-${index}`} className="flex min-w-0 flex-col">
-              <span className={dashboardTokens.metricLabel}>{stat.label}</span>
-              <span className={cn(dashboardTokens.secondaryMetric, 'break-all')}>
-                {stat.value == null || stat.value === '' || (typeof stat.value === 'number' && !Number.isFinite(stat.value)) ? '—' : stat.value}
-                {stat.unit && stat.value != null && stat.value !== '' && (typeof stat.value !== 'number' || Number.isFinite(stat.value)) && (
-                  <span className={cn(dashboardTokens.unit, 'ml-1 font-normal')}>
+              <span className="truncate text-2xs text-[var(--text-muted)]">{stat.label}</span>
+              <span className="truncate text-sm font-semibold text-[var(--text-primary)]">
+                {stat.value ?? '—'}
+                {stat.unit && (
+                  <span className="ml-0.5 text-2xs font-normal text-[var(--text-muted)]">
                     {stat.unit}
                   </span>
                 )}

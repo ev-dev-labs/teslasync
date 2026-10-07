@@ -37,14 +37,8 @@ vi.mock('react-i18next', () => ({
 // The only data-fetching dependency. Default returns two geofences; individual
 // tests override via mockReturnValue to exercise empty / undefined data.
 vi.mock('@/api/hooks/useLocations', () => ({ useGeofences: vi.fn() }));
-vi.mock('@/hooks/useSettings', async () => {
-  const { inputPreferences } = await import('@/test/inputPreferences');
-  return { useSettings: vi.fn(() => ({ settings: inputPreferences() })) };
-});
 
 import { useGeofences } from '@/api/hooks/useLocations';
-import { useSettings } from '@/hooks/useSettings';
-import { inputPreferences } from '@/test/inputPreferences';
 import { ConditionBuilder, CONDITION_TYPES, createDefaultCondition } from './ConditionBuilder';
 import type { AutomationConditionStepInput } from '../components/stepInputTypes';
 
@@ -56,7 +50,6 @@ function geofenceResult(data: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(useSettings).mockReturnValue({ settings: inputPreferences() } as ReturnType<typeof useSettings>);
   mockedUseGeofences.mockReturnValue(
     geofenceResult([
       { id: 5, name: 'Home' },
@@ -176,14 +169,14 @@ describe('createDefaultCondition', () => {
 describe('ConditionBuilder — empty + add', () => {
   it('renders only the Add button when there are no conditions', () => {
     renderBuilder([]);
-    expect(screen.getByRole('button', { name: 'Add condition' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Condition' })).toBeInTheDocument();
     expect(screen.queryByLabelText('Signal')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Remove condition' })).not.toBeInTheDocument();
   });
 
   it('appends a default signal condition when Add is clicked', () => {
     const { onChange } = renderBuilder([]);
-    fireEvent.click(screen.getByRole('button', { name: 'Add condition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Condition' }));
     expect(onChange).toHaveBeenCalledWith([
       { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 20 },
     ]);
@@ -213,7 +206,7 @@ describe('ConditionBuilder — remove + kind switch', () => {
 
   it('replaces a signal row with a fresh time-window default on kind change', () => {
     const { onChange } = renderBuilder([signalCondition]);
-    fireEvent.change(screen.getByLabelText('Condition type'), {
+    fireEvent.change(screen.getByLabelText('Condition Type'), {
       target: { value: 'condition_time_window' },
     });
     expect(lastArg(onChange)).toEqual([
@@ -250,7 +243,7 @@ describe('ConditionBuilder — signal operators', () => {
     expect(options).not.toContain('Between');
   });
 
-  it('switches to Min/Max while preserving the threshold and requiring an explicit maximum', () => {
+  it('switches to Min/Max inputs and seeds them when "between" is chosen', () => {
     const { onChange } = renderBuilder([signalCondition]);
     fireEvent.change(screen.getByLabelText('Operator'), { target: { value: 'between' } });
     expect(lastArg(onChange)).toEqual([
@@ -259,11 +252,11 @@ describe('ConditionBuilder — signal operators', () => {
         signal: 'battery_level',
         op: 'between',
         value_min: 20,
-        value_max: undefined,
+        value_max: 100,
       },
     ]);
-    expect(screen.getByLabelText('Min')).toHaveValue('20.00');
-    expect(screen.getByLabelText('Max')).toHaveValue('');
+    expect(screen.getByLabelText('Min')).toHaveValue(20);
+    expect(screen.getByLabelText('Max')).toHaveValue(100);
     expect(screen.queryByLabelText('Value')).not.toBeInTheDocument();
   });
 
@@ -275,75 +268,23 @@ describe('ConditionBuilder — signal operators', () => {
     ]);
     expect(screen.getByLabelText('Value')).toHaveAttribute('type', 'text');
   });
-
-  it('does not resurrect a cleared threshold when switching numeric operators or ranges', () => {
-    const { onChange } = renderBuilder([{ ...signalCondition, value_num: undefined }]);
-    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '>' } });
-    expect(lastArg(onChange)[0]).toMatchObject({ op: '>', value_num: undefined });
-    expect(screen.getByRole('textbox', { name: /^Value/ })).toHaveValue('');
-    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: 'between' } });
-    expect(lastArg(onChange)[0]).toMatchObject({ value_min: undefined, value_max: undefined });
-    expect(screen.getByLabelText('Min')).toHaveValue('');
-    expect(screen.getByLabelText('Max')).toHaveValue('');
-    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '=' } });
-    expect(lastArg(onChange)[0]).toMatchObject({ op: '=', value_num: undefined });
-    expect(screen.getByRole('textbox', { name: /^Value/ })).toHaveValue('');
-  });
 });
 
 // ── Signal fields — value editing per data type ───────────────────────────────
 
 describe('ConditionBuilder — signal value editing', () => {
-  it('converts preferred speed list inputs to exact canonical CSV values', () => {
-    vi.mocked(useSettings).mockReturnValue({
-      settings: inputPreferences({ unit_of_length: 'mi' }),
-    } as ReturnType<typeof useSettings>);
-    const { onChange } = renderBuilder([{
-      kind: 'condition_signal', signal: 'speed', op: 'in', value_text: '31.2928',
-    }]);
-    const input = screen.getByRole('textbox', { name: 'Value' });
-    expect(input).toHaveValue('70.00');
-    fireEvent.focus(input);
-    fireEvent.change(input, { target: { value: '60.0001; 70' } });
-    const condition = lastArg(onChange)[0];
-    expect(condition.kind).toBe('condition_signal');
-    if (condition.kind === 'condition_signal') {
-      const values = condition.value_text?.split(',').map(Number);
-      expect(values?.[0]).toBeCloseTo(26.822444704, 10);
-      expect(values?.[1]).toBeCloseTo(31.2928, 10);
-    }
-  });
-
-  it('converts preferred temperature bounds without rounding or repopulating blanks', () => {
-    vi.mocked(useSettings).mockReturnValue({
-      settings: inputPreferences({ unit_of_temp: 'F', locale: 'de-DE', decimal_precision: 3 }),
-    } as ReturnType<typeof useSettings>);
-    const { onChange } = renderBuilder([{
-      kind: 'condition_signal', signal: 'inside_temp', op: 'between', value_min: 20, value_max: 25,
-    }]);
-    const min = screen.getByLabelText('Min');
-    expect(min).toHaveValue('68,000');
-    expect(screen.getByLabelText('Max')).toHaveValue('77,000');
-    fireEvent.focus(min);
-    fireEvent.change(min, { target: { value: '68,12345' } });
-    expect(lastArg(onChange)[0]).toMatchObject({ value_min: (68.12345 - 32) * 5 / 9, value_max: 25 });
-    fireEvent.change(min, { target: { value: '' } });
-    expect(lastArg(onChange)[0]).toMatchObject({ value_min: undefined, value_max: 25 });
-    fireEvent.blur(min);
-    expect(min).toHaveValue('');
-  });
-  it('parses a numeric value and preserves blanks as absent thresholds', () => {
+  it('parses a numeric value and coerces blanks to zero', () => {
     const { onChange } = renderBuilder([signalCondition]);
-    const valueInput = screen.getByRole('textbox', { name: /^Value/ });
+    const valueInput = screen.getByLabelText('Value');
 
     fireEvent.change(valueInput, { target: { value: '55' } });
     expect(lastArg(onChange)).toEqual([
       { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 55 },
     ]);
 
-    fireEvent.change(screen.getByRole('textbox', { name: /^Value/ }), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Value'), { target: { value: '' } });
     expect(lastArg(onChange)).toEqual([
-      { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: undefined },
+      { kind: 'condition_signal', signal: 'battery_level', op: '<', value_num: 0 },
     ]);
   });
 
@@ -361,27 +302,6 @@ describe('ConditionBuilder — signal value editing', () => {
     expect(lastArg(onChange)).toEqual([
       { kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false },
     ]);
-  });
-
-  it('serializes boolean membership as a list and preserves false on return to equality', () => {
-    const { onChange } = renderBuilder([
-      { kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false },
-    ]);
-    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: 'in' } });
-    expect(lastArg(onChange)[0]).toEqual({
-      kind: 'condition_signal', signal: 'is_locked', op: 'in', value_text: 'false',
-    });
-    const value = screen.getByLabelText('Value');
-    expect(within(value).getByRole('option', { name: 'True / False' })).toHaveValue('true,false');
-    fireEvent.change(value, { target: { value: 'true,false' } });
-    expect(lastArg(onChange)[0]).toEqual({
-      kind: 'condition_signal', signal: 'is_locked', op: 'in', value_text: 'true,false',
-    });
-    fireEvent.change(value, { target: { value: 'false' } });
-    fireEvent.change(screen.getByLabelText('Operator'), { target: { value: '=' } });
-    expect(lastArg(onChange)[0]).toEqual({
-      kind: 'condition_signal', signal: 'is_locked', op: '=', value_bool: false,
-    });
   });
 
   it('resets to a bool default when switching from a numeric to a boolean signal', () => {
@@ -443,21 +363,6 @@ describe('ConditionBuilder — time window', () => {
     expect(screen.getByRole('button', { name: 'Fri' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Sun' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: 'Sat' })).toHaveAttribute('aria-pressed', 'false');
-  });
-
-  it('keeps empty as none when the last condition weekday is removed', () => {
-    const { onChange } = renderBuilder([timeWindow({
-      days_of_week: [3], start_time: '23:00', end_time: '02:00', timezone: 'Europe/London',
-    })]);
-    const group = screen.getByRole('group', { name: 'Days' });
-    fireEvent.click(within(group).getByRole('button', { name: 'Wed' }));
-    expect(lastArg(onChange)[0]).toEqual(timeWindow({
-      days_of_week: [], start_time: '23:00', end_time: '02:00', timezone: 'Europe/London',
-    }));
-    expect(within(group).getAllByRole('button')).toHaveLength(7);
-    for (const button of within(group).getAllByRole('button')) {
-      expect(button).toHaveAttribute('aria-pressed', 'false');
-    }
   });
 
   it('adds a day (sorted numerically) when an unpressed toggle is clicked', () => {

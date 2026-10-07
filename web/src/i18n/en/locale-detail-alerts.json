@@ -16,7 +16,7 @@
     "noAlertsDescription": "Configured rules continue monitoring incoming fleet telemetry.",
     "clearSearch": "Clear search",
     "clearFilters": "Clear filters",
-    "tabFlash": "(!) Alert — ",
+    "tabFlash": "(!) ALERT — ",
     "delete": {
       "title": "Delete rule?",
       "message": "This cannot be undone."

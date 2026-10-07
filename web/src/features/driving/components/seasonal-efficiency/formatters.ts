@@ -1,7 +1,6 @@
 import type { UnitPref } from '@/lib/unitConversion';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import type { SeasonalFitStatus, SeasonalSupport } from '../../lib/seasonalEfficiency';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 type Translate = (key: string, fallback: string) => string;
 
@@ -39,7 +38,7 @@ export function supportBandLabel(
 export function formatIntensityWhPerM(
   value: number | null | undefined,
   unitPrefs: UnitPref,
-  precision = getGlobalPrecision(),
+  precision = 2,
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   const displayUnitsPerM = convertDistanceFromSI(1, unitPrefs.distance);
@@ -68,7 +67,7 @@ export function toDisplayIntensity(
 export function formatDisplayIntensity(
   value: number | null | undefined,
   unitPrefs: UnitPref,
-  precision = getGlobalPrecision(),
+  precision = 2,
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   const formatted = new Intl.NumberFormat(unitPrefs.locale, {
@@ -81,7 +80,7 @@ export function formatDisplayIntensity(
 export function formatDisplayDistance(
   value: number | null | undefined,
   unitPrefs: UnitPref,
-  precision = getGlobalPrecision(),
+  precision = 1,
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   const formatted = new Intl.NumberFormat(unitPrefs.locale, {
@@ -94,7 +93,7 @@ export function formatDisplayDistance(
 export function formatSignedIntensityWhPerMPerYear(
   value: number | null | undefined,
   unitPrefs: UnitPref,
-  precision = Math.max(3, getGlobalPrecision()),
+  precision = 3,
 ): string {
   if (value == null || !Number.isFinite(value)) return '—';
   const sign = value > 0 ? '+' : value < 0 ? '−' : '';
@@ -140,7 +139,7 @@ export function formatInteger(value: number | null | undefined, locale: string):
 export function formatDecimal(
   value: number | null | undefined,
   locale: string,
-  precision = getGlobalPrecision(),
+  precision = 1,
 ): string {
   return value == null || !Number.isFinite(value)
     ? '—'

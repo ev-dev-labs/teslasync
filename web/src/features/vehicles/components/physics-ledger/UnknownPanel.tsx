@@ -4,12 +4,10 @@ import type {
 import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { asList, useT } from './helpers';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
-  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const { formatDuration } = useUnits();
   const intervals = asList(ledger.unknown_intervals);
@@ -18,7 +16,6 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
     { key: 'end', header: t('physicsLedger.unknown.end', 'End'), render: (row) => formatDateTime(row.ended_at) },
     {
       key: 'duration',
-      align: 'right',
       header: t('physicsLedger.unknown.duration', 'Duration'),
       render: (row) => formatDuration(row.duration_s),
     },
@@ -29,7 +26,7 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
       <PanelTitle>{t('physicsLedger.unknown.title', 'Unknown budget')}</PanelTitle>
       <div className="flex flex-wrap gap-2">
         <Badge variant={ledger.unknown_hours > 0 ? 'warning' : 'success'} size="sm">
-          {t('physicsLedger.unknown.hours', 'Unknown hours')}: {fmtNumber(ledger.unknown_hours)}
+          {t('physicsLedger.unknown.hours', 'Unknown hours')}: {fmtNumber(ledger.unknown_hours, 2)}
         </Badge>
         {ledger.truncated ? (
           <Badge variant="danger" size="sm">

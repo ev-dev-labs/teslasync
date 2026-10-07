@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
-	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/rs/zerolog/log"
@@ -69,53 +68,119 @@ const (
 
 // Stats returns aggregate driving statistics for a vehicle.
 func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
-	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.stats")
-	defer span.End()
-
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		span.RecordError(errMissingVehicleID)
 		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 	vehicleID, err := parseInt64(vehicleIDStr)
-	if err != nil || vehicleID <= 0 {
-		span.RecordError(errInvalidVehicleID)
+	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
-	reader := h.statsRepo
-	if reader == nil {
-		reader = h.driveRepo
-	}
-	stats, err := reader.GetStats(ctx, vehicleID)
+	ctx := r.Context()
+
+	// SI canonical drives schema (migration 000185): distance in
+	// meters, duration in seconds, speeds in m/s, power in W. Convert to
+	// the legacy display units (mi, min, mph, kW) in Go before populating
+	// the response so the JSON shape consumed by the frontend is preserved.
+	var totalDrives int
+	var totalDistMeters, totalDurSec, avgSpeedMpsVal, topSpeedMpsVal *float64
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*),
+		       SUM(distance_m),
+		       SUM(duration_s)::float8,
+		       AVG(CASE WHEN duration_s > 0 THEN distance_m / duration_s ELSE NULL END),
+		       MAX(max_speed_mps)
+		FROM drives
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
+	).Scan(&totalDrives, &totalDistMeters, &totalDurSec, &avgSpeedMpsVal, &topSpeedMpsVal)
 	if err != nil {
-		span.RecordError(err)
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).
-			Str("trace_id", span.SpanContext().TraceID().String()).
-			Msg("failed to get driving statistics")
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("drive stats: failed to query")
 		writeError(w, http.StatusInternalServerError, "failed to get driving stats")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, drivingStatsResponse(stats))
-}
+	// Convert selected SI aggregates only where existing compatibility fields
+	// intentionally remain unchanged. Duration and regen are exposed in SI
+	// canonical fields.
+	totalDistMi := scaleNullable(totalDistMeters, 1.0/driveStatsMetersPerMile)
+	avgSpeedMph := scaleNullable(avgSpeedMpsVal, 1.0/driveStatsMpsPerMph)
+	topSpeedMph := scaleNullable(topSpeedMpsVal, 1.0/driveStatsMpsPerMph)
 
-func drivingStatsResponse(stats drivedb.DrivingStats) map[string]any {
-	// Retain the existing metric response contract; Settings owns rounding.
-	return map[string]any{
-		"total_drives":         stats.Count,
-		"total_distance_km":    stats.DistanceM / 1000,
-		"total_duration_s":     stats.DurationS,
-		"avg_efficiency_wh_km": scaleNullable(stats.EfficiencyWhPerM, 1000),
-		"avg_speed_kmh":        scaleNullable(stats.AvgSpeedMps, 3.6),
-		"top_speed_kmh":        scaleNullable(stats.MaxSpeedMps, 3.6),
-		"regen_ratio":          stats.RegenRatio,
-		"regen_energy_wh":      stats.RegenEnergyWh,
-		// Existing net emissions estimate: 70 g/km, not measured emissions.
-		"co2_saved_kg": stats.DistanceM * 0.00007,
+	// Efficiency: battery % used per 100 km → approximate Wh/km.
+	// SoC delta is REAL percent in SI; distance converted from meters to
+	// miles inline so the original formula stays one expression.
+	var avgEfficiency *float64
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT AVG(
+			CASE WHEN distance_m > $2 AND start_soc_pct IS NOT NULL AND end_soc_pct IS NOT NULL
+			THEN (start_soc_pct - end_soc_pct)::float / (distance_m / $3) * 100 * 0.75
+			ELSE NULL END
+		)
+		FROM drives
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`,
+		vehicleID, driveStatsTwoMilesMeters, driveStatsMetersPerMile,
+	).Scan(&avgEfficiency)
+	if err != nil {
+		log.Debug().Err(err).Msg("drive stats: efficiency query")
 	}
+
+	// Regen: estimate from negative average-power readings.
+	// avg_power_w * duration_s / 3600 = Watt-hours.
+	var totalRegenWh *float64
+	err = h.db.Pool.QueryRow(ctx, `
+		SELECT SUM(CASE WHEN avg_power_w IS NOT NULL AND avg_power_w < 0
+		           THEN ABS(avg_power_w) * duration_s / 3600.0 ELSE 0 END)
+		FROM drives
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL`, vehicleID,
+	).Scan(&totalRegenWh)
+	if err != nil {
+		log.Debug().Err(err).Msg("drive stats: regen query")
+	}
+	totalRegenEnergyWh := scaleNullable(totalRegenWh, 1.0)
+
+	sf := func(v *float64) float64 {
+		if v == nil {
+			return 0
+		}
+		if math.IsNaN(*v) || math.IsInf(*v, 0) {
+			return 0
+		}
+		return math.Round(*v*100) / 100
+	}
+
+	totalDist := sf(totalDistMi)
+	regenEnergyWh := sf(totalRegenEnergyWh)
+
+	// CO2 saved: ~120g CO2/km for an average ICE car, minus ~50g/km for EV
+	co2SavedKg := totalDist * 0.070 // net 70g/km saved
+
+	// Regen ratio (fraction of energy recovered)
+	regenRatio := 0.0
+	if totalDist > 0 {
+		// Approximate total energy used: ~150 Wh/km average
+		totalEnergyWh := totalDist * 150
+		if totalEnergyWh > 0 {
+			regenRatio = regenEnergyWh / totalEnergyWh
+			if regenRatio > 1 {
+				regenRatio = 1
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"total_drives":         totalDrives,
+		"total_distance_km":    math.Round(totalDist*100) / 100,
+		"total_duration_s":     sf(totalDurSec),
+		"avg_efficiency_wh_km": sf(avgEfficiency),
+		"avg_speed_kmh":        sf(avgSpeedMph),
+		"top_speed_kmh":        sf(topSpeedMph),
+		"regen_ratio":          math.Round(regenRatio*1000) / 1000,
+		"regen_energy_wh":      math.Round(regenEnergyWh*100) / 100,
+		"co2_saved_kg":         math.Round(co2SavedKg*100) / 100,
+	})
 }
 
 // scaleNullable applies a multiplicative factor to a nullable float pointer.

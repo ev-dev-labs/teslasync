@@ -46,7 +46,7 @@ practices before connecting.
 
 TeslaSync servers communicate with Tesla for vehicle authorization, data, and
 commands. When you open a map, its tiles may be requested from external map
-providers, including OpenStreetMap, Esri, or OpenTopoMap; the server
+providers, including OpenStreetMap, CARTO, Esri, or OpenTopoMap; the server
 operator may configure Google Maps or Azure Maps instead. A tile provider may
 receive your IP address and the map area requested. Your server operator may
 also enable external geocoding, notification delivery, or AI providers. If you

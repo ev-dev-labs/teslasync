@@ -1,69 +1,100 @@
 import { useTranslation } from 'react-i18next'
-import { Shield, Lock, Unlock, Eye, DoorClosed, Car } from 'lucide-react'
-import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display'
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
+import { Shield, Lock, Unlock, Eye, Car, DoorClosed } from 'lucide-react'
+
+import { GlassPanel, PanelTitle } from '@/components/ui'
+import { MetricCard } from '@/components/data-display'
 import { EmptyState } from '@/components/feedback'
 import type { SecurityEvent, VehicleState } from '@/api/types'
-import type { DataStateSource } from '@/api/dataState'
-import { useDataState } from '@/hooks/useDataState'
-import { securityDoorReading, securityWindowReading } from '../statstrip-vehicle-detail/securityReadings'
-import { useVehicleDetailSummary, type VehicleDetailSummaryProps } from '../statstrip-vehicle-detail/useVehicleDetailSummary'
 
-interface SecuritySectionProps extends VehicleDetailSummaryProps {
+interface SecuritySectionProps {
   securityData: SecurityEvent | null | undefined
-  state: VehicleState | undefined
-  liveStateQuery?: DataStateSource<unknown>
+  state: VehicleState
 }
 
-export function SecuritySection({ securityData, state, sourceQuery, liveStateQuery }: SecuritySectionProps) {
-  const { t } = useTranslation()
-  const summary = useVehicleDetailSummary(t('vehicles.detail.security', 'Security'), sourceQuery, securityData?.ts, securityData != null)
-  const liveTrust = useDataState(liveStateQuery ?? { data: state })
-  const liveSummary = useVehicleDetailSummary(t('vehicles.detail.liveStateResource', 'Live vehicle state'), liveStateQuery, null, state != null)
-  const liveContext = t('vehicles.detail.brief.liveContext', '{{source}} · {{status}}', {
-    source: liveSummary.brief.provenance, status: liveSummary.brief.statusLabel,
-  })
-  const windows = securityWindowReading(securityData)
-  const doorState = securityDoorReading(securityData?.door_state, t('common.open', 'Open'), t('common.closed', 'Closed'))
-  const locked = state?.is_locked
-  const sentry = state?.sentry_mode
+// windowOpenCount counts the number of windows reading > 0 (percent open).
+// Backend `*_window` fields land as strings (snake_case JSON projection of
+// the codec FdWindow/FpWindow/RdWindow/RpWindow signals) per
+// internal/api/security_handler.go securityMappings; coerce defensively.
+function windowOpenCount(s: SecurityEvent): number {
+  const fields = [s.fd_window, s.fp_window, s.rd_window, s.rp_window]
+  let open = 0
+  for (const v of fields) {
+    if (v == null) continue
+    const n = typeof v === 'number' ? v : Number(v)
+    if (Number.isFinite(n) && n > 0) open += 1
+  }
+  return open
+}
 
-  const rawMetrics: readonly StatMetric[] = [
-          { metricId: 'status', occurrenceId: 'locked', label: t('common.locked', 'Locked'),
-            rawValue: locked == null ? null : locked ? t('common.yes', 'Yes') : t('common.no', 'No'),
-            context: <div>{locked == null ? <Shield className="h-4 w-4" aria-hidden="true" />
-              : locked ? <Lock className="h-4 w-4" aria-hidden="true" /> : <Unlock className="h-4 w-4" aria-hidden="true" />}
-              <div>{liveContext}</div></div> },
-          { metricId: 'status', occurrenceId: 'sentry', label: t('common.sentry', 'Sentry'),
-            rawValue: sentry == null ? null : sentry ? t('common.active', 'Active') : t('common.off', 'Off'),
-            context: <div><Eye className="h-4 w-4" aria-hidden="true" /><div>{liveContext}</div></div> },
-          { metricId: 'status', occurrenceId: 'doors', label: t('vehicles.detail.doors', 'Doors'),
-            rawValue: doorState, context: <DoorClosed className="h-4 w-4" aria-hidden="true" /> },
-          { metricId: 'status', occurrenceId: 'windows', label: t('vehicles.detail.windows', 'Windows'),
-            rawValue: windows.open > 0 ? t('vehicles.detail.windowsOpen', '{{count}} open', { count: windows.open })
-              : windows.complete ? t('common.closed', 'Closed') : null,
-            context: <div><Car className="h-4 w-4" aria-hidden="true" />
-              {!windows.complete && windows.open > 0
-                && t('vehicles.detail.brief.windowsPartial', 'Other window states are unknown.')}
-            </div> },
-  ]
-  const metrics = useOperationalMetrics(rawMetrics)
+// normalizeDoorState coerces the raw door_state signal into a display string
+// (or null → the card's "Closed" fallback). The backend serializes a raw
+// signal.SignalValue, so door_state can arrive as a native boolean
+// (true = a door is open) or a string enum — a boolean must map to Open/Closed
+// semantics rather than stringify to the literal "true"/"false".
+function normalizeDoorState(
+  v: SecurityEvent['door_state'],
+  openLabel: string,
+): string | null {
+  if (v == null) return null
+  if (typeof v === 'boolean') return v ? openLabel : null
+  const s = String(v).trim()
+  return s === '' ? null : s
+}
+
+export function SecuritySection({ securityData, state }: SecuritySectionProps) {
+  const { t } = useTranslation()
+
+  const windowsOpen = securityData ? windowOpenCount(securityData) : 0
+  const doorState = securityData
+    ? normalizeDoorState(securityData.door_state, t('common.open', 'Open'))
+    : null
+
   return (
-    <>
-      <OperationalBrief compact testId="vehicle-security-summary" {...summary.brief}
-        eyebrow={t('vehicles.detail.systems', 'Vehicle systems')}
-        title={t('vehicles.detail.security', 'Security')}
-        description={t('vehicles.detail.brief.securityDescription', 'Lock, sentry, doors and windows retain their individual source states; unknown is not unlocked, off or closed.')}
-        scope={<div className="space-y-2">
-          {summary.brief.scope}
-          <div>{t('vehicles.detail.summaryMixedSources', 'Lock and sentry: live state; doors and windows: security telemetry.')}</div>
-          <DataProvenanceBadge provenance={liveTrust.provenance} status={liveTrust.status} updatedAt={liveTrust.updatedAt} />
-        </div>}
-        metrics={metrics} />
-      {!securityData && (
-        // no-action: the independent source wrapper owns failure retry.
-        <EmptyState message={t('vehicles.detail.noSecurityData', 'No security data available')} />
+    <GlassPanel className="p-6">
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Shield className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('vehicles.detail.security', 'Security')}
+      </PanelTitle>
+      {securityData ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <MetricCard
+            label={t('common.locked', 'Locked')}
+            value={state.is_locked ? t('common.yes', 'Yes') : t('common.no', 'No')}
+            icon={
+              state.is_locked ? (
+                <Lock className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <Unlock className="h-4 w-4" aria-hidden="true" />
+              )
+            }
+            color={state.is_locked ? 'green' : 'cyan'}
+          />
+          <MetricCard
+            label={t('common.sentry', 'Sentry')}
+            value={state.sentry_mode ? t('common.active', 'Active') : t('common.off', 'Off')}
+            icon={<Eye className="h-4 w-4" aria-hidden="true" />}
+            color={state.sentry_mode ? 'green' : 'cyan'}
+          />
+          <MetricCard
+            label={t('vehicles.detail.doors', 'Doors')}
+            value={doorState ?? t('common.closed', 'Closed')}
+            icon={<DoorClosed className="h-4 w-4" aria-hidden="true" />}
+            color={doorState ? 'cyan' : 'green'}
+          />
+          <MetricCard
+            label={t('vehicles.detail.windows', 'Windows')}
+            value={
+              windowsOpen > 0
+                ? t('vehicles.detail.windowsOpen', '{{count}} open', { count: windowsOpen })
+                : t('common.closed', 'Closed')
+            }
+            icon={<Car className="h-4 w-4" aria-hidden="true" />}
+            color={windowsOpen > 0 ? 'cyan' : 'green'}
+          />
+        </div>
+      ) : (
+        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('vehicles.detail.noSecurityData', 'No security data available')} />
       )}
-    </>
+    </GlassPanel>
   )
 }

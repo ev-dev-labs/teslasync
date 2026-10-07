@@ -1,8 +1,5 @@
 import { type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { severityTokens, typography } from '@/lib/tokens';
-import { dashboardTokens } from '../../lib/dashboardTokens';
 import { cn } from '@/lib/cn';
 
 export interface StatusCell {
@@ -11,11 +8,9 @@ export interface StatusCell {
   status: 'ok' | 'warning' | 'error' | 'inactive' | 'unknown';
   value?: string;
   icon?: ReactNode;
-  /** Caller-localized domain status, e.g. "Charging" instead of generic "Healthy". */
-  statusLabel?: string;
 }
 
-export interface WidgetStatusGridProps {
+interface WidgetStatusGridProps {
   cells: StatusCell[];
   cols?: 2 | 3 | 4;
   compact?: boolean;
@@ -25,43 +20,42 @@ export interface WidgetStatusGridProps {
 
 const statusStyles: Record<StatusCell['status'], { bg: string; dot: string }> = {
   ok: {
-    bg: `${severityTokens.success.bg} ${severityTokens.success.border}`,
-    dot: severityTokens.success.dot,
+    bg: 'bg-emerald-500/10 border-emerald-500/20',
+    dot: 'bg-emerald-500',
   },
   warning: {
-    bg: `${severityTokens.warn.bg} ${severityTokens.warn.border}`,
-    dot: severityTokens.warn.dot,
+    bg: 'bg-amber-500/10 border-amber-500/20',
+    dot: 'bg-amber-500',
   },
   error: {
-    bg: `${severityTokens.critical.bg} ${severityTokens.critical.border}`,
-    dot: severityTokens.critical.dot,
+    bg: 'bg-red-500/10 border-red-500/20',
+    dot: 'bg-red-500',
   },
   inactive: {
-    bg: 'bg-[var(--surface-2)] border-[var(--border-subtle)]',
-    dot: 'bg-[var(--text-muted)]',
+    bg: 'bg-white/[0.03] border-white/[0.06]',
+    dot: 'bg-[var(--surface-2)]',
   },
   unknown: {
-    bg: 'bg-[var(--surface-2)] border-[var(--border-subtle)]',
-    dot: 'bg-[var(--text-muted)]',
+    bg: 'bg-white/[0.03] border-white/[0.06]',
+    dot: 'bg-[var(--surface-2)]',
   },
 };
 
-const statusCopy = {
-  ok: ['widget.status.ok', 'Healthy'],
-  warning: ['widget.status.warning', 'Warning'],
-  error: ['widget.status.error', 'Error'],
-  inactive: ['widget.status.inactive', 'Inactive'],
-  unknown: ['widget.status.unknown', 'Unknown'],
-} as const;
+// Container-query class table — collapses based on widget rendered width.
+// See WidgetStatGrid for the same approach.
+const containerColsClass: Record<2 | 3 | 4, string> = {
+  2: 'grid-cols-2',
+  3: 'grid-cols-1 @xs:grid-cols-2 @sm:grid-cols-3',
+  4: 'grid-cols-2 @sm:grid-cols-4',
+};
 
 export function WidgetStatusGrid({
   cells,
   cols = 2,
   compact = false,
-  emptyMessage,
+  emptyMessage = 'No status data available',
   emptyIcon,
 }: WidgetStatusGridProps) {
-  const { t } = useTranslation('dashboard');
   // Callers derive `cells` from `data?.field`-shaped sources, so a runtime
   // `undefined` can reach this list even though the prop type says StatusCell[].
   // Normalise to an array before touching .length / .map so a missing source
@@ -69,33 +63,32 @@ export function WidgetStatusGrid({
   const items = cells ?? [];
 
   if (items.length === 0) {
-    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage ?? t('widget.statusGrid.noData', 'No status data available')} icon={emptyIcon} />;
+    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={emptyMessage} icon={emptyIcon} />;
   }
 
   const resolvedCols = compact ? 2 : cols;
 
   return (
-    <div className={cn('grid min-w-0 gap-2', dashboardTokens.columns[resolvedCols] ?? dashboardTokens.columns[2])}>
+    <div className={cn('grid gap-2', containerColsClass[resolvedCols] ?? containerColsClass[2])}>
       {items.map((cell) => {
         // Fail closed like StatusBadge: a status outside the known union (e.g. a
         // raw backend string cast to StatusCell['status']) must not dereference
         // undefined — fall back to the neutral "unknown" styling.
         const style = statusStyles[cell.status] ?? statusStyles.unknown;
-        const copy = statusCopy[cell.status] ?? statusCopy.unknown;
-        const statusLabel = cell.statusLabel ?? t(copy[0], copy[1]);
         return (
           <div
             key={cell.id}
             className={cn(
-              'relative flex min-h-11 min-w-0 items-start gap-2 rounded-shape-sm border px-3 py-2',
+              'relative flex min-h-[44px] items-center gap-2 rounded-lg border px-3 py-2',
               style.bg,
               compact && 'px-2 py-1.5',
             )}
           >
-            {/* Status meaning remains visible as text independently of this dot. */}
+            {/* Decorative status cue — colour reinforces the label/value text,
+                which already carries the meaning for assistive tech. */}
             <span
               aria-hidden="true"
-              className={cn('mt-1.5 size-2 shrink-0 rounded-full', style.dot)}
+              className={cn('absolute right-2 top-2 size-2 rounded-full', style.dot)}
             />
 
             {cell.icon && (
@@ -105,13 +98,12 @@ export function WidgetStatusGrid({
             )}
 
             <div className="min-w-0 flex-1">
-              <p className={dashboardTokens.metricLabel}>{cell.label}</p>
-              {cell.value && (
-                <p className={cn(typography.role.body, 'break-words font-medium')}>
+              <p className="truncate text-xs text-[var(--text-secondary)]">{cell.label}</p>
+              {!compact && cell.value && (
+                <p className="truncate text-sm font-medium text-[var(--text-primary)]">
                   {cell.value}
                 </p>
               )}
-              <span className={cn(typography.role.caption, 'block break-words')}>{statusLabel}</span>
             </div>
           </div>
         );

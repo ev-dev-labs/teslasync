@@ -1,16 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { CircleDot } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
-import { deriveDataState } from '@/api/dataState';
+import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useLatestTirePressure } from '@/api/hooks/useVehicles';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { tirePressureVariant } from '@/features/vehicles/components/vehicle-detail/helpers';
 import { WidgetShell } from './WidgetShell';
-import { WidgetBigNumber } from './shared';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type TireVariant = ReturnType<typeof tirePressureVariant>;
 
@@ -51,16 +48,16 @@ function CarDiagram({ tires }: { tires: [TireInfo, TireInfo, TireInfo, TireInfo]
   ];
 
   return (
-    <svg viewBox="0 0 120 180" className="w-20 @xs:w-24 h-32" aria-hidden="true">
+    <svg viewBox="0 0 120 180" className="w-full h-full max-h-[140px]" aria-hidden="true">
       {/* Car body outline */}
       <rect x="30" y="16" width="60" height="148" rx="16" ry="16"
-        fill="none" className="stroke-[var(--border-default)]" strokeWidth="1.5" />
+        fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5" />
       {/* Windshield hint */}
       <line x1="36" y1="52" x2="84" y2="52"
-        className="stroke-[var(--border-subtle)]" strokeWidth="1" />
+        stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
       {/* Rear window hint */}
       <line x1="36" y1="132" x2="84" y2="132"
-        className="stroke-[var(--border-subtle)]" strokeWidth="1" />
+        stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
 
       {/* Tires */}
       {tirePositions.map(({ tire, x, y }) => (
@@ -92,13 +89,14 @@ function formatTimestamp(iso: string | undefined, t: (k: string, fb: string) => 
   }
 }
 
-export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
-  const { fmtNumber } = useNumberFormatting();
+export default function TirePressureVisualWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { data: tireData, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useLatestTirePressure(id, 10_000);
   const { pressureUnit, toPressureValue } = usePressureFormat();
+
+  const isCompact = size.cols <= 1;
 
   const tires: [TireInfo, TireInfo, TireInfo, TireInfo] = [
     { label: 'FL', value: tireData?.front_left ?? null, variant: tirePressureVariant(tireData?.front_left) },
@@ -108,23 +106,11 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
   ];
 
   const allNormal = tires.every((tire) => tire.variant === 'success');
-  const hasWarning = tires.some((tire) => tire.variant === 'warning');
-  const hasDanger = tires.some((tire) => tire.variant === 'danger');
-  const hasUnknown = tires.some((tire) => tire.variant === 'neutral');
-  const loading = isLoading || (vehiclesLoading && !id);
-  const queryError = error ?? (!id ? vehiclesError : null);
-  const dataState = deriveDataState({
-    data: tireData ?? (loading || queryError || isError ? undefined : null),
-    error: queryError,
-    isError,
-    isFetching,
-    dataUpdatedAt,
-    refetch,
-  });
+  const hasWarning = tires.some((tire) => tire.variant !== 'success');
 
   const formatPressure = (val: number | null): string => {
     const v = toPressureValue(val);
-    return v != null ? `${fmtNumber(v)}` : '—';
+    return v != null ? `${fmtNumber(v, 1)}` : '—';
   };
 
   // Most recent reading time across all tires
@@ -134,18 +120,13 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
         .sort()
         .pop()
     : undefined;
-  const statusLabel = (variant: TireVariant) => variant === 'neutral'
-    ? t('hero.unknownStatus', 'Unknown')
-    : variant === 'success'
-      ? t('widget.tireAllNormal', 'All normal')
-      : t('widget.tireWarning', 'Check pressure');
 
   return (
     <WidgetShell
-      title={t('widget.tirePressure', 'Tire pressure')}
+      title={isCompact ? undefined : t('widget.tirePressure', 'Tire Pressure')}
       icon={<CircleDot className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={loading}
-      dataState={dataState}
+      loading={isLoading}
+      error={error ? String(error) : null}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -153,18 +134,22 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
       onRefresh={() => refetch()}
     >
       {tireData ? (
-        <div className="flex min-w-0 flex-col gap-3">
+        <div className="h-full flex flex-col gap-2">
           {/* Car diagram + pressure values */}
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+          <div className="flex-1 flex items-center gap-3 min-h-0">
             {/* Left column: FL / RL values */}
-            <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex flex-col justify-between h-full py-2 text-right min-w-[50px]">
               <div>
-                <WidgetBigNumber label={t('widget.tireFL', 'FL')} value={formatPressure(tires[0].value)} valueColor={VARIANT_STYLE[tires[0].variant].text} size="secondary" />
-                {tires[0].variant !== 'success' && <Text variant="caption">{statusLabel(tires[0].variant)}</Text>}
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireFL', 'FL')}</p>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[0].variant].text}`}>
+                  {formatPressure(tires[0].value)}
+                </p>
               </div>
               <div>
-                <WidgetBigNumber label={t('widget.tireRL', 'RL')} value={formatPressure(tires[2].value)} valueColor={VARIANT_STYLE[tires[2].variant].text} size="secondary" />
-                {tires[2].variant !== 'success' && <Text variant="caption">{statusLabel(tires[2].variant)}</Text>}
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireRL', 'RL')}</p>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[2].variant].text}`}>
+                  {formatPressure(tires[2].value)}
+                </p>
               </div>
             </div>
 
@@ -174,29 +159,32 @@ export default function TirePressureVisualWidget({ vehicleId }: WidgetProps) {
             </div>
 
             {/* Right column: FR / RR values */}
-            <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex flex-col justify-between h-full py-2 text-left min-w-[50px]">
               <div>
-                <WidgetBigNumber label={t('widget.tireFR', 'FR')} value={formatPressure(tires[1].value)} valueColor={VARIANT_STYLE[tires[1].variant].text} size="secondary" />
-                {tires[1].variant !== 'success' && <Text variant="caption">{statusLabel(tires[1].variant)}</Text>}
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireFR', 'FR')}</p>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[1].variant].text}`}>
+                  {formatPressure(tires[1].value)}
+                </p>
               </div>
               <div>
-                <WidgetBigNumber label={t('widget.tireRR', 'RR')} value={formatPressure(tires[3].value)} valueColor={VARIANT_STYLE[tires[3].variant].text} size="secondary" />
-                {tires[3].variant !== 'success' && <Text variant="caption">{statusLabel(tires[3].variant)}</Text>}
+                <p className="text-2xs text-[var(--text-muted)] uppercase">{t('widget.tireRR', 'RR')}</p>
+                <p className={`text-sm font-bold ${VARIANT_STYLE[tires[3].variant].text}`}>
+                  {formatPressure(tires[3].value)}
+                </p>
               </div>
             </div>
           </div>
 
           {/* Footer: status badge + unit + reading time */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <Badge variant={allNormal ? 'success' : hasDanger ? 'danger' : hasWarning ? 'warning' : 'neutral'}>
+          <div className="flex-shrink-0 flex items-center justify-between">
+            <Badge variant={allNormal ? 'success' : hasWarning ? 'warning' : 'danger'}>
               {allNormal
-                ? t('widget.tireAllNormal', 'All normal')
-                : hasDanger || hasWarning ? t('widget.tireWarning', 'Check pressure') : t('hero.unknownStatus', 'Unknown')}
+                ? t('widget.tireAllNormal', 'All Normal')
+                : t('widget.tireWarning', 'Check Pressure')}
             </Badge>
-            {hasUnknown && (hasWarning || hasDanger) && <Text variant="caption">{t('hero.unknownStatus', 'Unknown')}</Text>}
-            <Text variant="caption">
+            <span className="text-2xs text-[var(--text-muted)]">
               {pressureUnit} · {formatTimestamp(latestReading, t)}
-            </Text>
+            </span>
           </div>
         </div>
       ) : (

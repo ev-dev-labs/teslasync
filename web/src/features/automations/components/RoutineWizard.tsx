@@ -112,7 +112,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
       <div className="flex flex-wrap items-center gap-3">
         <PanelTitle className="flex items-center gap-2">
           <Icons.location className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('automations.routines.title', 'Geofence routines')}
+          {t('automations.routines.title', 'Geofence Routines')}
         </PanelTitle>
         <div className="min-w-52 flex-1 sm:max-w-72">
           <Select

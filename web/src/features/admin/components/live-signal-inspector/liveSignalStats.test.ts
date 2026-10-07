@@ -252,16 +252,16 @@ describe('formatAge', () => {
   it('formats sub-second and second ranges', () => {
     expect(formatAge(0)).toBe('0ms');
     expect(formatAge(999)).toBe('999ms');
-    expect(formatAge(1499)).toBe('1.50s');
-    expect(formatAge(2000)).toBe('2.00s');
+    expect(formatAge(1499)).toBe('1.5s');
+    expect(formatAge(2000)).toBe('2.0s');
   });
 
   it('formats minute, hour and day ranges', () => {
     expect(formatAge(120_000)).toBe('2m');
-    expect(formatAge(3_600_000)).toBe('1.00h');
-    expect(formatAge(7_200_000)).toBe('2.00h');
-    expect(formatAge(86_400_000)).toBe('1.00d');
-    expect(formatAge(172_800_000)).toBe('2.00d');
+    expect(formatAge(3_600_000)).toBe('1.0h');
+    expect(formatAge(7_200_000)).toBe('2.0h');
+    expect(formatAge(86_400_000)).toBe('1.0d');
+    expect(formatAge(172_800_000)).toBe('2.0d');
   });
 });
 

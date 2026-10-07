@@ -25,7 +25,6 @@ import type { FsdInsights } from '@/types/fsd';
 
 import { hasAnyMeasuredFsd } from './helpers';
 import type { FsdSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DRIVING_DOT = {
   r: 2.75,
@@ -71,7 +70,6 @@ interface FsdDistanceTrendProps {
  * genuine gap instead of interpolating a value telemetry never reported.
  */
 export function FsdDistanceTrend({ insights, state }: FsdDistanceTrendProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const unitLabel = unitPrefs.distance;
@@ -103,7 +101,7 @@ export function FsdDistanceTrend({ insights, state }: FsdDistanceTrendProps) {
   const blocked = state.noVehicle || Boolean(state.error);
   const formatValue = (value: unknown) =>
     typeof value === 'number'
-      ? t('fsd.trend.value', '{{value}} {{unit}}', { value: fmtNumber(value), unit: unitLabel })
+      ? t('fsd.trend.value', '{{value}} {{unit}}', { value: value.toFixed(1), unit: unitLabel })
       : t('fsd.notReported', 'Not reported');
 
   return (

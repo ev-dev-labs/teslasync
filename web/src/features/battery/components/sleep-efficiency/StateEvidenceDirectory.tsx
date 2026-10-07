@@ -11,18 +11,16 @@ import {
   Text,
   type Column,
 } from '@/components/ui';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { SleepStateEvidence } from '../../lib/sleepEfficiencyAnalysis';
 import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function StateEvidenceDirectory({
   analysis,
   state,
 }: SleepEfficiencySectionProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () => [...analysis.transitions.directory],
@@ -115,7 +113,7 @@ export function StateEvidenceDirectory({
         ),
       },
     ],
-    [t, fmtInt, fmtNumber],
+    [t],
   );
 
   return (

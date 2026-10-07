@@ -28,7 +28,7 @@ export function TrueCostQueryStatus({
       <div
         className="mt-4 flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
         role="status"
-        aria-label={t('tco.query.loadingAria', 'Loading true cost evidence')}
+        aria-label={t('tco.query.loadingAria', 'Loading True Cost evidence')}
       >
         <RefreshCw className="h-4 w-4 animate-spin text-[var(--text-muted)]" aria-hidden="true" />
         <Text variant="bodySm">

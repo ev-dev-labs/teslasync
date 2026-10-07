@@ -63,10 +63,10 @@ export function JwtDecoderTool() {
   const decoded = useMemo(() => decodeJwt(jwt), [jwt])
 
   return (
-    <ToolCard icon={KeyRound} color="purple" title={t('devtools.utils.jwt', 'JWT decoder')} description={t('devtools.utils.jwtDesc', 'JWT decoder desc')}>
+    <ToolCard icon={KeyRound} color="purple" title={t('devtools.utils.jwt', 'Jwt Decoder')} description={t('devtools.utils.jwtDesc', 'Jwt Decoder Desc')}>
       <div className="space-y-3">
         <Textarea
-          label={t('devtools.utils.jwtInput', 'JWT input')}
+          label={t('devtools.utils.jwtInput', 'Jwt Input')}
           rows={3}
           placeholder="eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.signature"
           value={jwt}
@@ -74,14 +74,14 @@ export function JwtDecoderTool() {
         />
         {decoded.error && (
           <p role="alert" className="text-sm text-rose-300">
-            {t('devtools.utils.jwtInvalid', 'Invalid JWT')}
+            {t('devtools.utils.jwtInvalid', 'Invalid Jwt')}
           </p>
         )}
         {decoded.header && (
-          <ResultPanel title={t('devtools.utils.jwtHeader', 'JWT header')} data={decoded.header} />
+          <ResultPanel title={t('devtools.utils.jwtHeader', 'Jwt Header')} data={decoded.header} />
         )}
         {decoded.payload && (
-          <ResultPanel title={t('devtools.utils.jwtPayload', 'JWT Payload')} data={decoded.payload} />
+          <ResultPanel title={t('devtools.utils.jwtPayload', 'Jwt Payload')} data={decoded.payload} />
         )}
       </div>
     </ToolCard>

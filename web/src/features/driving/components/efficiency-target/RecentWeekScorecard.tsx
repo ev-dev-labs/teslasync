@@ -10,7 +10,6 @@ import type { TargetBand, WeekResult } from '../../lib/efficiencyTarget';
 import { EfficiencyTargetSectionBody } from './EfficiencyTargetSectionBody';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const RECENT_WEEK_COUNT = 8;
 interface ScorecardRow {
@@ -34,7 +33,6 @@ interface RecentWeekScorecardProps {
 export function RecentWeekScorecard(
   { completedWeeks, state, className }: RecentWeekScorecardProps,
 ) {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     formatDistance,
@@ -63,9 +61,9 @@ export function RecentWeekScorecard(
           weekStart: week.weekStart,
           week: formatWeek(week.weekStart),
           rank: week.rank,
-          consumption: formatEfficiency(week.whPerKm),
-          gap: formatSignedEfficiency(week.targetGapWhPerKm),
-          distance: formatDistance(week.distanceM),
+          consumption: formatEfficiency(week.whPerKm, 1),
+          gap: formatSignedEfficiency(week.targetGapWhPerKm, 1),
+          distance: formatDistance(week.distanceM, { precision: 1 }),
           drives: week.drives,
           status: statusLabel(week.band),
           band: week.band,
@@ -76,7 +74,7 @@ export function RecentWeekScorecard(
       formatEfficiency,
       formatSignedEfficiency,
       formatWeek,
-      t, displayPrecision, displayLocale,
+      t,
     ],
   );
   const columns = useMemo<Column<ScorecardRow>[]>(

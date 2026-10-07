@@ -1,67 +1,31 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { OperationalBrief } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { Activity, CheckCircle, AlertTriangle, Clock, AlertCircle } from 'lucide-react';
+import { MetricCard } from '@/components/data-display';
 import { GlassPanel } from '@/components/ui';
-import { DataStateNotice, QueryError } from '@/components/feedback';
+import { QueryError, StatGridSkeleton } from '@/components/feedback';
 import type { AutomationHistoryListResponse } from '@/api/types';
-import { useDataState } from '@/hooks/useDataState';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { formatDurationMs } from '@/lib/dateFormat';
 
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-export function AutomationHistorySummary({ query, scope }: {
-  query: UseQueryResult<AutomationHistoryListResponse>;
-  scope?: string;
-}) {
-  const { formatDurationMs } = useNumberFormatting();
-  const { fmtNumber } = useNumberFormatting();
+export function AutomationHistorySummary({ query }: { query: UseQueryResult<AutomationHistoryListResponse> }) {
   const { t } = useTranslation();
   const summary = query.data?.summary;
-  const source = useDataState({ ...query, data: query.data ?? undefined });
-  const context = t('automations.historyBrief.context', 'Server summary across the selected period and rule/status filters, not just this page of rows.');
-  const noRuns = t('automations.historyBrief.noRuns', 'No completed runs in this summary; a rate and average duration are undefined.');
-  const rawMetrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'total', rawValue: summary?.total_executions, label: t('automations.historyPage.total', 'Completed runs'), description: context },
-    { metricId: 'count', occurrenceId: 'success', rawValue: summary?.succeeded, label: t('automations.historyPage.success', 'Succeeded'), description: context },
-    { metricId: 'count', occurrenceId: 'failed', rawValue: summary?.failed, label: t('automations.historyPage.failed', 'Failed'), description: context },
-    { metricId: 'count', occurrenceId: 'partial', rawValue: summary?.partial, label: t('automations.historyPage.partial', 'Partial'), description: context },
-    { metricId: 'percent', occurrenceId: 'rate', rawValue: summary && summary.total_executions > 0 ? summary.success_rate : null,
-      label: t('automations.historyPage.rate', 'Success rate'), description: context, missingReason: summary?.total_executions === 0 ? noRuns : undefined,
-      display: { formatter: (raw) => ({ value: fmtNumber(raw), unit: '%' }) } },
-    { metricId: 'duration', occurrenceId: 'duration', rawValue: summary && summary.total_executions > 0 && summary.avg_duration_ms != null ? summary.avg_duration_ms / 1000 : null,
-      label: t('automations.historyPage.duration', 'Average duration'), description: context, missingReason: summary?.total_executions === 0 ? noRuns : undefined,
-      display: { formatter: (raw) => ({ value: formatDurationMs(raw * 1000), unit: '' }) } },
-  ];
-  const metrics = useOperationalMetrics(rawMetrics);
   return (
-    <div>
-      <OperationalBrief
-        compact
-        testId="automation-history-brief"
-        eyebrow={t('automations.historyBrief.eyebrow', 'Automation executions')}
-        title={t('automations.historyPage.summary', 'Execution summary')}
-        description={context}
-        statusLabel={query.isLoading && !summary ? t('automations.historyBrief.loading', 'Loading executions')
-          : !summary ? t('automations.historyBrief.unavailable', 'Summary unavailable')
-            : source.refreshError || source.isRefreshBlocked ? t('automations.historyBrief.retained', 'Retained execution summary')
-              : t('automations.historyBrief.available', 'Summary loaded')}
-        statusTone={source.refreshError || source.isRefreshBlocked || !summary ? 'warning' : 'neutral'}
-        loading={query.isLoading && !summary}
-        metrics={metrics}
-        scope={scope ?? t('automations.historyBrief.unknownScope', 'Execution window supplied by the caller')}
-        freshness={t('automations.historyBrief.freshness', 'History response; live events are a separate source')}
-        provenance={context}
-      />
-      {!summary && !query.isLoading && (
+    <section aria-label={t('automations.historyPage.summary', 'Execution summary')}>
+      {query.isLoading && !summary ? <StatGridSkeleton cards={6} /> : !summary ? (
         <GlassPanel className="p-5">
-          {source.fatalError ? (
-            <QueryError error={source.fatalError} onRetry={() => { void query.refetch(); }} />
-          ) : (
-            <DataStateNotice state="unavailable" />
-          )}
+          <QueryError error={query.error} onRetry={() => { void query.refetch(); }} />
         </GlassPanel>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+          <MetricCard label={t('automations.historyPage.total', 'Completed runs')} value={summary.total_executions} icon={<Activity className="h-5 w-5" />} />
+          <MetricCard label={t('automations.historyPage.success', 'Succeeded')} value={summary.succeeded} color="green" icon={<CheckCircle className="h-5 w-5" />} />
+          <MetricCard label={t('automations.historyPage.failed', 'Failed')} value={summary.failed} color="red" icon={<AlertTriangle className="h-5 w-5" />} />
+          <MetricCard label={t('automations.historyPage.partial', 'Partial')} value={summary.partial} color="amber" icon={<AlertCircle className="h-5 w-5" />} />
+          <MetricCard label={t('automations.historyPage.rate', 'Success rate')} value={summary.total_executions > 0 ? `${summary.success_rate.toFixed(1)}%` : '—'} />
+          <MetricCard label={t('automations.historyPage.duration', 'Average duration')} value={summary.total_executions > 0 ? formatDurationMs(summary.avg_duration_ms) : '—'} icon={<Clock className="h-5 w-5" />} />
+        </div>
       )}
-    </div>
+    </section>
   );
 }

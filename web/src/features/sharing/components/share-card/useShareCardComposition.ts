@@ -14,7 +14,6 @@ import type {
   ShareCardDisplay,
   ShareCardQueryState,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function useShareCardComposition(
   analysis: ShareCardAnalysis,
@@ -23,7 +22,6 @@ export function useShareCardComposition(
   start: string,
   end: string,
 ): ShareCardCompositionProps {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const [theme, setTheme] = useState<ShareCardTheme>('midnight');
   const lineLabels = useMemo<Record<ShareCardLineKey, string>>(
@@ -43,38 +41,43 @@ export function useShareCardComposition(
         label: lineLabels.distance,
         value: display.formatDistance(
           analysis.aggregates.distanceM.value,
+          { precision: 0 },
         ),
       },
       {
         label: lineLabels.driveCount,
-        value: display.formatNumber(analysis.eligibleRows),
+        value: display.formatNumber(analysis.eligibleRows, 0),
       },
       {
         label: lineLabels.energy,
         value: display.formatEnergy(
           analysis.aggregates.energyUsedWh.value,
+          { precision: 1 },
         ),
       },
       {
         label: lineLabels.regen,
         value: display.formatEnergy(
           analysis.aggregates.regenEnergyWh.value,
+          { precision: 1 },
         ),
       },
       {
         label: lineLabels.longest,
         value: display.formatDistance(
           analysis.aggregates.longestDistanceM.value,
+          { precision: 1 },
         ),
       },
       {
         label: lineLabels.topSpeed,
         value: display.formatSpeed(
           analysis.aggregates.maxSpeedMps.value,
+          { precision: 0 },
         ),
       },
     ],
-    [analysis, display, lineLabels, displayPrecision, displayLocale],
+    [analysis, display, lineLabels],
   );
   const title = t('shareCard.card.title', 'My Tesla · {{from}} – {{to}}', {
     from: start,
@@ -84,12 +87,12 @@ export function useShareCardComposition(
     ? t(
       'shareCard.card.cappedSubtitle',
       'Observed capped sample · {{rows}} returned rows',
-      { rows: display.formatNumber(analysis.returnedRows) },
+      { rows: display.formatNumber(analysis.returnedRows, 0) },
     )
     : t(
       'shareCard.card.returnedSubtitle',
       'Returned selected-window evidence · {{rows}} rows',
-      { rows: display.formatNumber(analysis.returnedRows) },
+      { rows: display.formatNumber(analysis.returnedRows, 0) },
     );
   const missing = analysis.card.missingMetricKeys
     .map((key) => lineLabels[key])

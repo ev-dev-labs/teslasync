@@ -7,7 +7,7 @@
     "note": "Phase-46 / Prompt 48 — placeholder file. All keys fall back to en.json via i18next's fallbackLng. Translation work is tracked as a follow-up sweep."
   },
   "nextCharge": {
-    "title": "Next charge",
+    "title": "Next Charge",
     "help": "12-hour verdict: charge home now, wait for off-peak, Supercharger, or skip DC-fast.",
     "resource": "Next charge decision",
     "waitingSoc": "Waiting for live battery level",

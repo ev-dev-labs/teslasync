@@ -106,23 +106,6 @@ describe('Button', () => {
     expect(cls).toContain('custom-xyz');
   });
 
-  it('opts into intrinsic multiline height without forwarding presentation props to the DOM', () => {
-    const { rerender } = render(<Button wrapLabel size="sm">Complete caller-supplied action label</Button>);
-    for (const size of ['sm', 'md', 'lg', 'auto'] as const) {
-      rerender(<Button wrapLabel size={size}>Complete caller-supplied action label</Button>);
-      const button = screen.getByRole('button', { name: 'Complete caller-supplied action label' });
-      expect(button).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal');
-      expect(button.querySelector('span')).toHaveClass('min-w-0', 'break-words');
-      expect(button).not.toHaveAttribute('wrapLabel');
-    }
-  });
-
-  it('preserves fixed icon sizing unless label wrapping is explicitly requested', () => {
-    render(<Button size="sm" className="h-3 w-1" aria-label="Prepared marker" />);
-    expect(screen.getByRole('button', { name: 'Prepared marker' })).toHaveClass('h-3', 'w-1');
-    expect(screen.getByRole('button')).not.toHaveClass('min-h-9', 'h-auto');
-  });
-
   it('renders the provided icon and no spinner when not loading', () => {
     const { container } = render(
       <Button icon={<span data-testid="btn-icon">*</span>}>Go</Button>,

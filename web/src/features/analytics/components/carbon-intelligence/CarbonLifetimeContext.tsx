@@ -1,9 +1,9 @@
 import { CalendarClock, Factory, History, ListChecks, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { StatStrip } from '@/components/data-display';
-import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Grid } from '@/components/layout';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { CarbonSectionBody } from './CarbonSectionBody';
 import type { CarbonSectionProps } from './types';
 
@@ -24,52 +24,56 @@ export function CarbonLifetimeContext({
         'Lifetime carbon context and selected-period shares',
       )}
     >
-      <LayoutCard
-        title={t('carbon.lifetime.title', 'Lifetime context and period share')}
-        actions={<History className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
-      >
-        <CarbonSectionBody state={states.lifetime}>
-          <StatStrip
-            id="carbon-lifetime-context-metrics"
-            variant="embedded"
-            period={{
-              kind: 'alltime',
-              label: t('carbon.source.lifetimeScope', 'Full vehicle history'),
-              provenance: t('carbon.source.lifetime', 'Lifetime summary'),
-            }}
-            metrics={[
-              {
-                metricId: 'text', occurrenceId: 'carbon-lifetime-energy',
-                label: t('carbon.lifetime.energy', 'Lifetime energy'),
-                rawValue: display.formatEnergy(lifetime.totalEnergyWh),
-                context: <><Zap className="h-5 w-5" aria-hidden="true" />{t('carbon.lifetime.energyShare', 'Period share: {{share}}', {
-                  share: display.formatPercent(context.energySharePct),
-                })}</>,
-              },
-              {
-                metricId: 'text', occurrenceId: 'carbon-lifetime-co2',
-                label: t('carbon.lifetime.co2', 'Lifetime charging CO₂'),
-                rawValue: display.formatKg(lifetime.totalCo2Kg),
-                context: <><Factory className="h-5 w-5" aria-hidden="true" />{t('carbon.lifetime.co2Share', 'Period share: {{share}}', {
-                  share: display.formatPercent(context.co2SharePct),
-                })}</>,
-              },
-              {
-                metricId: 'text', occurrenceId: 'carbon-lifetime-sessions',
-                label: t('carbon.lifetime.sessions', 'Lifetime sessions scored'),
-                rawValue: display.formatNumber(lifetime.sessionsScored),
-                context: <><ListChecks className="h-5 w-5" aria-hidden="true" />{t('carbon.lifetime.sessionShare', 'Period share: {{share}}', {
-                  share: display.formatPercent(context.sessionSharePct),
-                })}</>,
-              },
-              {
-                metricId: 'text', occurrenceId: 'carbon-lifetime-months',
-                label: t('carbon.lifetime.months', 'Lifetime monthly rows'),
-                rawValue: display.formatNumber(lifetime.monthly.length, 0),
-                context: <><CalendarClock className="h-5 w-5" aria-hidden="true" />{t('carbon.lifetime.monthHint', 'Returned full-history rollups')}</>,
-              },
-            ]}
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-4 flex items-center gap-2">
+          <History
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
           />
+          {t('carbon.lifetime.title', 'Lifetime context and period share')}
+        </PanelTitle>
+        <CarbonSectionBody state={states.lifetime}>
+          <Grid cols={{ default: 1, sm: 2, xl: 4 }} gap={3}>
+            <MetricCard
+              label={t('carbon.lifetime.energy', 'Lifetime energy')}
+              value={display.formatEnergy(lifetime.totalEnergyWh)}
+              subtitle={t('carbon.lifetime.energyShare', 'Period share: {{share}}', {
+                share: display.formatPercent(context.energySharePct),
+              })}
+              icon={<Zap className="h-5 w-5" aria-hidden="true" />}
+              color="cyan"
+            />
+            <MetricCard
+              label={t('carbon.lifetime.co2', 'Lifetime charging CO₂')}
+              value={display.formatKg(lifetime.totalCo2Kg)}
+              subtitle={t('carbon.lifetime.co2Share', 'Period share: {{share}}', {
+                share: display.formatPercent(context.co2SharePct),
+              })}
+              icon={<Factory className="h-5 w-5" aria-hidden="true" />}
+              color="amber"
+            />
+            <MetricCard
+              label={t('carbon.lifetime.sessions', 'Lifetime sessions scored')}
+              value={display.formatNumber(lifetime.sessionsScored, 0)}
+              subtitle={t(
+                'carbon.lifetime.sessionShare',
+                'Period share: {{share}}',
+                { share: display.formatPercent(context.sessionSharePct) },
+              )}
+              icon={<ListChecks className="h-5 w-5" aria-hidden="true" />}
+              color="blue"
+            />
+            <MetricCard
+              label={t('carbon.lifetime.months', 'Lifetime monthly rows')}
+              value={display.formatNumber(lifetime.monthly.length, 0)}
+              subtitle={t(
+                'carbon.lifetime.monthHint',
+                'Returned full-history rollups',
+              )}
+              icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />}
+              color="purple"
+            />
+          </Grid>
           <Text as="p" variant="caption" className="mt-4">
             {t(
               'carbon.lifetime.boundary',
@@ -77,7 +81,7 @@ export function CarbonLifetimeContext({
             )}
           </Text>
         </CarbonSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

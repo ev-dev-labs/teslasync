@@ -320,12 +320,15 @@ function loadedState(
 
 const GATED_NUMERIC_SECTIONS = [
   'hero-gauges',
+  'stat-cards',
   'more-details',
+  'energy-summary',
   'cost-savings',
 ] as const
 
 const ALWAYS_ON_SECTIONS = [
   'physics-debrief',
+  'drive-timeline',
   'gear-theater',
   'fsd-panel',
   'silent-counter',
@@ -339,7 +342,6 @@ const ALWAYS_ON_SECTIONS = [
   'power-profile',
   'tire-pressure',
   'why-ended',
-  'road-anomalies',
   'ai-coaching',
   'ai-speed-insights',
 ] as const
@@ -366,19 +368,18 @@ beforeEach(() => {
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 describe('DriveDetailPage', () => {
-  it('keeps report context and section placeholders while telemetry is loading', () => {
+  it('renders only the loading skeleton while telemetry is loading', () => {
     hookState.current = { ...emptyState(), isLoading: true }
     renderPage()
 
     expect(screen.getByTestId('drive-skeleton')).toBeInTheDocument()
     // No page chrome or sections while the skeleton owns the screen.
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull()
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
-    expect(screen.getByText('No Route data is available for this drive.')).toBeInTheDocument()
   })
 
-  it('surfaces the query error without hiding independent evidence or report shells', () => {
+  it('surfaces the query error and withholds every drive section', () => {
     hookState.current = { ...emptyState(), error: new Error('drive fetch exploded') }
     renderPage()
 
@@ -386,15 +387,12 @@ describe('DriveDetailPage', () => {
     // raw error.message — status-less errors fall into the network branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
     // The generic title still anchors the page…
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive Detail' })).toBeInTheDocument()
     // …but the error surface replaces the sections, and the empty state is NOT
     // shown (error takes precedence over the not-found branch).
     expect(screen.queryByTestId('hero-gauges')).toBeNull()
     expect(screen.queryByTestId('drive-timeline')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
-    expect(screen.getByText('No Route data is available for this drive.')).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
-    expect(screen.getByTestId('drive-ledger-compact')).toBeInTheDocument()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
   })
 
@@ -420,7 +418,7 @@ describe('DriveDetailPage', () => {
 
     // Sections survive…
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.getByTestId('journey-details')).toBeInTheDocument()
+    expect(screen.getByTestId('drive-timeline')).toBeInTheDocument()
     // …the page-level error surface never fires…
     expect(screen.queryByText("Can't reach server")).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
@@ -505,7 +503,7 @@ describe('DriveDetailPage', () => {
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
   })
 
-  it('retains all canonical and drilldown shells with a telemetry-gap notice for an all-zero drive', () => {
+  it('collapses the numeric panels into a telemetry-gap banner for an all-zero drive', () => {
     hookState.current = loadedState(
       { distanceM: 0, startAddress: null, endAddress: null, telemetry: [], positions: [] },
       { maxSpd: 0, energyWh: 0 },
@@ -515,14 +513,14 @@ describe('DriveDetailPage', () => {
     expect(screen.getByText(NO_TELEMETRY_BANNER)).toBeInTheDocument()
     // Every numeric-summary section is withheld…
     for (const id of GATED_NUMERIC_SECTIONS) {
-      expect(screen.getByTestId(id)).toBeInTheDocument()
+      expect(screen.queryByTestId(id)).toBeNull()
     }
     // …while the always-on sections (which self-gate internally) still render.
-    expect(screen.getByTestId('journey-details')).toBeInTheDocument()
+    expect(screen.getByTestId('drive-timeline')).toBeInTheDocument()
     expect(screen.getByTestId('route-map')).toBeInTheDocument()
     expect(screen.getByTestId('why-ended')).toBeInTheDocument()
     // With no addresses the title falls back to the generic label.
-    expect(screen.getByRole('heading', { level: 1, name: 'Drive detail' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Drive Detail' })).toBeInTheDocument()
   })
 
   it('keeps the numeric panels alive when only raw telemetry rows exist (zero aggregates)', () => {
@@ -538,19 +536,19 @@ describe('DriveDetailPage', () => {
     // Telemetry rows count as "meaningful" → no banner, panels render.
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.queryByTestId('stat-cards')).toBeNull()
+    expect(screen.getByTestId('stat-cards')).toBeInTheDocument()
   })
 
-  it('does not hide cost evidence for a recorded zero-energy drive', () => {
+  it('hides only the cost-savings panel when energy is zero but the drive is otherwise meaningful', () => {
     hookState.current = loadedState({ distanceM: 20000 }, { energyWh: 0, maxSpd: 90 })
     renderPage()
 
     // Meaningful via distance → energy summary shows, cost savings gated off.
-    expect(screen.getByTestId('more-details')).toBeInTheDocument()
-    expect(screen.getByTestId('cost-savings')).toBeInTheDocument()
+    expect(screen.getByTestId('energy-summary')).toBeInTheDocument()
+    expect(screen.queryByTestId('cost-savings')).toBeNull()
     // The rest of the numeric band is unaffected.
     expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
-    expect(screen.queryByTestId('stat-cards')).toBeNull()
+    expect(screen.getByTestId('stat-cards')).toBeInTheDocument()
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
   })
 

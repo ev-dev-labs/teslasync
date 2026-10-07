@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { deriveDataState } from '@/api/dataState';
 import { INTERVALS } from '@/lib/constants';
 import {
   resolveVehicleStateFreshness,
@@ -21,14 +20,14 @@ import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { VehicleHero } from '../components/VehicleHero';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import type { Vehicle } from '../types';
+import type { Vehicle, VehicleState } from '../types';
 
 /** Stable identity so an unresolved read never re-renders VehicleHero. */
 const EMPTY_VERIFIED_FIELDS: readonly VerifiedVehicleStateField[] = [];
 
 export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
@@ -43,7 +42,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
    * that reading ages out (batch not mounted on this surface, or failing).
    * Manual refresh and SSE reconnect recovery are unaffected. */
   const [recoveryInterval, setRecoveryInterval] = useState<number | false>(INTERVALS.STANDARD);
-  const { data: stateData, error, isFetching, isError, refetch } = useVehicleState(id, {
+  const { data: stateData, isFetching, isError, refetch } = useVehicleState(id, {
     refetchInterval: recoveryInterval,
   });
   const { state: live } = useVehicleLive(vehicle?.id);
@@ -107,21 +106,11 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   // fall back to an em-dash so the tile never renders an empty string.
   const firmwareVersion =
     live.version || live.swUpdateVersion || stateData?.state?.software_version || '—';
-  const dataState = deriveDataState({
-    data: vehicle ? { vehicle, stateData } : vehiclesLoading || vehiclesError || isError ? undefined : null,
-    error: error ?? (!vehicle ? vehiclesError : null),
-    isError,
-    isFetching,
-    dataUpdatedAt: observedAt,
-    refetch,
-  });
 
   return (
     <WidgetShell
-      title={!vehicle || vehiclesLoading ? t('glance.overviewAria', 'Vehicle overview') : undefined}
       loading={vehiclesLoading}
-      dataState={dataState}
-      className="[&_.relative.h-full]:!h-auto [&_.relative.p-4]:!p-0 [&_.absolute.inset-0]:!bg-none [&_.mt-6]:!mt-3 [&_.mb-6]:!mb-3 [&_.gap-x-6]:!gap-x-3 [&_.text-2xl]:!text-lg"
+      noPadding
       // `0` means "no verified observation" to WidgetShell (it renders the
       // freshness control with a null timestamp). Passing `undefined` would
       // HIDE the freshness + refresh control entirely — exactly when the user
@@ -135,7 +124,7 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
       {vehicle ? (
         <VehicleHero
           vehicle={vehicle as unknown as Vehicle}
-          state={stateData?.state ?? null}
+          state={(stateData?.state ?? null) as VehicleState | null}
           firmwareVersion={firmwareVersion}
           observedAt={observedAt}
           freshness={freshness}

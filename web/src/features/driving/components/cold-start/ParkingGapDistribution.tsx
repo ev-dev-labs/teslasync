@@ -17,14 +17,13 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type {
   ParkingGapBucket,
   ParkingGapBucketKey,
 } from '../../lib/coldStart';
 import type { ColdStartSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const BUCKET_COLORS: Record<ParkingGapBucketKey, string> = {
   warm: CHART_COLORS[1],
@@ -48,7 +47,6 @@ export function ParkingGapDistribution({
   state,
   className,
 }: ParkingGapDistributionProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const labels = useMemo<Record<ParkingGapBucketKey, string>>(
     () => ({
@@ -102,7 +100,7 @@ export function ParkingGapDistribution({
           {
             key: 'share',
             label: t('coldStart.gaps.share', 'Share'),
-            format: (value) => `${fmtNumber(value)}%`,
+            format: (value) => `${fmtNumber(value, 1)}%`,
           },
         ]}
       >

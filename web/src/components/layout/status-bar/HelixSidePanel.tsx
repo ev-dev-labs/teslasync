@@ -138,7 +138,7 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
         <div className="m-5 rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-6">
           <HelixMark className="mb-4 h-8 w-8 text-[var(--theme-primary)]" aria-hidden="true" />
           <Text as="p" variant="bodySm" className="mb-3">
-            {t('statusBar.helix.disabled', 'Enable Helix chat in integrations to ask about this page.')}
+            {t('statusBar.helix.disabled', 'Enable Helix Chat in Integrations to ask about this page.')}
           </Text>
           <Link className="text-[var(--theme-primary)] underline" to="/integrations/helix" onClick={onClose}>
             {t('statusBar.helix.configure', 'Configure Helix')}

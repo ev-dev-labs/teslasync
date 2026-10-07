@@ -1,13 +1,13 @@
 {
   "annotation": {
-    "addTitle": "Add annotation",
-    "labelPlaceholder": "e.g., battery replaced",
+    "addTitle": "Add Annotation",
+    "labelPlaceholder": "e.g., Battery replaced",
     "label": "Label",
     "date": "Date",
     "category": "Category",
     "descPlaceholder": "Optional description...",
     "description": "Description",
-    "add": "Add annotation",
+    "add": "Add Annotation",
     "listTitle": "Annotations",
     "remove": "Remove annotation",
     "removeNamed": "Remove annotation: {{label}}",

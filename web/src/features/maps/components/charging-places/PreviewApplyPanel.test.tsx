@@ -129,7 +129,7 @@ describe('PreviewApplyPanel — no rate selected', () => {
 
     expect(
       screen.getByText(
-        'Choose preview sessions on a rate to see affected charging sessions and estimated cost.',
+        'Choose Preview sessions on a rate to see affected charging sessions and estimated cost.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText('Matched')).not.toBeInTheDocument();
@@ -137,24 +137,6 @@ describe('PreviewApplyPanel — no rate selected', () => {
 });
 
 describe('PreviewApplyPanel — preview metrics', () => {
-  it('retains all preview evidence after refresh failure without performing an apply', () => {
-    mockedPreview.mockReturnValue(makePreviewQuery({ data: makePreview(), isError: true, error: new Error('refresh') }));
-    renderPanel({ geofenceId: 7, rate });
-    expect(screen.getByText('10')).toBeInTheDocument();
-    expect(screen.getByText('6')).toBeInTheDocument();
-    expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('$7.20')).toBeInTheDocument();
-    expect(applyMutate).not.toHaveBeenCalled();
-  });
-
-  it('shows unknown counts rather than fabricated zero before a preview resolves', () => {
-    mockedPreview.mockReturnValue(makePreviewQuery({ data: undefined }));
-    renderPanel({ geofenceId: 7, rate });
-    expect(screen.getAllByText('—')).toHaveLength(5);
-    expect(screen.queryByText('0')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Apply' })).toBeDisabled();
-    expect(applyMutate).not.toHaveBeenCalled();
-  });
   it('renders matched/eligible/protected/energy/estimated-cost for the selected rate', () => {
     renderPanel({ geofenceId: 7, rate });
 
@@ -168,7 +150,7 @@ describe('PreviewApplyPanel — preview metrics', () => {
     expect(screen.getByText('$7.20')).toBeInTheDocument();
     expect(
       screen.getByText(
-        'This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose apply.',
+        'This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose Apply.',
       ),
     ).toBeInTheDocument();
   });
@@ -230,7 +212,7 @@ describe('PreviewApplyPanel — apply gating', () => {
     mockedPreview.mockReturnValue(makePreviewQuery({ data: makePreview({ eligible_sessions: 0 }) }));
     renderPanel({ geofenceId: 7, rate });
 
-    expect(screen.getByRole('button', { name: 'Assign sessions' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Assign Sessions' })).toBeEnabled();
     expect(
       screen.getByText(/All matched costs are protected/),
     ).toBeInTheDocument();

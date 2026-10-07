@@ -8,12 +8,11 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type { SweetSpotResult } from '../../lib/speedSweetSpot';
 import type { SpeedSweetSpotSectionState } from './types';
 import { useSpeedSweetSpotDisplay } from './useSpeedSweetSpotDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface MonthlyOperatingContextProps {
   summary: SweetSpotResult;
@@ -24,7 +23,6 @@ export function MonthlyOperatingContext({
   summary,
   state,
 }: MonthlyOperatingContextProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const {
     convertDistance, convertDriveSpeed, convertEfficiency, distanceUnit,
@@ -145,7 +143,7 @@ export function MonthlyOperatingContext({
                   tickLine={false}
                   axisLine={false}
                   width={58}
-                  tickFormatter={(value) => fmtNumber(value)}
+                  tickFormatter={(value) => fmtNumber(value, 0)}
                 />
                 <YAxis
                   yAxisId="speed"
@@ -154,15 +152,15 @@ export function MonthlyOperatingContext({
                   tickLine={false}
                   axisLine={false}
                   width={50}
-                  tickFormatter={(value) => fmtNumber(value)}
+                  tickFormatter={(value) => fmtNumber(value, 0)}
                 />
                 <Tooltip
                   content={
                     <ChartTooltip
                       valueFormatter={(value, name) =>
                         name === speedName
-                          ? `${fmtNumber(value)} ${speedUnit}`
-                          : `${fmtNumber(value)} ${efficiencyUnit}`
+                          ? `${fmtNumber(value, 1)} ${speedUnit}`
+                          : `${fmtNumber(value, 1)} ${efficiencyUnit}`
                       }
                     />
                   }

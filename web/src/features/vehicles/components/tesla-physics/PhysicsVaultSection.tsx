@@ -29,7 +29,7 @@ export default function PhysicsVaultSection({ physics }: { physics: PhysicsPage 
         <MetricCard label={t('teslaOnly.vaultDrives', 'Drive boundaries')} value={drives.length} color="cyan" />
         <MetricCard label={t('teslaOnly.vaultCharges', 'Charge boundaries')} value={charges.length} color="green" />
       </Grid>
-      <Text as="p" variant="bodySm">{t('teslaOnly.certificateWindow', 'Certificate window: {{from}} to {{to}} · issued {{issued}}', {
+      <Text as="p" variant="bodySm">{t('teslaOnly.certificateWindow', 'Certificate window: {{from}} to {{to}} · Issued {{issued}}', {
         from: time(cert?.from, t), to: time(cert?.to, t), issued: time(cert?.issued_at, t),
       })}</Text>
       <Badge variant={cert?.hmac_sha256 ? 'success' : 'warning'} size="sm">{cert?.hmac_sha256
@@ -55,7 +55,7 @@ export default function PhysicsVaultSection({ physics }: { physics: PhysicsPage 
         mobileColumns={['id', 'started', 'rule']} keyExtractor={(r) => `charge-${r.id}-${r.started_at}`} />
       <RawRows title={t('teslaOnly.vaultEtiquette', 'Supercharger etiquette dwells')} rows={dwells} tableId="physics:vault-dwells" t={t}
         keyExtractor={(r) => String(r.index)} columns={[
-          { key: 'dwell', align: 'right', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
+          { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (r) => seconds(r.dwell, t) },
         ]} />
     </Evidence>
   </>;

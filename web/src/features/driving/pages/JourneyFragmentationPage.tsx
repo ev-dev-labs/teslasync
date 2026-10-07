@@ -3,11 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
-import { PageLayout, Grid, LayoutCard } from '@/components/layout';
+import { EmptyState } from '@/components/feedback';
+import { PageContainer, Grid } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Select, Text } from '@/components/ui';
-import { useDataState } from '@/hooks/useDataState';
+import { GlassPanel, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
@@ -17,6 +16,7 @@ import {
   ChainLengthChart,
   ElapsedComposition,
   EnergyIntensityPanel,
+  EvidenceBand,
   JourneyDirectory,
   MethodologyPanel,
   MonthlyTrendChart,
@@ -27,7 +27,6 @@ import {
   WeekdayProfileChart,
 } from '../components/journey-fragmentation';
 import { analyzeJourneyFragmentation } from '../lib/journeyFragmentation';
-import { JourneyEvidenceBrief } from '../components/operationalbrief-a-m/JourneyEvidenceBrief';
 
 const HISTORY_LIMIT = 1_000;
 const GAP_OPTIONS = [30, 60, 120, 240] as const;
@@ -41,7 +40,6 @@ export default function JourneyFragmentationPage() {
   const [analysisNowMs] = useState(() => Date.now());
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT);
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const result = useMemo(
     () => analyzeJourneyFragmentation(
       drivesQuery.data ?? [],
@@ -51,18 +49,17 @@ export default function JourneyFragmentationPage() {
     ),
     [analysisNowMs, drivesQuery.data, maxGapMin, timeZone],
   );
-  const initialLoading = vehicleId != null && drivesState.status === 'initial';
+  const initialLoading = drivesQuery.isLoading && drivesQuery.data == null;
   const gapOptions = GAP_OPTIONS.map((minutes) => ({
     value: String(minutes),
     label: t('journeyFragmentation.gapMinutes', '{{count}} min', { count: minutes }),
   }));
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('journeyFragmentation.title', 'Journey Fragmentation')}
-      query={drivesQuery}
       subtitle={t('journeyFragmentation.subtitle', 'Descriptive continuity analysis of a capped returned drive-history window')}
-      contextActions={(
+      actions={(
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Select
             aria-label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}
@@ -74,16 +71,13 @@ export default function JourneyFragmentationPage() {
         </div>
       )}
     >
-      <StaleRefreshWarning state={drivesState} label={t('journeyFragmentation.title', 'Journey Fragmentation')} />
       <FadeIn>
-        <JourneyEvidenceBrief
+        <EvidenceBand
           result={result}
           loading={initialLoading}
           hasVehicle={vehicleId != null}
-          error={drivesState.fatalError}
+          error={drivesQuery.isError ? drivesQuery.error : null}
           onRetry={() => void drivesQuery.refetch()}
-          available={drivesState.hasData}
-          retained={drivesState.status === 'stale' || drivesState.refreshError != null}
         />
       </FadeIn>
 
@@ -107,7 +101,7 @@ export default function JourneyFragmentationPage() {
       <FadeIn delay={0.5}><AccountingPanel result={result} /></FadeIn>
       <FadeIn delay={0.55}><MethodologyPanel result={result} /></FadeIn>
 
-      <LayoutCard title={t('journeyFragmentation.footer.title', 'Report context')}>
+      <GlassPanel className="p-4">
         <Text as="p" variant="caption">
           {result.returnedRows === 0
             ? t('journeyFragmentation.footer.empty', 'All analytical shells remain visible while the returned history window is empty.')
@@ -118,7 +112,7 @@ export default function JourneyFragmentationPage() {
             message={t('journeyFragmentation.footer.waiting', 'No returned drive rows are available for this vehicle yet.')}
           />
         )}
-      </LayoutCard>
-    </PageLayout>
+      </GlassPanel>
+    </PageContainer>
   );
 }

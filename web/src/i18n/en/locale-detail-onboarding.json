@@ -40,16 +40,16 @@
       "or": " or the ",
       "docs": "documentation"
     },
-    "syncTitle": "Sync your vehicles",
+    "syncTitle": "Sync Your Vehicles",
     "title": "Welcome to TeslaSync",
     "syncDesc": "Your Tesla account is connected. Sync your vehicles to start tracking.",
     "desc": "The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.",
-    "sync": "Sync vehicles",
-    "connect": "Connect Tesla account",
+    "sync": "Sync Vehicles",
+    "connect": "Connect Tesla Account",
     "tracking": "Real-time Tracking",
-    "drives": "Drive history",
-    "charging": "Charge analytics",
-    "control": "Vehicle control",
+    "drives": "Drive History",
+    "charging": "Charge Analytics",
+    "control": "Vehicle Control",
     "status": {
       "sectionLabel": "Setup status",
       "tesla": {

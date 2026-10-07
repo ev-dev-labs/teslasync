@@ -11,16 +11,14 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-
+import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { MetricBandSkeleton } from './helpers';
 import { PIE_COLORS } from './constants';
 import { ChargingDetailSection } from './ChargingDetailSection';
 import type { FleetAnalyticsQuery } from './constants';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -50,35 +48,35 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
               color="cyan"
             />
             <MetricCard
-              label={t('analytics.charging.totalEnergy', 'Total energy')}
-              value={data ? fmtNumber(data.total_energy_kwh ?? 0) : '—'}
+              label={t('analytics.charging.totalEnergy', 'Total Energy')}
+              value={data ? fmtNumber(data.total_energy_kwh ?? 0, 1) : '—'}
               subtitle="kWh"
               icon={<Zap className="h-4 w-4" />}
               color="green"
             />
             <MetricCard
-              label={t('analytics.charging.totalCost', 'Total cost')}
-              value={data ? formatCurrency(data.total_cost ?? 0) : '—'}
+              label={t('analytics.charging.totalCost', 'Total Cost')}
+              value={data ? formatCurrency(data.total_cost ?? 0, 2) : '—'}
               icon={<DollarSign className="h-4 w-4" />}
               color="amber"
             />
             <MetricCard
-              label={t('analytics.charging.avgPower', 'Avg power')}
-              value={powerStats ? fmtNumber(safe(powerStats.avg)) : '—'}
+              label={t('analytics.charging.avgPower', 'Avg Power')}
+              value={powerStats ? fmtNumber(safe(powerStats.avg), 1) : '—'}
               subtitle="kW"
               icon={<Gauge className="h-4 w-4" />}
               color="purple"
             />
             <MetricCard
-              label={t('analytics.charging.avgDuration', 'Avg duration')}
-              value={durStats ? fmtNumber(safe(durStats.avg)) : '—'}
+              label={t('analytics.charging.avgDuration', 'Avg Duration')}
+              value={durStats ? fmtNumber(safe(durStats.avg), 0) : '—'}
               subtitle={t('analytics.charging.min', 'min')}
               icon={<Timer className="h-4 w-4" />}
               color="cyan"
             />
             <MetricCard
-              label={t('analytics.charging.chargeEff', 'Charge efficiency')}
-              value={effStats ? fmtNumber(safe(effStats.avg)) : '—'}
+              label={t('analytics.charging.chargeEff', 'Charge Efficiency')}
+              value={effStats ? fmtNumber(safe(effStats.avg), 1) : '—'}
               subtitle="%"
               icon={<TrendingUp className="h-4 w-4" />}
               color="green"
@@ -93,7 +91,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
       >
         {/* Charger Types Donut */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.chargerTypes', 'Charger types')}
+          title={t('analytics.charging.chargerTypes', 'Charger Types')}
           icon={<PieChartIcon className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -132,7 +130,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Start Battery Distribution */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.startBattery', 'Start battery distribution')}
+          title={t('analytics.charging.startBattery', 'Start Battery Distribution')}
           icon={<Battery className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -160,7 +158,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Hourly Charging Pattern */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.hourlyPattern', 'Hourly charging pattern')}
+          title={t('analytics.charging.hourlyPattern', 'Hourly Charging Pattern')}
           icon={<Clock className="h-4 w-4" />}
           loading={isLoading}
           error={err}

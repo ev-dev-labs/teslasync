@@ -128,24 +128,10 @@ afterEach(() => {
 /* ── Tests ────────────────────────────────────────────────────────── */
 
 describe('EventHistoryTable — structure', () => {
-  it('keeps explicit false separate from an unknown lock value in the value checklist', () => {
-    renderTable({ history: [
-      makeEvent({ id: 'locked', locked: true }),
-      makeEvent({ id: 'unlocked', locked: false }),
-      makeEvent({ id: 'unknown', locked: null }),
-    ] });
-    fireEvent.click(screen.getByRole('button', { name: 'Lock filter' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Unlocked' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
-    expect(screen.getAllByTestId('ts')).toHaveLength(1);
-    expect(screen.getByText('Unlocked')).toBeInTheDocument();
-  });
-
   it('renders the panel title, all five column headers, and a data row', () => {
     renderTable({ history: [makeEvent({ locked: true, sentryMode: true })] });
 
-    expect(screen.getByText('Security event history')).toBeInTheDocument();
+    expect(screen.getByText('Security Event History')).toBeInTheDocument();
 
     // Every column header is present (Time is a sortable button, the rest spans).
     expect(screen.getByRole('button', { name: 'Time' })).toBeInTheDocument();
@@ -195,7 +181,7 @@ describe('EventHistoryTable — door + window branches', () => {
     const door = screen.getByText('Closed', { exact: true });
     expect(door.className).toContain('text-emerald-300');
 
-    const windows = screen.getByText('All closed');
+    const windows = screen.getByText('All Closed');
     expect(windows.className).toContain('text-emerald-300');
   });
 
@@ -208,7 +194,7 @@ describe('EventHistoryTable — door + window branches', () => {
     expect(door.className).toContain('text-amber-300');
 
     // 3 closed + 1 open → windowSummary interpolates "1 Open/Venting".
-    const windows = screen.getByText('1 open/venting');
+    const windows = screen.getByText('1 Open/Venting');
     expect(windows.className).toContain('text-amber-300');
   });
 });
@@ -238,7 +224,7 @@ describe('EventHistoryTable — loading + error states', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
     // The panel chrome is still present so the surface never goes blank.
-    expect(screen.getByText('Security event history')).toBeInTheDocument();
+    expect(screen.getByText('Security Event History')).toBeInTheDocument();
   });
 
   it('an error wins over a concurrent loading flag and suppresses the table + skeleton', () => {

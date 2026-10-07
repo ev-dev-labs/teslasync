@@ -246,8 +246,8 @@ describe('BatteryTab — loading', () => {
     const { container } = renderTab(makeQuery({ isLoading: true }));
 
     // The KPI band is a skeleton — no card labels or values leak through.
-    expect(screen.queryByText('Health score')).toBeNull();
-    expect(screen.queryByText('Est. range')).toBeNull();
+    expect(screen.queryByText('Health Score')).toBeNull();
+    expect(screen.queryByText('Est. Range')).toBeNull();
     // Pulsing skeletons are on screen…
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     // …but no chart has been drawn yet.
@@ -264,9 +264,9 @@ describe('BatteryTab — empty', () => {
     renderTab(makeQuery({ data: analytics([]) }));
 
     // Band never disappears: every labelled card is present…
-    expect(screen.getByText('Health score')).toBeInTheDocument();
+    expect(screen.getByText('Health Score')).toBeInTheDocument();
     expect(screen.getByText('Capacity')).toBeInTheDocument();
-    expect(screen.getByText('Est. range')).toBeInTheDocument();
+    expect(screen.getByText('Est. Range')).toBeInTheDocument();
     // …and each of the five values collapses to the em-dash placeholder.
     expect(screen.getAllByText('—')).toHaveLength(5);
 
@@ -315,10 +315,10 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Values come from the second (latest) row, not the first.
-    expect(screen.getAllByText('92.40').length).toBeGreaterThan(0);    // health_score, Settings precision
-    expect(screen.getAllByText('75.00 kWh').length).toBeGreaterThan(0); // capacity_wh via formatEnergy
+    expect(screen.getAllByText('92.4').length).toBeGreaterThan(0);     // health_score, 1dp
+    expect(screen.getAllByText('75.0 kWh').length).toBeGreaterThan(0); // capacity_wh via formatEnergy
     expect(screen.getAllByText('3.21').length).toBeGreaterThan(0);     // degradation_pct, 2dp
-    expect(screen.getAllByText('480.00').length).toBeGreaterThan(0);   // range_km → km
+    expect(screen.getAllByText('480').length).toBeGreaterThan(0);      // range_km → km, 0dp
     expect(screen.getAllByText('312').length).toBeGreaterThan(0);      // cycle_count int
   });
 
@@ -326,10 +326,10 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Panel titles frame each section.
-    expect(screen.getByRole('heading', { name: 'Health score timeline' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Capacity trend' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Range trend' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Degradation & cycles' })).toBeInTheDocument();
+    expect(screen.getByText('Health Score Timeline')).toBeInTheDocument();
+    expect(screen.getByText('Capacity Trend')).toBeInTheDocument();
+    expect(screen.getByText('Range Trend')).toBeInTheDocument();
+    expect(screen.getByText('Degradation & Cycles')).toBeInTheDocument();
 
     // Four charts: one area, two lines, one composed.
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
@@ -386,8 +386,9 @@ describe('BatteryTab — null safety', () => {
     });
     renderTab(makeQuery({ data: analytics([nulled]) }));
 
-    expect(screen.getAllByText('0.00')).toHaveLength(3);     // health, degradation, range → safe(0)
-    expect(screen.getByText('0.00 kWh')).toBeInTheDocument(); // capacity_wh → safe(0)
+    expect(screen.getByText('0.0')).toBeInTheDocument();      // health_score → safe(0)
+    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();  // capacity_wh → safe(0)
+    expect(screen.getByText('0.00')).toBeInTheDocument();     // degradation_pct → safe(0)
 
     // Charts still render (the row exists) and the range projection is 0, not NaN.
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
@@ -406,7 +407,7 @@ describe('BatteryTab — miles preference', () => {
     renderTab(makeQuery({ data: analytics(trend) }));
 
     // 480 km → ~298 mi through the REAL convertDistanceFromSI.
-    expect(screen.getByText('298.26')).toBeInTheDocument();
+    expect(screen.getByText('298')).toBeInTheDocument();
     expect(screen.getByText('mi')).toBeInTheDocument();
 
     // The projected chart value is the converted distance, not the raw km.

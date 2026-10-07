@@ -9,7 +9,7 @@
  *   - forwarded props (height, icon, message, error, onRetry) reach the
  *     inner component,
  *   - the error branch never goes blank — even for a nullish error,
- *   - ready/retained render children; retained-empty keeps specialist empty copy.
+ *   - only the `ready` branch renders `children`.
  *
  * QueryError pulls in i18n (`useTranslation`) + Router (`useNavigate`) +
  * `useOnlineStatus`, so we import `@/i18n`, wrap in a MemoryRouter, and
@@ -86,7 +86,6 @@ describe('LiveSectionState', () => {
       const skeleton = container.querySelector('.animate-pulse');
       expect(skeleton).not.toBeNull();
       expect((skeleton as HTMLElement).style.height).toBe('320px');
-      expect(screen.getByRole('status', { name: 'Loading Live snapshot' })).toBeInTheDocument();
       expect(queryByTestId('ready-body')).toBeNull();
     });
 
@@ -159,29 +158,5 @@ describe('LiveSectionState', () => {
       expect(container.querySelector('.animate-pulse')).toBeNull();
       expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
     });
-
-    describe('retained branch', () => {
-      it('keeps the specialist body visible and retries without replacing it with an error', () => {
-        const onRetry = vi.fn();
-        renderState('retained', { error: new ApiError('refresh failed', 500), onRetry });
-        expect(screen.getByTestId('ready-body')).toBeInTheDocument();
-        expect(screen.getByRole('status')).toHaveTextContent('Previously loaded data remains visible');
-        expect(screen.queryByRole('alert')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
-        expect(onRetry).toHaveBeenCalledTimes(1);
-        expect(screen.getByTestId('ready-body')).toBeInTheDocument();
-      });
-
-      it('keeps a retained empty snapshot distinct from a fresh empty answer or a fatal error', () => {
-        const onRetry = vi.fn();
-        renderState('retained-empty', { error: new ApiError('refresh failed', 500), onRetry });
-        expect(screen.getByText('Redis has no live snapshot for this vehicle yet.')).toBeInTheDocument();
-        expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
-        expect(screen.queryByTestId('ready-body')).toBeNull();
-        expect(screen.queryByRole('alert')).toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
-        expect(onRetry).toHaveBeenCalledTimes(1);
-      });
-    });
-  })
+  });
 });

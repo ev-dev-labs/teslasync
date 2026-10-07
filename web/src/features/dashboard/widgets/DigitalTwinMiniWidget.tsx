@@ -1,15 +1,12 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Monitor, ArrowUpRight, Lock, Unlock, Shield } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
-import { EmptyState, Skeleton } from '@/components/feedback';
+import { Badge } from '@/components/ui';
+import { EmptyState } from '@/components/feedback';
 import { VehicleTwin } from '@/components/vehicles';
 import { useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { buildTwinState } from '@/lib/vehicleState';
-import { useDataState } from '@/hooks/useDataState';
-import { combineDataStates } from '@/api/dataState';
-import { WidgetStatusGrid } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
@@ -17,47 +14,20 @@ const REFRESH_INTERVAL = 5_000;
 
 export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
-  const vehiclesQuery = useVehicles();
-  const { data: vehicles, isLoading: vehiclesLoading } = vehiclesQuery;
+  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
   const vehicle = vehicleId
     ? vehicles?.find((v) => v.id === vehicleId) ?? vehicles?.[0]
     : vehicles?.[0];
   const id = vehicle?.id ?? 0;
 
-  const securityQuery = useSecurityLatest(id, REFRESH_INTERVAL);
-  const stateQuery = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
-  const chargingQuery = useChargingTelemetryLatest(id, REFRESH_INTERVAL);
-  const { data: securityData, isLoading: secLoading } = securityQuery;
-  const { data: vehicleStateData, isLoading: stateLoading, isFetching: stateFetching, isStale: stateStale, isError: stateError, dataUpdatedAt: stateUpdatedAt, refetch: refetchState } = stateQuery;
-  const { data: chargingData } = chargingQuery;
+  const { data: securityData, isLoading: secLoading } = useSecurityLatest(id, REFRESH_INTERVAL);
+  const { data: vehicleStateData, isLoading: stateLoading, isFetching: stateFetching, isStale: stateStale, isError: stateError, dataUpdatedAt: stateUpdatedAt, refetch: refetchState } = useVehicleState(id, { refetchInterval: REFRESH_INTERVAL });
+  const { data: chargingData } = useChargingTelemetryLatest(id, REFRESH_INTERVAL);
 
   // Include the vehicle-list load so the shell shows a skeleton during the
   // initial fetch instead of flashing the "No vehicle data" empty state.
   const isLoading = vehiclesLoading || secLoading || stateLoading;
   const vehicleState = vehicleStateData?.state ?? null;
-  const stateTrust = useDataState({ ...stateQuery, data: vehicleStateData ?? (stateLoading || stateError ? undefined : null) }, { provenance: vehicleStateData?.live ? 'live' : 'cached' });
-  const securityTrust = useDataState({ ...securityQuery, data: securityData ?? (secLoading || securityQuery.isError ? undefined : null) }, { provenance: 'cached' });
-  const chargingTrust = useDataState({ ...chargingQuery, data: chargingData ?? (chargingQuery.isLoading || chargingQuery.isError ? undefined : null) }, { provenance: 'cached' });
-  const vehiclesTrust = useDataState({ ...vehiclesQuery, data: vehicles ?? (vehiclesLoading || vehiclesQuery.isError ? undefined : []) });
-  const hasTelemetry = vehicleStateData != null || securityData != null || chargingData != null;
-  // Vehicle metadata must not mask an initial failure of every telemetry source.
-  const combined = combineDataStates(vehicle
-    ? hasTelemetry ? [stateTrust, securityTrust, chargingTrust, vehiclesTrust] : [stateTrust, securityTrust, chargingTrust]
-    : [vehiclesTrust]);
-  const handleRefresh = useCallback(() => {
-    void refetchState();
-    void securityQuery.refetch?.();
-    void chargingQuery.refetch?.();
-    void vehiclesQuery.refetch?.();
-  }, [refetchState, securityQuery, chargingQuery, vehiclesQuery]);
-
-  const dataState = {
-    ...combined,
-    status: !hasTelemetry && isLoading ? 'initial' : combined.status,
-    data: vehicle ? [vehicleStateData, securityData, chargingData] : vehicles,
-    hasData: hasTelemetry,
-    retry: handleRefresh,
-  } satisfies Parameters<typeof WidgetShell>[0]['dataState'];
 
   const twinState = useMemo(
     () => buildTwinState(securityData, vehicleState, chargingData),
@@ -68,23 +38,21 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
 
   return (
     <WidgetShell
-      title={t('widget.digitalTwinMini', 'Digital twin')}
-      icon={<Monitor className="h-3.5 w-3.5" />}
-      dataState={dataState}
-      loadingContent={<div className="flex flex-col gap-2"><Skeleton className="h-28" /><Skeleton className="h-11" /></div>}
+      title={t('widget.digitalTwinMini', 'Digital Twin')}
+      icon={<Monitor className="h-3.5 w-3.5 text-neon-purple" />}
       loading={isLoading}
-      updatedAt={combined.updatedAt ?? stateUpdatedAt}
-      isFetching={combined.isRefreshing || stateFetching}
+      updatedAt={stateUpdatedAt}
+      isFetching={stateFetching}
       isStale={stateStale}
       isError={stateError}
-      onRefresh={handleRefresh}
+      onRefresh={() => refetchState()}
+      noPadding
       actions={
         <Link
           to="/digital-twin"
-          className="flex min-h-11 max-w-full items-center gap-1 rounded-shape-sm px-2 transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          className="text-2xs text-[var(--text-muted)] hover:text-cyan-300 transition-colors flex items-center gap-0.5"
         >
-          <Text variant="bodySm" className="min-w-0 [overflow-wrap:anywhere]">{t('widget.open', 'Open')}</Text>
-          <ArrowUpRight className="h-3 w-3 shrink-0" aria-hidden="true" />
+          {t('widget.open', 'Open')} <ArrowUpRight className="h-3 w-3" />
         </Link>
       }
     >
@@ -111,9 +79,9 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
                 }
               >
                 {twinState.locked === false ? (
-                  <Unlock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
+                  <Unlock className="h-2.5 w-2.5 mr-0.5" />
                 ) : (
-                  <Lock className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
+                  <Lock className="h-2.5 w-2.5 mr-0.5" />
                 )}
                 {twinState.locked === false
                   ? t('widget.unlocked', 'Unlocked')
@@ -123,7 +91,7 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
               </Badge>
               {twinState.sentryMode != null && (
                 <Badge variant={twinState.sentryMode ? 'info' : 'neutral'}>
-                  <Shield className="h-2.5 w-2.5 me-0.5" aria-hidden="true" />
+                  <Shield className="h-2.5 w-2.5 mr-0.5" />
                   {twinState.sentryMode
                     ? t('widget.sentryOn', 'Sentry')
                     : t('widget.sentryOff', 'Off')}
@@ -131,25 +99,13 @@ export default function DigitalTwinMiniWidget({ vehicleId, size }: WidgetProps) 
               )}
             </div>
           ) : null}
-          {!isCompact && <WidgetStatusGrid compact cells={[
-            {
-              id: 'sentry', label: t('widget.sentryOn', 'Sentry'),
-              status: twinState.sentryMode == null ? 'unknown' : twinState.sentryMode ? 'ok' : 'inactive',
-              statusLabel: twinState.sentryMode == null ? t('widget.status.unknown', 'Unknown') : twinState.sentryMode ? t('widget.sentryOn', 'Sentry') : t('widget.sentryOff', 'Off'),
-            },
-          ]} />}
         </div>
       ) : (
-        <div className="flex min-w-0 flex-col gap-2">
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<Monitor className="h-5 w-5" />}
           message={t('widget.noVehicle', 'No vehicle data')}
           className="py-4"
         />
-        <WidgetStatusGrid compact cells={[
-          { id: 'lock', label: t('widget.lockStatus', 'Lock'), status: 'unknown' },
-        ]} />
-        </div>
       )}
     </WidgetShell>
   );

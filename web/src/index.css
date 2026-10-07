@@ -422,8 +422,8 @@ select option:checked {
   }
 
   .metric-label {
-    /* Aligned with typography.role.metricLabel; keep authored label casing. */
-    @apply text-2xs font-medium tracking-wider;
+    /* Aligned with typography.role.metricLabel — micro uppercase eyebrow above big metric values. */
+    @apply text-2xs font-medium uppercase tracking-wider;
     color: var(--text-muted);
   }
 }
@@ -481,23 +481,6 @@ html[data-status-bar='off'] {
 }
 
 /* === ANIMATIONS === */
-@keyframes replay-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.6); opacity: 0; }
-}
-
-@keyframes vehicle-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.25; }
-  50% { transform: scale(1.6); opacity: 0; }
-}
-
-@keyframes dashFlow {
-  to { stroke-dashoffset: -12; }
-}
-.flow-active {
-  animation: dashFlow 0.8s linear infinite;
-}
-
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }

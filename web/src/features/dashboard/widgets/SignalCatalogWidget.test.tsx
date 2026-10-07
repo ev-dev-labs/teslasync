@@ -40,7 +40,6 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
 
 import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
 import type { WidgetSize } from './types';
@@ -153,7 +152,7 @@ const STANDARD: WidgetSize = { cols: 2, rows: 3 };
 const COMPACT: WidgetSize = { cols: 1, rows: 1 };
 
 function renderWidget(size: WidgetSize = STANDARD, vehicleId?: number) {
-  return render(<MemoryRouter><SignalCatalogWidget size={size} vehicleId={vehicleId} /></MemoryRouter>);
+  return render(<SignalCatalogWidget size={size} vehicleId={vehicleId} />);
 }
 
 beforeEach(() => {
@@ -173,7 +172,7 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByText('No signals in catalog')).toBeNull();
-    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
   });
 
   it('shows the empty state when the catalog loaded with zero entries and no error', () => {
@@ -182,14 +181,14 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
 
     expect(screen.getByText('No signals in catalog')).toBeInTheDocument();
     expect(screen.queryByText('Failed to load signal catalog')).toBeNull();
-    expect(screen.getByRole('textbox')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).toBeNull();
   });
 
   it('shows a distinct "failed to load" message (not "no signals") on an errored initial load', () => {
     setCatalog({ isError: true, data: undefined });
     renderWidget(STANDARD);
 
-    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.getByText('Failed to load signal catalog')).toBeInTheDocument();
     expect(screen.queryByText('No signals in catalog')).toBeNull();
   });
 
@@ -206,14 +205,14 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
 // ── Compact layout ────────────────────────────────────────────────────────────
 
 describe('SignalCatalogWidget — compact layout', () => {
-  it('retains its title beside the signal count and caption without a search box', () => {
+  it('renders the signal count and caption without a search box or title heading', () => {
     setCatalog({ data: [makeEntry(), makeEntry({ name: 'VehicleSpeed' })] });
     renderWidget(COMPACT);
 
     expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('Signals available')).toBeInTheDocument();
+    expect(screen.getByText('signals available')).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.getByRole('heading', { name: /Signal catalog/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /Signal Catalog/i })).toBeNull();
   });
 
   it('prefers the empty state over a "0" figure when the catalog is empty', () => {
@@ -221,8 +220,7 @@ describe('SignalCatalogWidget — compact layout', () => {
     renderWidget(COMPACT);
 
     expect(screen.getByText('No signals in catalog')).toBeInTheDocument();
-    expect(screen.getByText('Signals available')).toBeInTheDocument();
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.queryByText('signals available')).toBeNull();
   });
 });
 
@@ -232,7 +230,7 @@ describe('SignalCatalogWidget — standard layout', () => {
   it('exposes the title heading and an accessible search field', () => {
     renderWidget(STANDARD);
 
-    expect(screen.getByRole('heading', { name: /Signal catalog/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Signal Catalog/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Search signals' })).toBeInTheDocument();
   });
 
@@ -289,8 +287,8 @@ describe('SignalCatalogWidget — standard layout', () => {
     ]);
     renderWidget(STANDARD);
 
-    const batteryRow = screen.getByText('BatteryLevel').closest('div')?.parentElement as HTMLElement;
-    const speedRow = screen.getByText('VehicleSpeed').closest('div')?.parentElement as HTMLElement;
+    const batteryRow = screen.getByText('BatteryLevel').closest('div') as HTMLElement;
+    const speedRow = screen.getByText('VehicleSpeed').closest('div') as HTMLElement;
     expect(within(batteryRow).getByText('3')).toBeInTheDocument();
     expect(within(speedRow).getByText('0')).toBeInTheDocument();
   });
@@ -384,24 +382,6 @@ describe('SignalCatalogWidget — observations wiring & refresh', () => {
   it('passes the explicit vehicleId prop through to useSignalObservations', () => {
     renderWidget(STANDARD, 42);
     expect(observationsMock).toHaveBeenCalledWith(42);
-  });
-
-  describe('SignalCatalogWidget — observation sample trust', () => {
-    it('shows unknown counts while observations are unavailable', () => {
-      setObservations(undefined);
-      renderWidget({ cols: 3, rows: 3 });
-      expect(screen.getByText('BatteryLevel')).toBeInTheDocument();
-      expect(screen.getByText('—')).toBeInTheDocument();
-      expect(screen.queryByText('0')).toBeNull();
-    });
-
-    it('keeps a cached observation sample while reporting its failed refresh', () => {
-      observationsMock.mockReturnValue({ data: [makeObs()], isError: true, error: new Error('refresh') });
-      const { container } = renderWidget(STANDARD);
-      expect(screen.getByText('BatteryLevel')).toBeInTheDocument();
-      expect(screen.getByTitle('Observations in fetched sample')).toHaveTextContent('1');
-      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
-    });
   });
 
   it('falls back to the first vehicle id when no vehicleId prop is provided', () => {

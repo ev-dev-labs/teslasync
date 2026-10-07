@@ -40,7 +40,7 @@ export function VehiclePaintPicker({
       role="radiogroup"
       aria-label={t('paint.pickerLabel', 'Vehicle paint color')}
     >
-      <span className="text-xs tracking-wider text-[var(--text-secondary)]">
+      <span className="text-xs uppercase tracking-wider text-[var(--text-secondary)]">
         {t('paint.label', 'Paint')}
       </span>
       <div className="flex items-center gap-2">

@@ -178,8 +178,8 @@ describe('YearChargingBreakdown — populated', () => {
     const list = screen.getByRole('list');
     expect(within(list).getAllByRole('listitem')).toHaveLength(3);
     expect(within(list).getByText('Supercharger')).toBeInTheDocument();
-    expect(within(list).getByText('DC fast')).toBeInTheDocument();
-    expect(within(list).getByText('AC / other')).toBeInTheDocument();
+    expect(within(list).getByText('DC Fast')).toBeInTheDocument();
+    expect(within(list).getByText('AC / Other')).toBeInTheDocument();
     expect(within(list).getByText('50%')).toBeInTheDocument();
     expect(within(list).getByText('30%')).toBeInTheDocument();
     expect(within(list).getByText('20%')).toBeInTheDocument();
@@ -212,8 +212,8 @@ describe('YearChargingBreakdown — slice filtering + colour stability', () => {
     const list = screen.getByRole('list');
     expect(within(list).getAllByRole('listitem')).toHaveLength(2);
     expect(within(list).queryByText('Supercharger')).toBeNull();
-    expect(within(list).getByText('DC fast')).toBeInTheDocument();
-    expect(within(list).getByText('AC / other')).toBeInTheDocument();
+    expect(within(list).getByText('DC Fast')).toBeInTheDocument();
+    expect(within(list).getByText('AC / Other')).toBeInTheDocument();
   });
 
   it('keeps each connector on a stable colour when a slice is filtered out (regression)', () => {
@@ -224,14 +224,14 @@ describe('YearChargingBreakdown — slice filtering + colour stability', () => {
       return swatch.style.backgroundColor;
     });
     expect(new Set(fullColours).size).toBe(3);
-    const dcColourWhenFull = swatchColorFor('DC fast');
+    const dcColourWhenFull = swatchColorFor('DC Fast');
     full.unmount();
 
     // Drop the Supercharger slice: DC Fast must NOT inherit Supercharger's
     // colour — it keeps the exact same swatch it had in the full split.
     renderBreakdown(makeReview({ supercharger_pct: 0, dc_fast_pct: 60, ac_other_pct: 40 }));
     expect(legendItems()).toHaveLength(2);
-    expect(swatchColorFor('DC fast')).toBe(dcColourWhenFull);
+    expect(swatchColorFor('DC Fast')).toBe(dcColourWhenFull);
   });
 });
 
@@ -269,7 +269,7 @@ describe('YearChargingBreakdown — null safety + rounding', () => {
     // Nullish shares collapse to 0 and are filtered out → a single slice.
     const list = screen.getByRole('list');
     expect(within(list).getAllByRole('listitem')).toHaveLength(1);
-    expect(within(list).getByText('DC fast')).toBeInTheDocument();
+    expect(within(list).getByText('DC Fast')).toBeInTheDocument();
     expect(within(list).getByText('100%')).toBeInTheDocument();
 
     // Nullish summary fields render as a clean "0 sessions ... 0%".
@@ -282,6 +282,6 @@ describe('YearChargingBreakdown — null safety + rounding', () => {
     const list = screen.getByRole('list');
     expect(within(list).getByText('33%')).toBeInTheDocument();
     expect(within(list).getByText('67%')).toBeInTheDocument();
-    expect(within(list).queryByText('AC / other')).toBeNull();
+    expect(within(list).queryByText('AC / Other')).toBeNull();
   });
 });

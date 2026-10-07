@@ -14,14 +14,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui';
-
+import { formatBytes } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
 import {
   useExportJobs,
   exportDownloadUrl,
   type ExportJobSummary,
 } from '@/api/hooks/useExports';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Floating, minimizable widget that surfaces in-flight + recently-finished
@@ -241,7 +240,7 @@ function DrawerSection({
 }) {
   return (
     <div>
-      <p className="px-2 pb-1 pt-1 text-2xs font-semibold tracking-wider text-[var(--text-muted)]">
+      <p className="px-2 pb-1 pt-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
         {label}
       </p>
       {jobs.length === 0 ? (
@@ -258,7 +257,6 @@ function DrawerSection({
 }
 
 function JobRow({ job }: { job: ExportJobSummary }) {
-  const { formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
   const bucket = bucketFor(job);
   const typeLabel = prettyType(job.type, t);
@@ -276,8 +274,8 @@ function JobRow({ job }: { job: ExportJobSummary }) {
           <span className="font-medium text-[var(--text-primary)] truncate">
             {typeLabel}
           </span>
-          <span className="text-2xs tracking-wider text-[var(--text-muted)]">
-            {job.format === 'csv' ? 'CSV' : job.format === 'json' ? 'JSON' : job.format}
+          <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+            {job.format}
           </span>
         </div>
         <div className="text-2xs text-[var(--text-muted)] truncate">
@@ -287,7 +285,7 @@ function JobRow({ job }: { job: ExportJobSummary }) {
                 relative: formatRelative(job.created_at),
               })
             : t('export.jobDrawer.completedLine', '{{size}} · {{relative}}', {
-                size: formatBytes(job.file_size, { zeroAsEmpty: true }) || '—',
+                size: formatBytes(job.file_size, { zeroAsEmpty: true, gbDecimals: 2 }) || '—',
                 relative: formatRelative(job.completed_at ?? job.created_at),
               })}
         </div>

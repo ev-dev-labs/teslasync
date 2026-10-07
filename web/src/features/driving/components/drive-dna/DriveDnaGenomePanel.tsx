@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { KVList, type KVItem } from '@/components/data-display';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 import type {
   DriveDnaModel,
@@ -20,7 +20,6 @@ import type {
 import { DriveDnaSectionBody } from './DriveDnaSectionBody';
 import { downloadDriveDnaSvg } from './driveDnaSvg';
 import type { DriveDnaSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const TRAIT_ICONS = {
   spirited: Gauge,
@@ -45,7 +44,6 @@ export function DriveDnaGenomePanel({
   driveLabel,
   units,
 }: DriveDnaGenomePanelProps) {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const canDownload =
     state.telemetry.isResolved && model.genome.petals.length > 0;
@@ -81,18 +79,18 @@ export function DriveDnaGenomePanel({
     },
     {
       label: t('driveDna.genome.medianSpeed', 'Sampled median speed'),
-      value: units.formatSpeed(model.stats.medianSpeedMps),
+      value: units.formatSpeed(model.stats.medianSpeedMps, { precision: 1 }),
     },
     {
       label: t('driveDna.genome.peakRegen', 'Peak regen magnitude'),
-      value: units.formatPower(model.stats.peakRegenW),
+      value: units.formatPower(model.stats.peakRegenW, { precision: 1 }),
     },
     {
       label: t('driveDna.genome.climb', 'Positive measured climb'),
       value:
         model.stats.positiveElevationClimbM != null
           ? t('driveDna.genome.metres', '{{value}} m', {
-              value: fmtNumber(model.stats.positiveElevationClimbM),
+              value: fmtNumber(model.stats.positiveElevationClimbM, 0),
             })
           : '—',
     },

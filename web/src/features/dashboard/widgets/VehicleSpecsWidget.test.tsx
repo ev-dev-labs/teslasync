@@ -205,7 +205,6 @@ describe('VehicleSpecsWidget vehicle resolution', () => {
     renderWidget();
 
     const empty = await screen.findByText('No specs available');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty.closest('[role="status"]')).not.toBeNull();
     // Regression guard: a disabled config query resolves `undefined`; the old
     // `!== null` check leaked it as "data" and rendered a card of "—".
@@ -224,7 +223,7 @@ describe('VehicleSpecsWidget states', () => {
     const { container } = renderWidget({ vehicleId: 1 });
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Vehicle specs')).toBeInTheDocument();
+    expect(screen.queryByText('Vehicle Specs')).toBeNull();
     expect(screen.queryByText('No specs available')).toBeNull();
   });
 
@@ -233,12 +232,11 @@ describe('VehicleSpecsWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     const empty = await screen.findByText('No specs available');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(empty.closest('[role="status"]')).not.toBeNull();
     // An empty options object ({}) alone must NOT count as data — so the
     // detail card (and its "Model" row) never renders.
     expect(screen.queryByText('Model')).toBeNull();
-    expect(screen.queryByText('Car version')).toBeNull();
+    expect(screen.queryByText('Car Version')).toBeNull();
   });
 
   it('surfaces a QueryError — not the empty state — when ALL requests fail', async () => {
@@ -246,12 +244,11 @@ describe('VehicleSpecsWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // Regression guard: the failure must NOT masquerade as an empty state or
     // render the populated card.
     expect(screen.queryByText('No specs available')).toBeNull();
-    expect(screen.getByText('Vehicle specs')).toBeInTheDocument();
+    expect(screen.queryByText('Vehicle Specs')).toBeNull();
   });
 
   it('keeps showing partial data (no error takeover) when only some sources fail', async () => {
@@ -263,10 +260,8 @@ describe('VehicleSpecsWidget states', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText('Model S Plaid')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.queryByText("Can't reach server")).toBeNull();
     expect(screen.queryByText('No specs available')).toBeNull();
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 });
 
@@ -281,12 +276,11 @@ describe('VehicleSpecsWidget populated detail card', () => {
     });
     renderWidget({ vehicleId: 1 });
 
-    expect(await screen.findByText('Vehicle specs')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
+    expect(await screen.findByText('Vehicle Specs')).toBeInTheDocument();
     // Labels
     expect(screen.getByText('Model')).toBeInTheDocument();
-    expect(screen.getByText('Paint color')).toBeInTheDocument();
-    expect(screen.getByText('Car version')).toBeInTheDocument();
+    expect(screen.getByText('Paint Color')).toBeInTheDocument();
+    expect(screen.getByText('Car Version')).toBeInTheDocument();
     // Values (specs wins over config for the overlapping fields)
     expect(screen.getByText('Model 3')).toBeInTheDocument();
     expect(screen.getByText('Performance')).toBeInTheDocument();
@@ -308,7 +302,6 @@ describe('VehicleSpecsWidget populated detail card', () => {
 
     // Model resolves through specs.car_type → specs.model → config.car_type.
     expect(await screen.findByText('Model Y (cfg)')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     expect(screen.getByText('Perf')).toBeInTheDocument();
     expect(screen.getByText('2025.2.6')).toBeInTheDocument();
   });
@@ -320,7 +313,6 @@ describe('VehicleSpecsWidget populated detail card', () => {
     renderWidget({ vehicleId: 1 });
 
     expect(await screen.findByText('Decoded 0')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Only the first eight option codes survive the slice.
     expect(screen.getAllByText('Option')).toHaveLength(8);
     expect(screen.getByText('OPT7')).toBeInTheDocument();
@@ -333,7 +325,6 @@ describe('VehicleSpecsWidget populated detail card', () => {
     renderWidget({ vehicleId: 1 });
 
     await screen.findByText('Model 3');
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     // Trim / Paint / Wheels / Interior / Aux / Car Version → six placeholders.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(5);
     expect(screen.queryByText(/undefined|NaN|null/)).toBeNull();
@@ -343,7 +334,7 @@ describe('VehicleSpecsWidget populated detail card', () => {
 // ── Compact (1×1) layout ────────────────────────────────────────────────────
 
 describe('VehicleSpecsWidget compact layout', () => {
-  it('renders the titled Model + Trim hero (no detail rows, no option badges)', async () => {
+  it('renders the title-less Model + Trim hero (no detail rows, no option badges)', async () => {
     routeAll({
       specs: envelope(specsData({ car_type: 'Model X', trim_badging: 'Plaid' })),
       options: envelope({ ADX1: 'Enhanced Autopilot' }),
@@ -351,22 +342,19 @@ describe('VehicleSpecsWidget compact layout', () => {
     renderWidget({ vehicleId: 1, cols: 1 });
 
     expect(await screen.findByText('Model X')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('Trim')).toBeInTheDocument();
-    expect(screen.getByText('Plaid')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Vehicle specs', level: 3 })).toBeInTheDocument();
-    expect(screen.queryByText('Paint color')).toBeNull();
+    expect(screen.getByText('Trim: Plaid')).toBeInTheDocument();
+    // Compact drops the header title, the labelled detail rows, and options.
+    expect(screen.queryByText('Vehicle Specs')).toBeNull();
+    expect(screen.queryByText('Paint Color')).toBeNull();
     expect(screen.queryByText('Enhanced Autopilot')).toBeNull();
   });
 
-  it('is null-safe in compact mode: an absent trim renders a labelled placeholder', async () => {
+  it('is null-safe in compact mode: an absent trim renders "Trim: —"', async () => {
     routeAll({ specs: envelope({ car_type: 'Model 3' }) }); // no trim
     renderWidget({ vehicleId: 1, cols: 1 });
 
     expect(await screen.findByText('Model 3')).toBeInTheDocument();
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.getByText('Trim')).toBeInTheDocument();
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Trim: —')).toBeInTheDocument();
     expect(screen.queryByText(/undefined/)).toBeNull();
   });
 });
@@ -379,7 +367,6 @@ describe('VehicleSpecsWidget refresh', () => {
     renderWidget({ vehicleId: 1 });
 
     const refresh = await screen.findByRole('button', { name: /^Refresh/i });
-    await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
     const before = specsCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
-import { useDataState } from '@/hooks/useDataState';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -14,6 +12,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import {
+  ColdStartKpis,
   ColdStartMethodology,
   ColdStartOpportunities,
   ColdWarmComparison,
@@ -23,7 +22,6 @@ import {
   type ColdStartSectionState,
 } from '../components/cold-start';
 import { summarizeColdStarts } from '../lib/coldStart';
-import { ColdStartBrief } from '../components/operationalbrief-a-m/ColdStartBrief';
 
 const DRIVE_WINDOW_LIMIT = 1_000;
 const ANALYSIS_COLUMNS = { default: 1, xl: 5 } as const;
@@ -46,10 +44,9 @@ export default function ColdStartPage() {
     limit: DRIVE_WINDOW_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
-  const sourceState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(() => summarizeColdStarts(drives), [drives]);
   const penaltyCost =
-    summary.totalPenaltyWh != null && costPerKwh != null && costPerKwh > 0
+    summary.totalPenaltyWh != null && costPerKwh > 0
       ? (summary.totalPenaltyWh / 1_000) * costPerKwh
       : null;
   const penaltyCostLabel =
@@ -64,15 +61,15 @@ export default function ColdStartPage() {
   }
 
   const sectionState: ColdStartSectionState = {
-    isLoading: sourceState.status === 'initial',
-    error: sourceState.fatalError,
+    isLoading: drivesQuery.isLoading,
+    error: drivesQuery.isError ? drivesQuery.error : null,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('coldStart.title', 'Cold Start Cost')}
       subtitle={t(
         'coldStart.subtitle',
@@ -80,14 +77,11 @@ export default function ColdStartPage() {
       )}
       query={drivesQuery}
     >
-      <StaleRefreshWarning state={sourceState} label={t('coldStart.title', 'Cold Start Cost')} />
       <FadeIn>
-        <ColdStartBrief
+        <ColdStartKpis
           summary={summary}
           penaltyCostLabel={penaltyCostLabel}
           {...sectionState}
-          scope={t('coldStart.brief.window', '{{start}}–{{end}}; returned selected-window drives', { start, end })}
-          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
 
@@ -139,6 +133,6 @@ export default function ColdStartPage() {
           />
         </Grid>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

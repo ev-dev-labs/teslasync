@@ -1,12 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CheckCheck, Radio } from 'lucide-react';
+import { CheckCheck, Radio, RefreshCw, ShieldAlert } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { OperationalBrief } from '@/components/data-display';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
@@ -18,15 +17,13 @@ import {
 import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { chartTokens } from '@/lib/tokens';
-import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
+import { formatDateShort } from '@/lib/dateFormat';
 import { useTimezone } from '@/lib/timezone';
 
 import { analyzeCommandReliability, type ReliabilityGrade } from '../lib/commandReliability';
-import { commandReliabilityMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
 
 const GRADE_BADGE: Record<ReliabilityGrade, 'success' | 'warning' | 'danger' | 'neutral' | 'info'> = {
   excellent: 'success',
@@ -54,7 +51,7 @@ const GRADE_COLOR: Record<ReliabilityGrade, number> = {
 
 export default function CommandReliabilityPage() {
   const { t } = useTranslation();
-  usePageTitle(t('commandReliability.title', 'Command reliability'));
+  usePageTitle(t('commandReliability.title', 'Command Reliability'));
 
   const { vehicleId } = useSelectedVehicle();
   const { preferences } = useProductPreferences();
@@ -64,7 +61,6 @@ export default function CommandReliabilityPage() {
     timezone: timeZone,
   });
   const historyQuery = useCommandReliabilityHistory(vehicleId ?? undefined, startInstant, endInstantExclusive);
-  const state = useDataState(historyQuery, { provenance: 'historical' });
 
   const summary = useMemo(
     () => analyzeCommandReliability(historyQuery.data ?? []),
@@ -91,56 +87,79 @@ export default function CommandReliabilityPage() {
     () => chartData.map(({ grade, ...rest }) => ({ ...rest, grade: String(grade) })),
     [chartData],
   );
-  const operationalMetrics = useOperationalMetrics(
-    commandReliabilityMetrics(historyQuery.data != null ? summary : null, t),
-  );
 
   if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('commandReliability.title', 'Command reliability')} />;
+    return <NoVehicleSelected pageTitle={t('commandReliability.title', 'Command Reliability')} />;
   }
 
   const isLoading = historyQuery.isLoading;
-  const isError = !!state.fatalError;
+  const isError = historyQuery.isError;
 
   return (
-    <PageLayout
-      title={t('commandReliability.title', 'Command reliability')}
+    <PageContainer
+      title={t('commandReliability.title', 'Command Reliability')}
       subtitle={t(
         'commandReliability.subtitle',
-        'Which remote commands you can actually trust, graded on wilson confidence bounds rather than a raw success percentage',
+        'Which remote commands you can actually trust, graded on Wilson confidence bounds rather than a raw success percentage',
       )}
       query={historyQuery}
     >
-      <StaleRefreshWarning state={state} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
           aria-label={t('commandReliability.kpis', 'Command reliability metrics')}
+          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
           {isError ? (
             <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={state.fatalError} onRetry={() => historyQuery.refetch()} />
+              <QueryError error={historyQuery.error} onRetry={() => historyQuery.refetch()} />
             </GlassPanel>
+          ) : isLoading ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} height={96} className="rounded-xl" />
+            ))
           ) : (
-            <OperationalBrief
-              compact
-              testId="command-reliability-summary"
-              eyebrow={t('commandReliability.kpis', 'Command reliability metrics')}
-              title={t('commandReliability.brief.title', 'Command reliability summary')}
-              description={t('commandReliability.summary.scope', 'Selected vehicle command history, with existing success and retry-intent definitions.')}
-              metrics={operationalMetrics}
-              loading={isLoading}
-              scope={`${formatDateTime(startInstant, { tz: timeZone })} → ${formatDateTime(endInstantExclusive, { tz: timeZone })}`}
-              provenance={t('commandReliability.summary.scope', 'Selected vehicle command history, with existing success and retry-intent definitions.')}
-              statusLabel={isLoading ? t('commandReliability.brief.loading', 'Loading command outcomes')
-                : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
-                  : historyQuery.data == null ? t('commandReliability.brief.unavailable', 'Command outcomes unavailable')
-                    : summary.totalAttempts === 0 ? t('commandReliability.brief.empty', 'No attempts recorded')
-                      : t('commandReliability.brief.recorded', 'Recorded command outcomes')}
-              statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
-              freshness={state.updatedAt != null
-                ? formatDateTime(new Date(state.updatedAt).toISOString()) : undefined}
-            />
+            <>
+              <MetricCard
+                label={t('commandReliability.overall', 'Overall Success')}
+                value={`${Math.round(summary.overallSuccessRate * 100)}%`}
+                subtitle={t('commandReliability.attempts', '{{n}} attempts', {
+                  n: summary.totalAttempts,
+                })}
+                icon={<CheckCheck className="h-5 w-5" />}
+                color={summary.overallSuccessRate >= 0.95 ? 'green' : 'amber'}
+                help={{
+                  i18nKey: 'help.commandReliability.overall',
+                  defaultValue:
+                    'Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average.',
+                }}
+              />
+              <MetricCard
+                label={t('commandReliability.unreliable', 'Unreliable Commands')}
+                value={summary.unreliableCount}
+                subtitle={
+                  summary.worstCommand != null
+                    ? summary.worstCommand.label
+                    : t('commandReliability.allFine', 'Nothing failing')
+                }
+                icon={<ShieldAlert className="h-5 w-5" />}
+                color={summary.unreliableCount > 0 ? 'red' : 'green'}
+              />
+              <MetricCard
+                label={t('commandReliability.intents', 'Distinct Intents')}
+                value={summary.totalIntents}
+                subtitle={t('commandReliability.intentsHint', 'after collapsing retry storms')}
+                icon={<Radio className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('commandReliability.storms', 'Retry Storms')}
+                value={summary.storms.length}
+                subtitle={t('commandReliability.stormsHint', 'you pressed it again, and again')}
+                icon={<RefreshCw className="h-5 w-5" />}
+                color={summary.storms.length > 0 ? 'amber' : 'purple'}
+              />
+            </>
           )}
         </section>
       </FadeIn>
@@ -159,14 +178,14 @@ export default function CommandReliabilityPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('commandReliability.chart', 'Confidence-weighted success')}
+            title={t('commandReliability.chart', 'Confidence-Weighted Success')}
             subtitle={t(
               'commandReliability.chartHint',
               'Bars are the pessimistic lower bound; the dot is the raw success rate the log shows',
             )}
             ariaLabel={t(
               'commandReliability.chart.aria',
-              'Bar chart of the wilson lower confidence bound for each command with the naive success rate overlaid',
+              'Bar chart of the Wilson lower confidence bound for each command with the naive success rate overlaid',
             )}
             loading={isLoading}
             empty={chartData.length === 0}
@@ -228,7 +247,7 @@ export default function CommandReliabilityPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <CheckCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('commandReliability.detail', 'Command breakdown')}
+            {t('commandReliability.detail', 'Command Breakdown')}
             <HelpTooltip
               size="sm"
               i18nKey="help.commandReliability.detail"
@@ -307,6 +326,6 @@ export default function CommandReliabilityPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

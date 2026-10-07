@@ -6,12 +6,10 @@ import {
   ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import type { AutomationHistoryListResponse } from '@/api/types';
-import { useDataState } from '@/hooks/useDataState';
 
 export function AutomationHistoryTrend({ query }: { query: UseQueryResult<AutomationHistoryListResponse> }) {
   const { t } = useTranslation();
   const trend = query.data?.trend;
-  const source = useDataState({ ...query, data: query.data ?? undefined });
   const resolution = (trend?.length ?? 0) > 3650 ? 4 : (trend?.length ?? 0) > 730 ? 7 : 10;
   const points = useMemo(() => {
     const buckets = new Map<string, { period: string; success: number; failed: number; other: number }>();
@@ -30,8 +28,8 @@ export function AutomationHistoryTrend({ query }: { query: UseQueryResult<Automa
       title={t('automations.historyPage.trend', 'Execution activity')}
       ariaLabel={t('automations.historyPage.trendAria', 'Execution outcomes across the selected period')}
       chartKey="automation-history-trend"
-      loading={query.isLoading && !source.hasData}
-      error={source.fatalError}
+      loading={query.isLoading && !query.data}
+      error={query.isError && !query.data ? query.error : undefined}
       onRetry={() => { void query.refetch(); }}
       empty={Boolean(query.data) && points.length === 0}
       emptyActionTo={{ label: t('automations.historyPage.manage', 'Manage automation rules'), to: '/automations/list' }}

@@ -9,7 +9,6 @@ import type {
   CandidateRejectionReason,
   ThermalDirection,
 } from '../../lib/cabinThermal';
-import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function cabinRejectionLabel(
   t: TFunction,
@@ -105,7 +104,7 @@ export function formatTemperatureDelta(
   deltaC: number | null,
   unit: TemperatureUnitPref,
   locale: string,
-  precision = getGlobalPrecision(),
+  precision = 1,
 ): string {
   if (deltaC == null || !Number.isFinite(deltaC)) return '—';
   const converted =

@@ -1,7 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { installApiMocks, seedBrowserState, waitForHarnessReady } from './mockApi'
-import { beginNativeDashboardDrag } from './dashboardDragPrecondition'
-import { attachDiagnostics, expectNoRuntimeFailures, monitorPage, type PageDiagnostics } from './qualityAssertions'
 
 interface LayoutItem {
   i: string
@@ -11,7 +9,7 @@ interface LayoutItem {
   h: number
 }
 
-async function createCommuter(page: Page) {
+async function createCommuter(page) {
   await page.getByRole('button', { name: 'Switch dashboard layout' }).click()
   await page.getByRole('menuitem', { name: 'New from template…' }).click()
   await page.getByRole('button', { name: /Daily Commuter/ }).click()
@@ -20,7 +18,7 @@ async function createCommuter(page: Page) {
   await expect(page.getByRole('button', { name: 'Switch dashboard layout' })).toContainText('Daily Commuter')
 }
 
-async function readLayouts(page: Page): Promise<Record<string, LayoutItem[]>> {
+async function readLayouts(page): Promise<Record<string, LayoutItem[]>> {
   return page.evaluate(() => {
     const dashboards = JSON.parse(localStorage.getItem('teslasync-dashboards') ?? '[]') as Array<{
       id: string
@@ -49,9 +47,6 @@ test.beforeEach(async ({ page }) => {
 })
 
 test('drag persists on the active breakpoint without touching the others', async ({ page }) => {
-  const diagnostics = monitorPage(page)
-  let restoredDiagnostics: PageDiagnostics | undefined
-  try {
   await seedBrowserState(page, 'dark', '/', { preserveDashboardState: true })
   const mockApi = await installApiMocks(page, 'populated')
   await page.goto('/', { waitUntil: 'domcontentloaded' })
@@ -64,7 +59,12 @@ test('drag persists on the active breakpoint without touching the others', async
 
   // Drag the first widget exactly one column right (no vertical ambiguity).
   const handle = page.locator('.widget-drag-handle').first()
-  const { x: cx, y: cy } = await beginNativeDashboardDrag(page, handle, test.info())
+  const box = await handle.boundingBox()
+  expect(box).not.toBeNull()
+  const cx = box!.x + box!.width / 2
+  const cy = box!.y + box!.height / 2
+  await page.mouse.move(cx, cy)
+  await page.mouse.down()
   for (let i = 1; i <= 8; i++) {
     await page.mouse.move(cx + (384 * i) / 8, cy)
     await page.waitForTimeout(30)
@@ -86,28 +86,13 @@ test('drag persists on the active breakpoint without touching the others', async
   // Opening a fresh document in the same context verifies persistence across
   // mounts without navigating the old page while its API mocks are active.
   const restoredPage = await page.context().newPage()
-  restoredDiagnostics = monitorPage(restoredPage)
   await seedBrowserState(restoredPage, 'dark', '/', { preserveDashboardState: true })
   const restoredApi = await installApiMocks(restoredPage, 'populated')
   await restoredPage.goto('/', { waitUntil: 'domcontentloaded' })
   await waitForHarnessReady(restoredPage, restoredApi)
   const reloaded = await readLayouts(restoredPage)
   expect(reloaded).toEqual(after)
-  await expectNoRuntimeFailures(diagnostics)
-  await expectNoRuntimeFailures(restoredDiagnostics)
   await restoredPage.close()
-  } finally {
-    await test.info().attach('drag-runtime-by-document.json', {
-      body: Buffer.from(JSON.stringify({ original: diagnostics, restored: restoredDiagnostics ?? null }, null, 2)),
-      contentType: 'application/json',
-    })
-    await attachDiagnostics(test.info(), {
-      consoleErrors: [...diagnostics.consoleErrors, ...(restoredDiagnostics?.consoleErrors ?? [])],
-      pageErrors: [...diagnostics.pageErrors, ...(restoredDiagnostics?.pageErrors ?? [])],
-      brokenResources: [...diagnostics.brokenResources, ...(restoredDiagnostics?.brokenResources ?? [])],
-      failedDataRequests: [...diagnostics.failedDataRequests, ...(restoredDiagnostics?.failedDataRequests ?? [])],
-    })
-  }
 })
 
 test('auto arrange compacts every breakpoint without overlaps', async ({ page }) => {
@@ -308,7 +293,7 @@ test('new widgets fit their content across desktop, tablet, and phone widths', a
   for (const width of [1920, 1440, 1200, 1024, 996, 768, 481, 480, 390, 320]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 })
     if (width === 390) {
-      await expect(page.getByRole('button', { name: 'Add widget', exact: true })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Add Widget', exact: true })).toBeVisible()
     }
     await expect.poll(async () => widget.evaluate((element) => {
       const panel = element.querySelector<HTMLElement>('.widget-panel')
@@ -494,7 +479,7 @@ test('repairs oversized layouts restored from the server and syncs the healed si
   await page.route('**/api/v1/settings/dashboard-layouts', async (route) => {
     if (route.request().method() === 'PUT') {
       saves.push(route.request().postDataJSON())
-      await route.fulfill({ status: 200, json: { dashboards: saves[saves.length - 1]?.dashboards, active_id: serverDashboard.id } })
+      await route.fulfill({ status: 200, json: { dashboards: saves.at(-1)?.dashboards, active_id: serverDashboard.id } })
       return
     }
     await route.fulfill({ status: 200, json: { dashboards: [serverDashboard], active_id: serverDashboard.id } })
@@ -504,7 +489,7 @@ test('repairs oversized layouts restored from the server and syncs the healed si
   await expect.poll(async () =>
     (await readLayouts(page)).md.find((item) => item.i === 'server-nav')?.h ?? 30,
   ).toBeLessThan(10)
-  await expect.poll(() => saves[saves.length - 1]?.dashboards[0]?.layouts.md.find((item) => item.i === 'server-nav')?.h ?? 30)
+  await expect.poll(() => saves.at(-1)?.dashboards[0]?.layouts.md.find((item) => item.i === 'server-nav')?.h ?? 30)
     .toBeLessThan(10)
   await expect.poll(async () =>
     (await readLayouts(page)).md.find((item) => item.i === 'server-hero')?.h ?? 9,

@@ -30,13 +30,13 @@ describe('Voltage — rendered value', () => {
     const { container } = render(<Voltage volts={0} precision={0} />);
     expect(container.textContent).toBe('0 V');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0 V');
+    expect(span(container)?.getAttribute('title')).toBe('0.000 V');
   });
 
   it('preserves the sign of negative voltages (e.g. LV deltas)', () => {
     const { container } = render(<Voltage volts={-48} precision={0} />);
     expect(container.textContent).toBe('-48 V');
-    expect(span(container)?.getAttribute('title')).toBe('-48 V');
+    expect(span(container)?.getAttribute('title')).toBe('-48.000 V');
   });
 
   it('renders large finite pack voltages without truncation', () => {
@@ -109,23 +109,23 @@ describe('Voltage — formatting & precision', () => {
 });
 
 describe('Voltage — title (canonical hover value)', () => {
-  it('formats the voltage title with the requested precision', () => {
+  it('exposes the raw voltage at a fixed 3-decimal precision', () => {
     const { container } = render(<Voltage volts={400.5} precision={1} />);
-    expect(span(container)?.getAttribute('title')).toBe('400.5 V');
+    expect(span(container)?.getAttribute('title')).toBe('400.500 V');
   });
 
-  it('uses the display precision for the title too', () => {
+  it('keeps the title at 3 decimals independent of the display precision', () => {
     const { container } = render(<Voltage volts={400} precision={0} />);
-    // The explicit integer override applies to both display and title.
+    // Display collapses to "400 V" but the hover title stays canonical.
     expect(container.textContent).toBe('400 V');
-    expect(span(container)?.getAttribute('title')).toBe('400 V');
+    expect(span(container)?.getAttribute('title')).toBe('400.000 V');
   });
 
-  it('uses locale grouping separators in the title', () => {
+  it('keeps the canonical title free of locale grouping separators', () => {
     setGlobalLocale('de-DE');
     const { container } = render(<Voltage volts={12345} precision={0} />);
-    // Titles follow the same locale as the visible measurement.
-    expect(span(container)?.getAttribute('title')).toBe('12.345 V');
+    // toFixed(3) is locale-agnostic, so the title never picks up de-DE grouping.
+    expect(span(container)?.getAttribute('title')).toBe('12345.000 V');
   });
 });
 
@@ -135,7 +135,7 @@ describe('Voltage — DOM & re-render', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42 V');
+    expect(el?.getAttribute('title')).toBe('42.000 V');
   });
 
   it('applies the className to the rendered value span', () => {
@@ -146,11 +146,11 @@ describe('Voltage — DOM & re-render', () => {
   it('recomputes the display and title when props change on re-render', () => {
     const { container, rerender } = render(<Voltage volts={100} precision={1} />);
     expect(container.textContent).toBe('100.0 V');
-    expect(span(container)?.getAttribute('title')).toBe('100.0 V');
+    expect(span(container)?.getAttribute('title')).toBe('100.000 V');
 
     rerender(<Voltage volts={240} precision={1} />);
     expect(container.textContent).toBe('240.0 V');
-    expect(span(container)?.getAttribute('title')).toBe('240.0 V');
+    expect(span(container)?.getAttribute('title')).toBe('240.000 V');
   });
 
   it('transitions from a valid value to the empty state when volts becomes null', () => {

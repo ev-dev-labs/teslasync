@@ -29,7 +29,6 @@ import {
   type KindCategory,
   type LiveSignalRow,
 } from './liveSignalStats';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface LiveSignalsTableProps {
   rows: LiveSignalRow[];
@@ -86,7 +85,6 @@ function parseTs(ts: string | undefined): number {
 }
 
 export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
-  useNumberFormatting();
   const { t } = useTranslation();
   const [filter, setFilter] = useState('');
   const { sortKey, sortDir, onSort } = useSortToggle('name', 'asc');
@@ -112,7 +110,6 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
   const columns: Column<LiveSignalRow>[] = [
     {
       key: 'name',
-      filterValue: (row) => row.name ?? null,
       header: t('admin.liveSignals.cols.name', 'Signal'),
       sortable: true,
       visibleOnMobile: true,
@@ -137,11 +134,6 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
     },
     {
       key: 'kind',
-      filterValue: (row) => row.kind ?? null,
-      filterValueLabel: (_value, row) => {
-        const category = classifyKind(row.kind, row.value);
-        return t(KIND_LABELS[category].key, KIND_LABELS[category].fallback);
-      },
       header: t('admin.liveSignals.cols.kind', 'Kind'),
       render: (row) => {
         const category = classifyKind(row.kind, row.value);
@@ -154,7 +146,6 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
     },
     {
       key: 'source',
-      filterValue: (row) => row.source ?? null,
       header: t('admin.liveSignals.cols.source', 'Source'),
       render: (row) =>
         row.source ? (
@@ -165,7 +156,6 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
     },
     {
       key: 'timestamp',
-      filterValue: (row) => row.timestamp ?? null,
       header: t('admin.liveSignals.cols.timestamp', 'Last update'),
       sortable: true,
       render: (row) =>
@@ -178,7 +168,7 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
   ];
 
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="space-y-4">
       <div className="relative max-w-md">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
@@ -201,8 +191,6 @@ export function LiveSignalsTable({ rows }: LiveSignalsTableProps) {
         name="live-signals"
         columns={columns}
         data={sorted}
-        enableValueFilters
-        filterData={rows ?? EMPTY_ROWS}
         keyExtractor={(row) => row.name}
         sortKey={sortKey}
         sortDir={sortDir}

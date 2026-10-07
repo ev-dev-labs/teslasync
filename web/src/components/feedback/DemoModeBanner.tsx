@@ -37,7 +37,7 @@ export function DemoModeBanner({ className, enabled }: DemoModeBannerProps) {
       className={cn(
         'sticky top-0 z-[9999] flex items-center justify-center gap-2 border-b',
         'border-amber-400/40 bg-amber-500/20 px-3 py-1.5 text-center',
-        'text-xs font-semibold tracking-wider text-amber-900 dark:text-amber-100',
+        'text-xs font-semibold uppercase tracking-wider text-amber-900 dark:text-amber-100',
         className,
       )}
     >

@@ -8,8 +8,7 @@
 import { useId, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ListChecks } from 'lucide-react'
-import { GlassPanel, IconBox, PanelTitle, HelperText } from '@/components/ui'
-import { OrderedStepList } from '@/components/data-display'
+import { GlassPanel, IconBox, PanelTitle, Text, HelperText } from '@/components/ui'
 
 export function TotpSetupGuide() {
   const { t } = useTranslation('settings')
@@ -26,7 +25,7 @@ export function TotpSetupGuide() {
       {
         id: 'step1',
         title: t('totp.guide.step1.title', 'Install an authenticator app') || '—',
-        description:
+        body:
           t(
             'totp.guide.step1.body',
             'Use any RFC 6238 client — Google Authenticator, 1Password, Bitwarden or Authy.',
@@ -35,7 +34,7 @@ export function TotpSetupGuide() {
       {
         id: 'step2',
         title: t('totp.guide.step2.title', 'Scan the QR code') || '—',
-        description:
+        body:
           t(
             'totp.guide.step2.body',
             'Choose Enable TOTP, then scan the QR or paste the manual secret into your app.',
@@ -44,7 +43,7 @@ export function TotpSetupGuide() {
       {
         id: 'step3',
         title: t('totp.guide.step3.title', 'Verify a 6-digit code') || '—',
-        description:
+        body:
           t(
             'totp.guide.step3.body',
             'Enter the rotating code your app shows to confirm both devices are in sync.',
@@ -53,7 +52,7 @@ export function TotpSetupGuide() {
       {
         id: 'step4',
         title: t('totp.guide.step4.title', 'Store your backup codes') || '—',
-        description:
+        body:
           t(
             'totp.guide.step4.body',
             'Save the one-time codes somewhere safe — they recover access if you lose your app.',
@@ -79,7 +78,28 @@ export function TotpSetupGuide() {
           <HelperText>{subtitle}</HelperText>
         </div>
       </div>
-      <OrderedStepList aria-labelledby={titleId} steps={steps} />
+      <ol aria-labelledby={titleId} className="space-y-3">
+        {steps.map((step, i) => (
+          <li key={step.id} className="flex gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] ring-1 ring-white/[0.08]"
+            >
+              <Text as="span" size="xs" weight="semibold" color="primary">
+                {i + 1}
+              </Text>
+            </span>
+            <div className="space-y-0.5">
+              <Text as="p" size="sm" weight="medium" color="primary">
+                {step.title}
+              </Text>
+              <Text variant="bodySm" as="p">
+                {step.body}
+              </Text>
+            </div>
+          </li>
+        ))}
+      </ol>
     </GlassPanel>
   )
 }

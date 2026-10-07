@@ -98,7 +98,7 @@ describe('QuickMetrics — populated grid', () => {
     // Total Time: 150 min → 2h 30m.
     expect(screen.getByText('2h 30m')).toBeInTheDocument();
     // Monthly Avg: 1200 / 12 = 100 → "$100" (precision 0, "$" from settings).
-    expect(screen.getByText('$100.00')).toBeInTheDocument();
+    expect(screen.getByText('$100')).toBeInTheDocument();
     // Per Session: 840 / 42 = 20 → "20.00 kWh".
     expect(screen.getByText('20.00 kWh')).toBeInTheDocument();
 
@@ -159,7 +159,7 @@ describe('QuickMetrics — regression + null safety', () => {
     // Missing duration → formatDuration(undefined) → em-dash.
     expect(screen.getByText('—')).toBeInTheDocument();
     // Missing cost → (0 / 12) → "$0"; missing energy/count → "0.00 kWh".
-    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('$0')).toBeInTheDocument();
     expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
 
     expect(container.textContent).not.toContain('NaN');

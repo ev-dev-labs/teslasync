@@ -1,16 +1,20 @@
+import { SlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
-
+import { Grid } from '@/components/layout';
+import {
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
+  Text,
+} from '@/components/ui';
+import { fmtInt, fmtPercent } from '@/lib/numberFormat';
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
 import { ComfortConsistencySectionBody } from './ComfortConsistencySectionBody';
 import type {
   ComfortConsistencyQueryState,
   TemperatureDeltaFormatter,
 } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencySetpointAgreementProps {
   summary: ComfortConsistencySummary;
@@ -18,17 +22,29 @@ interface ComfortConsistencySetpointAgreementProps {
   formatDelta: TemperatureDeltaFormatter;
 }
 
+function AgreementMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <MetricLabel>{label}</MetricLabel>
+      <Text as="p" variant="body" className="mt-1">{value}</Text>
+    </div>
+  );
+}
+
 export function ComfortConsistencySetpointAgreement({
   summary,
   state,
   formatDelta,
 }: ComfortConsistencySetpointAgreementProps) {
-  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
     <section data-testid="comfort-consistency-setpoint-agreement">
-      <LayoutCard title={t('comfortConsistency.setpoints.title', 'Front-row setpoint agreement')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('comfortConsistency.setpoints.title', 'Front-row setpoint agreement')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.setpoints.subtitle',
@@ -40,26 +56,34 @@ export function ComfortConsistencySetpointAgreement({
           state={state}
           requirement="samples"
         >
-          <VehicleOperationalBrief embedded id="comfort-consistency-setpoint-summary"
-            title={t('comfortConsistency.setpoints.title', 'Front-row setpoint agreement')}
-            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
-            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('comfortConsistency.setpoints.note', 'Agreement statistics use only analyzed active samples with both setpoints; one-sided rows still support cabin-to-target deviation.') }}
-            metrics={[
-              { metricId: 'count', occurrenceId: 'paired', label: t('comfortConsistency.setpoints.paired', 'Analyzed paired-setpoint samples'), rawValue: summary.pairedSetpointAnalyzedSamples, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-              { metricId: 'count', occurrenceId: 'single', label: t('comfortConsistency.setpoints.single', 'Analyzed one-sided samples'), rawValue: summary.singleSetpointAnalyzedSamples, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-              ...[
-                { key: 'mean', label: t('comfortConsistency.setpoints.mean', 'Mean disagreement'), value: summary.meanSetpointDisagreementC },
-                { key: 'median', label: t('comfortConsistency.setpoints.median', 'Median disagreement'), value: summary.medianSetpointDisagreementC },
-                { key: 'p90', label: t('comfortConsistency.setpoints.p90', 'P90 disagreement'), value: summary.p90SetpointDisagreementC },
-              ].map(fact => ({
-                metricId: 'number' as const, occurrenceId: fact.key, label: fact.label, rawValue: fact.value,
-                display: { formatter: (raw: number) => ({ value: formatDelta(raw), unit: '' }) },
-              })),
-              { metricId: 'percent', occurrenceId: 'share', label: t('comfortConsistency.setpoints.overThreshold', 'Paired samples above gate'), rawValue: summary.disagreementSampleShare != null ? summary.disagreementSampleShare * 100 : null,
-                display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) } },
-            ]}
-          />
+          <Grid cols={{ default: 2, md: 3 }} gap={3}>
+            <AgreementMetric
+              label={t('comfortConsistency.setpoints.paired', 'Analyzed paired-setpoint samples')}
+              value={fmtInt(summary.pairedSetpointAnalyzedSamples)}
+            />
+            <AgreementMetric
+              label={t('comfortConsistency.setpoints.single', 'Analyzed one-sided samples')}
+              value={fmtInt(summary.singleSetpointAnalyzedSamples)}
+            />
+            <AgreementMetric
+              label={t('comfortConsistency.setpoints.mean', 'Mean disagreement')}
+              value={formatDelta(summary.meanSetpointDisagreementC)}
+            />
+            <AgreementMetric
+              label={t('comfortConsistency.setpoints.median', 'Median disagreement')}
+              value={formatDelta(summary.medianSetpointDisagreementC)}
+            />
+            <AgreementMetric
+              label={t('comfortConsistency.setpoints.p90', 'P90 disagreement')}
+              value={formatDelta(summary.p90SetpointDisagreementC)}
+            />
+            <AgreementMetric
+              label={t('comfortConsistency.setpoints.overThreshold', 'Paired samples above gate')}
+              value={summary.disagreementSampleShare != null
+                ? fmtPercent(summary.disagreementSampleShare * 100, 1)
+                : '—'}
+            />
+          </Grid>
           <Text as="p" variant="caption" className="mt-3">
             {t(
               'comfortConsistency.setpoints.note',
@@ -67,7 +91,7 @@ export function ComfortConsistencySetpointAgreement({
             )}
           </Text>
         </ComfortConsistencySectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

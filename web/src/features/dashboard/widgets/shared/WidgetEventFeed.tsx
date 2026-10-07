@@ -12,24 +12,17 @@ export interface EventFeedItem {
   timestamp: string;
   color: string;
   severity?: 'info' | 'warning' | 'critical';
-  /** Navigation target; rich slots stay outside the title link. */
+  /** Optional navigation target. When set, the entire row becomes a `<Link>`
+   *  to this href for drill-through navigation. */
   href?: string;
-  badges?: ReactNode;
-  metadata?: ReactNode;
-  actions?: ReactNode;
-  wrap?: boolean;
-  /** Already formatted by the source's existing formatter; sorting still uses timestamp. */
-  timeLabel?: string;
 }
 
 interface WidgetEventFeedProps {
-  items: readonly EventFeedItem[];
+  items: EventFeedItem[];
   maxItems?: number;
   compact?: boolean;
   emptyMessage?: string;
   emptyIcon?: ReactNode;
-  /** Source order is opt-in; the default remains most-recent-first. */
-  order?: 'newest-first' | 'source';
 }
 
 /** Universal placeholder rendered for an unparseable timestamp. */
@@ -51,7 +44,6 @@ export function WidgetEventFeed({
   compact = false,
   emptyMessage,
   emptyIcon,
-  order = 'newest-first',
 }: WidgetEventFeedProps) {
   const { t } = useTranslation('dashboard');
   const { formatDateTime } = useDateFormat();
@@ -75,19 +67,16 @@ export function WidgetEventFeed({
   const limit = maxItems ?? (compact ? 3 : 10);
 
   const sorted = useMemo(
-    () => {
-      const rows = [...(items ?? [])];
-      if (order === 'newest-first') {
-        rows.sort((a, b) => {
+    () =>
+      [...(items ?? [])]
+        .sort((a, b) => {
           const ea = toEpoch(a.timestamp);
           const eb = toEpoch(b.timestamp);
           if (ea === eb) return 0;
           return ea > eb ? -1 : 1;
-        });
-      }
-      return rows.slice(0, limit);
-    },
-    [items, limit, order],
+        })
+        .slice(0, limit),
+    [items, limit],
   );
 
   if (sorted.length === 0) {
@@ -112,14 +101,10 @@ export function WidgetEventFeed({
             icon={item.icon}
             title={item.title}
             subtitle={item.subtitle}
-            time={item.timeLabel ?? formatRelativeTime(item.timestamp)}
+            time={formatRelativeTime(item.timestamp)}
             color={item.color}
             isLast={i === sorted.length - 1}
             href={item.href}
-            badges={item.badges}
-            metadata={item.metadata}
-            actions={item.actions}
-            wrap={item.wrap}
           />
         </div>
       ))}

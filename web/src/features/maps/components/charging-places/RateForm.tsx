@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus } from 'lucide-react';
 
-import { Button, Select, Input, HelperText, type SelectOption } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle, Button, Select, Input, HelperText, type SelectOption } from '@/components/ui';
 import { CurrencyInput } from '@/components/forms';
-import { AlertBanner, QueryError } from '@/components/feedback';
+import { AlertBanner } from '@/components/feedback';
 import { useSettings } from '@/hooks/useSettings';
 import { currencyCodeFromSymbol, microToValue } from '@/lib/currencyFormat';
 import { useCreateGeofenceRate } from '@/api/hooks/useLocations';
@@ -142,14 +141,17 @@ export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormPr
   };
 
   return (
-    <LayoutCard title={t('chargingPlaces.rateForm.title', 'Add a rate')} actions={<Plus className="h-4 w-4 text-emerald-300" aria-hidden="true" />}>
+    <GlassPanel className="p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        <Plus className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+        {t('chargingPlaces.rateForm.title', 'Add a Rate')}
+      </PanelTitle>
 
       {formError && (
         <AlertBanner variant="warning" className="mb-3">
           {formError}
         </AlertBanner>
       )}
-      {createRate.error && <QueryError error={createRate.error} />}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Select
@@ -191,15 +193,14 @@ export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormPr
 
       <div className="mt-3 flex justify-end">
         <Button
-          wrapLabel
           variant="primary"
           onClick={handleSubmit}
           loading={createRate.isPending}
           disabled={rateMicro == null}
         >
-          {t('chargingPlaces.rateForm.submit', 'Save rate')}
+          {t('chargingPlaces.rateForm.submit', 'Save Rate')}
         </Button>
       </div>
-    </LayoutCard>
+    </GlassPanel>
   );
 }

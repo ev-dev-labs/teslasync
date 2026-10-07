@@ -2,13 +2,13 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlaskConical, Wind, Gauge, RotateCcw, TrendingDown, TrendingUp,
+  BatteryCharging, Timer, Zap,
 } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } from '@/components/ui';
 
-import type { StatMetric } from '@/components/data-display/stat-reference';
-import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
+import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -27,8 +27,6 @@ import {
   type TirePreset,
   type EnergyBreakdown,
 } from '../lib/whatIfModel';
-import { WhatIfEnergyBreakdown } from '../components/WhatIfEnergyBreakdown';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type ComponentKey = keyof Omit<EnergyBreakdown, 'total'>;
 
@@ -53,8 +51,49 @@ const COMPONENTS: {
   { key: 'other',     i18nKey: 'whatIf.compOther',     fallback: 'Other',     color: 'var(--text-muted)' },
 ];
 
+/** One labelled stacked bar (actual or what-if) in the breakdown panel. */
+function BreakdownRow({
+  caption,
+  breakdown,
+  max,
+  labels,
+  formatWh,
+}: {
+  caption: string;
+  breakdown: EnergyBreakdown;
+  max: number;
+  labels: Record<ComponentKey, string>;
+  formatWh: (wh: number) => string;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <Text variant="caption">{caption}</Text>
+        <Text variant="caption" className="font-mono tabular-nums">{formatWh(breakdown.total)}</Text>
+      </div>
+      <div
+        className="flex h-7 w-full overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)]"
+        role="img"
+        aria-label={`${caption} — ${formatWh(breakdown.total)}`}
+      >
+        {COMPONENTS.map((c) => {
+          const pct = max > 0 ? (breakdown[c.key] / max) * 100 : 0;
+          // Sub-0.5% slivers render as a hairline of colour with no readable
+          // area — drop them so the bar stays clean rather than fringed.
+          return pct > 0.5 ? (
+            <div
+              key={c.key}
+              style={{ width: `${pct}%`, background: c.color }}
+              title={`${labels[c.key]}: ${formatWh(breakdown[c.key])}`}
+            />
+          ) : null;
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function WhatIfPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('whatIf.title', 'What-If Simulator'));
 
@@ -81,7 +120,7 @@ export default function WhatIfPage() {
     () =>
       drives.map((d) => ({
         value: String(d.id),
-        label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM)}`,
+        label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM, { precision: 1 })}`,
       })),
     [drives, formatDistance],
   );
@@ -95,7 +134,7 @@ export default function WhatIfPage() {
   );
 
   const kwh = useMemo(
-    () => (wh: number) => formatEnergy(wh),
+    () => (wh: number) => formatEnergy(wh, { precision: 1 }),
     [formatEnergy],
   );
 
@@ -107,36 +146,13 @@ export default function WhatIfPage() {
   const saves = result.energyDeltaWh <= 0;
   const baselineDurationS = driveQuery.data?.durationS;
   const loading = drivesQuery.isLoading || driveQuery.isLoading || telemetryQuery.isLoading;
-  const summaryMetrics: readonly StatMetric[] = [
-    {
-      metricId: 'energy', occurrenceId: 'scenario-energy',
-      rawValue: result.ok ? result.scenario.total : null,
-      label: t('whatIf.energy', 'Energy used'),
-      display: { formatter: (raw) => ({ value: kwh(raw), unit: '' }) },
-      context: result.ok ? `${t('whatIf.was', 'was')} ${kwh(result.baseline.total)}` : undefined,
-    },
-    {
-      metricId: 'percent', occurrenceId: 'scenario-arrival',
-      rawValue: result.ok ? result.scenarioArrivalSoc : null,
-      label: t('whatIf.arrival', 'Arrival battery'),
-      display: { precision: 0 },
-      context: result.ok && socDelta != null ? `${socDelta >= 0 ? '+' : '−'}${fmtNumber(Math.abs(socDelta))}%` : undefined,
-    },
-    {
-      metricId: 'duration', occurrenceId: 'scenario-duration',
-      rawValue: result.ok ? result.scenarioDurationS : null,
-      label: t('whatIf.duration', 'Duration'),
-      display: { formatter: (raw) => ({ value: formatDuration(raw), unit: '' }) },
-      context: baselineDurationS != null ? `${t('whatIf.was', 'was')} ${formatDuration(baselineDurationS)}` : undefined,
-    },
-  ];
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('whatIf.title', 'What-If Simulator')}
       subtitle={t('whatIf.subtitle', 'Replay a real drive under different conditions')}
       query={[drivesQuery, driveQuery, telemetryQuery]}
-      contextActions={
+      actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {driveOptions.length > 0 && (
             <Select
@@ -149,25 +165,17 @@ export default function WhatIfPage() {
         </div>
       }
     >
-      <FadeIn>
-        <DrivingSummaryBrief
-          id="what-if-brief"
-          title={t('whatIf.kpis', 'Simulated drive outcome')}
-          description={t('whatIf.brief.description', 'Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.')}
-          metrics={summaryMetrics}
-          scope={driveQuery.data ? formatDateShort(driveQuery.data.startTs) : t('whatIf.brief.noDrive', 'No selected recorded drive')}
-          provenance={t('whatIf.brief.provenance', 'Selected drive and telemetry, recomputed locally with the current simulation knobs.')}
-          loading={loading}
-          unavailable={!activeId || !result.ok}
-          retained={driveQuery.isError || telemetryQuery.isError}
-        />
-      </FadeIn>
       {drivesQuery.isError ? (
         <GlassPanel className="p-4 sm:p-5">
           <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
         </GlassPanel>
       ) : loading ? (
         <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} height={96} className="rounded-xl" />
+            ))}
+          </div>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <Skeleton height={340} className="rounded-xl xl:col-span-1" />
             <Skeleton height={340} className="rounded-xl xl:col-span-2" />
@@ -190,6 +198,44 @@ export default function WhatIfPage() {
         </GlassPanel>
       ) : (
         <>
+          {/* 1 — KPI band: the simulated outcome at a glance */}
+          <FadeIn>
+            <section
+              aria-label={t('whatIf.kpis', 'Simulated drive outcome')}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4"
+            >
+              <MetricCard
+                label={t('whatIf.energy', 'Energy used')}
+                value={kwh(result.scenario.total)}
+                subtitle={`${t('whatIf.was', 'was')} ${kwh(result.baseline.total)}`}
+                icon={<Zap className="h-5 w-5" />}
+                color={saves ? 'green' : 'amber'}
+              />
+              <MetricCard
+                label={t('whatIf.arrival', 'Arrival battery')}
+                value={result.scenarioArrivalSoc != null ? `${Math.round(result.scenarioArrivalSoc)}%` : '—'}
+                subtitle={
+                  socDelta != null
+                    ? `${socDelta >= 0 ? '+' : '−'}${Math.abs(socDelta).toFixed(1)}%`
+                    : undefined
+                }
+                icon={<BatteryCharging className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('whatIf.duration', 'Duration')}
+                value={formatDuration(result.scenarioDurationS, { precision: 0 })}
+                subtitle={
+                  baselineDurationS != null
+                    ? `${t('whatIf.was', 'was')} ${formatDuration(baselineDurationS, { precision: 0 })}`
+                    : undefined
+                }
+                icon={<Timer className="h-5 w-5" />}
+                color="purple"
+              />
+            </section>
+          </FadeIn>
+
           {/* 2 — Knobs (1/3) + energy breakdown & takeaway (2/3) */}
           <FadeIn delay={0.1}>
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -251,7 +297,7 @@ export default function WhatIfPage() {
                     min={-10}
                     max={40}
                     step={1}
-                    formatValue={(v) => formatTemperature(v)}
+                    formatValue={(v) => formatTemperature(v, { precision: 0 })}
                     onChange={(v) => setKnobs((k) => ({ ...k, ambientC: v }))}
                   />
                 </div>
@@ -265,21 +311,19 @@ export default function WhatIfPage() {
                   </PanelTitle>
 
                   <div className="space-y-4">
-                    <WhatIfEnergyBreakdown
+                    <BreakdownRow
                       caption={t('whatIf.baseline', 'Actual drive')}
                       breakdown={result.baseline}
                       max={maxTotal}
                       labels={componentLabels}
                       formatWh={kwh}
-                      components={COMPONENTS}
                     />
-                    <WhatIfEnergyBreakdown
+                    <BreakdownRow
                       caption={t('whatIf.scenario', 'What-if')}
                       breakdown={result.scenario}
                       max={maxTotal}
                       labels={componentLabels}
                       formatWh={kwh}
-                      components={COMPONENTS}
                     />
                   </div>
 
@@ -310,11 +354,11 @@ export default function WhatIfPage() {
                     {saves
                       ? t('whatIf.takeawaySave', 'This would save {{wh}} — arriving with {{soc}} more battery.', {
                           wh: kwh(Math.abs(result.energyDeltaWh)),
-                          soc: socDelta != null ? `${fmtNumber(Math.abs(socDelta))}%` : '—',
+                          soc: socDelta != null ? `${Math.abs(socDelta).toFixed(1)}%` : '—',
                         })
                       : t('whatIf.takeawayCost', 'This would cost an extra {{wh}} — arriving with {{soc}} less battery.', {
                           wh: kwh(result.energyDeltaWh),
-                          soc: socDelta != null ? `${fmtNumber(Math.abs(socDelta))}%` : '—',
+                          soc: socDelta != null ? `${Math.abs(socDelta).toFixed(1)}%` : '—',
                         })}
                   </Text>
                   <Badge variant={saves ? 'success' : 'warning'}>
@@ -327,6 +371,6 @@ export default function WhatIfPage() {
           </FadeIn>
         </>
       )}
-    </PageLayout>
+    </PageContainer>
   );
 }

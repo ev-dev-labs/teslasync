@@ -6,26 +6,19 @@ import { cn } from '@/lib/cn';
 export interface RankedItem {
   id: string | number;
   label: string;
-  /** Missing/null is unknown; finite zero and negative readings remain measured. */
-  value?: number | null;
+  value: number;
   formattedValue: string;
-  /** Optional rich presentation; label remains the caller's plain-text fallback. */
-  labelContent?: ReactNode;
   badge?: { text: string; variant: 'success' | 'warning' | 'error' | 'neutral' };
   barColor?: string;
 }
 
 interface WidgetRankedListProps {
-  items: readonly RankedItem[];
-  /** Source preserves caller business rank, including placement of unknowns. */
-  order?: 'value-desc' | 'source';
+  items: RankedItem[];
   maxItems?: number;
   compact?: boolean;
   showBars?: boolean;
   emptyMessage?: string;
   emptyIcon?: ReactNode;
-  /** Wrap labels and formatted values rather than truncate narrow rows. */
-  wrapContent?: boolean;
 }
 
 const badgeVariantMap = {
@@ -36,24 +29,21 @@ const badgeVariantMap = {
 } as const;
 
 /**
- * Preserve unknown readings without a magnitude bar. Malformed non-null
- * numbers retain the existing zero normalization for sort/bar safety only;
- * caller-formatted text is never replaced with an invented measured zero.
+ * Coerce a possibly non-finite runtime value (NaN / ±Infinity, or a
+ * mistyped null from the untyped API layer) to a safe, sortable number so a
+ * single bad reading can't poison the sort order or produce a `NaN%` bar.
  */
-function safeValue(value: number | null | undefined): number | null {
-  if (value == null) return null;
+function safeValue(value: number): number {
   return Number.isFinite(value) ? value : 0;
 }
 
 export function WidgetRankedList({
   items,
-  order = 'value-desc',
   maxItems,
   compact = false,
   showBars = true,
   emptyMessage = 'No data available',
   emptyIcon,
-  wrapContent = false,
 }: WidgetRankedListProps) {
   const limit = maxItems ?? (compact ? 3 : 5);
   const hideBars = compact || !showBars;
@@ -65,21 +55,12 @@ export function WidgetRankedList({
       ...item,
       value: safeValue(item.value),
     }));
-    if (order === 'value-desc') {
-      normalized.sort((a, b) => {
-        if (a.value === null) return b.value === null ? 0 : 1;
-        if (b.value === null) return -1;
-        return b.value - a.value;
-      });
-    }
+    normalized.sort((a, b) => b.value - a.value);
     return normalized.slice(0, Math.max(0, limit));
-  }, [items, limit, order]);
+  }, [items, limit]);
 
   const maxValue = useMemo(
-    () => visible.reduce(
-      (max, item) => item.value === null ? max : Math.max(max, item.value),
-      0,
-    ),
+    () => visible.reduce((max, item) => Math.max(max, item.value), 0),
     [visible],
   );
 
@@ -94,9 +75,7 @@ export function WidgetRankedList({
           // Clamp to [0,100]: a negative reading mixed with positive ones
           // would otherwise yield a negative CSS width.
           const barPct =
-            item.value !== null && maxValue > 0
-              ? Math.min(100, Math.max(0, (item.value / maxValue) * 100))
-              : 0;
+            maxValue > 0 ? Math.min(100, Math.max(0, (item.value / maxValue) * 100)) : 0;
 
           return (
             <li
@@ -105,7 +84,7 @@ export function WidgetRankedList({
             >
               {/* Background bar (decorative — conveys rank magnitude already
                   present in the numeric value, so hidden from assistive tech) */}
-              {!hideBars && item.value !== null && (
+              {!hideBars && (
                 <div
                   aria-hidden="true"
                   className={cn(
@@ -117,21 +96,15 @@ export function WidgetRankedList({
               )}
 
               {/* Row content */}
-              <div className={cn(
-                'relative flex items-center gap-3',
-                wrapContent && 'flex-wrap',
-              )}>
+              <div className="relative flex items-center gap-3">
                 {/* Rank number */}
                 <span className="w-5 shrink-0 text-right text-xs font-medium text-[var(--text-muted)]">
                   {index + 1}
                 </span>
 
                 {/* Label */}
-                <span className={cn(
-                  'min-w-0 flex-1 text-sm text-[var(--text-primary)]',
-                  wrapContent ? 'basis-1/2 whitespace-normal break-words' : 'truncate',
-                )}>
-                  {item.labelContent ?? item.label ?? '—'}
+                <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-primary)]">
+                  {item.label ?? '—'}
                 </span>
 
                 {/* Badge */}
@@ -145,10 +118,7 @@ export function WidgetRankedList({
                 )}
 
                 {/* Value */}
-                <span className={cn(
-                  'text-sm font-semibold tabular-nums text-[var(--text-primary)]',
-                  wrapContent ? 'max-w-full whitespace-normal break-words' : 'shrink-0',
-                )}>
+                <span className="shrink-0 text-sm font-semibold tabular-nums text-[var(--text-primary)]">
                   {item.formattedValue ?? '—'}
                 </span>
               </div>

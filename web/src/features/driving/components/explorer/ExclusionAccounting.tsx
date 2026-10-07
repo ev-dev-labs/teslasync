@@ -1,10 +1,9 @@
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui';
-
+import { fmtInt } from '@/lib/numberFormat';
 
 import type { ExplorerExclusions } from '../../lib/explorer';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ExclusionAccountingProps {
   exclusions: ExplorerExclusions;
@@ -13,7 +12,6 @@ interface ExclusionAccountingProps {
 export function ExclusionAccounting({
   exclusions,
 }: ExclusionAccountingProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = [
     {

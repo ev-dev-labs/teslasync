@@ -27,11 +27,6 @@
  */
 
 const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
-  ...(import.meta.env.DEV ? {
-    '/dev/grid-states': () => import('../features/developer-reference/mobile-grid/MobileGridReferencePage'),
-    '/dev/layout': () => import('../features/developer-reference/layout/LayoutReferencePage'),
-    '/dev/stats': () => import('../features/developer-reference/stats/StatReferencePage'),
-  } : {}),
   '/': () => import('../features/dashboard/pages/DashboardPage'),
   '/activity': () => import('../features/system/pages/ActivityTimelinePage'),
   '/admin/feedback': () => import('../features/admin/pages/FeedbackQueuePage'),

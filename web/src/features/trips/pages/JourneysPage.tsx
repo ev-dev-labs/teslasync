@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -20,7 +20,7 @@ export default function JourneysPage() {
   usePageTitle(t('journey.page.navTitle', 'Journeys'));
 
   return (
-    <PageLayout
+    <PageContainer
       title={t('journey.page.title', 'Journeys')}
       subtitle={t(
         'journey.page.subtitle',
@@ -30,6 +30,6 @@ export default function JourneysPage() {
       <FadeIn>
         <JourneyPanel vehicleId={vehicleId} />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

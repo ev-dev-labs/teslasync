@@ -2,7 +2,7 @@
   "theme": {
     "title": "Appearance",
     "subtitle": "Customize colors and display mode",
-    "displayMode": "Display mode",
+    "displayMode": "Display Mode",
     "modeCount": "{{count}} modes",
     "browseModes": "Browse all {{count}} modes",
     "showCoreModes": "Show essential modes",
@@ -10,7 +10,7 @@
     "searchModes": "Search display modes…",
     "noModes": "No display modes match your search.",
     "mode": "Mode",
-    "accentColor": "Accent color",
+    "accentColor": "Accent Color",
     "theme": "Theme",
     "custom": "Custom",
     "primary": "Primary",
@@ -45,7 +45,7 @@
       "show": "Show status bar",
       "showHelp": "Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.",
       "iconOnly": "Always icon-only",
-      "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into more on constrained screens.",
+      "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into More on constrained screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
     },

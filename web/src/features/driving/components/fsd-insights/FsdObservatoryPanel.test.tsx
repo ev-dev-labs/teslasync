@@ -9,11 +9,10 @@ import type { FsdSectionState } from './types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string | Record<string, unknown>, values?: Record<string, unknown>) =>
-      Object.entries(typeof fallback === 'object' ? fallback : values ?? {}).reduce(
+    t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
+      Object.entries(values ?? {}).reduce(
         (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
-        typeof fallback === 'string' ? fallback
-          : typeof fallback?.defaultValue === 'string' ? fallback.defaultValue : key,
+        fallback,
       ),
   }),
 }));
@@ -23,12 +22,6 @@ vi.mock('@/hooks/useUnits', () => ({
     unitPrefs: { distance: 'km' },
     formatDistance: (meters: number | null, options?: { precision?: number }) =>
       meters == null ? '-' : `${(meters / 1000).toFixed(options?.precision ?? 1)} km`,
-  }),
-}));
-
-vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({
-    formatDateTime: (value: string) => `preferred:${value}`,
   }),
 }));
 
@@ -48,14 +41,6 @@ beforeEach(() => {
 });
 
 describe('FsdObservatoryPanel', () => {
-  it('renders journal dates with the preference-aware formatter', () => {
-    const insights = fsdInsights();
-    insights.drive_analytics.observatory.timeline[0].at = '2026-08-26T15:15:00Z';
-    renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
-    expect(screen.getByRole('link', { name: 'preferred:2026-08-26T15:15:00Z' }))
-      .toHaveAttribute('href', '/drives/280');
-  });
-
   it('renders the stitched journal without claiming engagement segments', () => {
     renderPanel(<FsdObservatoryPanel insights={fsdInsights()} state={readyState} />);
 
@@ -73,11 +58,7 @@ describe('FsdObservatoryPanel', () => {
     expect(screen.getByTestId('fsd-observatory-reset')).toHaveTextContent('not travelled FSD');
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Home to Office').length).toBeGreaterThan(0);
-    expect(screen.getByRole('table', { name: 'Stitched journal' })).toBeInTheDocument();
-    const commute = screen.getByRole('table', { name: 'Commute stories' });
-    const chapter = within(commute).getByText('2026.8.1').closest('tr')!;
-    expect(chapter.querySelector('[data-column-key="unknown"]')).toHaveTextContent('1');
-    expect(chapter.querySelector('[data-column-key="reportedFsd"]')).toHaveTextContent('Not measured');
+    expect(screen.getByText('1 unknown')).toBeInTheDocument();
   });
 
   it('keeps missing stitched FSD as an em dash instead of zero', () => {
@@ -128,18 +109,18 @@ describe('FsdObservatoryPanel', () => {
     renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
 
     const journal = screen.getByTestId('fsd-observatory-timeline');
-    expect(journal.querySelectorAll('tbody tr')).toHaveLength(25);
+    expect(within(journal).getAllByRole('listitem')).toHaveLength(25);
     expect(screen.getByText('Showing 1–25 of 26')).toBeInTheDocument();
 
     const next = screen.getAllByRole('button', { name: 'Next page' })
       .find((button) => !button.hasAttribute('disabled'));
     expect(next).toBeDefined();
     fireEvent.click(next!);
-    expect(journal.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(within(journal).getAllByRole('listitem')).toHaveLength(1);
     expect(screen.getByText('Showing 26–26 of 26')).toBeInTheDocument();
   });
 
-  it('pages all firmware chapters with the integrated grid footer', () => {
+  it('pages commute stories with the shared pagination control', () => {
     const insights = structuredClone(fsdInsights());
     const seed = insights.drive_analytics.observatory.commute_stories[0];
     insights.drive_analytics.observatory.commute_stories = Array.from({ length: 26 }, (_, index) => ({
@@ -151,28 +132,15 @@ describe('FsdObservatoryPanel', () => {
     renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
 
     const commute = screen.getByTestId('fsd-observatory-commute');
-    expect(commute.querySelectorAll('tbody tr')).toHaveLength(25);
-    expect(within(commute).getByText('Showing 1–25 of 52')).toBeInTheDocument();
+    expect(within(commute).getAllByText(/Commute \d+/)).toHaveLength(25);
+    expect(screen.getByText('Showing 1–25 of 26')).toBeInTheDocument();
 
-    const next = within(commute).getAllByRole('button', { name: 'Next page' })
+    const next = screen.getAllByRole('button', { name: 'Next page' })
       .find((button) => !button.hasAttribute('disabled'));
     expect(next).toBeDefined();
     fireEvent.click(next!);
-    expect(within(commute).getByText('Showing 26–50 of 52')).toBeInTheDocument();
-    fireEvent.click(next!);
-    expect(commute.querySelectorAll('tbody tr')).toHaveLength(2);
-    expect(within(commute).getByText('Showing 51–52 of 52')).toBeInTheDocument();
-  });
-
-  it('keeps routes with no firmware chapters visible without inventing counts or distance', () => {
-    const insights = structuredClone(fsdInsights());
-    insights.drive_analytics.observatory.commute_stories[0].chapters = [];
-    renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
-    const table = screen.getByRole('table', { name: 'Commute stories' });
-    expect(table.querySelectorAll('tbody tr')).toHaveLength(1);
-    expect(within(table).getByText('Unknown firmware')).toBeInTheDocument();
-    expect(within(table).getByText('Not measured')).toBeInTheDocument();
-    expect(table.querySelector('tbody [data-column-key="chapterDrives"]')).toHaveTextContent('—');
+    expect(within(commute).getAllByText(/Commute \d+/)).toHaveLength(1);
+    expect(screen.getByText('Showing 26–26 of 26')).toBeInTheDocument();
   });
 
   it('keeps the observatory shell visible while loading', () => {

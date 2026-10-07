@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
-import { deriveDataState } from '@/api/dataState';
-import { Grid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -18,6 +16,7 @@ import {
 
 import {
   MilestoneControls,
+  MilestoneKpis,
   MilestoneMethodology,
   MilestoneProgress,
   MonthlyDistanceChart,
@@ -27,7 +26,6 @@ import {
   UpcomingRoadmap,
   type MilestoneSectionState,
 } from '../components/odometer-milestones';
-import { MilestoneBrief as MilestoneKpis } from '../components/operationalbrief-a-m/MilestoneBrief';
 import {
   DEFAULT_HISTORY_LIMIT,
   buildOdometerMilestones,
@@ -37,7 +35,7 @@ const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function MilestonesPage() {
   const { t } = useTranslation();
-  usePageTitle(t('milestones.title', 'Odometer milestones'));
+  usePageTitle(t('milestones.title', 'Odometer Milestones'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr =
@@ -58,7 +56,6 @@ export default function MilestonesPage() {
     DEFAULT_HISTORY_LIMIT,
   );
   const drives = drivesQuery.data ?? [];
-  const source = deriveDataState(drivesQuery, { provenance: 'historical' });
   const milestoneUnitKm =
     convertDistanceToSI(1, unitPrefs.distance) / 1_000;
   const summary = useMemo(
@@ -90,28 +87,28 @@ export default function MilestonesPage() {
   if (vehicleId == null) {
     return (
       <NoVehicleSelected
-        pageTitle={t('milestones.title', 'Odometer milestones')}
+        pageTitle={t('milestones.title', 'Odometer Milestones')}
       />
     );
   }
 
   const sectionState: MilestoneSectionState = {
-    isLoading: source.status === 'initial',
-    error: source.fatalError,
+    isLoading: drivesQuery.isLoading,
+    error: drivesQuery.isError ? drivesQuery.error : null,
     onRetry: () => {
       void drivesQuery.refetch();
     },
   };
 
   return (
-    <PageLayout
-      title={t('milestones.title', 'Odometer milestones')}
+    <PageContainer
+      title={t('milestones.title', 'Odometer Milestones')}
       subtitle={t(
         'milestones.subtitle',
         'Observed progress, unit-round milestones, and evidence-based forecasts',
       )}
       query={drivesQuery}
-      contextActions={
+      actions={
         <MilestoneControls
           baseDisplay={baseDisplay}
           distanceUnit={unitPrefs.distance}
@@ -119,10 +116,8 @@ export default function MilestonesPage() {
         />
       }
     >
-      <StaleRefreshWarning state={source} />
       <FadeIn>
-        <MilestoneKpis summary={summary} {...sectionState}
-          retained={source.status === 'stale' || source.isRefreshBlocked} />
+        <MilestoneKpis summary={summary} {...sectionState} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
@@ -171,6 +166,6 @@ export default function MilestonesPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

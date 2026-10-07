@@ -8,11 +8,10 @@ import {
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
 import { Badge } from '@/components/ui';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import type { TargetBand, WeekResult } from '../../lib/efficiencyTarget';
 import type { EfficiencyTargetSectionState } from './types';
 import { useEfficiencyTargetDisplay } from './useEfficiencyTargetDisplay';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_CHART_WEEKS = 26;
 
@@ -25,7 +24,6 @@ interface WeeklyTargetChartProps {
 export function WeeklyTargetChart(
   { weeks, targetWhPerKm, state }: WeeklyTargetChartProps,
 ) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { convertEfficiency, efficiencyUnit, formatWeek } =
     useEfficiencyTargetDisplay();
@@ -86,7 +84,7 @@ export function WeeklyTargetChart(
         action={
           <Badge variant="info" dot>
             {t('effTarget.weekly.activeLegend', 'Target {{target}} · active = snapshot', {
-              target: `${fmtNumber(targetDisplay)} ${efficiencyUnit}`,
+              target: `${fmtNumber(targetDisplay, 1)} ${efficiencyUnit}`,
             })}
           </Badge>
         }
@@ -145,13 +143,13 @@ export function WeeklyTargetChart(
                   tickLine={false}
                   axisLine={false}
                   width={48}
-                  tickFormatter={(value) => fmtNumber(value)}
+                  tickFormatter={(value) => fmtNumber(value, 0)}
                 />
                 <Tooltip
                   content={
                     <ChartTooltip
                       valueFormatter={(value) =>
-                        `${fmtNumber(value)} ${efficiencyUnit}`
+                        `${fmtNumber(value, 1)} ${efficiencyUnit}`
                       }
                     />
                   }

@@ -1,0 +1,13 @@
+{
+  "tirePressure": {
+    "title": "Tire Pressure",
+    "subtitle": "Monitor tire pressure readings and history",
+    "aiTrendReasoning": {
+      "title": "Narrate the 30-day tire-pressure trend",
+      "badge": "Helix",
+      "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
+      "generateButton": "Narrate trend"
+    },
+    "pressureHistoryAria": "Tire pressure over time for all four positions"
+  }
+}

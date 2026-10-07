@@ -1,45 +1,39 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertTriangle, HeartPulse, BarChart3, ShieldCheck,
+  Activity, AlertTriangle, Clock, HeartPulse, BarChart3, ShieldCheck,
 } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 
-import { OperationalBrief } from '@/components/data-display';
+import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip, CHART_COLORS,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useAnomalies } from '@/api/hooks/useAnomalies';
-import { AIAnomalyExplanations } from '@/components/ai';
-import { AILearnedAnomalyBaselines } from '@/components/ai';
+import { AIAnomalyExplanations } from '@/components/ai/AIAnomalyExplanations';
+import { AILearnedAnomalyBaselines } from '@/components/ai/AILearnedAnomalyBaselines';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
-import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-dashboard';
-import { anomalySummary } from '../components/statstrip-anomaly/anomalySummary';
 
 export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
-  usePageTitle(t('anomaly.title', 'Anomaly detection'));
+  usePageTitle(t('anomaly.title', 'Anomaly Detection'));
 
   const { vehicleId: selectedId } = useSelectedVehicle();
   const activeIdStr = selectedId != null ? String(selectedId) : null;
   const noVehicle = activeIdStr === null;
 
   const anomaliesQuery = useAnomalies(activeIdStr);
-  const { data, isLoading: queryLoading, refetch } = anomaliesQuery;
-  const state = useDataState(anomaliesQuery, { provenance: 'inferred' });
-  const error = state.fatalError;
-  const isLoading = queryLoading && !state.hasData;
+  const { data, isLoading, error, refetch } = anomaliesQuery;
 
   /* Stable retry handler shared by all three error panels (frequency, health,
      timeline) so we don't allocate three fresh closures on every render. */
@@ -61,8 +55,6 @@ export default function AnomalyDashboardPage() {
 
   const anomalies = data?.anomalies ?? [];
   const healthEntries = Object.entries(data?.health_summary ?? {});
-  const summary = anomalySummary(data, t);
-  const briefMetrics = useOperationalMetrics(summary.metrics);
 
   const signalFrequencyColumns = useMemo<ChartDataColumn[]>(
     () => [
@@ -77,31 +69,44 @@ export default function AnomalyDashboardPage() {
     : t('anomaly.noData', 'No data available yet.');
 
   return (
-    <PageLayout
-      title={t('anomaly.title', 'Anomaly detection')}
+    <PageContainer
+      title={t('anomaly.title', 'Anomaly Detection')}
       subtitle={t('anomaly.subtitle', 'Automatic health monitoring and signal anomaly detection')}
       query={anomaliesQuery}
     >
-      <StaleRefreshWarning state={state} />
-      {/* ── 1. Summary — independently scoped source metrics ───────── */}
+      {/* ── 1. KPI band — full-width responsive metric grid ─────────── */}
       <FadeIn>
         <section aria-label={t('anomaly.kpis', 'Summary metrics')}>
-          <OperationalBrief
-            compact
-            testId="anomaly-summary"
-            eyebrow={t('anomaly.title', 'Anomaly detection')}
-            title={t('anomaly.summary.title', 'Coverage and anomaly windows')}
-            description={summary.period.kind === 'unknown' ? summary.period.reason ?? summary.period.label : summary.period.label}
-            metrics={briefMetrics}
-            scope={summary.period.label}
-            statusLabel={isLoading ? t('common.loading', 'Loading')
-              : error ? t('error.loadFailed', 'Failed to load data')
-                : state.refreshError || state.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
-                  : data ? t('anomaly.summary.available', 'Detector snapshot available')
-                    : t('anomaly.summary.unavailable', 'Detector snapshot unavailable')}
-            statusTone={error ? 'danger' : state.refreshError || state.isRefreshBlocked ? 'warning' : 'neutral'}
-            loading={isLoading}
-          />
+          {isLoading && !data ? (
+            <StatGridSkeleton cards={4} />
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+              <MetricCard
+                label={t('anomaly.monitored', 'Signals Monitored')}
+                value={data?.signals_monitored ?? 0}
+                icon={<Activity className="h-5 w-5" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('anomaly.last7d', 'Anomalies (7d)')}
+                value={data?.anomalies_last_7d ?? 0}
+                icon={<AlertTriangle className="h-5 w-5" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('anomaly.last24h', 'Anomalies (24h)')}
+                value={data?.anomalies_last_24h ?? 0}
+                icon={<Clock className="h-5 w-5" />}
+                color="red"
+              />
+              <MetricCard
+                label={t('anomaly.categories', 'Health Categories')}
+                value={healthEntries.length}
+                icon={<HeartPulse className="h-5 w-5" />}
+                color="green"
+              />
+            </div>
+          )}
         </section>
       </FadeIn>
 
@@ -130,7 +135,7 @@ export default function AnomalyDashboardPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('anomaly.frequency', 'Most frequent anomalies')}
+              {t('anomaly.frequency', 'Most Frequent Anomalies')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={300} />
@@ -144,7 +149,7 @@ export default function AnomalyDashboardPage() {
             ) : (
               <div className="h-72 sm:h-80">
                 <EmbeddedChart
-                  title={t('anomaly.frequency', 'Most frequent anomalies')}
+                  title={t('anomaly.frequency', 'Most Frequent Anomalies')}
                   ariaLabel={t('anomaly.frequencyAria', 'Bar chart of the most frequently anomalous signals')}
                   data={signalFrequency}
                   dataColumns={signalFrequencyColumns}
@@ -168,7 +173,7 @@ export default function AnomalyDashboardPage() {
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-              {t('anomaly.healthSummary', 'System health')}
+              {t('anomaly.healthSummary', 'System Health')}
             </PanelTitle>
             {isLoading ? (
               <Skeleton height={220} />
@@ -195,7 +200,7 @@ export default function AnomalyDashboardPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
-            {t('anomaly.timeline', 'Anomaly timeline')}
+            {t('anomaly.timeline', 'Anomaly Timeline')}
           </PanelTitle>
           {isLoading ? (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
@@ -219,6 +224,6 @@ export default function AnomalyDashboardPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageLayout>
+    </PageContainer>
   );
 }

@@ -67,19 +67,19 @@ export function RegexTesterTool() {
       { value: 'gi', label: 'gi (global, case-insensitive)' },
       { value: 'gm', label: 'gm (global, multiline)' },
       { value: 'gim', label: 'gim (all)' },
-      { value: '', label: t('devtools.utils.regexNoFlags', 'No flags') },
+      { value: '', label: t('devtools.utils.regexNoFlags', 'No Flags') },
     ],
     [t],
   )
 
   return (
-    <ToolCard icon={Regex} color="red" title={t('devtools.utils.regex', 'Regex tester')} description={t('devtools.utils.regexDesc', 'Regex tester desc')}>
+    <ToolCard icon={Regex} color="red" title={t('devtools.utils.regex', 'Regex Tester')} description={t('devtools.utils.regexDesc', 'Regex Tester Desc')}>
       <div className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
           <Input label={t('devtools.utils.regexPattern', 'Pattern')} placeholder="\\d+" value={pattern} onChange={(e) => setPattern(e.target.value)} icon={<Regex className="h-4 w-4" />} error={error ? t('devtools.utils.regexInvalidPattern', 'Invalid pattern') : undefined} />
           <Select label={t('devtools.utils.regexFlags', 'Flags')} options={flagOptions} value={flags} onChange={(e) => setFlags(e.target.value)} />
         </div>
-        <Textarea label={t('devtools.utils.regexTestString', 'Test string')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', 'Test String Placeholder')} />
+        <Textarea label={t('devtools.utils.regexTestString', 'Test String')} rows={3} value={testStr} onChange={(e) => setTestStr(e.target.value)} placeholder={t('devtools.utils.regexTestStringPlaceholder', 'Test String Placeholder')} />
 
         {error ? (
           <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
@@ -102,7 +102,7 @@ export function RegexTesterTool() {
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
                     <Badge variant="info" size="sm">{i + 1}</Badge>
                     <code className="text-xs font-mono text-rose-300">{m.match || t('(empty match)')}</code>
-                    <span className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexAtIndex', 'At index')} {m.index}</span>
+                    <span className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexAtIndex', 'At Index')} {m.index}</span>
                   </div>
                 ))}
               </div>

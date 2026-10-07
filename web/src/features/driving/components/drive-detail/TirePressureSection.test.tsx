@@ -154,7 +154,7 @@ describe('TirePressureSection', () => {
   it('always renders the titled, screen-reader-labelled chart figure', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
     expect(
-      screen.getByRole('heading', { name: 'Tire pressure during drive' }),
+      screen.getByRole('heading', { name: 'Tire Pressure During Drive' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', {
@@ -168,8 +168,8 @@ describe('TirePressureSection', () => {
     // the empty branch must win so we never render a half-populated section.
     renderSection(fullPressure, driveStats({ hasTirePressure: false }));
     expect(screen.getByText('No telemetry data available')).toBeInTheDocument();
-    expect(screen.getByRole('rowheader', { name: 'Front left' })).toBeInTheDocument();
-    expect(screen.getByRole('rowheader', { name: 'Rear right' })).toBeInTheDocument();
+    expect(screen.queryByText('Front Left')).not.toBeInTheDocument();
+    expect(screen.queryByText('Rear Right')).not.toBeInTheDocument();
     // The figure keeps its accessible name even in the empty state.
     expect(
       screen.getByRole('img', {
@@ -180,10 +180,10 @@ describe('TirePressureSection', () => {
 
   it('renders all four per-wheel summary tiles when tire pressure is present', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
-    expect(screen.getByText('Front left')).toBeInTheDocument();
-    expect(screen.getByText('Front right')).toBeInTheDocument();
-    expect(screen.getByText('Rear left')).toBeInTheDocument();
-    expect(screen.getByText('Rear right')).toBeInTheDocument();
+    expect(screen.getByText('Front Left')).toBeInTheDocument();
+    expect(screen.getByText('Front Right')).toBeInTheDocument();
+    expect(screen.getByText('Rear Left')).toBeInTheDocument();
+    expect(screen.getByText('Rear Right')).toBeInTheDocument();
   });
 
   it('summarises each wheel as a min–max range in the user pressure unit (bar)', () => {
@@ -207,7 +207,7 @@ describe('TirePressureSection', () => {
     expect(screen.getByText(`2.80${EN_DASH}2.90 bar`)).toBeInTheDocument();
     expect(screen.getAllByText(EM_DASH)).toHaveLength(3);
     // The zero-only wheel keeps its label even though it has no numeric range.
-    expect(screen.getByText('Rear right')).toBeInTheDocument();
+    expect(screen.getByText('Rear Right')).toBeInTheDocument();
   });
 
   it('skips non-finite samples so a NaN never leaks into the range', () => {
@@ -242,7 +242,7 @@ describe('TirePressureSection', () => {
       renderSection(undefined, driveStats({ hasTirePressure: true })),
     ).not.toThrow();
     expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
-    expect(screen.getByText('Front left')).toBeInTheDocument();
+    expect(screen.getByText('Front Left')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
@@ -253,7 +253,7 @@ describe('TirePressureSection', () => {
       (ui) => <ChartTimeRangeProvider syncId="drive-detail">{ui}</ChartTimeRangeProvider>,
     );
     expect(
-      screen.getByRole('heading', { name: 'Tire pressure during drive' }),
+      screen.getByRole('heading', { name: 'Tire Pressure During Drive' }),
     ).toBeInTheDocument();
     expect(screen.getByText(`2.80${EN_DASH}2.90 bar`)).toBeInTheDocument();
   });

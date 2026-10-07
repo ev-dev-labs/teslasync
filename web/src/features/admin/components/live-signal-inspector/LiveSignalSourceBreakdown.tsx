@@ -86,11 +86,10 @@ export function LiveSignalSourceBreakdown({
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.liveSignals.panels.sources', 'Source layers')}
+        {t('admin.liveSignals.panels.sources', 'Source Layers')}
       </PanelTitle>
 
       <LiveSectionState
-        label={t('admin.liveSignals.panels.sources', 'Source layers')}
         status={status}
         error={error}
         onRetry={onRetry}

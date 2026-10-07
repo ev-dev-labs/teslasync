@@ -13,7 +13,6 @@ import { useMemo } from 'react';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES } from '@/lib/constants';
-import { useSettings } from './useSettings';
 import type {
   AlertMessagePlaceholder,
   AlertMessagePreset,
@@ -25,8 +24,8 @@ import type {
 
 /**
  * Stable query keys for the message-helper endpoints. The catalog
- * responses also depend on persisted display preferences. Consumers include
- * the formatting fingerprint so settings changes cannot retain stale examples.
+ * responses are pure functions of their inputs (no per-user state) so
+ * we can lean on TanStack's default cache + a long staleTime.
  */
 export const alertMessageKeys = {
   presets: (kind?: AlertRuleKind | '') => ['alerts', 'message-presets', kind ?? ''] as const,
@@ -39,38 +38,10 @@ export const alertMessageKeys = {
  * filters the catalog to either signal- or metric-only entries plus
  * the universal "" entries.
  */
-export function useAlertMessageFormattingKey() {
-  const { data: settings } = useSettings();
-  return JSON.stringify([
-    settings?.decimal_precision, settings?.locale, settings?.language,
-    settings?.unit_of_length, settings?.unit_of_temp, settings?.unit_of_pressure,
-    settings?.currency_symbol, settings?.tz_display_default, settings?.timezone_user,
-    settings?.time_format_default,
-  ]);
-}
-
-export function useAlertMessagePresets(kind?: AlertRuleKind | '', draft?: {
-  signal_name?: string;
-  op?: AlertRuleOp;
-  metric_id?: string | null;
-  vehicle_timezone?: string;
-}) {
-  const formattingKey = useAlertMessageFormattingKey();
-  const signalName = draft?.signal_name;
-  const op = draft?.op;
-  const metricId = draft?.metric_id;
-  const vehicleTimezone = draft?.vehicle_timezone;
-  const qs = useMemo(() => {
-    const params = new URLSearchParams();
-    if (kind) params.set('kind', kind);
-    if (signalName) params.set('signal_name', signalName);
-    if (op) params.set('op', op);
-    if (metricId) params.set('metric_id', metricId);
-    if (vehicleTimezone) params.set('vehicle_timezone', vehicleTimezone);
-    return params.size ? `?${params}` : '';
-  }, [kind, signalName, op, metricId, vehicleTimezone]);
+export function useAlertMessagePresets(kind?: AlertRuleKind | '') {
+  const qs = useMemo(() => (kind ? `?kind=${encodeURIComponent(kind)}` : ''), [kind]);
   return useQuery({
-    queryKey: [...alertMessageKeys.presets(kind), signalName ?? '', op ?? '', metricId ?? '', vehicleTimezone ?? '', formattingKey],
+    queryKey: alertMessageKeys.presets(kind),
     queryFn: ({ signal }) =>
       request<AlertMessagePreset[]>(`/alerts/message-presets${qs}`, { signal }),
     staleTime: STALE_TIMES.EXTENDED,
@@ -91,23 +62,20 @@ export function useAlertMessagePlaceholders(args: {
   signal_name?: string;
   op?: AlertRuleOp;
   metric_id?: string | null;
-  vehicle_timezone?: string;
   enabled?: boolean;
 }) {
-  const { kind, signal_name, op, metric_id, vehicle_timezone, enabled = true } = args;
-  const formattingKey = useAlertMessageFormattingKey();
+  const { kind, signal_name, op, metric_id, enabled = true } = args;
   const qs = useMemo(() => {
     const params = new URLSearchParams();
     if (kind) params.set('kind', kind);
     if (signal_name) params.set('signal_name', signal_name);
     if (op) params.set('op', op);
     if (metric_id) params.set('metric_id', metric_id);
-    if (vehicle_timezone) params.set('vehicle_timezone', vehicle_timezone);
     const s = params.toString();
     return s ? `?${s}` : '';
-  }, [kind, signal_name, op, metric_id, vehicle_timezone]);
+  }, [kind, signal_name, op, metric_id]);
   return useQuery({
-    queryKey: [...alertMessageKeys.placeholders(kind, signal_name, op, metric_id), vehicle_timezone ?? '', formattingKey],
+    queryKey: alertMessageKeys.placeholders(kind, signal_name, op, metric_id),
     queryFn: ({ signal }) =>
       request<AlertMessagePlaceholder[]>(`/alerts/message-placeholders${qs}`, { signal }),
     staleTime: STALE_TIMES.EXTENDED,

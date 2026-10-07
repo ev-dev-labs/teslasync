@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { expect, type Page, type TestInfo } from '@playwright/test';
 
 export interface PageDiagnostics {
   consoleErrors: string[];
@@ -70,38 +70,6 @@ export async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   });
   expect(overflow.root.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.root.clientWidth + 1);
   expect(overflow.body.scrollWidth, JSON.stringify(overflow)).toBeLessThanOrEqual(overflow.body.clientWidth + 1);
-}
-
-export async function expectIntegratedGridFooter(table: Locator): Promise<void> {
-  const frame = table.locator('xpath=ancestor::*[@data-grid-frame]');
-  const footer = frame.locator('[data-grid-footer]');
-  await expect(frame).toHaveCount(1);
-  await expect(footer).toBeVisible();
-  const geometry = await frame.evaluate((node) => {
-    const viewport = node.querySelector('[data-grid-viewport]');
-    const footerNode = node.querySelector('[data-grid-footer]');
-    if (!viewport || !footerNode) throw new Error('Grid frame must contain a viewport and footer');
-    const bounds = node.getBoundingClientRect();
-    const view = viewport.getBoundingClientRect();
-    const foot = footerNode.getBoundingClientRect();
-    const style = getComputedStyle(node);
-    return {
-      footerOutsideScroll: !viewport.contains(footerNode),
-      gap: foot.y - view.bottom,
-      bottomGap: bounds.bottom - foot.bottom,
-      widthDifference: Math.abs(foot.width - view.width),
-      leftDifference: Math.abs(foot.x - view.x),
-      border: Number.parseFloat(style.borderBottomWidth),
-      bottomRadius: Number.parseFloat(style.borderBottomLeftRadius),
-    };
-  });
-  expect(geometry.footerOutsideScroll).toBe(true);
-  expect(Math.abs(geometry.gap)).toBeLessThanOrEqual(1);
-  expect(geometry.bottomGap).toBeLessThanOrEqual(1);
-  expect(geometry.widthDifference).toBeLessThanOrEqual(1);
-  expect(geometry.leftDifference).toBeLessThanOrEqual(1);
-  expect(geometry.border).toBeGreaterThan(0);
-  expect(geometry.bottomRadius).toBeGreaterThan(0);
 }
 
 export async function expectStableChartHeights(page: Page): Promise<void> {

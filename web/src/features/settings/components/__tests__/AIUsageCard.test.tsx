@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
@@ -35,29 +35,8 @@ function makeWrapper() {
 beforeEach(() => {
   requestMock.mockReset()
 })
-function usageValues() {
-  return Array.from(screen.getByTestId('helix-usage-summary').querySelectorAll('[data-operational-value]'))
-}
 
 describe('AIUsageCard (Settings)', () => {
-  it('opens the real Review drawer without changing usage or requesting a mutation', async () => {
-    requestMock.mockResolvedValue({
-      call_count: 1, input_tokens: 42, output_tokens: 10,
-      cost_micro_cents: 1200, error_count: 0, avg_latency_ms: 10,
-    })
-    const Wrapper = makeWrapper()
-    render(<Wrapper><AIUsageCard /></Wrapper>)
-    await screen.findByText('1 call · 0 errors')
-    expect(screen.getByText('Tokens in').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
-    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
-    const drawer = screen.getByRole('dialog')
-    expect(within(drawer).getByText('42')).toBeInTheDocument()
-    expect(within(drawer).getByText('$0.001200')).toBeInTheDocument()
-    expect(requestMock.mock.calls.some(call => ['POST', 'PUT', 'DELETE'].includes(
-      (call[1] as RequestInit | undefined)?.method ?? 'GET',
-    ))).toBe(false)
-  })
-
   it('renders the live numbers from /ai/usage/today', async () => {
     requestMock.mockImplementation(async (path: string) => {
       if (path === '/ai/usage/today') {
@@ -80,17 +59,17 @@ describe('AIUsageCard (Settings)', () => {
     )
 
     await waitFor(() => {
-      const values = usageValues()
+      const values = screen.getAllByTestId('ai-usage-value')
       expect(values[0].textContent).toMatch(/134,?795/)
       expect(values[1].textContent).toMatch(/8,?512/)
     })
-    const values = usageValues()
+    const values = screen.getAllByTestId('ai-usage-value')
     // Cost cell: micro-cents → $12.50 (locale-formatted currency).
     expect(values[2].textContent).toMatch(/12\.50/)
     expect(screen.getByText(/80 calls · 0 errors/i)).toBeInTheDocument()
   })
 
-  it('retains the loading Brief without claiming measurements before data arrives', () => {
+  it('falls back to em-dash placeholders when no data has loaded yet', () => {
     requestMock.mockImplementation(() => new Promise(() => {})) // never resolves
     const Wrapper = makeWrapper()
     render(
@@ -98,9 +77,11 @@ describe('AIUsageCard (Settings)', () => {
         <AIUsageCard />
       </Wrapper>,
     )
-    expect(screen.getByTestId('helix-usage-summary')).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByTestId('helix-usage-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(3)
-    expect(usageValues()).toHaveLength(0)
+    const values = screen.getAllByTestId('ai-usage-value')
+    expect(values).toHaveLength(3)
+    for (const v of values) {
+      expect(v.textContent).toBe('—')
+    }
     expect(screen.getByText(/Loading today’s usage/i)).toBeInTheDocument()
   })
 
@@ -116,7 +97,7 @@ describe('AIUsageCard (Settings)', () => {
       expect(screen.getByRole('alert')).toHaveTextContent('Usage could not be loaded.')
     })
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
-    expect(usageValues().map(node => node.textContent)).toEqual(['—', '—', '—'])
+    expect(screen.getAllByTestId('ai-usage-value').map(node => node.textContent)).toEqual(['—', '—', '—'])
   })
 
   it('shows a real zero state and precise small estimated costs', async () => {
@@ -127,7 +108,7 @@ describe('AIUsageCard (Settings)', () => {
     const Wrapper = makeWrapper()
     const { unmount } = render(<Wrapper><AIUsageCard /></Wrapper>)
     expect(await screen.findByText('No Helix calls yet today.')).toBeInTheDocument()
-    expect(usageValues().map(node => node.textContent)).toEqual(['0', '0', '$0.00'])
+    expect(screen.getAllByTestId('ai-usage-value').map(node => node.textContent)).toEqual(['0', '0', '$0.00'])
     unmount()
 
     requestMock.mockResolvedValue({
@@ -136,7 +117,7 @@ describe('AIUsageCard (Settings)', () => {
     })
     render(<Wrapper><AIUsageCard /></Wrapper>)
     await screen.findByText('1 call · 0 errors')
-    expect(usageValues()[2]).toHaveTextContent('$0.001200')
+    expect(screen.getAllByTestId('ai-usage-value')[2]).toHaveTextContent('$0.001200')
   })
 
   it('does not call the guarded endpoint while Helix is off', () => {

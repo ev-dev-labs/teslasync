@@ -217,19 +217,6 @@ describe('PlaceDetailPanel — closed state', () => {
   });
 });
 
-describe('PlaceDetailPanel — independent retained setup sources', () => {
-  it('keeps the selected/current rate and editable place when rates and first-session refresh fail', async () => {
-    mockedRates.mockReturnValue({ data: [makeRate({ id: 88 })], error: new Error('rates refresh'), isLoading: false, refetch: vi.fn() });
-    mockedFirstSession.mockReturnValue({ data: { started_at: '2020-01-01T00:00:00Z' }, error: new Error('session refresh'), isLoading: false, refetch: vi.fn() });
-    render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
-    await waitFor(() => expect(screen.getByTestId('stub-preview-apply')).toHaveTextContent('rate=88'));
-    expect(screen.getByTestId('stub-rate-form')).toHaveTextContent('currentRate=88');
-    expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
-    expect(deleteMutate).not.toHaveBeenCalled();
-    expect(archiveMutate).not.toHaveBeenCalled();
-  });
-});
-
 describe('PlaceDetailPanel — header', () => {
   it('titles the modal with the place name', () => {
     render(<PlaceDetailPanel place={makePlace({ name: 'Costco Supercharger' })} onClose={vi.fn()} />);
@@ -362,7 +349,7 @@ describe('PlaceDetailPanel — tabs', () => {
   it('switches to the Charging Activity tab, showing summary/activity panels', () => {
     render(<PlaceDetailPanel place={makePlace({ id: 11 })} onClose={vi.fn()} />);
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Charging activity' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Charging Activity' }));
 
     expect(screen.getByTestId('stub-summary')).toBeInTheDocument();
     expect(screen.getByTestId('stub-activity')).toHaveTextContent('geofenceId=11');

@@ -5,8 +5,7 @@ import { Gauge } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption, Button, Input, Badge, ErrorText } from '@/components/ui';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { useTripConfidence } from '@/api/hooks/useDriving';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface TripCopilotCardProps {
   currentSoc: number;
@@ -29,7 +28,6 @@ function verdictBadge(verdict: string, t: (k: string, d: string) => string): { l
  * distance; the verdict blends current SOC, efficiency, and arrival floor.
  */
 export function TripCopilotCard({ currentSoc, minArrivalSoc }: TripCopilotCardProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [remainingKm, setRemainingKm] = useState('');
   const check = useTripConfidence();
@@ -82,8 +80,8 @@ export function TripCopilotCard({ currentSoc, minArrivalSoc }: TripCopilotCardPr
             <Text as="p" variant="bodySm">{result.explanation}</Text>
             <Caption className="block tabular-nums">
               {t('tripPlanner.copilot.detail', 'Arrival ~{{soc}}% · {{margin}} kWh margin', {
-                soc: fmtNumber(result.arrival_soc),
-                margin: fmtNumber(result.margin_kwh),
+                soc: fmtNumber(result.arrival_soc, 0),
+                margin: fmtNumber(result.margin_kwh, 1),
               })}
             </Caption>
           </div>

@@ -7,11 +7,10 @@ import {
   ChartTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, EmbeddedChart,
 } from '@/components/charts';
-
+import { fmtNumber } from '@/lib/numberFormat';
 import { useFormatting } from '@/hooks/useFormatting';
 import type { CostForecastData } from '@/types/charging';
 import { CostSection } from './CostSection';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ForecastDetailsProps {
   forecastData: CostForecastData | undefined;
@@ -21,7 +20,6 @@ interface ForecastDetailsProps {
 }
 
 export function ForecastDetails({ forecastData, isLoading, error, onRetry }: ForecastDetailsProps) {
-  const { fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
   const { currencySymbol } = useFormatting();
 
@@ -106,7 +104,7 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
                   <Caption>{homeLabel}</Caption>
                 </div>
                 <Text size="xs" weight="medium" color="primary">
-                  <Currency value={breakdown.home?.avg_cost_per_kwh} precision={displayPrecision} />/kWh
+                  <Currency value={breakdown.home?.avg_cost_per_kwh} precision={3} />/kWh
                 </Text>
               </div>
               <div className="flex items-center justify-between">
@@ -115,7 +113,7 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
                   <Caption>{superchargerLabel}</Caption>
                 </div>
                 <Text size="xs" weight="medium" color="primary">
-                  <Currency value={breakdown.supercharger?.avg_cost_per_kwh} precision={displayPrecision} />/kWh
+                  <Currency value={breakdown.supercharger?.avg_cost_per_kwh} precision={3} />/kWh
                 </Text>
               </div>
             </div>
@@ -141,20 +139,20 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
                 {t('costAnalysis.forecast.monthlySavings', 'Monthly Savings')}
               </Text>
               <Text as="p" size="3xl" weight="bold" className="text-emerald-300">
-                {currencySymbol}<AnimatedNumber value={gas.monthly_savings ?? 0} decimals={displayPrecision} />
+                {currencySymbol}<AnimatedNumber value={gas.monthly_savings ?? 0} decimals={0} />
               </Text>
             </div>
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-white/[0.04] p-3">
                 <Text as="p" variant="caption">{t('costAnalysis.forecast.annual', 'Annual')}</Text>
                 <Text as="p" size="lg" weight="semibold" color="primary">
-                  <Currency value={gas.annual_savings} precision={displayPrecision} />
+                  <Currency value={gas.annual_savings} precision={0} />
                 </Text>
               </div>
               <div className="rounded-lg bg-white/[0.04] p-3">
                 <Text as="p" variant="caption">{t('costAnalysis.forecast.lifetime', 'Lifetime')}</Text>
                 <Text as="p" size="lg" weight="semibold" color="primary">
-                  <Currency value={gas.lifetime_savings} precision={displayPrecision} />
+                  <Currency value={gas.lifetime_savings} precision={0} />
                 </Text>
               </div>
             </div>
@@ -169,7 +167,7 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
               </div>
               <div className="flex justify-between">
                 <Caption>{t('costAnalysis.forecast.avgKm', 'Avg km/mo')}</Caption>
-                <Caption>{fmtNumber(gas.avg_km_per_month)}</Caption>
+                <Caption>{fmtNumber(gas.avg_km_per_month, 0)}</Caption>
               </div>
             </div>
           </div>

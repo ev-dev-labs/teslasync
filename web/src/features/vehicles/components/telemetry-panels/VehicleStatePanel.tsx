@@ -85,7 +85,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
     <GlassPanel className="p-6 h-full">
       <h3 className="section-title flex items-center gap-2 mb-5">
         <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
-        {t('telemetry.vehicleState', 'Vehicle state')}
+        {t('telemetry.vehicleState', 'Vehicle State')}
         {sseConnected && (
           <span
             className="ml-auto flex items-center gap-1 text-2xs text-emerald-300"
@@ -100,14 +100,14 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
         {/* Lights */}
         <StateRow
           icon={Lightbulb}
-          label={t('telemetry.highBeams', 'High beams')}
+          label={t('telemetry.highBeams', 'High Beams')}
           value={live.lightsHighBeams ? t('common.on', 'On') : offLabel}
           active={Boolean(live.lightsHighBeams)}
           activeClass="text-cyan-300"
         />
         <StateRow
           icon={Car}
-          label={t('telemetry.turnSignal', 'Turn signal')}
+          label={t('telemetry.turnSignal', 'Turn Signal')}
           value={turnSignalActive ? turnSignalRaw : offLabel}
           active={turnSignalActive}
           activeClass="text-amber-300"
@@ -125,7 +125,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
         {/* Driver & Keys */}
         <StateRow
           icon={User}
-          label={t('telemetry.driverSeat', 'Driver seat')}
+          label={t('telemetry.driverSeat', 'Driver Seat')}
           value={
             live.driverSeatOccupied
               ? t('telemetry.seatOccupied', 'Occupied')
@@ -136,7 +136,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
         />
         <StateRow
           icon={Key}
-          label={t('telemetry.pairedKeys', 'Paired keys')}
+          label={t('telemetry.pairedKeys', 'Paired Keys')}
           value={formatCount(live.pairedKeyCount)}
         />
 
@@ -145,33 +145,33 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
         {/* Access Modes */}
         <StateRow
           icon={Car}
-          label={t('telemetry.valetMode', 'Valet mode')}
+          label={t('telemetry.valetMode', 'Valet Mode')}
           value={live.valetMode ? t('common.enabled', 'Enabled') : offLabel}
           active={Boolean(live.valetMode)}
           activeClass="text-purple-400"
         />
         <StateRow
           icon={Settings}
-          label={t('telemetry.serviceMode', 'Service mode')}
+          label={t('telemetry.serviceMode', 'Service Mode')}
           value={live.serviceMode ? t('common.active', 'Active') : offLabel}
           active={Boolean(live.serviceMode)}
           activeClass="text-amber-400"
         />
         <StateRow
           icon={Gauge}
-          label={t('telemetry.speedLimit', 'Speed limit')}
+          label={t('telemetry.speedLimit', 'Speed Limit')}
           value={speedLimitActive ? formatSpeed(currentLimit) : offLabel}
           active={speedLimitActive}
           activeClass="text-cyan-300"
         />
         <StateRow
           icon={Monitor}
-          label={t('telemetry.centerDisplay', 'Center display')}
+          label={t('telemetry.centerDisplay', 'Center Display')}
           value={formatText(live.centerDisplay)}
         />
         <StateRow
           icon={MapPin}
-          label={t('telemetry.homelinkDevices', 'HomeLink devices')}
+          label={t('telemetry.homelinkDevices', 'HomeLink Devices')}
           value={formatCount(live.homelinkDeviceCount)}
         />
 
@@ -179,7 +179,7 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
 
         <StateRow
           icon={Settings}
-          label={t('telemetry.softwareUpdateAvailable', 'Software update')}
+          label={t('telemetry.softwareUpdateAvailable', 'Software Update')}
           value={
             live.swUpdateInProgress
               ? t('telemetry.updateInstalling', 'Installing')
@@ -192,14 +192,14 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
         />
         <StateRow
           icon={Key}
-          label={t('telemetry.remoteStartActive', 'Remote start active')}
+          label={t('telemetry.remoteStartActive', 'Remote Start Active')}
           value={live.remoteStartActive ? t('common.active', 'Active') : offLabel}
           active={Boolean(live.remoteStartActive)}
           activeClass="text-amber-400"
         />
         <StateRow
           icon={MapPin}
-          label={t('telemetry.gpsAccuracy', 'GPS accuracy')}
+          label={t('telemetry.gpsAccuracy', 'GPS Accuracy')}
           value={typeof live.gpsAccuracyM === 'number' && Number.isFinite(live.gpsAccuracyM) ? `${live.gpsAccuracyM} m` : '—'}
         />
         <StateRow

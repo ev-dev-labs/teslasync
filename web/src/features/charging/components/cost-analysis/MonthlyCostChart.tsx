@@ -57,14 +57,14 @@ export function MonthlyCostChart({ data, vehicleId, isLoading, error, onRetry }:
       {
         key: 'cost',
         label: t('costAnalysis.charts.col.cost', 'Cost ($)'),
-        format: (v: unknown) => formatCurrency(typeof v === 'number' ? v : 0),
+        format: (v: unknown) => formatCurrency(typeof v === 'number' ? v : 0, 2),
       },
     ],
     [t, formatCurrency],
   );
 
   const formatCostTick = useCallback(
-    (v: number) => formatCurrency(v),
+    (v: number) => formatCurrency(v, 0),
     [formatCurrency],
   );
 
@@ -85,7 +85,6 @@ export function MonthlyCostChart({ data, vehicleId, isLoading, error, onRetry }:
       title={t('costAnalysis.charts.monthlyCost', 'Monthly Cost Trend')}
       ariaLabel={t('costAnalysis.charts.monthlyCost.aria', 'Monthly charging cost trend area chart')}
       data={chartData}
-      exportData={chartData}
       dataColumns={dataColumns}
       height={260}
       loading={isLoading}

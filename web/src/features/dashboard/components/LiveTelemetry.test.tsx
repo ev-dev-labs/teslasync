@@ -133,11 +133,11 @@ describe('LiveTelemetry', () => {
   it('renders the section title and all six telemetry panel headings', () => {
     renderLive();
 
-    expect(screen.getByRole('heading', { name: /Live telemetry/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Live Telemetry/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Drivetrain' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Climate' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Security' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Tire pressure' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Tire Pressure' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Media' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
   });
@@ -152,7 +152,7 @@ describe('LiveTelemetry', () => {
     // Skeleton placeholders are present, and no concrete value / progressbar
     // leaks through the loading state.
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('320.00 Nm')).toBeNull();
+    expect(screen.queryByText('320 Nm')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
@@ -160,8 +160,8 @@ describe('LiveTelemetry', () => {
   it('renders drivetrain metrics with units and a gear badge', () => {
     renderLive({ motorData: motor });
 
-    expect(screen.getByText('320.00 Nm')).toBeInTheDocument();
-    expect(screen.getByText('45.00°C')).toBeInTheDocument();
+    expect(screen.getByText('320 Nm')).toBeInTheDocument();
+    expect(screen.getByText('45°C')).toBeInTheDocument();
     expect(screen.getByText('0.50g')).toBeInTheDocument();
 
     const gear = screen.getByText('D');
@@ -194,7 +194,7 @@ describe('LiveTelemetry', () => {
 
     // torque, motor temp, gear, g-force → four dashes.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
-    expect(screen.queryByText('320.00 Nm')).toBeNull();
+    expect(screen.queryByText('320 Nm')).toBeNull();
     // No gear badge is rendered when the gear is null.
     expect(screen.queryByText('D')).toBeNull();
   });
@@ -212,9 +212,9 @@ describe('LiveTelemetry', () => {
     const toF = vi.fn((c: number) => c * (9 / 5) + 32);
     renderLive({ climateData: climate, toTemperatureDisplay: toF, tempUnit: '°F' });
 
-    expect(screen.getByText('69.80°F')).toBeInTheDocument(); // 21°C
-    expect(screen.getByText('59.00°F')).toBeInTheDocument(); // 15°C
-    expect(screen.getByText('2.50 kW')).toBeInTheDocument();
+    expect(screen.getByText('70°F')).toBeInTheDocument(); // 21°C
+    expect(screen.getByText('59°F')).toBeInTheDocument(); // 15°C
+    expect(screen.getByText('2.5 kW')).toBeInTheDocument();
     expect(toF).toHaveBeenCalledWith(21);
     expect(toF).toHaveBeenCalledWith(15);
   });
@@ -244,7 +244,7 @@ describe('LiveTelemetry', () => {
       climateData: { ...climate, defrost_mode: 'Front', battery_heater_on: true },
     });
     expect(screen.getByText('Defrost')).toBeInTheDocument();
-    expect(screen.getByText('Bat heater')).toBeInTheDocument();
+    expect(screen.getByText('Bat Heater')).toBeInTheDocument();
     cleanup();
 
     renderLive({
@@ -260,7 +260,7 @@ describe('LiveTelemetry', () => {
     expect(screen.getByText(/Locked$/)).toBeInTheDocument();
     expect(screen.getByText(/Active$/)).toBeInTheDocument(); // sentry on
     // Doors + windows both report "All Closed".
-    expect(screen.getAllByText('All closed')).toHaveLength(2);
+    expect(screen.getAllByText('All Closed')).toHaveLength(2);
   });
 
   it('counts open doors and windows and reflects unlocked / sentry-off state', () => {
@@ -286,10 +286,10 @@ describe('LiveTelemetry', () => {
   it('renders four in-range tires with an all-normal badge', () => {
     renderLive({ tireData: tires });
 
-    expect(screen.getByText('2.30')).toBeInTheDocument();
-    expect(screen.getByText('2.80')).toBeInTheDocument();
+    expect(screen.getByText('2.3')).toBeInTheDocument();
+    expect(screen.getByText('2.8')).toBeInTheDocument();
     expect(screen.getAllByText('bar')).toHaveLength(4); // unit under each tile
-    expect(screen.getByText('All normal')).toBeInTheDocument();
+    expect(screen.getByText('All Normal')).toBeInTheDocument();
   });
 
   it('colours low pressure, flags a warning, and dashes a missing tire', () => {
@@ -297,7 +297,7 @@ describe('LiveTelemetry', () => {
       tireData: { front_left: 1.9, front_right: 2.5, rear_left: null, rear_right: 2.5 },
     });
 
-    const low = screen.getByText('1.90');
+    const low = screen.getByText('1.9');
     expect(low.className).toContain('rose'); // danger threshold colour
     expect(screen.getByText('—')).toBeInTheDocument(); // null tire
     expect(screen.getByText('Warning')).toBeInTheDocument();
@@ -365,8 +365,8 @@ describe('LiveTelemetry', () => {
     renderLive({ locationData: location, toDistanceDisplay: toDist });
 
     expect(screen.getByText('Supercharger')).toBeInTheDocument();
-    expect(screen.getByText('12.00 km')).toBeInTheDocument();
-    expect(screen.getByText('18.00 min')).toBeInTheDocument();
+    expect(screen.getByText('12.0 km')).toBeInTheDocument();
+    expect(screen.getByText('18 min')).toBeInTheDocument();
     expect(screen.getByText(/Home$/)).toBeInTheDocument(); // "🏠 Home" chip
     expect(toDist).toHaveBeenCalledWith(12);
   });

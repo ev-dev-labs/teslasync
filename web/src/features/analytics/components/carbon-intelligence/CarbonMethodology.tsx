@@ -1,8 +1,7 @@
 import { BookOpenCheck, Clock3, Database, FlaskConical, Fuel, ShieldAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard } from '@/components/layout';
-import { Text } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import type { CarbonSectionProps } from './types';
 
 export function CarbonMethodology({
@@ -31,7 +30,7 @@ export function CarbonMethodology({
       title: t('carbon.method.formulaTitle', 'Charging attribution'),
       body: t(
         'carbon.method.formulaBody',
-        'Session CO₂ equals positive charging energy multiplied by the matching model intensity and converted from grams to kilograms. the frontend independently derives average intensity from returned CO₂ and canonical Wh.',
+        'Session CO₂ equals positive charging energy multiplied by the matching model intensity and converted from grams to kilograms. The frontend independently derives average intensity from returned CO₂ and canonical Wh.',
       ),
     },
     {
@@ -73,10 +72,17 @@ export function CarbonMethodology({
         'Carbon methodology assumptions and limitations',
       )}
     >
-      <LayoutCard
-        title={t('carbon.method.title', 'Methodology, source assumptions, and limitations')}
-        actions={<BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
-      >
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-2 flex items-center gap-2">
+          <BookOpenCheck
+            className="h-4 w-4 text-[var(--text-muted)]"
+            aria-hidden="true"
+          />
+          {t(
+            'carbon.method.title',
+            'Methodology, source assumptions, and limitations',
+          )}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'carbon.method.normalization',
@@ -97,7 +103,7 @@ export function CarbonMethodology({
             </div>
           ))}
         </div>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

@@ -17,20 +17,20 @@ import type { LatLngExpression } from '@/components/maps';
 
 /**
  * One sample of the drive time-series feeding every drive-detail chart. Required
- * signal fields preserve `null` when the underlying telemetry sample is absent.
- * Real zero observations stay zero; charts must not bridge unknown readings.
+ * numeric fields are coalesced to `0` by the producer (never `undefined`/`NaN`);
+ * optional fields are `null` when the underlying telemetry sample lacks them.
  */
 export interface ChartDataPoint {
   /** Pre-formatted timestamp label for the chart X axis. */
   time: string;
   /** Speed in the user's display unit (km/h or mph), converted from SI m/s. */
-  speed: number | null;
+  speed: number;
   /** Battery state of charge as a percentage (0–100). */
-  battery: number | null;
+  battery: number;
   /** Elevation in metres (SI, raw) — differenced to derive gain/loss. */
-  elevation: number | null;
+  elevation: number;
   /** Instantaneous power in kW; sign preserved (negative = regen). */
-  power: number | null;
+  power: number;
   /** Ambient temp in the display unit (°C/°F) from SI °C; `null` if absent. */
   outsideTemp: number | null;
   /** Cabin temp in the display unit (°C/°F) from SI °C; `null` if absent. */

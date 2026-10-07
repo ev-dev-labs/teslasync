@@ -148,19 +148,19 @@ describe('WidgetSettingsModal — rendering', () => {
     setup({ category: 'battery', name: 'Battery Health' });
     // Title is interpolated from def.name, not hard-coded English.
     expect(screen.getByRole('dialog', { name: 'Battery Health Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Refresh interval' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Refresh Interval' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Appearance' })).toBeInTheDocument();
     // battery is both a vehicle- and a chart-widget → all four sections present.
     expect(selectByLabel('Vehicle')).toBeInTheDocument();
-    expect(selectByLabel('Time range')).toBeInTheDocument();
+    expect(selectByLabel('Time Range')).toBeInTheDocument();
   });
 
   it('gives every icon-free select an accessible name', () => {
     setup({ category: 'battery' });
     // If these throw, the selects have no programmatic label (a11y regression).
     expect(selectByLabel('Vehicle').tagName).toBe('SELECT');
-    expect(selectByLabel('Refresh interval').tagName).toBe('SELECT');
-    expect(selectByLabel('Time range').tagName).toBe('SELECT');
+    expect(selectByLabel('Refresh Interval').tagName).toBe('SELECT');
+    expect(selectByLabel('Time Range').tagName).toBe('SELECT');
   });
 });
 
@@ -171,7 +171,7 @@ describe('WidgetSettingsModal — vehicle selector', () => {
       vehicles: [makeVehicle(1, 'Red Model 3'), makeVehicle(2, 'Blue Model Y')],
     });
     expect(selectByLabel('Vehicle').value).toBe('all');
-    expect(screen.getByText('All vehicles (first)')).toBeInTheDocument();
+    expect(screen.getByText('All Vehicles (first)')).toBeInTheDocument();
     expect(screen.getByText('Red Model 3')).toBeInTheDocument();
     expect(screen.getByText('Blue Model Y')).toBeInTheDocument();
   });
@@ -220,24 +220,24 @@ describe('WidgetSettingsModal — vehicle selector', () => {
     setup({ category: 'vehicle', vehicles: [] });
     const select = selectByLabel('Vehicle');
     expect(select.value).toBe('all');
-    expect(screen.getByText('All vehicles (first)')).toBeInTheDocument();
+    expect(screen.getByText('All Vehicles (first)')).toBeInTheDocument();
   });
 });
 
 describe('WidgetSettingsModal — time range', () => {
   it('shows the time-range picker for chart widgets', () => {
     setup({ category: 'driving' });
-    expect(selectByLabel('Time range')).toBeInTheDocument();
+    expect(selectByLabel('Time Range')).toBeInTheDocument();
   });
 
   it('hides the time-range picker for non-chart widgets', () => {
     setup({ category: 'climate' });
-    expect(screen.queryByRole('combobox', { name: 'Time range' })).toBeNull();
+    expect(screen.queryByRole('combobox', { name: 'Time Range' })).toBeNull();
   });
 
   it('defaults the time range to 7d and commits a change', () => {
     const { onSave } = setup({ category: 'driving' });
-    const select = selectByLabel('Time range');
+    const select = selectByLabel('Time Range');
     expect(select.value).toBe('7d');
     fireEvent.change(select, { target: { value: '30d' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -248,7 +248,7 @@ describe('WidgetSettingsModal — time range', () => {
 describe('WidgetSettingsModal — refresh interval', () => {
   it('defaults to "Default" and commits a chosen interval as a number', () => {
     const { onSave } = setup({ category: 'battery' });
-    const select = selectByLabel('Refresh interval');
+    const select = selectByLabel('Refresh Interval');
     expect(select.value).toBe('default');
     fireEvent.change(select, { target: { value: '15' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -257,7 +257,7 @@ describe('WidgetSettingsModal — refresh interval', () => {
 
   it('clears a custom refresh interval when "Default" is chosen', () => {
     const { onSave } = setup({ category: 'battery', config: { refreshRate: 30 } });
-    const select = selectByLabel('Refresh interval');
+    const select = selectByLabel('Refresh Interval');
     expect(select.value).toBe('30');
     fireEvent.change(select, { target: { value: 'default' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -314,8 +314,8 @@ describe('WidgetSettingsModal — hardening', () => {
   it('defaults every control when the widget has no saved config', () => {
     setup({ category: 'battery', config: undefined });
     expect(selectByLabel('Vehicle').value).toBe('all');
-    expect(selectByLabel('Refresh interval').value).toBe('default');
-    expect(selectByLabel('Time range').value).toBe('7d');
+    expect(selectByLabel('Refresh Interval').value).toBe('default');
+    expect(selectByLabel('Time Range').value).toBe('7d');
     expect(screen.getByRole('switch', { name: 'Show widget title' })).toHaveAttribute(
       'aria-checked',
       'true',
@@ -333,7 +333,7 @@ describe('WidgetSettingsModal — hardening', () => {
         <WidgetSettingsModal widget={widgetA} def={def} open onClose={onClose} onSave={onSave} />
       </StrictMode>,
     );
-    const timeSelect = () => screen.getByRole('combobox', { name: 'Time range' }) as HTMLSelectElement;
+    const timeSelect = () => screen.getByRole('combobox', { name: 'Time Range' }) as HTMLSelectElement;
     expect(timeSelect().value).toBe('30d');
 
     // Edit widget A's draft in-place.

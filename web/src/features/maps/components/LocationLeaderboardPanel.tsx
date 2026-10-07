@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 
-import { LayoutCard } from '@/components/layout';
+import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -98,7 +98,11 @@ export function LocationLeaderboardPanel({
   );
 
   return (
-    <LayoutCard title={title} actions={icon}>
+    <GlassPanel className="p-4 sm:p-5">
+      <PanelTitle className="mb-3 flex items-center gap-2">
+        {icon}
+        {title}
+      </PanelTitle>
       {loading ? (
         <Skeleton className="h-64 w-full" />
       ) : error ? (
@@ -133,6 +137,6 @@ export function LocationLeaderboardPanel({
           </ResponsiveContainer>
         </EmbeddedChart>
       )}
-    </LayoutCard>
+    </GlassPanel>
   );
 }

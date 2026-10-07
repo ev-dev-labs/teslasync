@@ -49,26 +49,9 @@ destinations without removing them from the catalog.
 | Nonlinear Signal Coupling | `/signal-mutual-information` | Discover nonlinear dependencies between telemetry signals. | Renders an empty state when no data is available — the page is not hidden. |
 | Redis Signals | `/redis-signals` | Dump the Redis live-signal cache for a vehicle. | Operator surface — needs a healthy API, MQTT, and DB. |
 | Telemetry Coverage | `/admin/telemetry/coverage` | Which Fleet Telemetry fields are wired vs missing. | Operator surface — needs a healthy API, MQTT, and DB. |
-| API Logs | `/api-logs` | Compact outbound-request evidence table with status, duration, and response details; separate backend runtime-error (process uptime) and browser-error (last hour) summaries. API-call totals and service counts use the same View settings date range as the requests, independently of individual column predicates. | Request headers and reset controls remain available for empty or failed results; each error summary retains its own state. |
+| API Logs | `/api-logs` | Filterable outbound API requests with status, duration, and response details; separate backend runtime-error (process uptime) and browser-error (last hour) summaries. All-time API-call totals and service counts are not filtered by the request-list date or controls. | Request list and each error summary show their own loading, empty, or failure state. |
 | API Playground | `/api-playground` | Try any API endpoint with parameter forms. | Renders an empty state when no data is available — the page is not hidden. |
 
 Expand an API Logs row for method, URL, status, duration, vehicle ID, rate-limit flag, error, request/response headers and bodies. Header values are redacted except for a small allowlist of safe diagnostic fields. Body capture is disabled by default (`API_LOG_CAPTURE_BODIES=false`); when enabled, captured payloads are limited to 10 KB. Older records cannot retroactively gain headers or bodies.
-
-The runtime diagnostics use two independent, responsive cards rather than a
-nested browser tile. Backend totals and uptime describe the current API
-process; category rows preserve counts, the latest message, and last-seen
-timestamps, with a link to System Status. Browser totals describe reports
-received within the server's reporting window and show the summary timestamp
-and reported sources. Neither card uses the API-call filters. Zero browser
-reports does not establish an error-free frontend or complete reporting
-coverage, including when reporting or RUM is disabled. Loading, unavailable
-summaries, and failed requests remain distinct from explicitly reported zero;
-a failed refresh retains existing evidence with a stale-data notice.
-
-Method, status, endpoint, service, app installation, and app-key filters live in
-their column headers. Reveal the optional App key column through **Columns**.
-These are server predicates, not checklists inferred from the current 25-row
-page. Changing a filter resets the page and persists in the URL; a filter with
-no matches can still be cleared from its header.
 
 [← All groups](./catalogue.md)

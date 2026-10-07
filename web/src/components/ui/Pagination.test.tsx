@@ -23,9 +23,8 @@
  * expectation is encoding-proof.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { act, render, screen, fireEvent, within } from '@testing-library/react';
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { describe, it, expect, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // i18n stub — echo the English fallback and interpolate `{{var}}` from the
 // options bag so the range caption + page indicator resolve to real numbers.
@@ -79,11 +78,6 @@ const range = (container: HTMLElement) =>
 const indicator = (container: HTMLElement) =>
   container.querySelector('[aria-current="page"]');
 
-beforeEach(() => {
-  setGlobalLocale('en-US');
-  setGlobalPrecision(3);
-});
-
 describe('Pagination', () => {
   it('renders a Pagination landmark with the live range and page indicator', () => {
     const { container } = renderPagination({ page: 1, pageSize: 25, total: 60 });
@@ -92,7 +86,7 @@ describe('Pagination', () => {
     expect(range(container)).toBe('Showing 1\u201325 of 60');
 
     const ind = indicator(container);
-    expect(ind?.textContent).toBe('1');
+    expect(ind?.textContent).toBe('1 / 3');
     expect(ind).toHaveAttribute('aria-label', 'Page 1 of 3');
   });
 
@@ -100,16 +94,14 @@ describe('Pagination', () => {
     const { container } = renderPagination({ page: 2, pageSize: 25, total: 60 });
     // (2-1)*25+1 = 26 … min(2*25, 60) = 50
     expect(range(container)).toBe('Showing 26\u201350 of 60');
-    expect(indicator(container)?.textContent).toBe('2');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 2 of 3');
+    expect(indicator(container)?.textContent).toBe('2 / 3');
   });
 
   it('clamps the range end to total on a partial final page', () => {
     const { container } = renderPagination({ page: 3, pageSize: 25, total: 60 });
     // (3-1)*25+1 = 51 … min(3*25=75, 60) = 60 — must NOT overshoot to 75.
     expect(range(container)).toBe('Showing 51\u201360 of 60');
-    expect(indicator(container)?.textContent).toBe('3');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 3 of 3');
+    expect(indicator(container)?.textContent).toBe('3 / 3');
   });
 
   it('disables First and Previous on the first page while Next and Last stay enabled', () => {
@@ -188,8 +180,7 @@ describe('Pagination', () => {
   it('shows an empty range and a single page when total is zero', () => {
     const { container } = renderPagination({ page: 1, pageSize: 25, total: 0 });
     expect(range(container)).toBe('Showing 0\u20130 of 0');
-    expect(indicator(container)?.textContent).toBe('1');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 1 of 1');
+    expect(indicator(container)?.textContent).toBe('1 / 1');
     // Nothing to page through — every direction is a dead end.
     expect(screen.getByRole('button', { name: 'First page' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
@@ -199,8 +190,7 @@ describe('Pagination', () => {
   it('guards a zero pageSize instead of producing Infinity pages', () => {
     const { container } = renderPagination({ page: 1, pageSize: 0, total: 50 });
     // Falls back to the first option (25) → ceil(50/25) = 2 pages, NOT Infinity.
-    expect(indicator(container)?.textContent).toBe('1');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 1 of 2');
+    expect(indicator(container)?.textContent).toBe('1 / 2');
     expect(container.textContent).not.toContain('Infinity');
     expect(range(container)).toBe('Showing 1\u201325 of 50');
     expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
@@ -209,8 +199,7 @@ describe('Pagination', () => {
   it('clamps an out-of-range page down to the last page', () => {
     const { container, onPageChange } = renderPagination({ page: 99, pageSize: 25, total: 60 });
 
-    expect(indicator(container)?.textContent).toBe('3');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 3 of 3');
+    expect(indicator(container)?.textContent).toBe('3 / 3');
     // The range must not read backwards ("51–60", never "2451–60").
     expect(range(container)).toBe('Showing 51\u201360 of 60');
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
@@ -223,8 +212,7 @@ describe('Pagination', () => {
 
   it('clamps a below-range page up to the first page', () => {
     const { container } = renderPagination({ page: 0, pageSize: 25, total: 60 });
-    expect(indicator(container)?.textContent).toBe('1');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 1 of 3');
+    expect(indicator(container)?.textContent).toBe('1 / 3');
     expect(screen.getByRole('button', { name: 'First page' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
   });
@@ -244,108 +232,5 @@ describe('Pagination', () => {
     // the new count without stealing focus.
     const live = container.querySelector('[aria-live="polite"]');
     expect(live).toHaveAttribute('aria-atomic', 'true');
-  });
-
-  it.each([
-    [1, ['1', '2', '3', '…', '10']],
-    [3, ['1', '2', '3', '…', '10']],
-    [5, ['1', '…', '5', '…', '10']],
-    [8, ['1', '…', '8', '9', '10']],
-    [10, ['1', '…', '8', '9', '10']],
-  ])('offers a bounded numbered range and ellipses at page %s', (page, expected) => {
-    const { container, onPageChange } = renderPagination({ page, total: 250 });
-    const current = indicator(container)!;
-    expect(Array.from(current.parentElement!.children).map(element => element.textContent)).toEqual(expected);
-    expect(current).toHaveAttribute('aria-label', `Page ${page} of 10`);
-    expect(current.tagName).toBe('BUTTON');
-    fireEvent.click(current);
-    expect(onPageChange).not.toHaveBeenCalled();
-    const target = page === 10 ? 1 : 10;
-    fireEvent.click(screen.getByRole('button', { name: `Page ${target}` }));
-    expect(onPageChange).toHaveBeenCalledWith(target);
-  });
-
-  it('shows all numbered pages without ellipses for a short range', () => {
-    const { container } = renderPagination({ page: 3, pageSize: 25, total: 125 });
-    expect(Array.from(indicator(container)!.parentElement!.children).map(element => element.textContent)).toEqual(['1', '2', '3', '4', '5']);
-  });
-
-  it.each(['', '0', '-1', '4', '1.5', 'abc', 'Infinity', '1e0'])('rejects invalid Go to page input %j without navigating', input => {
-    const { onPageChange } = renderPagination();
-    const field = screen.getByRole('textbox', { name: 'Go to page' });
-    fireEvent.change(field, { target: { value: input } });
-    fireEvent.click(screen.getByRole('button', { name: 'Go' }));
-    expect(onPageChange).not.toHaveBeenCalled();
-    expect(field).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByRole('alert')).toHaveTextContent('Enter a page from 1 to 3.');
-    expect(field).toHaveAttribute('aria-describedby', screen.getByRole('alert').id);
-  });
-
-  it('submits a valid Go to page by form/Enter without navigating the current page', () => {
-    const onPageChange = vi.fn();
-    const { rerender } = render(<Pagination page={1} pageSize={25} total={60} onPageChange={onPageChange} />);
-    const field = screen.getByRole('textbox', { name: 'Go to page' });
-    expect(field).toHaveValue('1');
-    fireEvent.change(field, { target: { value: ' 3 ' } });
-    fireEvent.submit(field.closest('form')!);
-    expect(onPageChange).toHaveBeenCalledWith(3);
-    rerender(<Pagination page={3} pageSize={25} total={60} onPageChange={onPageChange} />);
-    expect(field).toHaveValue('3');
-    onPageChange.mockClear();
-    fireEvent.change(field, { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Go' }));
-    expect(onPageChange).not.toHaveBeenCalled();
-    expect(screen.queryByRole('alert')).toBeNull();
-  });
-
-  it('clears invalid feedback when the input changes', () => {
-    renderPagination();
-    const field = screen.getByRole('textbox', { name: 'Go to page' });
-    fireEvent.change(field, { target: { value: '' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Go' }));
-    expect(screen.getByRole('alert')).toBeInTheDocument();
-    fireEvent.change(field, { target: { value: '2' } });
-    expect(screen.queryByRole('alert')).toBeNull();
-    expect(field).not.toHaveAttribute('aria-invalid');
-  });
-
-  it('keeps Go to populated after external paging, clamping, and an empty result', () => {
-    const onPageChange = vi.fn();
-    const { rerender } = render(<Pagination page={2} pageSize={25} total={100} onPageChange={onPageChange} />);
-    const field = screen.getByRole('textbox', { name: 'Go to page' });
-    expect(field).toHaveValue('2');
-    fireEvent.change(field, { target: { value: '4' } });
-    rerender(<Pagination page={3} pageSize={25} total={100} onPageChange={onPageChange} />);
-    expect(field).toHaveValue('3');
-    rerender(<Pagination page={99} pageSize={25} total={60} onPageChange={onPageChange} />);
-    expect(field).toHaveValue('3');
-    rerender(<Pagination page={99} pageSize={25} total={0} onPageChange={onPageChange} />);
-    expect(field).toHaveValue('1');
-  });
-
-  it('uses reactive locale integer formatting irrespective of measurement precision', () => {
-    renderPagination({ page: 40, pageSize: 1000, total: 1234567, pageSizeOptions: [1000, 2000] });
-    expect(screen.getByText('Showing 39,001–40,000 of 1,234,567')).toBeInTheDocument();
-    act(() => setGlobalLocale('de-DE'));
-    expect(screen.getByText('Showing 39.001–40.000 of 1.234.567')).toBeInTheDocument();
-    expect(screen.getByRole('button', { current: 'page' })).toHaveAttribute('aria-label', 'Page 40 of 1.235');
-    expect(screen.getByRole('option', { name: '1.000 / page' })).toBeInTheDocument();
-    act(() => setGlobalPrecision(4));
-    expect(screen.getByText('Showing 39.001–40.000 of 1.234.567')).toBeInTheDocument();
-  });
-
-  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])('sanitizes nonfinite props %s and invalid size options', value => {
-    const { container } = renderPagination({ page: value, pageSize: value, total: value, pageSizeOptions: [0, -1, value, 2.5] });
-    expect(range(container)).toBe('Showing 0–0 of 0');
-    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 1 of 1');
-    expect(screen.getByRole('combobox', { name: 'Rows per page' })).toHaveValue('25');
-    expect(screen.getByRole('option', { name: '25 / page' })).toBeInTheDocument();
-    expect(container.textContent).not.toMatch(/NaN|Infinity/);
-  });
-
-  it('sanitizes fractional counts, deduplicates options and includes an unlisted current size', () => {
-    renderPagination({ page: 2.9, pageSize: 20, total: 60.9, pageSizeOptions: [10, 10, 0, 50] });
-    expect(screen.getByText('Showing 21–40 of 60')).toBeInTheDocument();
-    expect(within(screen.getByRole('combobox')).getAllByRole('option').map(option => option.textContent)).toEqual(['20 / page', '10 / page', '50 / page']);
   });
 });

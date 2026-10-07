@@ -1,13 +1,10 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import * as auditTrail from '../lib/auditTrail';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import { AuditTrailPanel } from './AuditTrailPanel';
 import { recordAuditEvent, __resetAuditTrailForTests } from '../lib/auditTrail';
 
 describe('AuditTrailPanel', () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
     __resetAuditTrailForTests();
   });
 
@@ -51,25 +48,5 @@ describe('AuditTrailPanel', () => {
     screen.getByRole('button', { name: /refresh/i }).click();
 
     expect(await screen.findByText(/rotated signing key/i)).toBeInTheDocument();
-  });
-
-  it('retains local events through a rejected refresh and retries without reordering them', async () => {
-    await recordAuditEvent('key_generated', 'Older key event.');
-    await recordAuditEvent('report_exported', 'Newer export event.');
-    const list = vi.spyOn(auditTrail, 'listAuditEvents');
-    render(<MemoryRouter><AuditTrailPanel /></MemoryRouter>);
-    expect(await screen.findByText('Newer export event.')).toBeInTheDocument();
-
-    list.mockRejectedValueOnce(new Error('local storage refresh failed'));
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
-    await waitFor(() => expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument());
-    expect(screen.getByText('Older key event.')).toBeInTheDocument();
-    const rows = screen.getAllByRole('listitem');
-    expect(rows[0]).toHaveTextContent('Newer export event.');
-    expect(rows[1]).toHaveTextContent('Older key event.');
-
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    await waitFor(() => expect(screen.queryByText(/Previously loaded data remains visible/)).not.toBeInTheDocument());
-    expect(screen.getByText('Newer export event.')).toBeInTheDocument();
   });
 });

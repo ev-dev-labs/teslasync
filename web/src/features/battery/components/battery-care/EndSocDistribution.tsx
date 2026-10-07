@@ -8,7 +8,7 @@ import {
   MetricLabel,
   MetricValue,
 } from '@/components/ui';
-
+import { fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
 
 import type {
@@ -17,7 +17,6 @@ import type {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EndSocDistributionProps {
   care: CareScore;
@@ -47,7 +46,6 @@ export function EndSocDistribution({
   state,
   className,
 }: EndSocDistributionProps) {
-  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -84,7 +82,7 @@ export function EndSocDistribution({
         <div className="rounded-xl bg-[var(--surface-2)] p-4">
           <MetricValue>
             {care.medianEndSocPct != null
-              ? fmtPercent(care.medianEndSocPct)
+              ? fmtPercent(care.medianEndSocPct, 0)
               : '—'}
           </MetricValue>
           <MetricLabel>
@@ -106,7 +104,7 @@ export function EndSocDistribution({
                 {
                   pct:
                     bucket.share != null
-                      ? fmtPercent(bucket.share * 100)
+                      ? fmtPercent(bucket.share * 100, 0)
                       : '—',
                   count: bucket.count,
                 },

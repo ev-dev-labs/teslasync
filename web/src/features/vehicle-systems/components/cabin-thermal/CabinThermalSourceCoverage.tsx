@@ -1,17 +1,19 @@
+import { CalendarRange } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { LayoutCard } from '@/components/layout';
-import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+import { Grid } from '@/components/layout';
 import {
+  GlassPanel,
+  MetricLabel,
+  PanelTitle,
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { CabinThermalSummary } from '../../lib/cabinThermal';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalSourceCoverageProps {
   summary: CabinThermalSummary;
@@ -20,19 +22,41 @@ interface CabinThermalSourceCoverageProps {
   formatDuration: UnitFormatter;
 }
 
+function CoverageMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <MetricLabel>{label}</MetricLabel>
+      <Text
+        as="div"
+        size="base"
+        weight="semibold"
+        color="primary"
+        className="mt-1"
+      >
+        {value}
+      </Text>
+    </div>
+  );
+}
+
 export function CabinThermalSourceCoverage({
   summary,
   state,
   locale,
   formatDuration,
 }: CabinThermalSourceCoverageProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const coverage = summary.coverage;
+  const duration = (minutes: number | null) =>
+    minutes != null ? formatDuration(minutes * 60, { precision: 1 }) : '—';
 
   return (
     <section data-testid="cabin-thermal-source-coverage">
-      <LayoutCard title={t('cabinThermal.coverage.title', 'Source coverage')}>
+      <GlassPanel className="p-4 sm:p-5">
+        <PanelTitle className="mb-1 flex items-center gap-2">
+          <CalendarRange className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+          {t('cabinThermal.coverage.title', 'Source coverage')}
+        </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.coverage.subtitle',
@@ -40,30 +64,42 @@ export function CabinThermalSourceCoverage({
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="rows">
-          <VehicleOperationalBrief embedded id="cabin-thermal-coverage-summary"
-            title={t('cabinThermal.coverage.title', 'Source coverage')}
-            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
-            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
-              reason: t('cabinThermal.coverage.subtitle', 'Chronological span and cadence of valid, deduplicated climate samples returned by the seven-day endpoint.') }}
-            metrics={[
-              { metricId: 'text', occurrenceId: 'earliest', label: t('cabinThermal.coverage.earliest', 'Earliest valid sample'), rawValue: coverage.earliestValidTs ? formatDateTime(coverage.earliestValidTs, { locale }) : null },
-              { metricId: 'text', occurrenceId: 'latest', label: t('cabinThermal.coverage.latest', 'Latest valid sample'), rawValue: coverage.latestValidTs ? formatDateTime(coverage.latestValidTs, { locale }) : null },
-              ...[
-                { key: 'span', label: t('cabinThermal.coverage.span', 'Observed span'), minutes: coverage.timespanMin },
-                { key: 'median', label: t('cabinThermal.coverage.medianCadence', 'Median cadence'), minutes: coverage.medianCadenceMin },
-                { key: 'p90', label: t('cabinThermal.coverage.p90Cadence', 'P90 cadence'), minutes: coverage.p90CadenceMin },
-                { key: 'max', label: t('cabinThermal.coverage.maxGap', 'Largest observed gap'), minutes: coverage.maxObservedGapMin },
-              ].map(fact => ({
-                metricId: 'duration' as const, occurrenceId: fact.key, label: fact.label,
-                rawValue: fact.minutes != null ? fact.minutes * 60 : null,
-                display: { formatter: (raw: number) => ({ value: formatDuration(raw), unit: '' }) },
-              })),
-              { metricId: 'count', occurrenceId: 'intervals', label: t('cabinThermal.coverage.intervals', 'Adjacent intervals'), rawValue: coverage.gapIntervals, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-              { metricId: 'count', occurrenceId: 'long-gaps', label: t('cabinThermal.coverage.longGaps', 'Long gaps'), rawValue: coverage.longGapCount, display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-            ]}
-          />
+          <Grid cols={{ default: 2, xl: 4 }} gap={3}>
+            <CoverageMetric
+              label={t('cabinThermal.coverage.earliest', 'Earliest valid sample')}
+              value={formatDateTime(coverage.earliestValidTs, { locale })}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.latest', 'Latest valid sample')}
+              value={formatDateTime(coverage.latestValidTs, { locale })}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.span', 'Observed span')}
+              value={duration(coverage.timespanMin)}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.intervals', 'Adjacent intervals')}
+              value={fmtInt(coverage.gapIntervals)}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.medianCadence', 'Median cadence')}
+              value={duration(coverage.medianCadenceMin)}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.p90Cadence', 'P90 cadence')}
+              value={duration(coverage.p90CadenceMin)}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.maxGap', 'Largest observed gap')}
+              value={duration(coverage.maxObservedGapMin)}
+            />
+            <CoverageMetric
+              label={t('cabinThermal.coverage.longGaps', 'Long gaps')}
+              value={fmtInt(coverage.longGapCount)}
+            />
+          </Grid>
         </CabinThermalSectionBody>
-      </LayoutCard>
+      </GlassPanel>
     </section>
   );
 }

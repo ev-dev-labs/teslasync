@@ -8,21 +8,21 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-import { EmptyState, Skeleton } from '@/components/feedback';
-import { LayoutCard, SourceContent } from '@/components/layout';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import {
   Caption,
+  GlassPanel,
   MetricValue,
+  PanelTitle,
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-
+import { fmtNumber } from '@/lib/numberFormat';
 
 import type { DriveCalendar } from '../../lib/driveCalendar';
 import { formatCalendarMonth, getWeekdayLabels } from './labels';
 import type { DriveCalendarSectionState } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RhythmInsightsPanelProps extends DriveCalendarSectionState {
   calendar: DriveCalendar;
@@ -44,7 +44,6 @@ export function RhythmInsightsPanel({
   error,
   onRetry,
 }: RhythmInsightsPanelProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance, unitPrefs } = useUnits();
   const longWeekdays = getWeekdayLabels(t, true);
@@ -66,7 +65,7 @@ export function RhythmInsightsPanel({
     },
     {
       label: t('driveCalendar.rhythm.activeRate', 'Calendar activity'),
-      value: `${fmtNumber(calendar.activityRate * 100)}%`,
+      value: `${fmtNumber(calendar.activityRate * 100, 0)}%`,
       detail: t(
         'driveCalendar.rhythm.activeRateDetail',
         'of days included at least one drive',
@@ -77,14 +76,14 @@ export function RhythmInsightsPanel({
       label: t('driveCalendar.rhythm.typicalDay', 'Typical active day'),
       value:
         calendar.averageDistancePerActiveDayM != null
-          ? formatDistance(calendar.averageDistancePerActiveDayM)
+          ? formatDistance(calendar.averageDistancePerActiveDayM, { precision: 1 })
           : '—',
       detail:
         calendar.averageDrivesPerActiveDay != null
           ? t(
               'driveCalendar.rhythm.typicalDayDetail',
               '{{average}} drives on average',
-              { average: fmtNumber(calendar.averageDrivesPerActiveDay) },
+              { average: fmtNumber(calendar.averageDrivesPerActiveDay, 1) },
             )
           : '—',
       icon: Route,
@@ -93,7 +92,7 @@ export function RhythmInsightsPanel({
       label: t('driveCalendar.rhythm.weekendShare', 'Weekend distance'),
       value:
         calendar.weekendDistanceShare != null
-          ? `${fmtNumber(calendar.weekendDistanceShare * 100)}%`
+          ? `${fmtNumber(calendar.weekendDistanceShare * 100, 0)}%`
           : '—',
       detail: t(
         'driveCalendar.rhythm.weekendShareDetail',
@@ -111,7 +110,7 @@ export function RhythmInsightsPanel({
             'driveCalendar.rhythm.peakMonthDetail',
             '{{distance}} · {{count}} drives',
             {
-              distance: formatDistance(peakMonth.distanceM),
+              distance: formatDistance(peakMonth.distanceM, { precision: 0 }),
               count: peakMonth.drives,
             },
           )
@@ -121,15 +120,17 @@ export function RhythmInsightsPanel({
   ];
 
   return (
-    <div className={cn('h-full', className)}>
-    <LayoutCard title={t('driveCalendar.rhythm.title', 'Driving rhythm')}>
-      <SourceContent
-        state={error ? 'error' : isLoading ? 'loading' : calendar.totalDrives === 0 ? 'empty' : 'ready'}
-        label={t('driveCalendar.rhythm.title', 'Driving rhythm')}
-        emptyMessage={t('driveCalendar.rhythm.noData', 'No driving rhythm to summarize yet.')}
-        errorMessage={t('error.loadFailed', 'Failed to load data')} error={error}
-        errorRecovery={{ onRetry }} loadingContent={<Skeleton height={280} />}
-        emptyContent={(
+    <GlassPanel className={cn('h-full p-4 sm:p-5', className)}>
+      <PanelTitle className="mb-4 flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-purple-300" aria-hidden="true" />
+        {t('driveCalendar.rhythm.title', 'Driving rhythm')}
+      </PanelTitle>
+
+      {error ? (
+        <QueryError error={error} onRetry={onRetry} />
+      ) : isLoading ? (
+        <Skeleton height={280} />
+      ) : calendar.totalDrives === 0 ? (
         <EmptyState
           icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
           message={t('driveCalendar.rhythm.noData', 'No driving rhythm to summarize yet.')}
@@ -138,8 +139,7 @@ export function RhythmInsightsPanel({
             to: '/drives',
           }}
         />
-        )}
-      >
+      ) : (
         <div className="grid grid-cols-2 gap-3">
           {insights.map(({ label, value, detail, icon: Icon }, index) => (
             <div
@@ -158,8 +158,7 @@ export function RhythmInsightsPanel({
             </div>
           ))}
         </div>
-      </SourceContent>
-    </LayoutCard>
-    </div>
+      )}
+    </GlassPanel>
   );
 }

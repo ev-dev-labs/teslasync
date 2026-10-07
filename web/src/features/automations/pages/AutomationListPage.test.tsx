@@ -329,51 +329,11 @@ beforeEach(() => {
 });
 
 describe('AutomationListPage', () => {
-  it('reviews cumulative counters without claiming a known window or changing selected rules', () => {
-    const mutation = vi.fn();
-    useBulkMock.mockReturnValue({ mutateAsync: mutation });
-    renderPage();
-    selectRows([2]);
-    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
-    const drawer = screen.getByRole('dialog', { name: 'Rule inventory details' });
-    expect(within(drawer).getAllByText('Cumulative counters on loaded rules; their start time is not supplied.').length).toBeGreaterThan(0);
-    expect(within(drawer).getByText('360')).toBeInTheDocument();
-    expect(within(drawer).getByText('28')).toBeInTheDocument();
-    expect(captured.table.selectedKeys).toEqual([2]);
-    expect(mutation).not.toHaveBeenCalled();
-  });
-  it('states loaded and filtered selection scope without treating a filter as select-all', async () => {
-    renderPage();
-    selectRows([1, 2, 3]);
-    fireEvent.change(screen.getByRole('combobox', { name: 'Filter automations by status' }), {
-      target: { value: 'active' },
-    });
-    const toolbar = screen.getByRole('region', { name: /bulk actions/i });
-    expect(toolbar).toHaveAttribute('data-selection-scope', 'filtered');
-    expect(toolbar).toHaveTextContent('1 selected · 1 matching loaded rules · 4 loaded');
-    fireEvent.click(within(toolbar).getByRole('button', { name: 'Enable' }));
-    await waitFor(() => expect(useBulkMock().mutateAsync).toHaveBeenCalledWith({ ids: [1], op: 'enable' }));
-  });
-
-  it('retains the KPI, table, status and selected IDs during failed background recovery', () => {
-    useAutomationsMock.mockReturnValue(makeQuery({
-      data: AUTOMATIONS, isError: true, error: new Error('Refresh offline'),
-    }));
-    const { container } = renderPage();
-    selectRows([2]);
-    expect(container.querySelector('[data-layout-reference]')).not.toBeNull();
-    expect(within(kpiRegion()).getByText('Total runs')).toBeInTheDocument();
-    expect(captured.table.error).toBeNull();
-    expect(captured.status.error).toBeNull();
-    expect(captured.table.selectedKeys).toEqual([2]);
-    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-  });
-
   it('renders the page shell, KPI band and both bento sections', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Automation rules' }),
+      screen.getByRole('heading', { level: 1, name: 'Automation Rules' }),
     ).toBeInTheDocument();
 
     // KPI band present with all six tiles (scoped so the "Active"/"Disabled"
@@ -400,15 +360,7 @@ describe('AutomationListPage', () => {
       screen.getByRole('combobox', { name: 'Filter automations by status' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search automations' })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: 'Search automations' })
-      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'context');
-    expect(screen.getByRole('combobox', { name: 'Filter automations by status' })
-      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'context');
-    expect(screen.getByRole('button', { name: 'New' })
-      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
-    const heading = screen.getByRole('heading', { level: 1, name: 'Automation rules' });
-    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
-    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
   });
 
   it('renders the read-only explanation outside the disabled create action', () => {
@@ -510,9 +462,8 @@ describe('AutomationListPage', () => {
     expect(captured.table.isLoading).toBe(true);
     expect(captured.status.isLoading).toBe(true);
     expect(captured.table.totalCount).toBe(0);
-    expect(within(kpiRegion()).getByText('Total runs')).toBeInTheDocument();
-    expect(screen.getByTestId('automation-rules-brief')).toHaveAttribute('aria-busy', 'true');
-    expect(kpiRegion().querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    // KPI tiles are replaced by skeletons during the first load.
+    expect(within(kpiRegion()).queryByText('Total runs')).not.toBeInTheDocument();
   });
 
   it('propagates an error to both sections without hiding them', () => {
@@ -528,8 +479,7 @@ describe('AutomationListPage', () => {
     expect(screen.getByTestId('stub-table')).toBeInTheDocument();
     expect(screen.getByTestId('stub-status')).toBeInTheDocument();
     // KPI band shows the error with retry — never fabricated zeros.
-    expect(within(kpiRegion()).getByText('Total')).toBeInTheDocument();
-    expect(kpiRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
+    expect(within(kpiRegion()).queryByText('Total')).not.toBeInTheDocument();
     const retry = within(kpiRegion()).getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
     expect(query.refetch).toHaveBeenCalledTimes(1);

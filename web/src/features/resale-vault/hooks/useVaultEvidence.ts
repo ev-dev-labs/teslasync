@@ -11,7 +11,6 @@
  * normalizers alone have access to.
  */
 import { useMemo } from 'react';
-import { deriveDataState, type DataState, type DataStateSource } from '@/api/dataState';
 import { useVehicle } from '@/api/hooks/useVehicles';
 import { useBatteryPassport } from '@/api/hooks/useBatteryPassport';
 import { useMaintenance, useServiceRecords, useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
@@ -30,23 +29,12 @@ import {
   normalizeWarranty,
 } from '../lib/evidenceNormalizers';
 import type { DatePrecision, SensitiveFieldSelection, VaultEvidence } from '../lib/types';
-import type { EvidenceSectionId } from '../lib/constants';
-
-export interface VaultEvidenceSource {
-  id: string;
-  section: EvidenceSectionId;
-  labelKey: string;
-  label: string;
-  loading: boolean;
-  state: DataState<unknown>;
-}
 
 export interface UseVaultEvidenceResult {
   evidence: VaultEvidence;
   isLoading: boolean;
-  /** Failures never discard any evidence retained by the underlying queries. */
+  /** True if at least one underlying query is in an error state — evidence for that section is simply omitted (null), never fabricated. */
   hasPartialErrors: boolean;
-  sources: readonly VaultEvidenceSource[];
 }
 
 /**
@@ -123,29 +111,5 @@ export function useVaultEvidence(vehicleId: string | null, sensitive: SensitiveF
     ],
   );
 
-  const sources: VaultEvidenceSource[] = ([
-    { id: 'vehicle', section: 'vehicle_identity', labelKey: 'resaleVault.section.vehicleIdentity', label: 'Vehicle identity', query: vehicleQuery },
-    { id: 'battery', section: 'battery', labelKey: 'resaleVault.battery.title', label: 'Battery health', query: passportQuery },
-    { id: 'maintenance', section: 'maintenance', labelKey: 'resaleVault.maintenance.scheduledCount', label: 'Scheduled items', query: maintenanceQuery },
-    { id: 'service', section: 'maintenance', labelKey: 'resaleVault.maintenance.records', label: 'Service records', query: serviceRecordsQuery },
-    { id: 'software', section: 'software_updates', labelKey: 'resaleVault.software.title', label: 'Software updates', query: softwareUpdatesQuery },
-    { id: 'warranty', section: 'warranty', labelKey: 'resaleVault.warranty.title', label: 'Warranty', query: warrantyQuery },
-    { id: 'drives', section: 'driving_history', labelKey: 'resaleVault.usage.drives', label: 'Drives observed', query: driveHistoryQuery },
-    { id: 'driving-stats', section: 'driving_history', labelKey: 'resaleVault.usage.driving', label: 'Driving', query: drivingStatsQuery },
-    { id: 'driving-score', section: 'driving_history', labelKey: 'resaleVault.usage.score', label: 'Driving score', query: driveScoreQuery },
-    { id: 'charging', section: 'charging_history', labelKey: 'resaleVault.usage.charging', label: 'Charging', query: chargingHistoryQuery },
-    { id: 'security', section: 'security_incidents', labelKey: 'resaleVault.incidents.title', label: 'Security incidents', query: guardEventsQuery },
-  ] satisfies {
-    id: string;
-    section: EvidenceSectionId;
-    labelKey: string;
-    label: string;
-    query: DataStateSource<unknown>;
-  }[]).map(({ query, ...source }) => ({
-    ...source,
-    loading: query.isLoading && query.data === undefined,
-    state: deriveDataState<unknown>(query),
-  }));
-
-  return { evidence, isLoading, hasPartialErrors, sources };
+  return { evidence, isLoading, hasPartialErrors };
 }

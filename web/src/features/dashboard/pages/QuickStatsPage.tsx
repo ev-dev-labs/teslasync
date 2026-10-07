@@ -2,16 +2,14 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  Car,
+  Car, MapPin, Route, BatteryCharging, Zap, DollarSign, Gauge, Leaf,
   RefreshCw, LayoutDashboard, BarChart3,
 } from 'lucide-react';
 
-import { PageLayout, Section } from '@/components/layout';
-import { GlassPanel, Button, Caption } from '@/components/ui';
-import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
-import { useDataState } from '@/hooks/useDataState';
+import { PageContainer } from '@/components/layout';
+import { GlassPanel, Select, Button, Caption } from '@/components/ui';
+import { MetricCard } from '@/components/data-display';
+import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleHeroCard } from '@/components/vehicles';
 import { FleetComparisonPanel } from '@/features/dashboard/components/FleetComparisonPanel';
@@ -23,8 +21,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 
 /** Fleet analytics distances are SI kilometres; efficiency is Wh/km. Convert at the boundary. */
 const METERS_PER_KM = 1000;
@@ -33,9 +30,8 @@ const KM_PER_MILE = 1.609344;
 const ANALYTICS_WINDOW_DAYS = 30;
 
 export default function QuickStatsPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('quickStats.title', 'Quick stats'));
+  usePageTitle(t('quickStats.title', 'Quick Stats'));
   const navigate = useNavigate();
 
   const { unitPrefs, formatEnergy } = useUnits();
@@ -51,44 +47,19 @@ export default function QuickStatsPage() {
   const {
     data: analytics,
     isLoading: analyticsLoading,
+    error: analyticsError,
     refetch: refetchAnalytics,
   } = analyticsQuery;
-  const analyticsState = useDataState(analyticsQuery, { provenance: 'historical' });
-  const metrics: readonly StatMetric[] = [
-    { metricId: 'distance', rawValue: analytics?.totalDistanceKm == null ? null : analytics.totalDistanceKm * METERS_PER_KM,
-      label: t('quickStats.distanceDriven', 'Distance driven'),
-      description: t('quickStats.summary.distanceHelp', 'Fleet distance over the last 30 days; source kilometres normalized to metres.'),
-      display: { formatter: raw => ({ value: fmtNumber(fromKm(raw / METERS_PER_KM)), unit: distanceUnit }) } },
-    { metricId: 'count', rawValue: analytics?.totalDrives, label: t('quickStats.drives', 'Drives'),
-      description: t('quickStats.summary.drivesHelp', 'Fleet drive count in the 30-day rollup.') },
-    { metricId: 'count', rawValue: analytics?.totalChargingSessions, label: t('quickStats.chargingSessions', 'Charging sessions'),
-      description: t('quickStats.summary.sessionsHelp', 'Fleet charging-session count in the 30-day rollup.') },
-    { metricId: 'energy', rawValue: analytics?.totalEnergyKwh == null ? null : analytics.totalEnergyKwh * 1000,
-      label: t('quickStats.energyUsed', 'Energy used'),
-      description: t('quickStats.summary.energyHelp', 'Fleet energy over the last 30 days; source kilowatt-hours normalized to watt-hours.'),
-      display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
-    { metricId: 'currency', rawValue: analytics?.totalCost, label: t('quickStats.totalCost', 'Total cost'),
-      description: t('quickStats.summary.costHelp', 'Recorded fleet cost in the source denomination; no currency conversion.'),
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
-    { metricId: 'efficiency', rawValue: analytics?.avgEfficiencyWhKm == null ? null : analytics.avgEfficiencyWhKm / METERS_PER_KM,
-      label: t('quickStats.avgEfficiency', 'Avg efficiency'),
-      description: t('quickStats.summary.efficiencyHelp', 'Fleet average consumption over the last 30 days; source Wh/km normalized to Wh/m.'),
-      display: { formatter: raw => ({ value: fmtNumber(whPerKmToDisplay(raw * METERS_PER_KM)), unit: efficiencyUnit }) } },
-    { metricId: 'mass', rawValue: analytics?.co2SavedKg, label: t('quickStats.co2Saved', 'CO₂ saved'),
-      description: t('quickStats.summary.carbonHelp', 'Source-reported fleet CO₂ savings in kilograms for the 30-day rollup.'),
-      display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) } },
-    { metricId: 'count', rawValue: analytics?.totalVehicles, label: t('quickStats.fleetVehicles', 'Fleet vehicles'),
-      description: t('quickStats.summary.vehiclesHelp', 'Fleet vehicle count reported by analytics, not the selected spotlight vehicle.') },
-  ];
 
-  // Workspace selection scopes the spotlight; the KPI band stays fleet-wide.
-  const { vehicleId, vehicle } = useSelectedVehicle();
+  // Spotlight vehicle: URL > sticky store > first vehicle. The picker only
+  // re-scopes the spotlight — the KPI band stays fleet-wide.
+  const { vehicleId, vehicle, vehicles, setVehicleId } = useSelectedVehicle();
   const vehiclesQuery = useVehicles();
   const {
     isLoading: vehiclesLoading,
+    error: vehiclesError,
     refetch: refetchVehicles,
   } = vehiclesQuery;
-  const vehiclesState = useDataState(vehiclesQuery);
   const stateQuery = useVehicleState(vehicleId ?? 0);
   const { data: stateData, refetch: refetchState } = stateQuery;
   const dataSources = useMemo(
@@ -113,8 +84,28 @@ export default function QuickStatsPage() {
     [analyticsQuery, stateQuery, t, vehicleId, vehiclesQuery],
   );
 
+  const onPickVehicle = (id: string) => {
+    const n = Number(id);
+    if (Number.isFinite(n) && n > 0) setVehicleId(n);
+  };
+
+  const vehicleOptions = vehicles.map((v) => ({
+    value: String(v.id),
+    label: v.display_name || v.vin,
+  }));
+
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
+      {vehicles.length > 1 && (
+        <Select
+          options={vehicleOptions}
+          value={vehicleId != null ? String(vehicleId) : ''}
+          onChange={(e) => onPickVehicle(e.target.value)}
+          placeholder={t('quickStats.selectVehicle', 'Select vehicle')}
+          aria-label={t('quickStats.selectVehicle', 'Select vehicle')}
+          size="sm"
+        />
+      )}
       <Button
         variant="ghost"
         size="sm"
@@ -131,32 +122,21 @@ export default function QuickStatsPage() {
   );
 
   return (
-    <main>
-    <PageLayout
-      title={t('quickStats.title', 'Quick stats')}
+    <PageContainer
+      title={t('quickStats.title', 'Quick Stats')}
       subtitle={t('quickStats.subtitle', 'Fleet snapshot · last 30 days')}
       actions={actions}
       query={[analyticsQuery, vehiclesQuery, stateQuery]}
       dataSources={dataSources}
     >
-      <StaleRefreshWarning state={analyticsState} label={t('dataSources.labels.fleetAnalytics', 'Fleet analytics')} />
-      <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
       {/* 1 — Fleet KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <Section id="quick-stats-metrics" title={t('quickStats.kpis', 'Fleet metrics')}>
-          <DashboardSourceBrief
-            metrics={metrics}
-            state={analyticsState}
-            eyebrow={t('quickStats.summary.eyebrow', 'Fleet rollup')}
-            title={t('quickStats.summary.title', 'Fleet operating summary')}
-            description={t('quickStats.summary.description', 'Fleet-wide analytics for the last 30 days. The selected vehicle only scopes the spotlight; exact rollup bounds and source coverage are not supplied.')}
-            scope={t('quickStats.summary.scope', 'All fleet vehicles · last 30 days')}
-            loading={analyticsLoading && !analytics}
-            testId="quick-stats-operational-brief"
-          />
-          {analyticsState.fatalError ? (
-            <QueryError error={analyticsState.fatalError} onRetry={refetchAnalytics} />
-          ) : !analytics && !analyticsLoading ? (
+        <section aria-label={t('quickStats.kpis', 'Fleet metrics')}>
+          {analyticsLoading ? (
+            <StatGridSkeleton cards={8} />
+          ) : analyticsError ? (
+            <QueryError error={analyticsError} onRetry={refetchAnalytics} />
+          ) : !analytics ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState
                 icon={<BarChart3 className="h-8 w-8" />}
@@ -164,8 +144,59 @@ export default function QuickStatsPage() {
                 action={{ label: t('common.retry', 'Retry'), onClick: refetchAnalytics }}
               />
             </GlassPanel>
-          ) : null}
-        </Section>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
+              <MetricCard
+                label={t('quickStats.distanceDriven', 'Distance Driven')}
+                value={`${fmtInt(fromKm(analytics.totalDistanceKm ?? 0))} ${distanceUnit}`}
+                icon={<MapPin className="h-4 w-4" />}
+                color="cyan"
+              />
+              <MetricCard
+                label={t('quickStats.drives', 'Drives')}
+                value={fmtInt(analytics.totalDrives ?? 0)}
+                icon={<Route className="h-4 w-4" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('quickStats.chargingSessions', 'Charging Sessions')}
+                value={fmtInt(analytics.totalChargingSessions ?? 0)}
+                icon={<BatteryCharging className="h-4 w-4" />}
+                color="blue"
+              />
+              <MetricCard
+                label={t('quickStats.energyUsed', 'Energy Used')}
+                value={formatEnergy((analytics.totalEnergyKwh ?? 0) * 1000)}
+                icon={<Zap className="h-4 w-4" />}
+                color="amber"
+              />
+              <MetricCard
+                label={t('quickStats.totalCost', 'Total Cost')}
+                value={formatCurrency(analytics.totalCost ?? 0, 0)}
+                icon={<DollarSign className="h-4 w-4" />}
+                color="purple"
+              />
+              <MetricCard
+                label={t('quickStats.avgEfficiency', 'Avg Efficiency')}
+                value={`${fmtNumber(whPerKmToDisplay(analytics.avgEfficiencyWhKm ?? 0))} ${efficiencyUnit}`}
+                icon={<Gauge className="h-4 w-4" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('quickStats.co2Saved', 'CO₂ Saved')}
+                value={`${fmtNumber(analytics.co2SavedKg ?? 0)} kg`}
+                icon={<Leaf className="h-4 w-4" />}
+                color="green"
+              />
+              <MetricCard
+                label={t('quickStats.fleetVehicles', 'Fleet Vehicles')}
+                value={fmtInt(analytics.totalVehicles ?? 0)}
+                icon={<Car className="h-4 w-4" />}
+                color="cyan"
+              />
+            </div>
+          )}
+        </section>
       </FadeIn>
 
       {/* 2 — Spotlight bento: hero vehicle (spans wide) + fleet comparison */}
@@ -175,13 +206,13 @@ export default function QuickStatsPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
           <div className="xl:col-span-2">
-            {vehiclesLoading && !vehicle ? (
+            {vehiclesLoading ? (
               <GlassPanel className="p-4 sm:p-5">
                 <Skeleton height={300} />
               </GlassPanel>
-            ) : vehiclesState.fatalError ? (
+            ) : vehiclesError ? (
               <GlassPanel className="p-4 sm:p-5">
-                <QueryError error={vehiclesState.fatalError} onRetry={refetchVehicles} />
+                <QueryError error={vehiclesError} onRetry={refetchVehicles} />
               </GlassPanel>
             ) : !vehicle ? (
               <GlassPanel className="p-4 sm:p-5">
@@ -207,8 +238,8 @@ export default function QuickStatsPage() {
 
           <FleetComparisonPanel
             entries={analytics?.vehicleComparison ?? []}
-            loading={analyticsLoading && !analytics}
-            error={analyticsState.fatalError}
+            loading={analyticsLoading}
+            error={analyticsError}
             onRetry={refetchAnalytics}
             className="xl:col-span-1"
           />
@@ -226,7 +257,7 @@ export default function QuickStatsPage() {
                 icon={<LayoutDashboard className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/')}
               >
-                {t('quickStats.openDashboard', 'Open dashboard')}
+                {t('quickStats.openDashboard', 'Open Dashboard')}
               </Button>
               {vehicle && (
                 <Button
@@ -235,7 +266,7 @@ export default function QuickStatsPage() {
                   icon={<Car className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => navigate(`/vehicles/${vehicle.id}`)}
                 >
-                  {t('quickStats.vehicleDetails', 'Vehicle details')}
+                  {t('quickStats.vehicleDetails', 'Vehicle Details')}
                 </Button>
               )}
               <Button
@@ -244,14 +275,13 @@ export default function QuickStatsPage() {
                 icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/statistics')}
               >
-                {t('quickStats.viewAnalytics', 'View analytics')}
+                {t('quickStats.viewAnalytics', 'View Analytics')}
               </Button>
             </div>
             <Caption>{t('quickStats.footer', 'Powered by TeslaSync')}</Caption>
           </div>
         </GlassPanel>
       </FadeIn>
-    </PageLayout>
-    </main>
+    </PageContainer>
   );
 }

@@ -104,9 +104,9 @@ export function windowSummary(ev: SecurityEvent | undefined, t: Translate): stri
   if (!ev) return '—';
   const states = [ev.fdWindow, ev.fpWindow, ev.rdWindow, ev.rpWindow].map(parseWindowState);
   const allClosed = states.every((s) => s === 'Closed');
-  if (allClosed) return t('admin.security.window.allClosed', 'All closed');
+  if (allClosed) return t('admin.security.window.allClosed', 'All Closed');
   const openCount = states.filter((s) => s !== 'Closed').length;
-  return t('admin.security.window.openVenting', '{{count}} open/venting', { count: openCount });
+  return t('admin.security.window.openVenting', '{{count}} Open/Venting', { count: openCount });
 }
 
 /* ------------------------------------------------------------------ */

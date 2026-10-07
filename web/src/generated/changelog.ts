@@ -259,4 +259,4 @@ export const CHANGELOG: readonly ChangelogEntry[] = [
   },
 ]
 
-export { LATEST_VERSION } from './changelogVersions'
+export const LATEST_VERSION: string = '0.7.0'

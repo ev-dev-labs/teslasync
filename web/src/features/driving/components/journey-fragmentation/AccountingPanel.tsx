@@ -5,7 +5,6 @@ import { EmptyState } from '@/components/feedback';
 import { GlassPanel, Text } from '@/components/ui';
 
 import { JourneyFragmentationSectionProps } from './_types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function dateLabel(ms: number | null, timeZone: string): string {
   if (ms == null) return '—';
@@ -21,7 +20,6 @@ function dateLabel(ms: number | null, timeZone: string): string {
 }
 
 export function AccountingPanel({ result }: JourneyFragmentationSectionProps) {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = [
     [t('journeyFragmentation.accounting.included', 'Included'), result.rowAccounting.included],
@@ -72,7 +70,7 @@ export function AccountingPanel({ result }: JourneyFragmentationSectionProps) {
           </Text>
           <Text as="p" variant="caption">
             {t('journeyFragmentation.accounting.recency', '{{days}} days since the latest included drive; {{activeDays}} active local days and {{activeWeeks}} active local weeks.', {
-              days: result.daysSinceLatestIncludedDrive == null ? '—' : fmtNumber(result.daysSinceLatestIncludedDrive),
+              days: result.daysSinceLatestIncludedDrive == null ? '—' : result.daysSinceLatestIncludedDrive.toFixed(1),
               activeDays: result.activeDays,
               activeWeeks: result.activeWeeks,
             })}

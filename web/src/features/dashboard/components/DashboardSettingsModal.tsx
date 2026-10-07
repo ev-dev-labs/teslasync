@@ -116,7 +116,7 @@ export function DashboardSettingsModal({
 
   const vehicleOptions = useMemo(
     () => [
-      { value: '', label: t('dashSettings.allVehicles', 'All vehicles') },
+      { value: '', label: t('dashSettings.allVehicles', 'All Vehicles') },
       ...(vehicles ?? []).map((v) => ({
         value: v.id.toString(),
         label: v.display_name,
@@ -138,7 +138,7 @@ export function DashboardSettingsModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={t('dashSettings.title', 'Dashboard settings')}
+      title={t('dashSettings.title', 'Dashboard Settings')}
       size="md"
     >
       <div className="space-y-6">
@@ -170,7 +170,7 @@ export function DashboardSettingsModal({
         {/* Vehicle filter */}
         <div>
           <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-1">
-            {t('dashSettings.vehicleFilter', 'Vehicle filter')}
+            {t('dashSettings.vehicleFilter', 'Vehicle Filter')}
           </h3>
           <p className="text-xs text-[var(--text-muted)] mb-3">
             {t(
@@ -179,7 +179,7 @@ export function DashboardSettingsModal({
             )}
           </p>
           <UiSelect
-            aria-label={t('dashSettings.vehicleFilter', 'Vehicle filter')}
+            aria-label={t('dashSettings.vehicleFilter', 'Vehicle Filter')}
             value={settings.vehicleId?.toString() ?? ''}
             onChange={(e) =>
               setSettings((s) => ({
@@ -194,10 +194,10 @@ export function DashboardSettingsModal({
         {/* Refresh interval */}
         <div>
           <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">
-            {t('dashSettings.refresh', 'Auto-refresh')}
+            {t('dashSettings.refresh', 'Auto-Refresh')}
           </h3>
           <UiSelect
-            aria-label={t('dashSettings.refresh', 'Auto-refresh')}
+            aria-label={t('dashSettings.refresh', 'Auto-Refresh')}
             value={settings.refreshInterval.toString()}
             onChange={(e) =>
               setSettings((s) => ({ ...s, refreshInterval: Number(e.target.value) }))

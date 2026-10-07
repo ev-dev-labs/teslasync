@@ -5,10 +5,9 @@ import { GlassPanel, Text, Caption, Label, MetricValue } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-
+import { fmtInt } from '@/lib/numberFormat';
 import type { YearReviewDriveHighlight } from '@/api/types';
 import type { LucideIcon } from 'lucide-react';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KM_PER_MILE = 1.609344;
 
@@ -20,7 +19,6 @@ interface Props {
 
 /** Highlight card for a single notable drive (longest, most efficient, …). */
 export function YearDriveHighlight({ drive, label, icon: Icon }: Props) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;

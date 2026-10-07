@@ -25,7 +25,7 @@ export function ServiceEvidencePrivacyPanel({ className }: ServiceEvidencePrivac
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceEvidencePack.privacy.title', 'Privacy manifest')}
+        {t('serviceEvidencePack.privacy.title', 'Privacy Manifest')}
       </PanelTitle>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">

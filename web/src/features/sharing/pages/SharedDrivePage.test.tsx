@@ -35,20 +35,17 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { SharedDriveData, SharedDriveDataV1, SharedSessionData } from '@/types/sharing'
-import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
-import { ApiError } from '@/lib/resilience'
 
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ────── */
 const h = vi.hoisted(() => ({
-  sharedHook: vi.fn(),
   query: {
     current: { data: undefined as unknown, isLoading: false, error: null as Error | null },
   },
-  unit: { current: 'km' as 'km' | 'mi', precision: 2, locale: 'en-US' },
+  unit: { current: 'km' as 'km' | 'mi' },
   maps: {
     containerCenters: [] as unknown[],
     containerZooms: [] as number[],
@@ -59,7 +56,6 @@ const h = vi.hoisted(() => ({
   charts: {
     areaData: [] as Array<Record<string, number>>,
     lineData: [] as Array<Record<string, number>>,
-    composedData: [] as Array<Record<string, number>>,
   },
 }))
 
@@ -130,17 +126,12 @@ vi.mock('@/hooks/useSettings', async () => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: {
-        ...base,
-        unit_of_length: h.unit.current,
-        decimal_precision: h.unit.precision,
-        locale: h.unit.locale,
-      },
+      settings: { ...base, unit_of_length: h.unit.current },
       isMiles: h.unit.current === 'mi',
       isFahrenheit: false,
       isPSI: false,
-      decimals: h.unit.precision,
-      locale: h.unit.locale,
+      decimals: 2,
+      locale: 'en-US',
       density: 'comfortable' as const,
       rangeType: 'rated' as const,
     }),
@@ -150,13 +141,7 @@ vi.mock('@/hooks/useSettings', async () => {
 /* ── Controllable public-share query ─────────────────────────────────────── */
 vi.mock('@/api/hooks/useSharing', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useSharing')>('@/api/hooks/useSharing')
-  return {
-    ...actual,
-    useSharedDrive: (token: string) => {
-      h.sharedHook(token)
-      return h.query.current
-    },
-  }
+  return { ...actual, useSharedDrive: () => h.query.current }
 })
 
 /* ── Inert leaflet barrel — capture props, never touch canvas/leaflet ────── */
@@ -216,10 +201,9 @@ vi.mock('@/components/charts', () => ({
     h.charts.lineData = data
     return <div data-testid="line-chart" data-count={data.length} />
   },
-  ComposedChart: ({ data }: { data: Array<Record<string, number>> }) => {
-    h.charts.composedData = data
-    return <div data-testid="composed-chart" data-count={data.length} />
-  },
+  ComposedChart: ({ data }: { data: Array<Record<string, number>> }) => (
+    <div data-testid="composed-chart" data-count={data.length} />
+  ),
   Area: () => null,
   Line: () => null,
   XAxis: () => null,
@@ -228,12 +212,6 @@ vi.mock('@/components/charts', () => ({
   Tooltip: () => null,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }))
-
-vi.mock('@/components/layout', async () => {
-  const actual = await vi.importActual<typeof import('@/components/layout')>('@/components/layout')
-  const charts = await vi.importMock<typeof import('@/components/charts')>('@/components/charts')
-  return { ...actual, ChartCard: charts.ChartContainer }
-})
 
 /* ── Motion barrel → inert passthrough (avoid framer timing/act churn) ────── */
 vi.mock('@/components/motion', async () => {
@@ -335,22 +313,18 @@ function setData(
 }
 
 function renderPage(token = 'abc123') {
-  const tree = () => (
+  return render(
     <MemoryRouter initialEntries={[`/s/${token}`]}>
       <Routes>
         <Route path="/s/:token" element={<SharedDrivePage />} />
       </Routes>
-    </MemoryRouter>
+    </MemoryRouter>,
   )
-  const result = render(tree())
-  return { ...result, rerenderPage: () => result.rerender(tree()) }
 }
 
 beforeEach(() => {
   h.query.current = { data: undefined, isLoading: false, error: null }
   h.unit.current = 'km'
-  h.unit.precision = 2
-  h.unit.locale = 'en-US'
   h.maps.containerCenters = []
   h.maps.containerZooms = []
   h.maps.polylines = []
@@ -358,8 +332,6 @@ beforeEach(() => {
   h.maps.tileStyles = []
   h.charts.areaData = []
   h.charts.lineData = []
-  h.charts.composedData = []
-  h.sharedHook.mockClear()
 })
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
@@ -372,36 +344,29 @@ describe('SharedDrivePage — loading / error / empty branches', () => {
       screen.getByRole('status', { name: 'Loading shared drive report…' }),
     ).toHaveAttribute('aria-busy', 'true')
     // Stable report chrome renders immediately; fetched content does not.
-    expect(screen.getByText('Shared drive report')).toBeInTheDocument()
+    expect(screen.getByText('Shared Drive Report')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Morning Commute' })).toBeNull()
-    const title = screen.getByRole('heading', { level: 1, name: 'Shared drive report' })
-    expect(title).toHaveAttribute('data-route-focus-target', 'true')
-    expect(title.closest('header')).toHaveAttribute('data-role', 'page-header')
   })
 
   it('shows the expired/unavailable view when the query errors', () => {
     setData(undefined, { error: new Error('gone') })
     renderPage()
 
-    expect(screen.getByRole('heading', { name: 'Share link unavailable' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Share Link Unavailable' })).toBeInTheDocument()
     expect(
       screen.getByText('This shared drive link has expired or been revoked.'),
     ).toBeInTheDocument()
     const home = screen.getByRole('link', { name: 'Go to TeslaSync' })
     expect(home).toHaveAttribute('href', '/')
-    expect(screen.getByRole('heading', { name: 'Share link unavailable' }).closest('header'))
-      .toHaveAttribute('data-role', 'page-header')
-    home.focus()
-    expect(home).toHaveFocus()
     // The success chrome is withheld.
-    expect(screen.queryByText('Shared drive report')).toBeNull()
+    expect(screen.queryByText('Shared Drive Report')).toBeNull()
   })
 
   it('shows the expired view when there is no data (revoked token / empty response)', () => {
     setData(undefined) // not loading, no error, no data
     renderPage()
 
-    expect(screen.getByRole('heading', { name: 'Share link unavailable' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Share Link Unavailable' })).toBeInTheDocument()
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull()
   })
 })
@@ -411,62 +376,24 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     setData(makeV2())
     renderPage()
 
-    expect(screen.getByText('Shared drive report')).toBeInTheDocument()
+    expect(screen.getByText('Shared Drive Report')).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: 'Morning Commute' })).toBeInTheDocument()
     expect(screen.getByText('A scenic drive')).toBeInTheDocument()
     expect(screen.getByText('2025-03-01')).toBeInTheDocument()
     expect(screen.getByText('Seattle → Tacoma')).toBeInTheDocument()
-    const title = screen.getByRole('heading', { level: 1, name: 'Morning Commute' })
-    const header = title.closest('header')
-    expect(header).toHaveAttribute('data-role', 'page-header')
-    expect(header).toHaveClass('border-0', 'rounded-none')
-    expect(title).toHaveAttribute('tabindex', '-1')
-    expect(title).toHaveAttribute('data-route-focus-target', 'true')
-    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
-    expect(screen.getByText('Seattle → Tacoma').closest('[data-action-group="context"]'))
-      .not.toBeNull()
-    expect(title.compareDocumentPosition(screen.getByTestId('map-container')) & Node.DOCUMENT_POSITION_FOLLOWING)
-      .toBeTruthy()
   })
 
   it('renders every stat card with SI→km/display-converted values', () => {
     setData(makeV2())
     renderPage()
 
-    expect(screen.getByText('5.00 km')).toBeInTheDocument() // 5000 m
+    expect(screen.getByText('5.0 km')).toBeInTheDocument() // 5000 m
     expect(screen.getByText('10m')).toBeInTheDocument() // 600 s
-    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument() // 0.15 Wh/m
-    expect(screen.getByText('80.00% → 65.00%')).toBeInTheDocument()
-    expect(screen.getByText('108.00 km/h')).toBeInTheDocument() // 30 m/s
-    expect(screen.getByText('72.00 km/h')).toBeInTheDocument() // 20 m/s
-    expect(screen.getByText('120.00 m')).toBeInTheDocument() // elevation gain
-  })
-
-  it('updates mounted measurement cards for locale and precision without mutating SI data', () => {
-    const data = makeV2()
-    const snapshot = structuredClone(data)
-    Object.freeze(data.drive)
-    setData(data)
-    const view = renderPage()
-    try {
-      expect(screen.getByText('5.00 km')).toBeInTheDocument()
-      act(() => {
-        h.unit.precision = 3
-        h.unit.locale = 'de-DE'
-        setGlobalPrecision(3)
-        setGlobalLocale('de-DE')
-      })
-      expect(screen.getByText('5,000 km')).toBeInTheDocument()
-      expect(screen.getByText('108,000 km/h')).toBeInTheDocument()
-      expect(screen.getByText('150,000 Wh/km')).toBeInTheDocument()
-      expect(screen.getByText('80,000% → 65,000%')).toBeInTheDocument()
-      expect(screen.getByText('120,000 m')).toBeInTheDocument()
-      expect(data).toEqual(snapshot)
-    } finally {
-      view.unmount()
-      setGlobalPrecision(2)
-      setGlobalLocale('en-US')
-    }
+    expect(screen.getByText('150 Wh/km')).toBeInTheDocument() // 0.15 Wh/m
+    expect(screen.getByText('80% → 65%')).toBeInTheDocument()
+    expect(screen.getByText('108 km/h')).toBeInTheDocument() // 30 m/s
+    expect(screen.getByText('72 km/h')).toBeInTheDocument() // 20 m/s
+    expect(screen.getByText('120 m')).toBeInTheDocument() // elevation gain
   })
 
   it('renders the vehicle badge with the model and colour', () => {
@@ -482,8 +409,8 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     renderPage()
 
     // Accessible chart regions (section[aria-label]) with headings.
-    expect(screen.getByRole('heading', { name: 'Elevation profile' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Speed profile' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Elevation Profile' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Speed Profile' })).toBeInTheDocument()
     expect(
       screen.getByRole('region', {
         name: 'Shared drive elevation profile area chart by distance',
@@ -518,7 +445,7 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     renderPage()
 
     expect(
-      screen.getByText('Shared via TeslaSync — self-hosted Tesla fleet intelligence'),
+      screen.getByText('Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence'),
     ).toBeInTheDocument()
     const link = screen.getByRole('link', { name: 'Learn more →' })
     expect(link).toHaveAttribute('href', 'https://github.com/ev-dev-labs/teslasync')
@@ -533,35 +460,6 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Morning Commute' })).toBeInTheDocument()
     expect(screen.queryByText('A scenic drive')).toBeNull()
   })
-
-  it('preserves every returned map, elevation and speed point, including terminal values', () => {
-    const payload = makeV2({
-      map_points: Array.from({ length: 41 }, (_, index) => ({
-        lat: 47 + index / 100, lng: -122 + index / 100,
-      })),
-      elevation_profile: Array.from({ length: 41 }, (_, index) => ({
-        distance_m: index * 100, elevation_m: 100 + index,
-      })),
-      speed_profile: Array.from({ length: 41 }, (_, index) => ({
-        distance_m: index * 100, speed_mps: index,
-      })),
-    })
-    const snapshot = structuredClone(payload)
-    setData(payload)
-    renderPage()
-    expect(screen.getByTestId('map-polyline')).toHaveAttribute('data-count', '41')
-    expect(h.maps.polylines.at(-1)).toEqual(payload.map_points?.map((point) => [point.lat, point.lng]))
-    expect(h.charts.areaData).toEqual(payload.elevation_profile?.map((point) => ({
-      distance: point.distance_m / 1000, elevation: point.elevation_m,
-    })))
-    expect(h.charts.lineData).toHaveLength(41)
-    payload.speed_profile?.forEach((point, index) => {
-      expect(h.charts.lineData[index].distance).toBeCloseTo(point.distance_m / 1000)
-      expect(h.charts.lineData[index].speed).toBeCloseTo(point.speed_mps * 3.6)
-    })
-    expect(h.charts.lineData.at(-1)).toEqual({ distance: 4, speed: 144 })
-    expect(payload).toEqual(snapshot)
-  })
 })
 
 describe('SharedDrivePage — imperial boundary', () => {
@@ -570,11 +468,11 @@ describe('SharedDrivePage — imperial boundary', () => {
     setData(makeV2())
     renderPage()
 
-    expect(screen.getByText('3.11 mi')).toBeInTheDocument() // 5000 m
-    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument()
-    expect(screen.getByText('67.11 mph')).toBeInTheDocument() // 30 m/s max
-    expect(screen.getByText('44.74 mph')).toBeInTheDocument() // 20 m/s avg
-    expect(screen.getByText('393.70 ft')).toBeInTheDocument() // 120 m elevation gain
+    expect(screen.getByText('3.1 mi')).toBeInTheDocument() // 5000 m
+    expect(screen.getByText('241 Wh/mi')).toBeInTheDocument() // 150 Wh/km * 1.609
+    expect(screen.getByText('67 mph')).toBeInTheDocument() // 30 m/s max
+    expect(screen.getByText('45 mph')).toBeInTheDocument() // 20 m/s avg
+    expect(screen.getByText('394 ft')).toBeInTheDocument() // 120 m elevation gain
     // Elevation chart converts metres → feet for imperial viewers.
     expect(h.charts.areaData.map((p) => Math.round(p.elevation))).toEqual([328, 492])
   })
@@ -589,8 +487,8 @@ describe('SharedDrivePage — payload discriminator + legacy normalisation', () 
     setData(makeV2({ payload_version: 'v1' }))
     renderPage()
 
-    expect(screen.getByText('5.00 km')).toBeInTheDocument()
-    expect(screen.getByText('108.00 km/h')).toBeInTheDocument()
+    expect(screen.getByText('5.0 km')).toBeInTheDocument()
+    expect(screen.getByText('108 km/h')).toBeInTheDocument()
     expect(screen.queryByText('—')).toBeNull()
   })
 
@@ -599,11 +497,11 @@ describe('SharedDrivePage — payload discriminator + legacy normalisation', () 
     renderPage()
 
     expect(screen.getByRole('heading', { level: 1, name: 'Legacy Trip' })).toBeInTheDocument()
-    expect(screen.getByText('5.00 km')).toBeInTheDocument() // 5 km
+    expect(screen.getByText('5.0 km')).toBeInTheDocument() // 5 km
     expect(screen.getByText('10m')).toBeInTheDocument() // 10 min
-    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument() // efficiency_wh_km
-    expect(screen.getByText('108.00 km/h')).toBeInTheDocument() // max_speed_kmh
-    expect(screen.getByText('72.00 km/h')).toBeInTheDocument() // avg_speed_kmh
+    expect(screen.getByText('150 Wh/km')).toBeInTheDocument() // efficiency_wh_km
+    expect(screen.getByText('108 km/h')).toBeInTheDocument() // max_speed_kmh
+    expect(screen.getByText('72 km/h')).toBeInTheDocument() // avg_speed_kmh
     expect(screen.getByText('Tesla Model Y')).toBeInTheDocument()
     // Profiles are re-based to SI then reconverted for display.
     expect(h.charts.areaData.map((p) => p.elevation)).toEqual([50, 80])
@@ -630,14 +528,14 @@ describe('SharedDrivePage — optional cards + empty states', () => {
 
     // Always-on cards remain.
     expect(screen.getByText('Distance')).toBeInTheDocument()
-    expect(screen.getByText('5.00 km')).toBeInTheDocument()
+    expect(screen.getByText('5.0 km')).toBeInTheDocument()
     expect(screen.getByText('Duration')).toBeInTheDocument()
     // Nullable cards are withheld (never rendered blank).
     expect(screen.queryByText('Battery')).toBeNull()
     expect(screen.queryByText('Efficiency')).toBeNull()
-    expect(screen.queryByText('Max speed')).toBeNull()
-    expect(screen.queryByText('Avg speed')).toBeNull()
-    expect(screen.queryByText('Elevation gain')).toBeNull()
+    expect(screen.queryByText('Max Speed')).toBeNull()
+    expect(screen.queryByText('Avg Speed')).toBeNull()
+    expect(screen.queryByText('Elevation Gain')).toBeNull()
   })
 
   it('shows the honest "no route data" empty state when all profiles are absent', () => {
@@ -651,7 +549,7 @@ describe('SharedDrivePage — optional cards + empty states', () => {
     expect(screen.queryByTestId('map-container')).toBeNull()
     expect(screen.queryByTestId('area-chart')).toBeNull()
     expect(screen.queryByTestId('line-chart')).toBeNull()
-    expect(screen.getByText('5.00 km')).toBeInTheDocument()
+    expect(screen.getByText('5.0 km')).toBeInTheDocument()
   })
 
   it('falls back to the empty state for a single map point that cannot draw a polyline', () => {
@@ -704,80 +602,11 @@ describe('SharedDrivePage — session share branch', () => {
     renderPage()
 
     expect(screen.getByText('Baker Supercharger Stop')).toBeInTheDocument()
-    expect(screen.getByText('Shared charging report')).toBeInTheDocument()
+    expect(screen.getByText('Shared Charging Report')).toBeInTheDocument()
     expect(screen.getByText('20% → 80%')).toBeInTheDocument()
     expect(screen.getByTestId('composed-chart')).toHaveAttribute('data-count', '1')
     // Drive chrome stays out: no map, no drive header.
     expect(screen.queryByTestId('map-container')).toBeNull()
-    expect(screen.queryByText('Shared drive report')).toBeNull()
-  })
-
-  it('passes every shared power and battery curve value through the actual session report without sampling or mutation', () => {
-    const payload = sessionPayload()
-    payload.session.curve = Array.from({ length: 37 }, (_, index) => ({
-      t_s: index * 60, power_kw: 250 - index, battery_pct: 20 + index, energy_kwh: index,
-    }))
-    const snapshot = structuredClone(payload)
-    Object.freeze(payload.session.curve)
-    Object.freeze(payload.session)
-    setData(payload)
-    renderPage()
-    expect(screen.getByTestId('composed-chart')).toHaveAttribute('data-count', '37')
-    expect(h.charts.composedData).toEqual(Array.from({ length: 37 }, (_, index) => ({
-      minutes: index, power: 250 - index, soc: 20 + index,
-    })))
-    expect(screen.getByText('Shared charging report')).toBeInTheDocument()
-    expect(screen.queryByTestId('map-container')).not.toBeInTheDocument()
-    expect(payload).toEqual(snapshot)
-  })
-
-  it.each(['drive', 'session'] as const)(
-    'withholds a cached %s report after token permission failure and restores only a successful response',
-    (kind) => {
-      const payload = kind === 'drive' ? makeV2() : sessionPayload()
-      const snapshot = structuredClone(payload)
-      setData(payload)
-      const view = renderPage('public-token-only')
-      expect(screen.getByRole('heading', { name: payload.title, level: 1 })).toBeInTheDocument()
-      expect(h.sharedHook).toHaveBeenLastCalledWith('public-token-only')
-
-      setData(payload, { error: new ApiError('revoked token', 403) })
-      view.rerenderPage()
-      expect(screen.getByRole('heading', { name: 'Share link unavailable' })).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: payload.title })).not.toBeInTheDocument()
-      expect(screen.queryByText('Seattle → Tacoma')).not.toBeInTheDocument()
-      expect(screen.queryByText('Baker, CA')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('map-container')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Go to TeslaSync' })).toHaveAttribute('href', '/')
-
-      setData(payload)
-      view.rerenderPage()
-      expect(screen.getByRole('heading', { name: payload.title, level: 1 })).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Share link unavailable' })).not.toBeInTheDocument()
-      expect(h.sharedHook).toHaveBeenLastCalledWith('public-token-only')
-      expect(payload).toEqual(snapshot)
-    },
-  )
-
-  it('keeps loading chrome guest-only until the selected public token resolves to a session', () => {
-    setData(undefined, { isLoading: true })
-    const view = renderPage('session-token')
-    expect(screen.getByRole('status', { name: 'Loading shared drive report…' }))
-      .toHaveAttribute('aria-busy', 'true')
-    expect(screen.queryByText('Baker, CA')).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
-
-    setData(sessionPayload())
-    view.rerenderPage()
-    expect(screen.getByText('Shared charging report')).toBeInTheDocument()
-    expect(screen.getByText('Baker, CA')).toBeInTheDocument()
-    expect(screen.queryByRole('status', { name: 'Loading shared drive report…' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Shared drive report')).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument()
-    expect(h.sharedHook.mock.calls.every(([token]) => token === 'session-token')).toBe(true)
+    expect(screen.queryByText('Shared Drive Report')).toBeNull()
   })
 })
