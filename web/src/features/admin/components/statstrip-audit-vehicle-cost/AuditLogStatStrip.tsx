@@ -17,21 +17,21 @@ export function AuditLogStatStrip({ controller }: { controller: Controller }) {
         {t('developerReference.stats.state.loading', 'Loading measurements')}
       </Text>}
       {state.isRefreshing && <Text as="span" variant="caption" role="status">
-        {t('statstrip.audit.refreshing', 'Refreshing this source')}
+        {t('admin.auditLog.statstrip.refreshing', 'Refreshing this source')}
       </Text>}
       {state === logState && (state.fatalError || state.refreshError) && !controller.subsystemMissing
         && <Text as="span" variant="caption" role="status">
-          {state.hasData ? t('statstrip.audit.retainedEntries', 'Entries source refresh failed; retained page counts')
-            : t('statstrip.audit.unavailableEntries', 'Entries source unavailable; page counts unknown')}
+          {state.hasData ? t('admin.auditLog.statstrip.retainedEntries', 'Entries source refresh failed; retained page counts')
+            : t('admin.auditLog.statstrip.unavailableEntries', 'Entries source unavailable; page counts unknown')}
         </Text>}
       {state !== logState && (state.fatalError || state.refreshError) && <QueryError
         error={state.fatalError ?? state.refreshError} onRetry={() => state.retry?.()} />}
     </div>
   );
   const rowsKnown = Array.isArray(controller.logQuery.data?.rows);
-  const pageScope = t('statstrip.audit.pageScope', 'Current filtered page only; not the full ledger');
-  const categoryScope = t('statstrip.audit.categoryScope', 'Queried category catalog; not limited to this page');
-  const actionScope = t('statstrip.audit.actionScope', 'Queried action catalog; not limited to this page');
+  const pageScope = t('admin.auditLog.statstrip.pageScope', 'Current filtered page only; not the full ledger');
+  const categoryScope = t('admin.auditLog.statstrip.categoryScope', 'Queried category catalog; not limited to this page');
+  const actionScope = t('admin.auditLog.statstrip.actionScope', 'Queried action catalog; not limited to this page');
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'entries', label: t('admin.auditLog.kpiEntries', 'Entries shown'),
       rawValue: rowsKnown ? controller.rows.length : null, context: context(logState, pageScope), description: pageScope },
@@ -52,14 +52,14 @@ export function AuditLogStatStrip({ controller }: { controller: Controller }) {
     <OperationalBrief compact metricColumns={3} testId="admin-audit-summary" metrics={operationalMetrics}
       eyebrow={t('admin.auditLog.pageTitle', 'Audit log')}
       title={t('admin.auditLog.kpis', 'Audit overview')}
-      description={t('statstrip.audit.periodReason', 'Page counts follow the active filters and pagination; catalog counts use independent queries. No full-ledger period is implied.')}
+      description={t('admin.auditLog.statstrip.periodReason', 'Page counts follow the active filters and pagination; catalog counts use independent queries. No full-ledger period is implied.')}
       statusLabel={retained ? t('operationalSummary.retained', 'Retained source data')
         : sources.some(source => source.fatalError) ? t('operationalSummary.unavailable', 'Source unavailable')
           : sources.some(source => source.status === 'initial') ? t('operationalSummary.loading', 'Loading sources')
             : t('operationalSummary.snapshot', 'Queried snapshot')}
       statusTone={retained || sources.some(source => source.fatalError) ? 'warning' : 'neutral'}
-      scope={t('statstrip.audit.period', 'Current filtered page and queried catalogs')}
+      scope={t('admin.auditLog.statstrip.period', 'Current filtered page and queried catalogs')}
       freshness={retained ? t('developerReference.stats.state.retained', 'Showing retained measurements') : undefined}
-      provenance={t('statstrip.audit.periodReason', 'Page counts follow the active filters and pagination; catalog counts use independent queries. No full-ledger period is implied.')} />
+      provenance={t('admin.auditLog.statstrip.periodReason', 'Page counts follow the active filters and pagination; catalog counts use independent queries. No full-ledger period is implied.')} />
   </section></FadeIn>;
 }
