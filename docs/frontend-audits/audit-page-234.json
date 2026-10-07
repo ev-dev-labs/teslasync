@@ -1,0 +1,166 @@
+{
+  "item": "audit-page-234",
+  "page": "web\\src\\features\\vehicles\\pages\\TeslaPhysicsPage.tsx",
+  "routes": ["/tesla-physics", "/tesla-physics/clocks", "/tesla-physics/life-tape", "/tesla-physics/contradictions", "/tesla-physics/meters", "/tesla-physics/unknown", "/tesla-physics/car-kept-living", "/tesla-physics/logbook", "/tesla-physics/firmware-epochs", "/tesla-physics/charge-port", "/tesla-physics/black-box", "/tesla-physics/dictionary", "/tesla-physics/vault", "/tesla-physics/modes", "/tesla-physics/nervous-system", "/tesla-physics/range"],
+  "purpose": "A selected-vehicle bounded Tesla evidence workbench, with an overview and fifteen lazily loaded investigations of telemetry timing, state, counters, charging, firmware, provenance and interpretation limits.",
+  "primaryGoal": "Understand what the returned evidence supports, inspect timestamp-level observations and related sessions, and distinguish unknown or capped evidence from zero findings without inferring lifetime completeness.",
+  "dataSources": [
+    {
+      "hook": "usePhysicsPage → useTeslaExclusive",
+      "file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsPageShell.tsx",
+      "line": 48,
+      "endpoint": "GET /api/v1/physics/exclusive?vehicle_id=<selected vehicle>",
+      "hookFile": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "hookLine": 109,
+      "routeFile": "internal\\api\\router.go",
+      "routeLine": 3521,
+      "sourceOwner": "Existing physicsHandler.Exclusive; backend implementation and database behavior not inspected.",
+      "behavior": "Historical query policy; AbortSignal forwarded; scope key retains vehicle identity; enabled only with vehicle ID. All sixteen aliases use the same full report query, not independent slice endpoints. No range, timezone or units are supplied to this request."
+    },
+    {
+      "hook": "useSelectedVehicle, useDataState, useNumberFormatting, useUnits, useOperationalMetrics",
+      "sourceOwner": "Existing application workspace, historical trust, locale and display-formatting owners",
+      "behavior": "Vehicle selection remains in the shell. Report values are not mutated. Distance and energy display use useUnits; briefs adapt numeric values through the existing operational metric bridge. Shared implementations were not independently audited."
+    }
+  ],
+  "components": [
+    {"owner": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsPageShell.tsx", "role": "PageLayout, LayoutCard, provenance badge, source boundaries, fatal retry, stale warning, missing-slice and no-vehicle states"},
+    {"owner": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsInvestigationNav.tsx", "role": "Four grouped desktop navigation columns and a mobile shared Select; overview, ledger and science links"},
+    {"owner": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsInvestigation.tsx", "role": "Fifteen lazy investigation owners and shared Skeleton suspense fallback"},
+    {"owner": "web\\src\\features\\vehicles\\components\\tesla-physics\\Evidence.tsx", "role": "Local Evidence composition of GlassPanel/PanelTitle/Text, and RawRows composition of Accordion/DataTable; pagination 25/50/100"},
+    {"owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\PhysicsEvidenceBrief.tsx", "role": "Physics-specific source caps, requested/observed timestamps, fetched freshness and partial status"},
+    {"owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx", "role": "Existing OperationalBrief/useOperationalMetrics adapter with status labels and source context"},
+    {"owner": "Existing category barrels", "role": "Layout, typography, Select, Badge, DataTable, Accordion, feedback and provenance primitives are reused rather than direct chart/library or raw-control replacements"}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\Evidence.tsx", "line": 14, "rule": "MDC-002", "detail": "Returned-row disclosure, bounds warning, pagination and table composition already have one local owner across fourteen RawRows call sites.", "fix": "Reuse RawRows; do not introduce another table/export pipeline.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsFirmwareEpochsSection.tsx", "line": 42, "rule": "MDC-015/MDC-033", "detail": "Bordered observation blocks and metric context reappear in meters, firmware, range and unknown investigations, but differ in business interpretation.", "fix": "Keep domain calculations local; reuse existing surface/typography primitives, extracting only demonstrably identical presentation if needed.", "owner": "page", "confidence": "medium"}
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceBehavior": "Navigation uses a shared Select below sm, two columns at sm and four at xl. Evidence panels use responsive padding; modes and unknown budgets use two columns at md. Eleven of fourteen RawRows invocations specify mobileColumns; dictionary, unknown and vault dwell tables rely on existing DataTable defaults. Four direct recent/attention tables specify mobileColumns. Digests explicitly break long text.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsUnknownSection.tsx", "line": 48, "rule": "MDC-043", "detail": "Signal-name and duration badge share a non-wrapping justify-between row; long source field names may compress or overflow at 320px. Similar estimate rows exist in range.", "fix": "Exercise long field names and enlarged text; allow wrap/min-w-0 without hiding source metadata.", "owner": "page", "confidence": "medium"}
+    ],
+    "acceptanceNeeded": "Exercise all contract widths 320/375/390/430/768/1024/1280/1440/1920/2560, sidebar allocation, 200% text, mobile table details and long translated labels; no viewport was exercised."
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceBehavior": "Shared Select labels, typed table headers, semantic typography, aria-current navigation, textual uncertainty and cap warnings are present. No local decorative animation or chart canvas is introduced.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsInvestigationNav.tsx", "line": 51, "rule": "MDC-040", "detail": "Ledger/science footer links have no local padding or min-height; unlike investigation links they do not establish a 44px touch target. Overview link also lacks min-h-11.", "fix": "Use existing native-link/button chrome with adequate target reachability; verify focus and spacing exceptions in the actual composed layout.", "owner": "page", "confidence": "high"}
+    ],
+    "acceptanceNeeded": "Keyboard navigation, Select operation, Accordion/table focus, OperationalBrief details, screen-reader semantics, effective contrast, forced colors and reduced motion remain unverified."
+  },
+  "states": {
+    "initialLoading": "Query passed into PageLayout; actual PageLayout loading suppression not inspected or exercised. A slice-code loading fallback is a h-40 Skeleton.",
+    "noVehicle": "NoVehicleSelected early return.",
+    "fatalError": "QueryError with query.refetch retry; navigation survives within shell.",
+    "refreshFailure": "StaleRefreshWarning renders and state.data is retained for report presentation.",
+    "missingSlice": "A localized missing-slice EmptyState replaces children, including the common evidence-at-a-glance card.",
+    "partial": "Evidence boundaries show missing history/black-box and row/session caps. PhysicsEvidenceBrief maps otherwise-ok limited coverage to partial. Overview VehicleEvidenceBrief passes state.status directly.",
+    "emptyRows": "Shared table empty messages and domain-specific interpretation cautions; no fabricated source measurements.",
+    "offline": "No separate local connectivity-state mechanism. Broker connectivity is report evidence, not proof of browser network connectivity; runtime offline behavior is unverified.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsContradictionsSection.tsx", "line": 67, "rule": "MDC-026", "detail": "When selected kind/uncertainty filters match no episodes, the fallback says no contradictions in the returned window even when findings exist but are excluded. The no-matching-findings DataTable message is unreachable because that table requires episodes.length.", "fix": "Separate no matching filtered episodes from an empty returned findings set, retaining the all-episodes disclosure and uncertainty caution.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsPageShell.tsx", "line": 103, "rule": "MDC-026", "detail": "The report-empty branch tells the user to select a vehicle after the no-vehicle branch has already returned; a selected vehicle with no report gets an inaccurate instruction.", "fix": "Provide a source-unavailable/empty report explanation appropriate to the selected vehicle; distinguish initial loading through the existing query-state owner.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\pages\\TeslaPhysicsPage.tsx", "line": 29, "rule": "MDC-026", "detail": "Overview summary forwards state.status without the coverage-limited partial adjustment made by PhysicsEvidenceBrief. The summary may say Source returned beside a partial-evidence warning.", "fix": "Compose the existing physics coverage status consistently, without discarding retained data or changing query keys.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsInvestigationNav.tsx", "line": 38, "rule": "MDC-013", "detail": "Investigation link labels use ad-hoc text-sm while neighboring labels use Text/PanelTitle roles.", "fix": "Retain native links and aria-current while composing existing typography roles/tokens; do not create a new typography system.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsClocksSection.tsx", "line": 55, "rule": "MDC-033/visual intensity", "detail": "Fourteen summary metric entries plus detailed repeated contexts may compete for hierarchy; this is source density evidence, not a rendered visual finding.", "fix": "Prioritize essential timing/coverage metrics and use existing brief detail disclosure for supporting context while preserving every metric and explanation.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsClocksSection.tsx", "line": 61, "rule": "MDC-033/MDC-045", "detail": "Signed ingest lag is represented as duration. The design contract says negative duration input is rejected before custom formatting, while this investigation explicitly explains negative clock disagreement and its table renders signed seconds. Summary lag could lose valid negative observations.", "fix": "Check the canonical metric formatter's signed-value contract and use existing signed-number/custom-unit semantics for ingest lag, leaving positive elapsed intervals as duration. Do not clamp negative lag or change source values.", "owner": "integration", "confidence": "medium"},
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsClocksSection.tsx", "line": 20, "rule": "MDC-044", "detail": "Second-precision timestamps use browser-default toLocaleString(undefined), while other investigations use canonical formatDateTime. App locale/timezone preference equivalence is not established.", "fix": "Preserve second precision and adopt canonical locale/timezone formatting only after proving equivalent detail capability.", "owner": "integration", "confidence": "medium"},
+    {"file": "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsPageShell.tsx", "line": 95, "rule": "MDC-031/preservation", "detail": "Missing active slice suppresses every child, including cross-slice evidence-at-a-glance. This is existing behavior but a preservation/trust design concern; missing one slice does not prove other report evidence unavailable.", "fix": "Retain source boundaries and available independent summaries; scope the missing-slice placeholder to the investigation without inventing missing measurements.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Correct filtered-empty wording and selected-vehicle empty messaging; verify signed-lag metric preservation before changing summaries.",
+    "rationale": "Substantial modern shared architecture and restrained source palette already exist. Focus on trustworthy state semantics, full alias preservation, locale equivalence and actual mobile/accessibility validation rather than cosmetic replacement."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": "Evidence/RawRows and physics brief adapters compose existing primitives rather than competing with them. Physics ledger is a linked distinct mounted module outside this assignment, not a seventeenth alias. No new shared owner is justified by this bounded audit."
+  },
+  "preservation": {
+    "sourceHash": "de23f75f9e4c8c2e910746339adee2a25cc47ef9c2725b24cc389e4120e9ec2b",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashOrigin": "Live root web\\src\\features\\vehicles\\pages\\TeslaPhysicsPage.tsx; verified twice during audit.",
+    "currentLineCount": 50,
+    "routesOrigin": "Exact pages[id=audit-page-234] record in session frontend-modernization-route-manifest.json; corroborated App.tsx:587-602. No redirect or ledger routes added.",
+    "sectionCounts": {"mountedModuleAliases": 16, "lazyInvestigations": 15, "aliasSpecificEvidencePanels": 29, "rawRowsInvocations": 14, "directRecentOrAttentionTables": 4, "pageSummaryCards": 1, "shellBoundaryCards": 1, "navigationGroups": 4, "pageLiteralGlassPanel": 0, "pageLiteralChartContainer": 0},
+    "commonSections": ["Four-group investigation navigation", "Evidence boundaries, requested/observed windows and all source/session caps", "Where to start / Evidence at a glance with sampled percentage, unknown hours, returned episodes, meter drops and non-alive signals", "Active investigation when its slice is returned"],
+    "actions": ["Copy page link via PageLayout", "Refresh through existing PageLayout query ownership, exact rendered toolbar unverified", "Retry fatal report with query.refetch", "Desktop alias links and mobile investigation selector", "Overview link", "Physics ledger link", "Science lab link", "Accordion raw-row disclosures", "DataTable pagination 25/50/100 and stable table IDs; shared export/sort/detail capabilities not independently verified", "Clock interval filter", "Life-state filter", "Contradiction kind and uncertainty filters", "Logbook kind filter", "Firmware-version filter", "Charge-state filter", "Nervous-system status filter", "Recorded positive-ID drive and charging session links", "Cross-investigation clocks/unknown/nervous-system/car-kept-living/meters/firmware links", "Existing OperationalBrief detail interactions, implementation not independently audited"],
+    "aliasSpecificBehavior": [
+      {"route": "/tesla-physics", "sections": ["Where to start guide", "Returned evidence five-metric overview"], "behavior": "No lazy investigation selected; all navigation, boundaries and cross-module links retained."},
+      {"route": "/tesla-physics/clocks", "file": "PhysicsClocksSection.tsx", "sections": ["Three clocks summary", "Latest six returned samples (second precision)"], "behavior": "Event/ingest/display timestamps, signed median/min/max lag, gaps and threshold counts, unknown flags, paired coverage, interval filter and full raw rows; IDs physics:clocks-recent, physics:clocks."},
+      {"route": "/tesla-physics/life-tape", "file": "PhysicsLifeTapeSection.tsx", "sections": ["Life tape summary and state durations", "Longest interval and state chronology"], "behavior": "Classified-window ratio not completeness; overlap warning, unknown intervals, longest and five recent segments, state filter and physics:tape rows."},
+      {"route": "/tesla-physics/contradictions", "file": "PhysicsContradictionsSection.tsx", "sections": ["Contradiction court summary", "Latest eight episodes"], "behavior": "Episode versus observation counts, uncertainty filters, nearest charge-port sample within two minutes explicitly non-causal, grouped all-episode disclosure; IDs physics:episodes, physics:findings."},
+      {"route": "/tesla-physics/meters", "file": "PhysicsMetersSection.tsx", "sections": ["Trip-meter genealogy summary", "Observed counter changes and firmware bounds"], "behavior": "SI meter readings, quantifiable/largest drops, FSD-counter ratio explicitly not engagement, latest eight resets, firmware bounds and current-mode caveats; physics:meters."},
+      {"route": "/tesla-physics/unknown", "file": "PhysicsUnknownSection.tsx", "sections": ["Unknown OS summary", "Signal-specific unknown-hour investigation"], "behavior": "Window/sample/unknown hours, percentages, descending signal budgets and flags; overlapping budgets must not be summed; three related-investigation links; physics:unknown."},
+      {"route": "/tesla-physics/car-kept-living", "file": "PhysicsCarKeptLivingSection.tsx", "sections": ["Car kept living summary", "Ingestion and missing-history investigation"], "behavior": "Last telemetry, elapsed gap, queue snapshot, MQTT/replay flags, clock offset and paired ingest lag, returned notes and clocks/unknown links; never infer missing events from connectivity."},
+      {"route": "/tesla-physics/logbook", "file": "PhysicsLogbookSection.tsx", "sections": ["Tesla-language logbook summary", "Observed narrative and session drilldowns"], "behavior": "Gear/charge words, session boundaries, first/last states, positive-ID links and unlinked counts, latest eight and full filtered rows; physics:logbook-recent, physics:logbook."},
+      {"route": "/tesla-physics/firmware-epochs", "file": "PhysicsFirmwareEpochsSection.tsx", "sections": ["Firmware epochs summary", "Version observation chronology"], "behavior": "Observed version bounds, counter changes/drops/dwells and caveats, full chronology and filtered rows; installation time and FSD engagement not inferred; physics:epochs."},
+      {"route": "/tesla-physics/charge-port", "file": "PhysicsChargePortSection.tsx", "sections": ["Charge-port court summary", "Charge-port transitions and schedule context"], "behavior": "Latest state/current/gear/firmware/latch/schedule, missing current and per-state counts, Disconnected semantics, transitions and state filter; physics:port."},
+      {"route": "/tesla-physics/black-box", "file": "PhysicsBlackBoxSection.tsx", "sections": ["Black box summary", "Frame changes inside the selected window"], "behavior": "Latest selected trigger, 90-second window and frame/current coverage, cap/missing-source warnings, sorted changes and last five, gear/firmware identities, full eight-column frame disclosure; physics:black-box."},
+      {"route": "/tesla-physics/dictionary", "file": "PhysicsDictionarySection.tsx", "sections": ["Owner dictionary summary", "Recorded etiquette dwell distribution"], "behavior": "Dictionary median versus separately returned vault population, park dwell and unscheduled completion counts, quartiles only with four usable dwells, invalid-dwell exclusion warning, all original dwell observations; physics:dictionary."},
+      {"route": "/tesla-physics/vault", "file": "PhysicsVaultSection.tsx", "sections": ["Physics vault with certificate and three disclosures"], "behavior": "Certificate window/issue time, exact integrity and HMAC digests, hash-only versus configured-key caveat, rules/honesty, firmware identities, history/session caps, positive-ID session links; physics:vault-drives, physics:vault-charges, physics:vault-dwells."},
+      {"route": "/tesla-physics/modes", "file": "PhysicsModesSection.tsx", "sections": ["Mode laws with allowed/forbidden interpretations", "Counter and firmware cross-check"], "behavior": "Nullable valet/service/transport flags stay unknown rather than false; active/unknown fields, uncertain drops and versions; current modes never assigned to past drops; meters/firmware links."},
+      {"route": "/tesla-physics/nervous-system", "file": "PhysicsNervousSystemSection.tsx", "sections": ["Nervous system summary", "Signal-level diagnostic triage"], "behavior": "Alive/contradicting/other counts, alive share, attention table and status filter, case-insensitive exact-name historical budget cross-reference with non-causal caution; physics:nerves-attention, physics:nerves."},
+      {"route": "/tesla-physics/range", "file": "PhysicsRangeSection.tsx", "sections": ["Range disagreement summary", "Pairwise estimate comparisons"], "behavior": "Rated/typical/ideal SI estimates, remaining Wh, spread and pairwise direction/relative values, Wh/km display only, true_range must remain empty and no fabricated distance-to-empty forecast."}
+    ],
+    "dataBehavior": ["One full historical exclusive report per selected vehicle; slice changes do not create new report query keys.", "Preserve nullable values, retained stale payloads, caps and honesty strings, ordering, filters, stable table IDs, all columns and session destinations.", "Meters, Wh and seconds remain raw; useUnits converts distance/energy only for display. Existing report hour and Wh/km fields are source contract exceptions observed in types; audit does not rename, normalize or certify backend units.", "No date selector is added. These exact routes are not in RANGE_ENABLED_PATHS; this bounded-report query currently supplies vehicle only. Server defaults/caps are not independently verified.", "Evidence summaries and raw disclosures are complementary, not replacement permissions; preserve every metric, explanation and observation."],
+    "lineCounts": {"Evidence.tsx": 24, "PhysicsBlackBoxSection.tsx": 73, "PhysicsCarKeptLivingSection.tsx": 59, "PhysicsChargePortSection.tsx": 66, "PhysicsClocksSection.tsx": 93, "PhysicsContradictionsSection.tsx": 80, "PhysicsDictionarySection.tsx": 61, "PhysicsFirmwareEpochsSection.tsx": 65, "PhysicsInvestigation.tsx": 28, "PhysicsInvestigationNav.tsx": 59, "PhysicsLifeTapeSection.tsx": 70, "PhysicsLogbookSection.tsx": 64, "PhysicsMetersSection.tsx": 72, "PhysicsModesSection.tsx": 59, "PhysicsNervousSystemSection.tsx": 61, "PhysicsPageShell.tsx": 106, "PhysicsRangeSection.tsx": 64, "PhysicsUnknownSection.tsx": 65, "PhysicsVaultSection.tsx": 60, "PhysicsEvidenceBrief.tsx": 32, "VehicleEvidenceBrief.tsx": 43}
+  },
+  "evidenceLimits": {
+    "method": "Phase 0 source-only read-only inspection; only assigned report and heartbeat written.",
+    "runtime": "Unverified; no mounted browser session, API invocation, mutations, viewport, keyboard, visual, contrast or offline exercise.",
+    "validation": "No Git, build, lint, TypeScript or tests run, per assignment. Skill audit.sh inspected but not executed because it unconditionally invokes prohibited TypeScript validation. Scoped case-sensitive source pattern counts are recorded separately, not a comprehensive quality pass.",
+    "backend": "Only exact relevant router declarations inspected. Endpoint reachability, server filtering/caps, source units and database behavior not independently verified.",
+    "shared": "Shared component internals, authentication, catalogs, query policy and formatter implementation are outside this page-specific audit; shared capability names are not runtime acceptance.",
+    "sourceDrift": "Page hash stable at both reads; dependency citations describe this concurrent live-source snapshot, not a lock.",
+    "sourcePatternCounts": {"inlineStyles": 0, "rawControls": 0, "directLibraries": 0, "oldApiImports": 0, "neonOrFixedWhite": 0},
+    "verificationReceipt": {"exitCode": 0, "output": ["inlineStyles: 0", "rawControls: 0", "directLibraries: 0", "oldApiImports: 0", "neonOrFixedWhite: 0", "JSON valid; exact page and all 16 ordered aliases match manifest; live SHA256 matches."], "method": "PowerShell Select-String -CaseSensitive over explicit presentation files; ConvertFrom-Json on assigned report; ordered alias/page comparison with assigned manifest record; Get-FileHash -Algorithm SHA256 comparison with live page."},
+    "patternScanScope": "TeslaPhysicsPage.tsx, all nineteen tesla-physics presentation modules, PhysicsEvidenceBrief.tsx and VehicleEvidenceBrief.tsx. Case-sensitive matching is required to distinguish shared Select from raw select. Counts do not certify contrast or all rules."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md (sections 0/1, architecture, palette/visual hierarchy, responsive, states, accessibility, data separation and visual QA)",
+    "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\frontend-modernization-route-manifest.json (exact assigned record)",
+    "web\\src\\features\\vehicles\\pages\\TeslaPhysicsPage.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\Evidence.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsPageShell.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsInvestigation.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsInvestigationNav.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsBlackBoxSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsCarKeptLivingSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsChargePortSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsClocksSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsContradictionsSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsDictionarySection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsFirmwareEpochsSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsLifeTapeSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsLogbookSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsMetersSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsModesSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsNervousSystemSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsRangeSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsUnknownSection.tsx",
+    "web\\src\\features\\vehicles\\components\\tesla-physics\\PhysicsVaultSection.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\PhysicsEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+    "web\\src\\api\\scope.ts (lines 1-160)",
+    "web\\src\\types\\teslaPhysics.ts (lines 130-400)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx (exact relevant route/import search)",
+    "internal\\api\\router.go (exact physics declaration search)",
+    ".github\\skills\\audit-violations\\audit.sh"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-234.json", ".agent-status\\audit-page-234.txt"]
+}
