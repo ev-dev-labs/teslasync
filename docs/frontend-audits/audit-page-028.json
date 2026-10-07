@@ -1,0 +1,336 @@
+{
+  "item": "audit-page-028",
+  "phase": 0,
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+  "routes": [
+    {
+      "path": "/intelligence/behavioral-sentinel",
+      "file": "web\\src\\App.tsx",
+      "line": 767,
+      "mount": "SafeRoute wrapping lazy BehavioralSentinel",
+      "lazyImportLine": 233,
+      "runtimeReachability": "unverified"
+    }
+  ],
+  "purpose": "Review explainable command, identity, and telemetry-integrity anomalies with evidence and limitations, without attributing behavior to a person.",
+  "primaryGoal": "Inspect the selected vehicle's paginated findings, severity, confidence, observation times, supporting evidence and data quality while retaining explicit non-attribution and unsupported-capability warnings.",
+  "dataSources": [
+    {
+      "hook": "useBehavioralSentinel",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 98,
+      "owner": "advanced-intelligence API domain",
+      "endpoint": "GET /api/v1/advanced-intelligence/behavioral-sentinel",
+      "parameters": ["vehicle_id", "limit=20", "offset=(page-1)*20"],
+      "queryKey": "['advanced-intelligence', 'behavioral-sentinel', vehicleId, limit, offset]",
+      "contract": "SentinelPage extends AdvancedPage<SentinelFinding>; snake_case source fields, quality, limitations and generated_at.",
+      "citations": [
+        {"file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 36},
+        {"file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "line": 39},
+        {"file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "line": 49},
+        {"file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts", "line": 66},
+        {"file": "web\\src\\types\\advancedIntelligence.ts", "line": 148},
+        {"file": "internal\\api\\router.go", "line": 3917},
+        {"file": "internal\\handler\\v1\\advancedintelligence\\handler.go", "line": 76},
+        {"file": "internal\\handler\\v1\\advancedintelligence\\handler.go", "line": 161},
+        {"file": "web\\src\\api\\client.ts", "line": 93}
+      ],
+      "behavior": "Positive vehicle enablement, vehicle/limit/offset-specific cache keys, inherited query policy and AbortSignal forwarding already exist. Handler delegates to service.BehavioralSentinel; algorithm, source repositories, windows and runtime response quality were not audited.",
+      "endpointVerification": "Source route composition matches; no HTTP request executed.",
+      "display": "Confidence and quality use current number-format preferences; timestamps use shared formatDateTime with browser-default locale/timezone when no options are passed. No physical-unit conversion is needed for inspected sentinel fields."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "owner": "workspace vehicle selection",
+      "endpoint": "GET /api/v1/vehicles",
+      "citations": [
+        {"file": "web\\src\\api\\hooks\\useVehicles.ts", "line": 73},
+        {"file": "web\\src\\hooks\\useSelectedVehicle.ts", "line": 75}
+      ],
+      "behavior": "Effective selection uses validated URL vehicle scope, persisted selection, then first fleet vehicle. Page consumes selection and does not introduce a competing picker.",
+      "endpointVerification": "Frontend hook inspected; fleet handler and runtime response not independently audited."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "shared layout", "ownerFile": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "usedAt": 41, "contract": "PageContainer adapter with w-full/min-w-0 container; preserve shell scope ownership."},
+    {"name": "InsightPanel", "kind": "domain composite", "ownerFile": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "line": 23, "usedAt": 59, "contract": "title/description/empty/emptyMessage/query/sourceState/error/onRetry; delegates to LayoutCard and SourceContent, preserves retained data and retry."},
+    {"name": "EvidencePanel", "kind": "domain composite", "ownerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 25, "usedAt": 130, "contract": "quality/evidence/limitations/unsupported; three always-present subsections."},
+    {"name": "LayoutCard", "kind": "shared composite", "ownerFile": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 17, "contract": "Persistent labelled Card, title/description/actions/footer and accessible description help."},
+    {"name": "SourceContent", "kind": "shared asynchronous presentation", "ownerFile": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "line": 10, "contract": "ready/loading/error/empty/retained, emptyContent/loadingContent overrides and errorRecovery."},
+    {"name": "AlertBanner", "kind": "shared feedback", "ownerFile": "web\\src\\components\\feedback\\AlertBanner.tsx", "line": 51, "usedAt": 48, "contract": "Persistent warning with localized title/body; not dismissible in this page."},
+    {"name": "Pagination", "kind": "shared interaction", "ownerFile": "web\\src\\components\\ui\\Pagination.tsx", "line": 20, "usedAt": 118, "contract": "Caller-owned page/pageSize/total/onPageChange; native controls, aria-current, live counts and validated direct jump."},
+    {"name": "FadeIn", "kind": "shared motion", "ownerFile": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23, "usedAt": [58, 129], "contract": "Uses useMotionPreference; reduced entrance sets initial=false."},
+    {"name": "Badge / Text / KVList / EmptyState", "kind": "existing primitive/composite dependencies", "ownerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 3, "contract": "Reuse category imports and semantic typography/status/metadata; internals not fully inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 95,
+      "rule": "MDC-002 / preserve source granularity",
+      "detail": "Evidence summaries appear within each finding and again in the aggregate EvidencePanel. This is purposeful local-versus-page context, not grounds for deleting either view. Both use hand-rendered bullet paragraphs.",
+      "fix": "Keep both contexts; reuse a domain evidence-list renderer only if it can preserve per-finding concise content versus aggregate source/time/sample metadata.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 109,
+      "rule": "MDC-002 / shared presentation",
+      "detail": "Finding and aggregate limitations use parallel bullet paragraph markup and distinct empty behavior.",
+      "fix": "Prefer one domain limitations-list presentation with optional localized empty copy, without flattening finding limitations into page limitations.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 72, "detail": "Finding header wraps top-level groups; inner icon/title row and severity/confidence row do not wrap."},
+      {"file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 90, "detail": "Finding evidence/limitations stack below md and use two columns above it."},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 45, "detail": "Aggregate quality/evidence/limitations stack until lg, then become three columns."},
+      {"file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 12, "detail": "Existing full-width min-w-0 layout adapter is already adopted."},
+      {"file": "web\\src\\components\\ui\\Pagination.tsx", "line": 51, "detail": "Shared pagination uses container-aware page controls, wrapping and 44px small-screen controls; preserve this migration."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+        "line": 73,
+        "rule": "MDC-043 / narrow containers and extreme content",
+        "detail": "Unbroken server finding_type/source text and the nonwrapping badge pair have no local min-w-0/break-word strategy. At 320px or long translations they may overflow despite the outer flex-wrap. This is a source-backed risk, not observed clipping.",
+        "fix": "Allow inner header items to shrink/wrap, keep decorative icon shrink-0, and wrap unbroken identifiers/source text without truncating evidence.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "testedViewports": [],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "runtime": "unverified; themes, RTL, zoom, long content and allocated container widths not exercised"
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      {"file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 74, "detail": "Decorative icons are aria-hidden and findings retain semantic article/h3 markup."},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 46, "detail": "Three aggregate sections carry localized aria-labels."},
+      {"file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 29, "detail": "Card shell has generated title association; description help remains a named keyboard button."},
+      {"file": "web\\src\\components\\ui\\Pagination.tsx", "line": 51, "detail": "Pagination is named navigation with current-page semantics, labelled controls and live count text."},
+      {"file": "web\\src\\components\\motion\\FadeIn.tsx", "line": 31, "detail": "Reduced-motion source branch exists; actual OS behavior unverified."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+        "line": 95,
+        "rule": "MDC-040 / semantic lists",
+        "detail": "Evidence and limitation collections use literal bullet characters inside paragraphs, so item count/list relationships are not encoded. Aggregate lists repeat the same pattern at EvidencePanel.tsx:62,109,121.",
+        "fix": "Use semantic ul/li with existing Text roles and retain all source content, localized headings and empty explanations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboardFocusScreenReaderContrastTouch": "unverified; source semantics are not accessibility acceptance"
+  },
+  "states": {
+    "initialLoading": "Findings query enters InsightPanel loading and SourceContent skeleton; attribution and aggregate panel remain present.",
+    "empty": "Findings show selected-vehicle prerequisite or no-supported-findings EmptyState; resolved empty query can refresh. EvidencePanel has quality/evidence/aggregate-limitations fallbacks.",
+    "fatalError": "Findings use source-local ErrorDisplay and retry through query.refetch; no whole-page content deletion.",
+    "retained": "InsightPanel maps stale DataState to retained SourceContent with non-blocking notice/retry while keeping findings.",
+    "pausedOffline": "Initial paused query uses distinct unresolved/paused role=status copy; retained paused query maps to stale. No distinct page-specific offline timestamp is passed.",
+    "unknownPartial": "Quality status/coverage/reasons are displayed when available, but aggregate metadata has no query trust input.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+        "line": 130,
+        "rule": "MDC-026 / unknown is not unsupported or empty",
+        "detail": "EvidencePanel receives only payload fields, not the query. While pending, paused, failed or vehicle-unselected, it presents 'Quality metadata is unsupported', 'No supporting evidence was returned', and 'No additional limitations were returned' as if a response resolved. Findings correctly distinguish these states through InsightPanel.",
+        "fix": "Extend existing EvidencePanel to accept optional query/trust state and prerequisite content, preserving its shell, three sections and static unsupported warnings; display unresolved/loading/fatal/retained context without inferring missing source capabilities.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+        "line": 109,
+        "rule": "MDC-026 / complete empty states",
+        "detail": "A finding with no limitations renders a labelled but blank limitations box, unlike aggregate limitations' explicit empty copy.",
+        "fix": "Add localized per-finding 'no limitations returned' copy without implying there are no actual limitations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "all states unverified; no query or browser interaction executed"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 71,
+      "rule": "MDC-010 / MDC-015 theme-aware neutral surfaces",
+      "detail": "Finding card and evidence box use fixed-white borders/background (also line 91). EvidencePanel evidence tiles repeat fixed-white styling at line 81. Low alpha is not pure-white text, but these surfaces bypass neutral theme tokens.",
+      "fix": "Use existing neutral surface/border tokens or current Card styling; retain article boundaries and subsection separation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 105,
+      "rule": "MDC-010 / visual intensity budget",
+      "detail": "Every finding's limitations box gets amber decoration regardless of severity; EvidencePanel repeats an amber unsupported box at line 117 and the page has a permanent warning banner. This may overemphasize generic caveats relative to findings; visual strength has not been measured.",
+      "fix": "Keep warning meaning and all caveats, but prefer neutral subsection surfaces and restrained semantic accents only where warning priority is meaningful.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\components\\feedback\\AlertBanner.tsx",
+      "line": 26,
+      "rule": "MDC-010 / semantic color restraint",
+      "detail": "The warning variant used here explicitly uses border-neon-amber/25 and bg-neon-amber/10. The other shared variants also use neon-named accent classes. This is dependency source evidence, not proof of fluorescent pixels or permission to rename persisted theme IDs.",
+      "fix": "Shared feedback owner should map existing variants to current subdued semantic tokens without changing AlertVariant, warning content or theme persistence; verify composed contrast in both themes.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+      "line": 35,
+      "rule": "MDC-032 / workspace scope and source-local pagination",
+      "detail": "Page state never resets when vehicleId changes. A user on page 3 of one vehicle requests offset 40 for the next vehicle. If that result is empty, InsightPanel replaces its children, including Pagination, so returning to page 1 is unavailable from this page. Shared Pagination clamps displayed safePage but does not correct caller fetch offset.",
+      "fix": "Reset or key pagination by effective vehicle scope and reconcile out-of-range page after totals resolve; keep recovery navigation reachable for an empty out-of-range page. Preserve limit/offset keys and server paging.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Scope-changing pagination can strand users, and the secondary metadata panel conflates unresolved/failure with resolved absence. Restrained visual token cleanup and semantic/overflow improvements follow.",
+    "order": ["scope-owned pagination recovery", "aggregate evidence trust-state propagation", "neutral/semantic token adoption", "semantic lists and empty limitations", "responsive and accessibility runtime QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel asynchronous trust propagation",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 12,
+      "owner": "shared domain composite",
+      "concreteContract": {
+        "preserveProps": ["quality", "evidence", "limitations", "unsupported"],
+        "proposedOptionalProps": ["query: DataStateSource<unknown>", "prerequisiteMessage: string"],
+        "states": ["initial loading", "prerequisite", "initial paused/unresolved", "fatal error with retry", "resolved empty", "ready", "retained stale/refresh failure"],
+        "preservation": "Keep three subsection headings and static unsupported warnings visible; retain previous quality/evidence/limitations on refresh failure. Reuse InsightPanel/useDataState/SourceContent rather than introduce another state engine."
+      },
+      "usedBy": ["BehavioralSentinelPage findings metadata", "EvidencePanel internal InsightPanel"],
+      "dependsOn": ["Existing InsightPanel query contract", "DataStateSource/useDataState", "SourceContent loading/empty/retained/error APIs", "canonical localization owner if new labels are needed"],
+      "evidenceLimit": "Other production EvidencePanel consumers were not inspected; no separate composite or broad API migration justified by this one-page audit."
+    },
+    {
+      "name": "Restrained AlertBanner semantic variants",
+      "existingOwnerFile": "web\\src\\components\\feedback\\AlertBanner.tsx",
+      "line": 23,
+      "owner": "shared feedback",
+      "concreteContract": {
+        "variants": ["info", "success", "warning", "danger"],
+        "propsToPreserve": ["variant", "title", "children", "onClose", "icon", "closeLabel", "HTML attributes"],
+        "states": ["persistent warning", "optional dismissible banner", "light/dark/forced-colors"]
+      },
+      "usedBy": ["/intelligence/behavioral-sentinel attribution warning"],
+      "dependsOn": ["existing semantic color/surface tokens", "ThemeProvider persistence", "effective contrast QA"],
+      "evidenceLimit": "No page override or token/theme rename authorized; other consumers and rendered colors unverified."
+    }
+  ],
+  "competingImplementations": {
+    "found": false,
+    "scope": "Inspected page and direct presentation/data dependencies only.",
+    "detail": "Existing PageLayout/InsightPanel/SourceContent/dataState migration is already in use. No competing page picker, router, query engine, unit helper, chart library or table pipeline is introduced here. Hand-rendered article/subsection surfaces compete stylistically with shared neutral cards, but are not an independently proven duplicate component system."
+  },
+  "preservation": {
+    "sourceSha256": "53EFC6981D65A07252489E3962205D2AE5A333D147835A5D51192A17F1F5C5EF",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 142,
+    "dependencyLineCounts": {"InsightPanel.tsx": 72, "EvidencePanel.tsx": 130},
+    "pageAndDirectDomainPresentationLines": 344,
+    "sectionCounts": {
+      "topLevelContentRegions": 3,
+      "mountedInsightPanelInstancesIncludingEvidencePanel": 2,
+      "pageLiteralInsightPanel": 1,
+      "pageLiteralEvidencePanel": 1,
+      "pageLiteralGlassPanel": 0,
+      "pageLiteralChartContainer": 0,
+      "perFindingSubsections": 2,
+      "aggregateEvidenceSubsections": 3
+    },
+    "sections": [
+      {"name": "Page title and subtitle", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 41},
+      {"name": "Anomaly is not attribution warning", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 48},
+      {"name": "Explainable findings", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 59},
+      {"name": "Finding type/icon, observed time, severity, confidence, explanation", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 69},
+      {"name": "Per-finding evidence", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 91},
+      {"name": "Per-finding limitations", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 105},
+      {"name": "Finding pagination", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 117},
+      {"name": "Aggregate evidence, quality and limitations", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 130},
+      {"name": "Data quality: status, samples, coverage, observation window, reasons", "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 46},
+      {"name": "Evidence sources: source, summary, sample count, observed time", "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 73},
+      {"name": "Aggregate limitations and explicit unsupported attribution/intent claims", "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 102}
+    ],
+    "actions": [
+      {"name": "Server page navigation and validated direct jump", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 118, "detail": "First/previous/numbered/next/last where shared responsive controls permit; direct jump remains available. Page size is fixed at 20; no page-size callback supplied."},
+      {"name": "Fatal/retained retry and resolved-empty refresh", "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "line": 37, "detail": "query.refetch is preserved through SourceContent/EmptyState."},
+      {"name": "Read full aggregate description help", "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 39, "detail": "Tooltip-backed named keyboard button from EvidencePanel description."},
+      {"name": "Workspace vehicle selection", "file": "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx", "line": 34, "detail": "External shell owner, consumed by page; no redundant local picker."}
+    ],
+    "dataBehavior": [
+      "Preserve vehicle-specific hook key, positive-ID enablement, cancellation, inherited retry/cache policy, fixed page size and backend total/offset semantics.",
+      "Retain every returned finding and its explanation/severity/confidence/time; preserve icon classification and severity mapping unless reviewed semantics justify change.",
+      "Keep per-finding evidence/limitations separate from aggregate quality/limitations; aggregate evidence is flatMap of the current page only, not an asserted whole-result evidence set.",
+      "Retain all non-attribution/unsupported warnings and localized fallbacks; no mutation, acknowledgement, identity attribution or export action exists in this inspected page.",
+      "Preserve shared preference-aware numeric formatting and safe shared date fallback; no fake data, unknown-to-zero display conversion or legacy unit helpers.",
+      "Preserve existing source-local loading/fatal/retained/paused handling and page/full-width/shared motion migrations rather than revert them.",
+      "Response generated_at is in the wire type but not currently displayed; adding freshness UI must not be reported as preservation of an existing display.",
+      "No date-range control or bounds exist in this page/hook. Do not invent backend date filtering based on observation-window metadata."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Read-only one-page source audit with directly relevant data/presentation owners and route composition. No UI/source changes, Git operations, agents, browser activity, runtime calls or project-wide validation.",
+    "runtime": "NOT VERIFIED",
+    "visual": "NOT VERIFIED",
+    "keyboard": "NOT VERIFIED",
+    "contrast": "NOT VERIFIED",
+    "viewport": "NOT VERIFIED",
+    "backend": "Known route and handler delegation only; business algorithms, storage/source completeness, freshness, real payloads, authentication behavior and server page edge cases not exercised.",
+    "localization": "Translation calls inspected; canonical key existence, runtime language changes and RTL not tested.",
+    "auditScript": "Read .github\\skills\\audit-violations\\audit.sh but did not execute it: it unconditionally invokes project TypeScript, outside this Phase 0 source-only validation scope. Used scoped source-pattern counts instead.",
+    "sourceChecks": {
+      "method": "PowerShell Get-Content/Select-String against the 142-line assigned page only; Get-FileHash SHA256.",
+      "successfulExitCode": 0,
+      "rawOutput": ["PAGE_LINES=142", "neon_MATCHING_LINES=0", "oldApi_MATCHING_LINES=0", "raw_MATCHING_LINES=0", "fixedWhite_MATCHING_LINES=2", "inline_MATCHING_LINES=0", "libraries_MATCHING_LINES=0"],
+      "interpretation": "Pattern counts are not a complete lint result. No explicit page neon/glow/shadow or pure-white text classes matched. Fixed-white translucent surfaces occur on two page lines; shared AlertBanner has neon-named variants. Dependency glow/saturation/Badge contrast not exhaustively validated.",
+      "failedProbe": "An initial PowerShell pattern-count expression failed with ParserError (exit 1) due quote escaping; corrected command completed with exit 0. No source or report was changed by that failed probe."
+    },
+    "snapshot": "Page hash rechecked at release; other concurrent writers may change dependencies. Prior foundation acceptance is context only, not borrowed runtime proof.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-028.json", ".agent-status\\audit-page-028.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\BehavioralSentinelPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\feedback\\AlertBanner.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go"
+  ]
+}
