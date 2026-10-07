@@ -1,0 +1,378 @@
+{
+  "item": "audit-page-157",
+  "page": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+  "routes": ["/ownership/insurance-telematics"],
+  "purpose": "Vehicle-scoped insurance risk analysis, stored policy management, nonbinding premium simulation, improvement levers and provenance.",
+  "primaryGoal": "Understand measured exposure and model assumptions, maintain a policy baseline, and use the computed evidence digest in insurer discussions without mistaking the simulation for a binding quote.",
+  "dataSources": [
+    {
+      "hook": "useInsuranceRiskProfile",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 146,
+      "endpoint": "GET /api/v1/insurance-telematics?vehicle_id={id}&window_days={days}",
+      "ownership": "Subject-scoped ownershipintel handler/service; vehicle-scoped query enabled only for positive vehicle IDs.",
+      "evidence": [
+        "web\\src\\api\\hooks\\useOwnership.ts:74-77,124-151: query key includes vehicle and days; queryFn forwards AbortSignal.",
+        "internal\\api\\router.go:3918: mounts ownershipIntelHandler within the API composition.",
+        "internal\\handler\\v1\\ownershipintel\\handler.go:114-117,197-220: GET group root, subject resolution, vehicle/window validation and service response."
+      ],
+      "limitations": "Chi trailing-slash behavior, response contents, engine derivations and actual runtime authorization were not exercised. Handler delegates the model to its service; no backing database/signal capability inferred."
+    },
+    {
+      "hook": "useUpsertInsurancePolicy",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 154,
+      "endpoint": "PUT /api/v1/insurance-telematics/policy",
+      "ownership": "Subject-scoped ownershipintel policy service; rate-limited handler write.",
+      "evidence": [
+        "web\\src\\api\\hooks\\useOwnership.ts:154-169: JSON body, ownership-wide invalidation, localized toast.",
+        "internal\\handler\\v1\\ownershipintel\\handler.go:112-117,223-240: registered PUT and service call.",
+        "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:117-124: submits current form with current selected vehicle; closes on success."
+      ],
+      "limitations": "No policy submitted; validation, persistence and currency acceptance unverified."
+    },
+    {
+      "hook": "useDeleteInsurancePolicy",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 172,
+      "endpoint": "DELETE /api/v1/insurance-telematics/policy/{id}",
+      "ownership": "Subject-scoped ownershipintel policy service; rate-limited handler write.",
+      "evidence": [
+        "internal\\handler\\v1\\ownershipintel\\handler.go:117,243-244: registered delete.",
+        "web\\src\\api\\hooks\\useOwnership.ts:172-184: invalidation and success/error toast.",
+        "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:87-99,547-557: destructive confirmation, per-policy pending indicator and inline failure."
+      ],
+      "limitations": "No delete, confirmation interaction or authorization exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "Indirect useVehicles dependency; endpoint not separately audited.",
+      "ownership": "Existing workspace URL/store/fleet selection owner.",
+      "evidence": [
+        "web\\src\\hooks\\useSelectedVehicle.ts:48-76: path/query/store/first-known-vehicle precedence.",
+        "web\\src\\lib\\workspaceScope.ts:156-168: assigned route has vehicle=true and range=false.",
+        "web\\src\\App.tsx:243,775: lazy import and SafeRoute mount."
+      ]
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "Existing PageContainer adapter; full-width min-w-0 container, existing header/action/query metadata slots."},
+    {"name": "OwnershipPanel", "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "line": 24, "contract": "Domain adapter of LayoutCard + SourceContent + useDataState; title/description/actions/source/sourceEnabled/empty/editing/preserveSummary. Seven direct page instances, one conditional editor, plus EvidencePanel's instance."},
+    {"name": "OwnershipBrief", "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx", "line": 24, "contract": "OperationalBrief/useOperationalMetrics adapter; typed metrics, source trust, scope, recorded window, unknown source freshness, client load timestamp and neutral missing-value tone. Four page instances, fifteen metrics."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 184, "contract": "Sole table pipeline; stable IDs, columns/keyExtractor, embedded variant, controlled sorting, exports and opt-in mobilePresentation. Two page instances."},
+    {"name": "ChartContainer", "owner": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx", "line": 703, "contract": "Consumed from charts barrel; title, ariaLabel, numeric data/table columns and responsive chart. Shared implementation not inspected."},
+    {"name": "EvidencePanel", "owner": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx", "line": 32, "contract": "Ownership provenance trailer; independent quality, evidence, limitations and explicitly unsupported computations."},
+    {"name": "MoneyInput", "owner": "web\\src\\features\\ownership\\components\\MoneyInput.tsx", "line": 21, "contract": "Minor-unit numeric Input, integer rounding, null blank and currency/locale display hint; does not convert stored money."},
+    {"name": "MutationError / VerdictBadge", "owner": "web\\src\\features\\ownership\\components\\index.ts", "line": 1, "contract": "Existing domain barrel; write-failure AlertBanner and semantic Badge mapping."},
+    {"name": "Button / Input / Select / Toggle / Text / ConfirmDialog", "owner": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx", "line": 27, "contract": "Existing UI barrel; preserve native form semantics, accessible labels, confirmation and pending state. Underlying primitive interactions not exercised."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23, "contract": "Existing motion preference; reduced initial=false, ignored delay and shared duration. No competing animation system."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 531,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Policy summary and evidence digest repeat hand-built rounded border/background shells; EvidencePanel source rows repeat the same fixed-white treatment.",
+      "fix": "Use existing semantic surface/border tokens; reuse a reviewed existing card primitive where useful rather than creating an InsuranceCard system.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:813", "web\\src\\features\\ownership\\components\\EvidencePanel.tsx:132"]
+    }
+  ],
+  "responsive": {
+    "verified": "Source only",
+    "positiveEvidence": [
+      "PageLayout.tsx:12 forwards full-width container; editor page:571 reflows one/two/three columns; policy row page:531 wraps; digest page:817 breaks long hashes.",
+      "EvidencePanel.tsx:58 uses a one-column to lg-three-column grid."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+        "line": 764,
+        "rule": "MDC-023/MDC-043 preservation",
+        "detail": "Both mobileColumns allow-lists suppress five of eight table columns below md. No mobilePresentation or expanded detail renderer is supplied. DataTable applies hidden md:table-cell to omitted keys; the source confirms information is hidden in the mobile table, not that it remains reachable elsewhere.",
+        "fix": "Adopt DataTable's existing mobilePresentation with all omitted fields in details, preserving underlying ordering, CSV values and stable IDs; alternatively retain complete accessible horizontal-scroll columns. Do not discard metadata.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:790", "web\\src\\components\\ui\\DataTable.tsx:184-188,715-725"],
+        "hiddenFactorFields": ["observed", "baseline", "weight", "direction", "samples"],
+        "hiddenLeverFields": ["rank", "target", "delta", "effort", "confidence"]
+      }
+    ],
+    "unverified": ["320/375/390/430/768/1024/1280/1440/1920/2560 viewports", "allocated-container behavior", "200% text", "RTL", "touch reachability", "overflow and chart label legibility"]
+  },
+  "accessibility": {
+    "positiveEvidence": [
+      "Page:304 localized analysis-window aria-label; page:706-709 localized chart name; page:711-717 accessible risk-score data columns.",
+      "Page:549,674,760,786 hides decorative icons; shared FadeIn:26-38 respects reduced motion at source level.",
+      "Page:570 uses form onSubmit and native required constraints via shared Input; page:841 retains ConfirmDialog."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+        "line": 561,
+        "rule": "MDC-040 form reachability",
+        "detail": "Editor is revealed inline well below the invoking Add/Edit button; no editor focus/scroll handoff or cancel return-focus code appears. This is a source-level potential discoverability gap, not a demonstrated keyboard failure.",
+        "fix": "Give the conditional editor an existing heading/form focus target and transfer focus on reveal, returning to the invoking action on cancel/success without adding an overlay engine.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:127-140,452-458,678"]
+      },
+      {
+        "file": "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+        "line": 66,
+        "rule": "MDC-044 localization",
+        "detail": "Risk grade and lever difficulty default to normalized raw vocabulary; EvidencePanel renders quality.status directly. These client-rendered statuses do not use translated display labels. Source narratives are backend data and must not be recased or rewritten.",
+        "fix": "Supply localized client-known labels through VerdictBadge.label or a single domain vocabulary mapping with raw-value fallback; translate quality display without altering wire values.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:269,340", "web\\src\\features\\ownership\\components\\EvidencePanel.tsx:71-72"]
+      }
+    ],
+    "unverified": ["keyboard order and focus restoration", "screen-reader announcements", "effective contrast", "forced colors", "modal open state", "target dimensions", "chart alternatives interaction"]
+  },
+  "states": {
+    "sourceEvidence": [
+      "OwnershipPanel.tsx:38-58 uses fatal-only errors, retained stale data, local empty content and loading skeleton/summary.",
+      "SourceContent.tsx:41-76 retains data with localized status and retry; fatal recovery is localized.",
+      "OwnershipBrief.tsx:35-80 distinguishes selection, unavailable, retained, loading, refreshing, not computed and returned source; unknown raw metrics get neutral tones.",
+      "Page:106-115 null-normalizes factor/lever/trend arrays; premium/policy absence has explanatory empty copy; pending writes and MutationError are retained."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+        "line": 44,
+        "rule": "MDC-026 offline/unknown trust",
+        "detail": "Initial paused query with no retained payload is not identified distinctly: the adapter checks source.isLoading but not dataState.isRefreshBlocked/isPending; it can route to domain empty/ready content. OwnershipBrief also groups paused initial work under generic loading/not-computed. Actual offline rendering is unexercised.",
+        "fix": "Extend the existing domain adapter's explicit unavailable/offline presentation using DataState.isRefreshBlocked; preserve placeholders, retry and retained payloads. Never fabricate exposure or policy values.",
+        "owner": "shared",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\api\\dataState.ts:186-212", "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx:42-46"]
+      }
+    ],
+    "unverified": ["initial loading", "initial failure", "refresh failure", "paused/offline", "no selected vehicle", "insufficient exposure", "null policy/premium", "empty arrays", "save/delete success and failure"]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 724,
+      "rule": "MDC-010/MDC-034 restrained chart palette",
+      "detail": "Risk curve and gradient hardcode bright #22d3ee, with 0.45 upper opacity; this bypasses current chart palette and user theme choices.",
+      "fix": "Use the existing chart palette/gradient contract and subdued fill, retaining the score series, numeric axis, tooltip and export/table data.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:725,736"]
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 531,
+      "rule": "MDC-010/MDC-011 theme-aware surfaces",
+      "detail": "Policy row and digest use fixed-white border/background rather than neutral semantic variables. Evidence rows repeat it in the shared domain trailer. Actual light-theme contrast not measured.",
+      "fix": "Replace with canonical semantic surface/border tokens, preserving complete policy metadata and full hash.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:813", "web\\src\\features\\ownership\\components\\EvidencePanel.tsx:132"]
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 206,
+      "rule": "MDC-013 typography roles",
+      "detail": "Contribution annotation uses raw text-xs; digest uses raw p/text-sm/font-mono; MoneyInput suffix repeats text-xs. Most page text already uses Text roles.",
+      "fix": "Reuse Text/Caption/Code roles with semantic element overrides and tabular/monospace behavior retained.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:817", "web\\src\\features\\ownership\\components\\MoneyInput.tsx:44"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 75,
+      "rule": "MDC-032 one workspace range owner",
+      "detail": "Page owns local 30/90/180/365-day analysis state and selector; assigned route is absent from RANGE_ENABLED_PATHS, so shell range is disabled. Hook/handler accept window_days only. This is not two simultaneously visible pickers, but it conflicts with shared dated-page range ownership.",
+      "fix": "Coordinate typed backend both-bound support and shared workspace registration before adopting useRangeState; retain window semantics and server calculations, no client-only slicing or fictional start/end endpoint.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:69,81,301-311", "web\\src\\lib\\workspaceScope.ts:22-76,166", "web\\src\\api\\hooks\\useOwnership.ts:146-151", "internal\\handler\\v1\\ownershipintel\\handler.go:209-215"]
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 117,
+      "rule": "MDC-032/MDC-046 preserve mutation subject scope",
+      "detail": "Form survives workspace vehicle changes, but submit attaches the current vehicleId. Editing vehicle A then selecting B can submit A's policy fields against B; no form/vehicle binding or reset effect appears. This is a source-backed risk, not an executed mutation.",
+      "fix": "Bind editor draft to the vehicle at open time and prevent unintended cross-vehicle writes; use the existing confirmation mechanism if discarding a dirty draft on scope changes.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:73-77,119-122,127-140"]
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 127,
+      "rule": "MDC-046 editor lifecycle",
+      "detail": "editPolicy updates fields only when a policy exists. After editing/removing a policy or changing vehicle to one without a policy, Add policy can reuse an old draft. Successful save closes without resetting it, and cancellation likewise leaves it intact.",
+      "fix": "Define explicit draft retention/reset rules per vehicle and new-versus-edit mode; initialize a new policy deliberately without altering established defaults or silently carrying another policy's fields.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:57-67,122,128-140,678"]
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 187,
+      "rule": "MDC-023 table interaction",
+      "detail": "Score/contribution/projected saving declare sortable=true, but neither DataTable instance supplies onSort, sortKey, sortDir or sortFn. Shared DataTable renders sort buttons only when onSort exists. Declared sorting is therefore not wired at this source snapshot.",
+      "fix": "Use existing controlled table sorting with explicit raw numeric accessors and stable source ordering as default; keys such as contribution/save do not equal wire fields.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:211,264,762-768,788-794", "web\\src\\components\\ui\\DataTable.tsx:1556-1574"]
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+      "line": 691,
+      "rule": "MDC-034 complete source explanation",
+      "detail": "Trend description promises rolling score and loss cost, while chart and accessible columns expose risk_score only. RiskTrendPoint has loss_cost_index, distance_m and drive_count. Do not assume another existing loss-cost series exists.",
+      "fix": "Resolve copy/data intent while preserving the current score trajectory; retain loss-cost metadata in an accessible table/detail if presenting it, without inventing an axis or measurements.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx:695,711-717,732-739", "web\\src\\types\\ownership.ts:101-107"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "sequence": ["Resolve vehicle-bound editor writes and draft lifecycle", "Preserve all mobile table information", "Coordinate shared workspace range and offline trust contracts", "Wire existing table sorting", "Apply restrained semantic surfaces/chart/typography and localized statuses"],
+    "reason": "Preservation and scope correctness take precedence over presentation-only modernization."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Ownership source offline trust",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "propsVariantsStates": "Keep current source/sourceEnabled/editing/preserveSummary API; explicitly present initial paused/offline using existing DataState.isRefreshBlocked and preserve retained data/retry.",
+      "usedBy": ["/ownership/insurance-telematics via seven direct panels and EvidencePanel"],
+      "dependsOn": ["web\\src\\api\\dataState.ts", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx"],
+      "evidence": "OwnershipPanel.tsx:38-58; dataState.ts:186-212.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "name": "Workspace insurance range integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Register assigned route only when useRangeState startInstant/endInstantExclusive flow through typed hook and actual backend filtering; preserve current rolling-day behavior and recorded bounds.",
+      "usedBy": ["/ownership/insurance-telematics"],
+      "dependsOn": ["web\\src\\api\\hooks\\useOwnership.ts:146-151", "internal\\handler\\v1\\ownershipintel\\handler.go:197-220", "existing workspace range owner; service/repository range support not inspected"],
+      "evidence": "Page:75,301-311; workspaceScope.ts:22-76,156-168.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Ownership status labels and provenance surfaces",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+      "propsVariantsStates": "Retain value/label/dot and severity meanings, add localized known display labels with raw fallback; EvidencePanel keeps all quality/evidence/unsupported content and uses existing neutral surface tokens.",
+      "usedBy": ["/ownership/insurance-telematics risk grade and improvement difficulty", "/ownership/insurance-telematics EvidencePanel quality/source rows"],
+      "dependsOn": ["existing localization/catalog owner", "web\\src\\features\\ownership\\components\\EvidencePanel.tsx", "existing Badge and semantic tokens"],
+      "evidence": "VerdictBadge.tsx:63-70; EvidencePanel.tsx:71-72,132.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx", "line": 301, "detail": "Local analysis-window owner competes conceptually with shared workspace scope; currently the header range is disabled on this route, so no duplicate visible picker was proven.", "resolution": "Coordinate one existing workspace owner after real backend support."},
+    {"file": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx", "line": 531, "detail": "Hand-built surface shells duplicate tokenized surfaces; no replacement primitive/library exists in this page.", "resolution": "Reuse neutral tokens and existing primitives, not a new page-specific card framework."}
+  ],
+  "preservation": {
+    "sourceHash": "552159CA9075E4648ECDBC629FBC6003312983A02E2A493A48C2243BBF10D826",
+    "hashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+    "currentLineCount": 845,
+    "sections": [
+      {"name": "Modelled, not quoted disclaimer", "line": 313},
+      {"name": "Underwriting position", "line": 326},
+      {"name": "Premium simulation and stored policy", "line": 439},
+      {"name": "Policy baseline editor (conditional)", "line": 562},
+      {"name": "Risk trajectory", "line": 689},
+      {"name": "Factor decomposition", "line": 747},
+      {"name": "Ranked improvement levers", "line": 773},
+      {"name": "Insurer evidence packet", "line": 799},
+      {"name": "Evidence, quality, and limitations trailer", "line": 825}
+    ],
+    "counts": {"directOwnershipPanels": 7, "alwaysPresentDirectOwnershipPanels": 6, "conditionalEditorPanels": 1, "evidencePanels": 1, "panelShellsWithEditor": 8, "ownershipBriefs": 4, "briefMetrics": 15, "dataTables": 2, "factorColumns": 8, "leverColumns": 8, "chartContainers": 1, "disclaimerBanners": 1, "glassPanelsInPage": 0},
+    "metricInventory": [
+      "risk_score", "frequency_index", "severity_index", "loss_cost_index",
+      "exposure_distance_m with drive_count", "exposure_duration_s", "night_distance_m with percentage context", "peer_percentile with own-history explanation",
+      "baseline_premium_minor", "modelled_premium_minor", "delta_minor with delta_pct", "applied_discount_pct with max_discount_pct",
+      "expected_loss_minor", "deductible_minor", "cost_per_distance_minor_per_m displayed per fixed 1000 m"
+    ],
+    "actions": [
+      "Change analysis window among 30/90/180/365 days; default 90",
+      "Use shared header vehicle selection and URL vehicle_id",
+      "Open Add/Edit policy baseline",
+      "Edit insurer/reference/currency/premium/deductible/discount/start/end/enrollment",
+      "Save via PUT, close on success and invalidate ownership queries",
+      "Cancel conditional form",
+      "Confirm policy removal via DELETE, show per-policy pending and mutation errors",
+      "Retry failed/retained source using existing shared recovery",
+      "Retain shared chart/table accessible data and export pipelines, stable table IDs and persistence"
+    ],
+    "defaults": {"currency": "USD", "annualPremiumMinor": 120000, "deductibleMinor": 50000, "coverageStart": "module-load current ISO instant", "coverageEnd": null, "telematicsProgram": true, "maxDiscountPct": 30},
+    "dataBehavior": [
+      "Keep SI distance meters and duration seconds in response/cache; useUnits converts display only.",
+      "Keep ISO currency minor units on wire/form; locale currency display does not change saved amounts.",
+      "Preserve fixed 1000 m rate explanation, not an undocumented unit-preference rewrite.",
+      "Preserve no-binding-quote, no-carrier-acceptance/regulatory-approval and no-actual-claims limitations.",
+      "Keep exact evidence packet hash and all evidence narratives, quality reasons, counts, coverage and observation windows.",
+      "Keep null premium/policy/arrays distinct from valid zero measurements; do not fabricate samples or exposure.",
+      "Keep source query key, positive-ID enablement, cancellation, mutation invalidation and toast/error behavior.",
+      "Preserve date helper's existing UTC date round-trip; coverage dates are independent business dates, not workspace selectors.",
+      "Retain stable ownership-insurance-factors and ownership-insurance-levers table IDs and risk score chart semantics."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 source-only read-only audit; not implementation acceptance",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibilityRuntime": "unverified",
+    "responsiveRuntime": "unverified",
+    "backend": "Route mounting and handler delegation inspected; engine, database and authorization runtime not inspected or exercised.",
+    "checks": [
+      {"command": "Get-FileHash -Algorithm SHA256 -LiteralPath 'web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx'; (Get-Content -LiteralPath 'web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx').Count", "exitCode": 0, "output": "SHA256 552159CA9075E4648ECDBC629FBC6003312983A02E2A493A48C2243BBF10D826; line count 845"},
+      {"command": "Scoped rg source scans for styles, prohibited raw controls/library imports, neon, palette/surfaces and section tags", "exitCode": 0, "output": "One dynamic contribution-width inline style at page:203 (allowed computed value); three hardcoded chart color occurrences at 724/725/736; two fixed-white surface wrappers at 531/813; seven OwnershipPanel, four OwnershipBrief, two DataTable, one ChartContainer and one EvidencePanel tags. No prohibited raw button/input/textarea/select/table, direct recharts/react-leaflet/framer-motion import or text-neon match in this page. This narrow scan is not a full violations pass."},
+      {"command": "audit.sh / TypeScript / full lint / build / tests / browser", "exitCode": null, "output": "NOT RUN: assignment forbids full lint/build and runtime mutations; audit.sh would invoke whole-project TypeScript. No validation baton requested or application interaction performed."}
+    ],
+    "historicalAcceptanceBorrowed": false,
+    "writeScope": ["docs\\frontend-audits\\audit-page-157.json", ".agent-status\\audit-page-157.txt"],
+    "sourceEdits": [],
+    "sharedEdits": [],
+    "queueEdits": [],
+    "gitOperations": [],
+    "applicationsSubmitted": false
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\InsuranceTelematicsPage.tsx",
+    "web\\src\\features\\ownership\\components\\index.ts",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\VerdictBadge.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}
