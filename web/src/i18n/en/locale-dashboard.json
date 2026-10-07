@@ -913,7 +913,12 @@
       "scheduleUnavailable": "Charging schedule unavailable",
       "vehicleUnavailable": "Vehicle charging state unavailable",
       "scheduleRetained": "Previously loaded charging schedule remains visible while this source recovers.",
-      "vehicleRetained": "Previously loaded vehicle charging state remains visible while this source recovers."
+      "vehicleRetained": "Previously loaded vehicle charging state remains visible while this source recovers.",
+      "currentLevelDescription": "Returned battery percentage; a measured zero is not a missing reading.",
+      "actualStatusDescription": "Actual charging state from the vehicle snapshot, not the scheduled mode or pending flag; an absent boolean remains unknown.",
+      "contextTitle": "Returned vehicle charging context",
+      "contextDescription": "Battery level and actual charging state use the independently loaded vehicle snapshot; they do not establish schedule-source freshness.",
+      "contextScope": "Vehicle {{id}} · returned state snapshot; scheduled times, mode, pending status and target limit belong to the separate live-schedule source."
     },
     "chargingSessionDetail": {
       "chartAria": "Charging power and battery state of charge over the latest session",
@@ -970,7 +975,12 @@
       "off": "Off",
       "noSeatHeat": "No seat heaters active",
       "defrost": "Defrost",
-      "batHeater": "Bat heater"
+      "batHeater": "Bat heater",
+      "summaryScope": "Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.",
+      "fanLevelDescription": "Reported fan level, not a velocity measurement.",
+      "wheelLevelDescription": "Reported wheel-heater level on the 0–3 scale; zero means Off.",
+      "summaryTitle": "Returned climate control readings",
+      "summaryDescription": "Cabin and outside temperatures are independent SI measurements converted only for display. Fan and wheel-heater levels are not speeds; HVAC and heater statuses remain separate."
     },
     "climateHistory": {
       "cabin": "Cabin",
@@ -1413,7 +1423,13 @@
       "gearState": "Gear state",
       "lateralG": "Lateral G",
       "longitudinalG": "Longitudinal G",
-      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})",
+      "statorSource": "Returned stator temperature in °C, falling back to the front motor temperature only when absent.",
+      "gearSource": "Reported gear, falling back to shift state; an absent source remains unknown.",
+      "extensionUnitLimitation": "Extension-field units are not established by the source contract. The existing g presentation is retained without rescaling; it is not verified SI acceleration.",
+      "summaryTitle": "Returned motor readouts",
+      "summaryDescription": "Temperature, categorical gear and two extension readings retain independent raw operands. Signed torque and its asymmetric regen/drive scale remain above.",
+      "summaryScope": "Vehicle {{id}} · returned motor snapshot; continuous recording coverage and extension-field units are not established."
     },
     "mqtt": {
       "title": "MQTT status",
@@ -1729,7 +1745,12 @@
       "noDatabaseData": "No database size data",
       "databaseError": "Unable to load database size",
       "noPoolData": "No connection pool data",
-      "poolError": "Unable to load connection pool data"
+      "poolError": "Unable to load connection pool data",
+      "activeConnsDescription": "Connections in use in the returned pool snapshot; a maximum is shown only when the source supplies a positive value.",
+      "goroutinesDescription": "Goroutines in the returned runtime snapshot; an absent reading remains unknown.",
+      "poolSummaryTitle": "Connection pool snapshot",
+      "poolSummaryDescription": "Pool and runtime counts retain their own source state independently of service health and database statistics. Memory and database size remain separate source references.",
+      "poolSummaryScope": "Returned pool/runtime snapshot only; no historical window or verified-live coverage is inferred"
     },
     "telemetryErrors": {
       "unknown": "Unknown",
@@ -1783,7 +1804,12 @@
       "allOk": "All OK",
       "dbSize": "DB size",
       "tables": "Tables",
-      "noData": "No system health data"
+      "noData": "No system health data",
+      "dbSizeSource": "Database size text returned by the server, preserved verbatim; no byte count is supplied.",
+      "tablesSource": "Database table count returned by the system-health snapshot; not a fleet-history record count.",
+      "summaryTitle": "Database snapshot",
+      "summaryDescription": "Database size and table count describe the returned system-health snapshot, separate from the four service-status records.",
+      "summaryScope": "Server-returned system-health snapshot · no vehicle or date-range filter; not complete fleet history."
     },
     "vampireDrain": {
       "min": "m",
@@ -1963,7 +1989,34 @@
     "summaryEyebrow": "Dashboard source summary",
     "climateSummaryTitle": "Returned climate temperatures",
     "climateSummaryDescription": "Cabin and outside temperatures remain separate SI measurements, converted only for display; HVAC, defrost and heater states remain below.",
-    "climateSummaryScope": "Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established."
+    "climateSummaryScope": "Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.",
+    "chargeStatusBatteryDescription": "Returned battery percentage; a measured zero is not a missing reading.",
+    "chargeStatusPowerDescription": "Returned charger power in the established kW API contract; no additional scaling is applied.",
+    "chargeStatusRateDescription": "Meters of range added per hour, converted to the distance preference; this is not vehicle speed.",
+    "chargeStatusTimeDescription": "The existing hours display is retained; the wire unit is not independently established. Negative estimates remain unknown.",
+    "chargeStatusRangeDescription": "Returned rated range in meters, converted only to the distance preference.",
+    "chargeStatusSummaryScope": "Vehicle {{id}} · returned state snapshot; not a completed charging session or continuous recording.",
+    "chargeStatusChargingSummaryTitle": "Returned charging readings",
+    "chargeStatusChargingSummaryDescription": "Power, range-addition rate, battery and time estimate remain separate source readings; missing values are not zero.",
+    "chargeStatusIdleSummaryTitle": "Returned battery and range",
+    "chargeStatusIdleSummaryDescription": "Battery and rated range remain visible for both idle and unknown charging status; the status badge does not establish source freshness.",
+    "rangeBarBrief": {
+      "distanceSource": "Secondary vehicle range reading in source meters, distinct from the preferred primary range.",
+      "varianceSource": "Ideal minus rated range, divided by rated range; shown only when both source readings are positive.",
+      "title": "Range comparison",
+      "description": "The secondary range and optional EPA variance retain the vehicle snapshot source; the primary range preference is unchanged.",
+      "scope": "Vehicle {{id}} · range snapshot; exact observation bounds and recording completeness are not supplied."
+    },
+    "rangeEstimate": {
+      "idealSource": "Returned ideal-range estimate in meters; not measured achievable distance.",
+      "summaryTitle": "Ideal-range reference",
+      "summaryDescription": "The ideal-range estimate is a separate reference from the rated-range hero; neither estimate measures achievable driving distance or a fleet aggregate.",
+      "summaryScope": "Vehicle {{id}} · returned state snapshot; observation bounds and recording completeness are not supplied."
+    },
+    "watchMeasurementsTitle": "Returned watch measurements",
+    "watchMeasurementsDescription": "Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate.",
+    "watchMeasurementsScope": "Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage.",
+    "watchDefaultVehicle": "default"
   },
   "widgets": {
     "gridFootprint": "{{cols}}×{{rows}} grid",
