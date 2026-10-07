@@ -1,0 +1,314 @@
+{
+  "item": "audit-page-017",
+  "page": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+  "routes": ["/admin/ingest-xray"],
+  "purpose": "Per-vehicle operator diagnostics for recent signal_log ingest volume, field activity, sample buckets and last-seen field metadata.",
+  "primaryGoal": "Select a vehicle, rolling observation window and bucket size; determine which fields are arriving, inspect sample volume and identify fields that have stopped arriving.",
+  "dataSources": [
+    {
+      "hook": "useIngestXRay",
+      "file": "web\\src\\api\\hooks\\useIngestXRay.ts",
+      "line": 56,
+      "endpoint": "GET /api/v1/system/ingest-xray/{vehicleID}?window={window}&bucket={bucket}&limit=100",
+      "sourceOwner": "internal\\api\\ingestxray\\handler.go; internal\\database\\observability\\ingest_xray_repo.go",
+      "routeEvidence": "internal\\api\\router.go:3167,4352,4499-4501",
+      "behavior": "Positive integer vehicle gate; query key includes vehicle/window/bucket/limit; defaults 1h/1m; AbortSignal forwarded; REALTIME stale time, FAST polling, no background-tab polling, retry 1. Page explicitly caps fields at 100; bucket results are not capped by this parameter.",
+      "wireEvidence": "internal\\api\\ingestxray\\handler.go:50-62,125-175; internal\\database\\observability\\ingest_xray_repo.go:33-45,67-78,125-134",
+      "wireFields": ["vehicle_id", "now", "window_start", "window", "bucket", "last_seen_at (optional)", "freshness_seconds (optional)", "total_samples", "fields[].field", "fields[].sample_count", "fields[].last_seen_at", "fields[].value_kind", "buckets[].bucket_start", "buckets[].count"],
+      "limits": "Frontend expects generated_at and unique_fields that the current handler does not emit. Handler total_samples is summed from limited FieldStats rows, not an independent full-window aggregate. Bucket SQL includes ts >= lower bound but no upper bound or gap-fill. Database execution and deployed payload remain unverified."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts:73-77; internal\\api\\router.go:3320",
+      "behavior": "Selection precedence URL/path, persisted store, first fleet vehicle; setter updates URL vehicle_id and persisted selection. Vehicles normalize to an array. Query loading/error information is not returned by this selector hook.",
+      "limits": "Vehicle list failure cannot be distinguished from empty/loading fleet by this page."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "kind": "layout", "props": "title, subtitle, contextActions, query, dataSources, children; PageContainer also offers busy and secondaryActions", "evidence": "web\\src\\components\\layout\\PageContainer.tsx:51-139; page:107-120"},
+    {"name": "XRayControls / Select", "owner": "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx", "line": 66, "kind": "domain controls", "props": "vehicles, vehicleId, windowSel, bucketSel, onVehicleChange, onWindowChange, onBucketChange", "sharedOwner": "web\\src\\components\\ui\\Select.tsx:12-39"},
+    {"name": "IngestOperationalBrief / OperationalBrief", "owner": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx", "line": 20, "kind": "domain operational summary", "props": "data, windowSel, bucketSel, loading, retained, enabled, error", "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx:43-63", "dependencies": ["useOperationalMetrics", "ingestMetrics", "briefSourceStatus", "useDateFormat", "useNumberFormatting"]},
+    {"name": "XRayBucketChart / ChartContainer", "owner": "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx", "line": 40, "kind": "chart", "props": "buckets, loading; shared title/subtitle/ariaLabel/data/dataColumns/exportData/exportFilename/fullscreen", "sharedOwner": "web\\src\\components\\charts\\ChartContainer.tsx:78-149"},
+    {"name": "XRayTopFields / MetricBar", "owner": "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx", "line": 30, "kind": "ranked domain list", "props": "rows, loading, error, onRetry, limit=8; MetricBar label/value/max/color/sublabel", "sharedOwner": "web\\src\\components\\data-display\\MetricBar.tsx:8-29"},
+    {"name": "XRayFieldsTable / DataTable", "owner": "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx", "line": 42, "kind": "table", "props": "rows, loading; tableId admin:xray-fields, columns, data, sortKey/sortDir/onSort, enableValueFilters, pagination, mobileColumns", "sharedOwner": "web\\src\\components\\ui\\DataTable.tsx:184-248,714-725"},
+    {"name": "GlassPanel, LayoutCard, Button, AlertBanner, QueryError, SectionErrorBoundary, FadeIn", "owner": "existing category barrels @/components/ui, @/components/layout, @/components/feedback, @/components/motion", "line": 25, "kind": "existing primitives and composites", "evidence": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx:25-32,95-102,122-191", "limits": "Internal implementations other than listed inspected owners were not audited."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+      "line": 158,
+      "rule": "MDC-026 / mission 24 error recovery",
+      "detail": "One fatal source failure produces chart, top-field and table retry surfaces, in addition to the page-level source notice. Those retries all refetch the same query.",
+      "fix": "Keep every section mounted and source-specific fallback, but review whether the existing named-source notice can own a single prominent recovery action. Do not remove retries until equivalent keyboard/mobile reachability is verified.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "page:85 actions wrap and occupy full width on small screens",
+      "XRayControls.tsx:145-172 vehicle selector full row, window/bucket flex with 7rem minima; sm widths 52/32/32",
+      "page:154-168 hero stacks until xl, then chart spans two of three columns",
+      "OperationalBrief.tsx:165-170 compact metrics one column, sm two, md three, 1920px six",
+      "XRayBucketChart.tsx:100,109 fixed 300px chart and container heights"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx",
+        "line": 134,
+        "rule": "MDC-023 / MDC-043 no mobile information loss",
+        "detail": "mobileColumns excludes value_kind and the page provides no expandable details or mobilePresentation. DataTable applies hidden md:table-cell to excluded columns at lines 714-725; therefore the Kind column is source-confirmed hidden below md.",
+        "fix": "Reuse DataTable mobilePresentation with a complete detail view including Kind, or retain all four columns with the existing semantic overflow strategy. Preserve filtering, sorting, pagination, tableId and column persistence.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "viewportAcceptance": "unverified",
+    "widthsRequired": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "risksToExercise": ["320px toolbar plus refresh wrapping", "long vehicle and field labels", "RTL", "200% text", "table detail and filter reachability", "fullscreen chart", "actual container widths"]
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "page:99 refresh action has a localized aria-label; icon hidden at line 101",
+      "XRayControls.tsx:151,160,169 selectors have localized accessible names",
+      "page:153 hero section has a localized aria-label and four named SectionErrorBoundary wrappers",
+      "XRayBucketChart.tsx:69-82,94-107 supplies localized chart label and formatted fallback data columns",
+      "MetricBar.tsx:59-66 provides named progressbar semantics and unknown-reading text",
+      "OperationalBrief.tsx:117,153-160,239-245 supplies labelled summary, Review details and Drawer"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx",
+        "line": 147,
+        "rule": "MDC-040 mobile targets / MDC-021 explicit control context",
+        "detail": "All Select calls omit size and visible label. Shared Select defaults md, min-h-10 (40px), below the stronger 44px target default. Window/bucket are named to assistive technology but visually displayed only as terse duration values.",
+        "fix": "Use existing Select size/label/hint APIs for a clear visible Window/Bucket distinction and target reachability; consider size=lg or documented spacing exception without changing global control defaults.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotion": "unverified; shared MetricBar source explicitly consumes useMotionPreference, other motion internals not inspected"
+  },
+  "states": {
+    "initial": "Summary uses deriveDataState initial status; chart/top-fields/table receive isLoading. All sections remain mounted.",
+    "noVehicle": "Info banner prompts selection; refresh disabled and ingest hook gated. Vehicle selector hook commonly auto-selects the first vehicle. Summary identifies no selection instead of fabricating measurements.",
+    "empty": "ChartContainer gets empty, ranked list gets EmptyState, table gets helpful widen-window message; summary peak/mean are zero only for supplied validated empty buckets.",
+    "fatalError": "deriveDataState.fatalError replaces chart/table contents with QueryError and gives top-fields its error; summary marks Read failed.",
+    "retainedRefreshFailure": "Fatal-only gating retains chart/table/top-fields; summary receives retained=true; PageLayout query/dataSources can show freshness/source degradation.",
+    "offlinePaused": "deriveDataState supports isRefreshBlocked, but operational summary's status adapter only receives retained=isError && hasData, so a paused source can still be labelled Source loaded. Header owner receives original query; browser behavior unverified.",
+    "disabled": "Refresh disabled without vehicle or during fetching; bucket options >= window disabled; narrowing window clamps bucket to largest valid smaller duration.",
+    "sectionFailure": "Four separate SectionErrorBoundary wrappers isolate KPI, chart, ranked-list and table renderer failures.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+        "line": 141,
+        "rule": "MDC-026 asynchronous trust",
+        "detail": "Summary retained flag checks xray.isError instead of source.status/isRefreshBlocked. briefSourceStatus.ts:14-19 labels any hasData result Source loaded when not failed/retained/loading, including paused/stale data.",
+        "fix": "Pass the existing DataState status/blocked semantics into the domain summary adapter and distinguish paused, stale, failed-refresh and unavailable readings. Keep cached measurements and shared PageLayout freshness owner.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "line": 50,
+        "rule": "MDC-026 independent source states",
+        "detail": "Vehicle query is hidden behind a selector returning only records and selection; page dataSources names only ingest-xray. An unavailable initial fleet may look like no vehicle selected, with no fleet retry.",
+        "fix": "Extend the existing selector result or reuse an agreed source descriptor to expose vehicle-list query state, then add it to PageLayout.dataSources with independent retry and honest empty/loading/error messaging.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx",
+      "line": 98,
+      "rule": "MDC-010 / mission 43 no rainbow decoration",
+      "detail": "Rank index cycles through CHART_COLORS despite one semantic measurement. MetricBar defaults fill=gradient (MetricBar.tsx:46), adding a second decorative intensity layer. Title icon is fixed text-cyan-300 at line 62.",
+      "fix": "Keep rankings and count/max values; use one restrained existing theme/series token and MetricBar fill=solid. Use a neutral/themed semantic icon token rather than unrelated fixed accent.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx",
+      "line": 131,
+      "rule": "MDC-010 / MDC-011 theme-aware surfaces",
+      "detail": "Tooltip cursor uses fixed white RGBA rather than an existing semantic surface/hover token. Its actual visibility in light mode and effective contrast are not measured.",
+      "fix": "Reuse the chart owner palette/token for cursor hover without changing data bars, saved chart colors or tooltip meaning.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\types\\admin-diagnostics.ts",
+      "line": 254,
+      "rule": "MDC-045 / mission 33 typed wire contract",
+      "detail": "Frontend IngestXRayResponse requires generated_at and unique_fields. Current routed handler response at internal\\api\\ingestxray\\handler.go:50-62 emits now/window_start and optional last_seen_at/freshness_seconds instead, with no generated_at/unique_fields. IngestOperationalBrief.tsx:31,43-46 claims exact bounds are not supplied and conditionally omits freshness; ingestMetrics.ts:29 expects unique_fields.",
+      "fix": "Reconcile the typed hook and domain adapter with the actual routed payload, displaying supplied bounds and freshness. Determine a truthful full distinct-field contract instead of silently deriving all fields from a capped list. Preserve raw response metadata and unknown semantics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\api\\ingestxray\\handler.go",
+      "line": 146,
+      "rule": "MDC-045 / no invented aggregate meaning",
+      "detail": "Handler sums total_samples over already-limited fields; page requests limit=100 and labels this Total samples within selected window (ingestMetrics.ts:26-28). Bucket query covers all fields, so summary count can disagree with chart counts when more than 100 fields occur. value_kind is MAX(value_kind) over the interval, not necessarily the last sample's kind (repo:72).",
+      "fix": "Integration owner must clarify/preserve server aggregate scope, expose truthful truncation/full totals before claiming full-window count, and retain value_kind semantics. Do not change calculations or guess full counts in a presentation-only rewrite.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx",
+      "line": 86,
+      "rule": "MDC-026 unknown is not zero",
+      "detail": "safeNumber coerces missing/nonfinite/malformed sample_count to zero for ranking, bar and readout. Shared MetricBar already accepts null/undefined and exposes an unknown reading. Typed normal payload is numeric, but the defensive branch changes uncertainty into a measurement.",
+      "fix": "Preserve malformed counts as unavailable and pass null to the existing MetricBar; derive rank/max only from valid readings and keep an em dash readout without fabricated zeros.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Reconcile wire metadata and aggregate scope", "Preserve complete mobile Kind detail", "Expose independent fleet and paused/stale trust states", "Reduce ranked-list and hover decoration", "Exercise runtime accessibility and ten widths"],
+    "reason": "Already largely composed from canonical shared owners. The strongest gaps are wire-contract/trust and mobile information preservation, not a need for wholesale page redesign."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "SelectedVehicleResult source-state exposure",
+      "existingOwnerFile": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "propsVariantsStates": "Keep vehicleId/vehicle/vehicles/setVehicleId unchanged; expose existing fleet query or typed source descriptor containing loading, retained payload, fatal/refresh error, paused state and retry.",
+      "usedBy": ["IngestXRayPage vehicle toolbar and source notice"],
+      "dependsOn": ["useVehicles existing query", "DataState", "PageContainer.dataSources", "selector consumers compatibility review"],
+      "owner": "shared",
+      "rationale": "Current selector drops the independent fleet source state; no new selector/store/query library is needed."
+    },
+    {
+      "name": "Ingest X-Ray wire metadata and full-range aggregate reconciliation",
+      "existingOwnerFile": "internal\\api\\ingestxray\\handler.go",
+      "propsVariantsStates": "Use typed now/window_start/last_seen_at/freshness_seconds; resolve absent generated_at/unique_fields; explicit full versus capped total scope and unknown distinct count. Domain summary adapter must render existing server freshness/bounds without inventing zeros.",
+      "usedBy": ["useIngestXRay", "IngestOperationalBrief", "ingestMetrics", "XRayFieldsTable"],
+      "dependsOn": ["internal\\database\\observability\\ingest_xray_repo.go", "web\\src\\types\\admin-diagnostics.ts", "web\\src\\api\\hooks\\useIngestXRay.ts", "existing request normalization", "backend/source-contract tests"],
+      "owner": "integration",
+      "rationale": "Current frontend schema and claims do not match the registered handler. Existing shared OperationalBrief accepts scope/freshness/narrative; no replacement composite required."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\components\\ingest-xray\\XRayHeader.tsx",
+      "line": 51,
+      "rule": "MDC-002 one existing architecture",
+      "detail": "Barrel still exports the older six-MetricCard KPI renderer, but this page imports IngestOperationalBrief instead. Both duplicate window/bucket labels and peak/mean logic. Page comment at lines 10 and 81 still names the former KPI owner.",
+      "fix": "Do not re-adopt the old header; keep OperationalBrief/useOperationalMetrics canonical. Integration owner should check other consumers before retiring the old export; page comments can be corrected in a later owned implementation.",
+      "owner": "integration",
+      "confidence": "high",
+      "limits": "No repository-wide consumer scan was performed; unused globally is not claimed."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "a9553faafb570e4b9bd05a63f432ace6a890fac013a5f863795e62addec01570",
+    "hashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 195,
+    "sourceSnapshot": "Current live source read during this audit; no historical baseline comparison or source edits.",
+    "sectionCount": 4,
+    "sectionNames": ["Operational summary", "Samples per bucket chart", "Top fields by volume", "Field statistics"],
+    "additionalRegions": ["Page header with scope controls and refresh", "Conditional no-vehicle info banner", "Operational summary details drawer", "Shared freshness/source notices", "Chart fullscreen and accessible data/export surfaces"],
+    "sectionEvidence": ["page:135-148", "page:157-166", "page:169-177", "page:181-191"],
+    "metricCount": 6,
+    "metrics": ["total_samples", "unique_fields (frontend assumption, absent from routed handler)", "peak of validated supplied bucket counts", "mean of validated supplied bucket counts", "selected window label", "selected bucket label"],
+    "fieldColumns": ["field", "sample_count", "last_seen_at", "value_kind"],
+    "actions": [
+      "Select vehicle; preserve URL/store synchronization and selection precedence",
+      "Select 5m/15m/1h/6h/24h observation window",
+      "Select 30s/1m/5m/15m/1h bucket; disable incompatible values and clamp on narrower window",
+      "Manual refresh and fatal-error retries; disabled during fetching/no vehicle",
+      "Open and close operational Review details drawer with scope, provenance, limitations and all six metrics",
+      "Shared chart PNG/SVG/copy-image/CSV export surfaces and fullscreen; supplied raw bucket/count export data and localized fallback table",
+      "Sort field/sample_count/last_seen_at/value_kind, initial count descending",
+      "Use DataTable value filters, existing column layout/persistence and pagination 25/50/100, initial 50",
+      "Read relative last-seen times and human-readable kind values including unknown enum fallback"
+    ],
+    "dataBehavior": [
+      "One ingest source powers summary/chart/ranked fields/table; no extra ranked-list request",
+      "Keep null-safe arrays, fatal-only section replacement and cached results after failed refresh",
+      "Keep default 1h/1m, limit=100, positive-vehicle gate, stable query key, abort signal, retry 1 and hidden-tab polling pause",
+      "Top fields sort descending, limit eight, maximum scale floors at one",
+      "Missing or invalid timestamps sort deterministically as oldest; missing labels use em dash",
+      "Table identity admin:xray-fields and export filename ingest-xray-buckets remain stable",
+      "Keep date/number locale formatting and existing display preferences; no wire/cache unit conversion",
+      "Local vehicle selector is legitimate: workspaceScope.ts:87-101 disables shell vehicle selection for /admin; do not drop required local selection.",
+      "Ingest window is currently a constrained diagnostic rolling duration, not a shared workspace absolute range. /admin/ingest-xray is absent from RANGE_ENABLED_PATHS. Do not silently substitute header dates: integration requires actual server bounds support."
+    ],
+    "lineCounts": {
+      "page": 195,
+      "mountedFeatureComponents": {"XRayControls": 174, "XRayBucketChart": 144, "XRayFieldsTable": 137, "XRayTopFields": 108, "IngestOperationalBrief": 61},
+      "mountedPagePlusComponents": 819,
+      "unmountedXRayHeader": 123,
+      "limits": "No source reduction performed. Helper derivations also remain in ingestMetrics and briefSourceStatus; current counts are a preservation inventory, not runtime parity."
+    },
+    "structuralCounts": {"pageGlassPanelJSX": 1, "pageLayoutCardJSX": 1, "mountedChartContainerJSX": 1, "topFieldsGlassPanelJSX": 1, "sectionErrorBoundaries": 4, "fadeInWrappers": 3},
+    "countNote": "The raw pattern scanner reported two ChartContainer text matches in XRayBucketChart because its doc comment contains JSX-like text; actual rendered JSX count is one."
+  },
+  "evidenceLimits": {
+    "auditType": "Phase0 read-only source inspection; wrote only assigned report and heartbeat",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendExecution": "unverified; current handler/repo SQL source inspected, no request or database query executed",
+    "tests": "not run; assignment forbids full build/lint and no validation baton was supplied",
+    "typescript": "not run; project-wide compilation not authorized for this atomic audit",
+    "skillAuditScript": "Read but not executed because it unconditionally runs project-wide TypeScript; used bounded read-only pattern scan instead",
+    "staticScan": {
+      "command": "Python pathlib/re scan of assigned page, five ingest-xray TSX renderers including unmounted XRayHeader, and IngestOperationalBrief; SHA256 via hashlib of page.read_bytes()",
+      "exitCode": 0,
+      "rawOutput": ["staticInline 0 []", "rawControls 0 []", "directLibraries 0 []", "oldAPI 0 []", "neon 0 []", "fixedWhite 1 ['web\\\\src\\\\features\\\\admin\\\\components\\\\ingest-xray\\\\XRayBucketChart.tsx:131']", "sourceHash a9553faafb570e4b9bd05a63f432ace6a890fac013a5f863795e62addec01570"],
+      "scopeLimit": "These are narrow regex match counts, not all-quality or runtime acceptance. Earlier PowerShell scan attempt failed with ParserError before scanning; successful Python retry supplied the reported counts."
+    },
+    "unknowns": ["Actual mounted production behavior", "Long-label clipping and mobile detail reachability", "Effective light/dark/custom-theme contrast", "Shared chart export and drawer keyboard behavior", "Fleet source failure/offline state composition", "Global consumers of older XRayHeader", "Database performance and deployed schema"],
+    "missingHistoricalPath": "Hook comment names internal\\api\\ingest_xray_handler.go; that path does not exist. Actual router imports internal\\api\\ingestxray and was followed to handler.go."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md (sections 0,1,15,33,43,44)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\IngestXRayPage.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayControls.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayBucketChart.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayFieldsTable.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayTopFields.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\XRayHeader.tsx",
+    "web\\src\\features\\admin\\components\\ingest-xray\\index.ts",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\IngestOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\ingestMetrics.ts",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts",
+    "web\\src\\api\\hooks\\useIngestXRay.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts (targeted source search)",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\types\\admin-diagnostics.ts (X-Ray types)",
+    "web\\src\\api\\dataState.ts (targeted source search)",
+    "web\\src\\api\\client.ts (targeted source search)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx (route/lazy import search)",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx (lines 1-210)",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx (lines 1-260)",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx (targeted search and mobile allow-list)",
+    "web\\src\\components\\charts\\ChartContainer.tsx (lines 1-150)",
+    "internal\\api\\router.go (targeted route search and X-Ray registration)",
+    "internal\\api\\ingestxray\\handler.go",
+    "internal\\database\\observability\\ingest_xray_repo.go"
+  ]
+}
