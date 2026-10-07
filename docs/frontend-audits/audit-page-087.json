@@ -1,0 +1,687 @@
+{
+  "item": "audit-page-087",
+  "page": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+  "routes": [
+    "/powershare"
+  ],
+  "purpose": "Vehicle-scoped Powershare recorded telemetry cockpit.",
+  "primaryGoal": "Inspect sharing status/destination, output power, estimated remaining runtime, last stop reason and the latest observation timestamps.",
+  "identity": {
+    "phase": 0,
+    "mode": "READ-ONLY source audit",
+    "root": "F:\\github\\TeslaSync",
+    "routeEvidence": "web\\src\\App.tsx:61,813 lazy-loads PowersharePage inside SafeRoute.",
+    "sourceSha256": "E887B9A0460BD599F5FD8635D9457510881F684C20F2DEC4E55EA4B9D77DF0A8",
+    "runtime": "unverified"
+  },
+  "dataSources": [
+    {
+      "hook": "useSignalObservations",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts:481-507",
+      "endpoint": "GET /api/v1/signals/observations",
+      "routeEvidence": "internal\\api\\router.go:4881-4883",
+      "sourceOwnership": "signal_log; internal\\api\\signalscatalog\\handler.go:164-209; internal\\tesla\\router\\routing.yaml:686-695",
+      "queries": [
+        {
+          "field": "PowershareStatus",
+          "limit": 1
+        },
+        {
+          "field": "PowershareType",
+          "limit": 1
+        },
+        {
+          "field": "PowershareStopReason",
+          "limit": 1
+        },
+        {
+          "field": "PowershareHoursLeft",
+          "limit": 48
+        },
+        {
+          "field": "PowershareInstantaneousPowerKW",
+          "limit": 48
+        }
+      ],
+      "contract": "vehicle_id and field wire parameters; signal_name translated to field; enveloped observations adapted to nullable numeric/text/bool values; abort signal forwarded; enabled only for a truthy vehicle; inherited REALTIME staleTime; no explicit polling or date bounds.",
+      "units": {
+        "verifiedSourceFacts": [
+          "internal\\tesla\\protomodel\\signal_metadata_gen.go:1614-1615 classifies both numeric Powershare fields as UnitKindNone.",
+          "internal\\tesla\\normalize\\normalize.go:138-145,221-234 passes non-overridden UnitKindNone fields through unchanged.",
+          "internal\\tesla\\units\\conversions.go:186-193 fixed kilo-unit conversion set does not include PowershareInstantaneousPowerKW.",
+          "internal\\api\\signalscatalog\\handler.go:195-202 returns the stored Value without physical conversion; useTelemetry.ts:555-569 performs numeric coercion, not unit conversion.",
+          "PowersharePage.tsx:90,93,125-134 assumes kW/h and multiplies by 1000/3600 for operational metric input."
+        ],
+        "conclusion": "The inspected path does not establish canonical W/s for these fields. Vendor names alone are not an authoritative wire-unit contract. Existing page assumptions must not be silently replaced with W/s interpretation or compensated by a second conversion. Resolve authoritative source units and stored history semantics with the integration owner before changing numeric behavior.",
+        "vendorWireUnits": "unverified",
+        "databaseSampleUnits": "unverified"
+      }
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts:51-86; web\\src\\api\\hooks\\useVehicles.ts:73-79",
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "sourceOwnership": "Existing vehicle repository/API and workspace store, not page-local state.",
+      "contract": "URL vehicle_id > persisted selection > first fleet vehicle; preserve selection repair and unrelated query parameters."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid",
+      "owner": "web\\src\\components\\layout",
+      "role": "Shared shell-aligned layout, freshness metadata and independent source notice."
+    },
+    {
+      "name": "ChargingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "role": "Four typed summary measurements through useOperationalMetrics; snapshot period/context."
+    },
+    {
+      "name": "TrendCard / ChartCard",
+      "owner": "web\\src\\features\\charging\\components\\powershare-modernization\\TrendCard.tsx",
+      "role": "Two trends using chart category exports; accessible data columns, fullscreen and export."
+    },
+    {
+      "name": "RuntimeCard / StopReasonCard / SnapshotCard",
+      "owner": "web\\src\\features\\charging\\components\\powershare-modernization",
+      "role": "Shared LayoutCard, MetricBar, StatusPill, Badge, DataTable and DateTime."
+    },
+    {
+      "name": "DataState / StaleRefreshWarning / Skeleton / EmptyState / QueryError / FadeIn",
+      "owner": "Existing api, hooks and feedback/motion categories",
+      "role": "Retained source trust, recovery and reduced-motion-aware entry."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\components\\powershare\\index.ts",
+      "line": 1,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Barrel still exports five older presentation panels while the mounted page consumes four modernization cards plus summary. Legacy and modern versions duplicate chart/session/stop/snapshot rendering; constants/helpers remain legitimate common dependencies.",
+      "fix": "Use the current mounted renderer as owner; check remaining callers and preserve legacy behavioral tests before consolidating exports. Do not delete capabilities or transplant old components.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceFacts": [
+      "PowersharePage.tsx:31-32,211-213,244 defines stacked default grids, three/two columns at xl and min-w-0 child containers.",
+      "RuntimeCard.tsx:47-56 wraps status/destination rows; StopReasonCard.tsx:24 wraps its badge/help.",
+      "SnapshotCard.tsx:57 preserves all three columns through the shared DataTable mobileColumns API.",
+      "ChartCard.tsx:18-21 delegates bounded chart sizing to placement policy."
+    ],
+    "issues": [],
+    "verification": "All prescribed viewports 320/375/390/430/768/1024/1280/1440/1920/2560, actual container widths, mobile table overflow, long labels and 200% text are unverified."
+  },
+  "accessibility": {
+    "sourceFacts": [
+      "PowersharePage.tsx:149 supplies a localized refresh name; section aria-labels at 190,209,242.",
+      "TrendCard.tsx:37-47 supplies chart names and data-table columns.",
+      "RuntimeCard.tsx:49-50 and StopReasonCard.tsx:25 retain text beside status color.",
+      "FadeIn.tsx:25-34 delegates reduced-motion preference and skips initial animation when reduced."
+    ],
+    "issues": [],
+    "verification": "Keyboard, focus, chart/table tool interactions, screen reader, touch target sizes, forced colors, composed contrast, RTL and OS reduced motion unverified; source ARIA is not acceptance."
+  },
+  "states": {
+    "preserved": [
+      "Independent initial loading/error/empty handling for trends, runtime and stop reason.",
+      "Retained data survives refresh failure through fatalError rather than raw query error.",
+      "Stale/offline notices are placed next to retained trend, stop and snapshot content.",
+      "Unknown/nonfinite numbers remain null; actual zero is preserved."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+        "line": 192,
+        "rule": "MDC-026 / mission 22",
+        "detail": "Summary omits loading although snapshotLoading is calculated at 103-104. ChargingSummaryBrief defaults loading=false (line 14), so initial requests show 'No source measurements' instead of initial loading.",
+        "fix": "Supply source-aware initial loading to the summary without suppressing retained metrics or independently resolved neighbors.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+        "line": 195,
+        "rule": "MDC-026 / MDC-033",
+        "detail": "Summary retained flag checks only combined status==='stale'. combineDataStates returns 'partial' for mixed stale/healthy sources (dataState.ts:316-325), so a partly retained summary can be labeled fully available by ChargingSummaryBrief's value-count status logic. runtimeState trust is also not passed to RuntimeCard; generic page metadata does not establish each metric's trust.",
+        "fix": "Carry actual contributing stale/blocked/partial state and source-specific availability into summary status/context and runtime notice; retain all values and independent retry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\powershare-modernization\\RuntimeCard.tsx",
+        "line": 37,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "'Live Session' and the no-live-session explanation at line 43 describe historical latest observations as live/current despite no bounded freshness validation or live polling. Page explicitly marks all five sources historical at 54-58.",
+        "fix": "Use recorded-session wording and observation freshness evidence; absence of readings must not assert session inactivity. Preserve status, destination, both bars and peak context.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+        "line": 81,
+        "rule": "MDC-026 / mission 23",
+        "detail": "Snapshot constructs five placeholder rows even when every successful source is empty; SnapshotCard's DataTable emptyMessage (line 63) therefore cannot describe all-empty telemetry. Unknown cells are preserved, but missing-source context is absent.",
+        "fix": "Keep all five identities and their unknown placeholders; add explicit no-observations/unavailable context rather than deleting the table.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+        "line": 162,
+        "rule": "MDC-026",
+        "detail": "Null selection uses the same select-vehicle EmptyState during initial fleet loading, fleet failure and truly empty fleet. useSelectedVehicle internally reads useVehicles but exposes no query-state distinction to the page.",
+        "fix": "Preserve header-owned vehicle selection while distinguishing fleet loading/failure/empty through the existing vehicle query contract; show actionable retry for fleet failure.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": {
+    "sourceFacts": [
+      "Mounted page/cards use shared surfaces and typography; targeted prohibited-pattern scan found no inline styles, raw controls/tables, direct chart/map/motion library imports, fixed-white/gray/neon text or literal hex in mounted TSX scope.",
+      "Modern trends and bars reuse useChartPalette instead of legacy literal POWER_COLOR/HOURS_COLOR; do not reset saved explicit chart palettes."
+    ],
+    "issues": [],
+    "verification": "Actual palette restraint, hierarchy, light/dark theme composition, clipping and contrast unverified. Legacy constants remain exported but are not the mounted trend colors."
+  },
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\powershare-modernization\\RuntimeCard.tsx",
+      "line": 3,
+      "rule": "MDC-002 component-first production imports",
+      "detail": "RuntimeCard, StopReasonCard and SnapshotCard import LayoutCard from the implementation sub-barrel '@/components/layout/layout-reference' instead of the canonical category barrel.",
+      "fix": "Import the existing LayoutCard from '@/components/layout'; do not add another card wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+      "line": 125,
+      "rule": "MDC-045",
+      "detail": "Canonical power/duration StatMetric input is synthesized by scaling observations assumed to be kW/h. Metadata and inspected normalization do not establish canonical raw W/s for these fields. This is an integration contract gap, not evidence that all readings should now be divided by 1000/3600.",
+      "fix": "Integration owner must establish authoritative vendor units, normalization and historical payload semantics; preserve current source values during audit and require explicit unit contract before changing adapters or display conversions.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\powershare-modernization\\TrendCard.tsx",
+      "line": 41,
+      "rule": "MDC-034 / preservation",
+      "detail": "Chart export/data-table projection discards TrendPoint.ts and keeps only formatted time labels. The 48 readings can span multiple dates, so equal clock labels do not uniquely identify observations in exported evidence.",
+      "fix": "Preserve full timestamp in export and accessible data rows using shared date formatting, without changing chronological order, source values or chart series.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\powershare\\helpers.ts",
+      "line": 71,
+      "rule": "MDC-044",
+      "detail": "humanizeEnum uses signal-name prefixes, whereas metadata defines distinct PowershareState/PowershareTypeStatus/PowershareStopReasonStatus prefixes. Fallback can produce 'State Enabled'/'Status Home' rather than intended labels, and known enum display is not localized.",
+      "fix": "Use verified enum-prefix metadata and localized known enum labels while preserving raw unknown enum text and current severity meaning.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "P1",
+    "rationale": "Resolve unit contract and historical-versus-live trust before presentation adoption; P2 source-state, enum-label and export clarity; P3 canonical imports and duplicate consolidation."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Verified Powershare observation physical-unit contract",
+      "existingOwnerFile": "internal\\tesla\\protomodel\\signal_metadata_gen.go; internal\\tesla\\normalize\\normalize.go; web\\src\\api\\hooks\\useTelemetry.ts",
+      "propsVariantsStates": "Explicit unit semantics for PowershareInstantaneousPowerKW and PowershareHoursLeft; distinguish vendor raw, stored history and display input; nullable/nonfinite/zero cases; preserve signal identities and cache values.",
+      "usedBy": [
+        "PowersharePage",
+        "TrendCard",
+        "RuntimeCard",
+        "SnapshotCard",
+        "ChargingSummaryBrief metrics"
+      ],
+      "dependsOn": [
+        "Authoritative vendor wire-unit evidence",
+        "Historical stored-value semantics",
+        "Integration-owner SI normalization decision"
+      ],
+      "disposition": "Integration investigation required, no shared mutation authorized by this audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "existing": "powershare/PowerTrendPanel + HoursTrendPanel",
+      "mounted": "powershare-modernization/TrendCard",
+      "evidence": "powershare/index.ts:1,3; PowersharePage.tsx:26,215,246"
+    },
+    {
+      "existing": "powershare/RuntimePanel + StopReasonPanel + SignalSnapshotPanel",
+      "mounted": "powershare-modernization/RuntimeCard + StopReasonCard + SnapshotCard",
+      "evidence": "powershare/index.ts:2,4-5; PowersharePage.tsx:27-29"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "E887B9A0460BD599F5FD8635D9457510881F684C20F2DEC4E55EA4B9D77DF0A8",
+    "currentLineCount": 281,
+    "sections": [
+      {
+        "name": "KPI summary",
+        "count": 1,
+        "metrics": [
+          "Status",
+          "Type",
+          "Output Power",
+          "Hours Remaining"
+        ],
+        "line": 186
+      },
+      {
+        "name": "Output and session",
+        "count": 2,
+        "children": [
+          "Output Power Trend",
+          "Live Session"
+        ],
+        "line": 206
+      },
+      {
+        "name": "Runtime and stop",
+        "count": 2,
+        "children": [
+          "Remaining Runtime Trend",
+          "Stop Reason"
+        ],
+        "line": 239
+      },
+      {
+        "name": "Raw signal snapshot",
+        "count": 1,
+        "rows": 5,
+        "line": 267
+      }
+    ],
+    "sectionCounts": {
+      "topLevelGroups": 4,
+      "majorContentSurfaces": 6,
+      "namedSectionElements": 3,
+      "trendCards": 2,
+      "runtimeCards": 1,
+      "stopCards": 1,
+      "snapshotCards": 1,
+      "summaryBriefs": 1,
+      "pageGlassPanelOrChartContainerTags": 0
+    },
+    "actions": [
+      "Refresh all five observations",
+      "Independent trend/stop retries",
+      "Runtime/snapshot retry all",
+      "Shared stale-source retries",
+      "Trend fullscreen/export/accessible data view",
+      "Snapshot sorting and stable table identity charging:powershare-signals",
+      "Header vehicle selection and URL scope"
+    ],
+    "dataBehavior": [
+      "Five signal identities and all observation timestamps",
+      "Limit 1 text / 48 numeric samples, newest observations rendered chronologically in trends",
+      "No date-range promise: /powershare has range=false, vehicle=true in workspaceScope.ts; no duplicate selector required",
+      "Null and nonfinite are unknown, measured zero remains zero",
+      "Source/raw values and query keys, cancellation, enablement and inherited cache policies",
+      "Peak-relative output/runtime bars",
+      "Saved number/theme/chart/motion/localization preferences",
+      "Independent retained content and errors"
+    ],
+    "sourceInventory": [
+      {
+        "path": "docs\\frontend-design-contract.md",
+        "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+        "lineCount": 394,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "docs\\frontend-worker-conventions.md",
+        "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+        "lineCount": 80,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "docs\\frontend-mission.md",
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "lineCount": 1593,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+        "lineCount": 141,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+        "sha256": "E887B9A0460BD599F5FD8635D9457510881F684C20F2DEC4E55EA4B9D77DF0A8",
+        "lineCount": 281,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "sha256": "8EB6EA58446FCEB6ACFCB1915F3D537F7EF1E3B5FC2475F63B8380C60DF87698",
+        "lineCount": 73,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare-modernization\\TrendCard.tsx",
+        "sha256": "056838F47B087D26C2E9A9845546751DFFB557932F479F0EAA72AD78289F07BC",
+        "lineCount": 79,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare-modernization\\RuntimeCard.tsx",
+        "sha256": "ED62AE913F005C09DFFCD8E02E0CF8D015353A41E70285AAC8EE58F1B2059919",
+        "lineCount": 74,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare-modernization\\StopReasonCard.tsx",
+        "sha256": "9BA9566E835290EC8F4E5B062328AD3E350755DAB329B2E5915872C0C347C96C",
+        "lineCount": 38,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare-modernization\\SnapshotCard.tsx",
+        "sha256": "71795D5D17DA639A8DBAF9B0108C9DB3BF492B8374F1210B6FDAE7564A83D987",
+        "lineCount": 68,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\constants.ts",
+        "sha256": "394D1F3D13026B59741A59545EB678F2A334502D3E830A42F5467A50FD5144E7",
+        "lineCount": 40,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\helpers.ts",
+        "sha256": "CE1B2583177542D2A967B1A9FCAB7EBAFA2313FC0D13855C848F727392981BAA",
+        "lineCount": 105,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\index.ts",
+        "sha256": "433CD6281BF88D52E10DBA8847FFA491F19F1235D4E0795DA416E67819A5986D",
+        "lineCount": 22,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\PowerTrendPanel.tsx",
+        "sha256": "241F723BF8562880B6EA6C4FF4570EECD2DDC0E417C44758539F6E1A13D93F4A",
+        "lineCount": 75,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\HoursTrendPanel.tsx",
+        "sha256": "CC95B4959B21538418EB3D1A8FA9222CE96970A0129429FB00164D104D5B03B0",
+        "lineCount": 95,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\RuntimePanel.tsx",
+        "sha256": "9E3EE217F54F7C51F0E594EA49382CB1D76D61ACC67058B8EA071499DDD7F0DD",
+        "lineCount": 105,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\StopReasonPanel.tsx",
+        "sha256": "2F0E52A5975CD4FF55C8D239CCDE9962481E0E9595124E2E699406920A35442E",
+        "lineCount": 50,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\features\\charging\\components\\powershare\\SignalSnapshotPanel.tsx",
+        "sha256": "19FDCE54E8EF61667FA119271116EA35F04E37441095CB36C33A6B195C37EB2C",
+        "lineCount": 109,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\App.tsx",
+        "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+        "lineCount": 918,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useTelemetry.ts",
+        "sha256": "5D042611BB8CFCCC88904D1ACD2F29ED27B09CC29647E218809D88DF29850E50",
+        "lineCount": 665,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useVehicles.ts",
+        "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+        "lineCount": 1898,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "lineCount": 174,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "lineCount": 65,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\api\\dataState.ts",
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "lineCount": 434,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\lib\\signalObservation.ts",
+        "sha256": "107105EAE141044FA16BA26E460F4EB17873A1AF1F16E8521A7D2871E041C98D",
+        "lineCount": 33,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\lib\\dateFormat.ts",
+        "sha256": "F86CBF7BA2D84CA11D93BF9A9253E96CFD44B907A275A7790EB174C632F5C53E",
+        "lineCount": 442,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+        "lineCount": 17,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+        "sha256": "504C70538B666ECCAC09537EF59BD5F1E3D3ED4D4930A8493D94B05C5C77FB0E",
+        "lineCount": 48,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+        "sha256": "1FEDEB6B5CF17436D31CB0F19DAC09EE1C6591D1866B09ED511387BD110E7D9A",
+        "lineCount": 64,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\components\\layout\\PageContainer.tsx",
+        "sha256": "0E2E1842FCAC1FE5BD7C4C37299A76F9515D45EAFE43AD122A8E09A0BB817D55",
+        "lineCount": 259,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "sha256": "6103CED7AF551C52DD32499D8C62AB3AD479A8ADF230D3C8059FA8B5199E87D0",
+        "lineCount": 115,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "web\\src\\components\\motion\\FadeIn.tsx",
+        "sha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+        "lineCount": 39,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\api\\router.go",
+        "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+        "lineCount": 5366,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\api\\signalscatalog\\handler.go",
+        "sha256": "4305DE18243B485E2C93AC800A83DB3F6F3997902869C1C9C20C7EE615170094",
+        "lineCount": 356,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\protomodel\\signal_metadata_gen.go",
+        "sha256": "C1FC35D2B746B6F1F64048C2E105FCA91A4E81D4DE4ABC90D0883BB0B225BC3B",
+        "lineCount": 1698,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\router\\routing.yaml",
+        "sha256": "2C8A2A44205FB1FAD2AD9D46BB1B7FDCCD9F3394744F38AD83AEDB6232A7EE0C",
+        "lineCount": 1043,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\units\\units.go",
+        "sha256": "8413AA7998BDF9EB318769E6B248FFC282CB5EBF5113A658A2BC885D9527DC28",
+        "lineCount": 107,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\units\\types.go",
+        "sha256": "94569E82B3AC02B10064B2528B472722C8BB61E83B74E84E1DED87AA3FEC473A",
+        "lineCount": 77,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\units\\units_test.go",
+        "sha256": "E532DC08B08A7638D4691824C075EEFA3355AFD762F75B75B599449034D04CD5",
+        "lineCount": 261,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\units\\conversions.go",
+        "sha256": "EDBBD6E68ADD3E59FEDEFD2328B30AC091E817E3C4D88D08471A856FEF6B5E29",
+        "lineCount": 213,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\normalize\\pipeline.go",
+        "sha256": "A01EC2FB9C9141B96BF73FC7FF2DF58E0E66DA4F4A50F99D6089FCAC89CFD9B4",
+        "lineCount": 596,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      },
+      {
+        "path": "internal\\tesla\\normalize\\normalize.go",
+        "sha256": "B2B057ACE50A2E3A2D1FCD58317A541D38A55E267121AA57552A84A177D711C9",
+        "lineCount": 317,
+        "inspection": "Source inspection; large shared/backend files inspected only at cited ranges/search matches, not whole-file semantic coverage"
+      }
+    ],
+    "baselineComparison": "Current read snapshot only. No Git/history or external baseline accessed; no modernization delta or 70-percent parity claim.",
+    "mountedPageAndPresentationLineCount": 613.0
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "backendRuntime": "unverified; route, handler and bounded unit source inspection only; no server/database/network calls",
+    "checks": [
+      {
+        "command": "Scoped rg prohibited-pattern search across PowersharePage.tsx, powershare-modernization/*.tsx and ChargingSummaryBrief.tsx",
+        "result": "No matches found",
+        "counts": {
+          "inlineStyles": 0,
+          "rawControlsOrTables": 0,
+          "directLibraryImports": 0,
+          "oldApiImports": 0,
+          "fixedWhiteGrayNeonText": 0,
+          "literalHex": 0
+        },
+        "limit": "Regex source inspection only, not exhaustive semantic/runtime acceptance."
+      },
+      {
+        "command": "Get-FileHash -Algorithm SHA256 web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+        "exitCode": 0,
+        "output": "E887B9A0460BD599F5FD8635D9457510881F684C20F2DEC4E55EA4B9D77DF0A8"
+      },
+      {
+        "command": "(Get-Content web\\src\\features\\charging\\pages\\PowersharePage.tsx).Count",
+        "exitCode": 0,
+        "output": "281"
+      },
+      {
+        "command": "audit.sh / npx tsc --noEmit / lint / build / tests",
+        "result": "NOT RUN: assignment forbids full gates; audit.sh includes project-wide TypeScript. Script inspected only."
+      }
+    ],
+    "ownership": [
+      "docs\\frontend-audits\\audit-page-087.json",
+      ".agent-status\\audit-page-087.txt"
+    ],
+    "noSourceMutation": true,
+    "noSharedMutation": true,
+    "noQueueMutation": true,
+    "noGit": true
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\PowersharePage.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\features\\charging\\components\\powershare-modernization\\TrendCard.tsx",
+    "web\\src\\features\\charging\\components\\powershare-modernization\\RuntimeCard.tsx",
+    "web\\src\\features\\charging\\components\\powershare-modernization\\StopReasonCard.tsx",
+    "web\\src\\features\\charging\\components\\powershare-modernization\\SnapshotCard.tsx",
+    "web\\src\\features\\charging\\components\\powershare\\constants.ts",
+    "web\\src\\features\\charging\\components\\powershare\\helpers.ts",
+    "web\\src\\features\\charging\\components\\powershare\\index.ts",
+    "web\\src\\features\\charging\\components\\powershare\\PowerTrendPanel.tsx",
+    "web\\src\\features\\charging\\components\\powershare\\HoursTrendPanel.tsx",
+    "web\\src\\features\\charging\\components\\powershare\\RuntimePanel.tsx",
+    "web\\src\\features\\charging\\components\\powershare\\StopReasonPanel.tsx",
+    "web\\src\\features\\charging\\components\\powershare\\SignalSnapshotPanel.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\signalObservation.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\signalscatalog\\handler.go",
+    "internal\\tesla\\protomodel\\signal_metadata_gen.go",
+    "internal\\tesla\\router\\routing.yaml",
+    "internal\\tesla\\units\\units.go",
+    "internal\\tesla\\units\\types.go",
+    "internal\\tesla\\units\\units_test.go",
+    "internal\\tesla\\units\\conversions.go",
+    "internal\\tesla\\normalize\\pipeline.go",
+    "internal\\tesla\\normalize\\normalize.go"
+  ]
+}
