@@ -1,0 +1,537 @@
+{
+  "item": "audit-page-094",
+  "page": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+  "routes": [
+    {
+      "path": "/dashcam",
+      "file": "web\\src\\App.tsx",
+      "line": 755,
+      "lazyImportLine": 221,
+      "detail": "Lazy page mounted in SafeRoute in source; actual browser reachability was not exercised."
+    }
+  ],
+  "purpose": "Local-first Dashcam/Sentry clip catalog, playback, manual privacy masks, heuristic event evidence, telemetry alignment and local incident exports.",
+  "primaryGoal": "Import a real local clip, inspect its playback and evidence, optionally align selected vehicle signal histories, and export honest incident metadata or a redacted still without uploading clip bytes.",
+  "dataSources": [
+    {
+      "name": "Local clip catalog and mutations",
+      "hooks": ["useClipCatalog", "useImportClips", "useUpdateClip", "useDeleteClip"],
+      "file": "web\\src\\features\\dashcam\\hooks\\useClipCatalog.ts",
+      "line": 9,
+      "endpoints": [],
+      "owner": "web\\src\\features\\dashcam\\lib\\db\\indexedDbAdapter.ts",
+      "detail": "Query key ['dashcam','clips'], staleTime Infinity, db.listClips(); import/update/delete invalidate the same key. File Blob, metadata, notes, masks, motion and candidates remain local.",
+      "citations": [
+        {"file": "web\\src\\features\\dashcam\\hooks\\useClipCatalog.ts", "line": 14, "endLine": 20},
+        {"file": "web\\src\\features\\dashcam\\hooks\\useClipCatalog.ts", "line": 36, "endLine": 104},
+        {"file": "web\\src\\features\\dashcam\\hooks\\useClipCatalog.ts", "line": 107, "endLine": 138},
+        {"file": "web\\src\\features\\dashcam\\lib\\db\\indexedDbAdapter.ts", "line": 4, "endLine": 8}
+      ]
+    },
+    {
+      "name": "Local storage handle and settings",
+      "hooks": ["useDashcamDb", "useDashcamSettings", "useUpdateDashcamSettings"],
+      "file": "web\\src\\features\\dashcam\\hooks\\useDashcamDb.ts",
+      "line": 11,
+      "endpoints": [],
+      "owner": "web\\src\\features\\dashcam\\lib\\db\\index.ts",
+      "detail": "One per-tab handle; IndexedDB teslasync-dashcam version 1 with clips/settings stores, or explicit in-memory fallback. Settings query ['dashcam','settings'] uses Infinity and mutations invalidate it. Persistence flag is adapter selection, not browser durability/quota proof.",
+      "citations": [
+        {"file": "web\\src\\features\\dashcam\\lib\\db\\index.ts", "line": 19, "endLine": 35},
+        {"file": "web\\src\\features\\dashcam\\lib\\db\\indexedDbAdapter.ts", "line": 50, "endLine": 95},
+        {"file": "web\\src\\features\\dashcam\\hooks\\useDashcamSettings.ts", "line": 6, "endLine": 31},
+        {"file": "web\\src\\features\\dashcam\\lib\\types.ts", "line": 128, "endLine": 147}
+      ]
+    },
+    {
+      "name": "Workspace-selected vehicle",
+      "hooks": ["useSelectedVehicle", "useVehicles"],
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/vehicles",
+          "hookFile": "web\\src\\api\\hooks\\useVehicles.ts",
+          "hookLine": 76,
+          "routerFile": "internal\\api\\router.go",
+          "routerLine": 3319,
+          "routerEndLine": 3320,
+          "verification": "Source path match only; no request executed."
+        }
+      ],
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "detail": "URL/store/first-fleet selection supplies import association and reconstruction vehicle. Catalog itself is browser-wide, not filtered by vehicle. Indirect vehicle-list read means page comments saying only telemetry network reads are incomplete."
+    },
+    {
+      "name": "Dynamic signal catalog and bounded histories",
+      "hooks": ["useSignals", "useReconstruction", "useSignalEvidenceBundle"],
+      "file": "web\\src\\features\\dashcam\\hooks\\useReconstruction.ts",
+      "line": 36,
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/signals/{vehicleID}/available",
+          "hookFile": "web\\src\\api\\hooks\\useTelemetry.ts",
+          "hookLine": 105,
+          "routerFile": "internal\\api\\router.go",
+          "routerLines": [4911, 4929],
+          "verification": "Both router branches register the source path; no response/runtime validation."
+        },
+        {
+          "method": "GET",
+          "path": "/signals/{vehicleID}/{encodedSignalName}/history?hours={boundedHours}&limit={boundedLimit}",
+          "hookFile": "web\\src\\api\\hooks\\useTelemetry.ts",
+          "hookLine": 258,
+          "routerFile": "internal\\api\\router.go",
+          "routerLines": [4914, 4932],
+          "verification": "Source route match only; handler retention, query interpretation and response values not audited."
+        }
+      ],
+      "detail": "Available names enabled only for positive vehicle ID. Histories independently keyed/cancelable, deduplicated trimmed names, maximum 8 signals, 1..8760 hours, 1..10000 points, no polling. Complete pending/failed/retained identities survive in sources. Clip epoch uses explicit camera offset; histories are aligned locally to pre-roll/clip/post-roll.",
+      "citations": [
+        {"file": "web\\src\\api\\hooks\\useTelemetry.ts", "line": 98, "endLine": 124},
+        {"file": "web\\src\\api\\hooks\\useTelemetry.ts", "line": 232, "endLine": 289},
+        {"file": "web\\src\\features\\dashcam\\hooks\\useReconstruction.ts", "line": 42, "endLine": 79},
+        {"file": "web\\src\\features\\dashcam\\lib\\timelineAlignment.ts", "line": 84, "endLine": 92}
+      ]
+    },
+    {
+      "name": "Local motion and export derivations",
+      "hooks": ["useMotionAnalysis"],
+      "file": "web\\src\\features\\dashcam\\hooks\\useMotionAnalysis.ts",
+      "line": 43,
+      "endpoints": [],
+      "owner": "web\\src\\features\\dashcam\\lib\\redactionExport.ts",
+      "detail": "Motion hook decodes Blob locally, invokes sampled-frame score utility, persists explicit ok/unavailable and candidate basis. Reconstruction is statistical, not calibrated physical incident detection. Export creates a JSON manifest and PNG locally; no modified video export.",
+      "citations": [
+        {"file": "web\\src\\features\\dashcam\\hooks\\useMotionAnalysis.ts", "line": 49, "endLine": 76},
+        {"file": "web\\src\\features\\dashcam\\lib\\eventDetection.ts", "line": 73, "endLine": 95},
+        {"file": "web\\src\\features\\dashcam\\lib\\timelineAlignment.ts", "line": 175, "endLine": 216},
+        {"file": "web\\src\\features\\dashcam\\lib\\redactionExport.ts", "line": 32, "endLine": 73}
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Grid / LayoutCard / SourceContent",
+      "category": "layout",
+      "ownerFiles": [
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+      ],
+      "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+      "line": 4,
+      "contract": "Retain inherited shell scope, full-width min-w-0 adapter, lg 1:2 catalog/detail layout, persistent panel shells, fatal versus retained error and retry.",
+      "evidenceLimit": "Grid/LayoutCard implementation not opened; their production barrel exports and call-site props were inspected."
+    },
+    {
+      "name": "Existing UI primitives and filter composites",
+      "category": "ui/forms",
+      "ownerFiles": ["web\\src\\components\\ui\\SelectableCard.tsx", "web\\src\\components\\ui\\Tabs.tsx"],
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipFilterBar.tsx",
+      "line": 3,
+      "contract": "Reuse SearchInput, FilterBar, PillFilterBar semanticMode=filters, ActiveFilterChips; Input/Button/Slider/Select/Badge/Text/Caption. Preserve historyScope=dashcam and all facets. Shared Tabs owns arrow/Home/End behavior; consumers own linked tab panels."
+    },
+    {
+      "name": "PlaybackControls / TimelineScrubber / Timeline",
+      "category": "data-display",
+      "ownerFiles": ["web\\src\\components\\data-display\\PlaybackControls.tsx", "web\\src\\components\\data-display\\TimelineScrubber.tsx"],
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx",
+      "line": 100,
+      "contract": "Playback is caller controlled: play/pause/restart/normalized seek, formatted elapsed/total, optional measured duration. Reconstruction scrubber is readOnly, with signed clock origin and markers, not linked video seeking. Timeline retains basis and chronological statistical sequence.",
+      "evidenceLimit": "PlaybackControls first 240 lines and TimelineScrubber targeted source matches inspected; all shared renderer branches not fully reviewed."
+    },
+    {
+      "name": "Source trust and motion/feedback",
+      "category": "feedback/motion/data trust",
+      "ownerFiles": [
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+        "web\\src\\components\\motion\\FadeIn.tsx",
+        "web\\src\\api\\dataState.ts"
+      ],
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx",
+      "line": 15,
+      "contract": "Keep all source identities, per-source retry, paused/stale/unavailable/failure distinctions and retained data. EmptyState/QueryError/InlineCallout remain existing feedback owners. FadeIn uses existing motion preference rather than new motion system."
+    },
+    {
+      "name": "Dashcam domain components",
+      "category": "feature",
+      "ownerFiles": ["web\\src\\features\\dashcam\\components\\dashcam\\index.ts"],
+      "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+      "line": 15,
+      "contract": "Keep ImportPanel, ClipFilterBar, ClipCatalogList and ClipDetailPanel with Player/Redaction/Events/Reconstruction/Export descendants; domain components own Blob lifecycle and local workflows."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx",
+      "line": 15,
+      "rule": "MDC-002 / one existing source-evidence implementation",
+      "detail": "Dashcam already reuses diagnostics SignalEvidenceSourceList; per-signal coverage list has a different purpose from trust/retry list and must not be collapsed into it.",
+      "fix": "Retain both presentations. Report cross-feature source-list ownership rather than cloning it or deleting coverage/gap explanations.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipFilterBar.tsx",
+      "line": 65,
+      "rule": "MDC-002 / reuse filters",
+      "detail": "Search/facet/chip behavior already composes shared form controls, not a competing filter toolbar.",
+      "fix": "Preserve current adoption; no new filter framework or local date/vehicle selector.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "observed": [
+      {"file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 73, "detail": "Single column below lg, three columns at lg with catalog 1/detail 2; import stays above both."},
+      {"file": "web\\src\\features\\dashcam\\components\\dashcam\\ImportPanel.tsx", "line": 54, "detail": "File fields stack then sm two-column; actions wrap and wrapLabel retains long text."},
+      {"file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipFilterBar.tsx", "line": 76, "detail": "Facets deliberately wrap with scrollable=false; no hover-only facet action."},
+      {"file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx", "line": 62, "detail": "Long filename break-all, wrapping metadata; delete reserves min 44px."},
+      {"file": "web\\src\\features\\dashcam\\components\\dashcam\\RedactionEditor.tsx", "line": 102, "detail": "Region sliders reflow 2 to 4 columns at sm."},
+      {"file": "web\\src\\components\\ui\\Tabs.tsx", "line": 95, "detail": "Shared strip is max-width with horizontal scrolling and shrink-0 labels, not proof of reachable tabs at 320px."}
+    ],
+    "issues": [],
+    "requiredQA": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "200% text", "long filenames and translated labels", "expanded redaction regions", "all five tabs"],
+    "evidenceLimit": "No viewport screenshots, rendered overflow measurements, pointer or touch testing. Do not hide metadata, tabs, signals, exports or evidence to simplify mobile."
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, screen reader and effective contrast unverified",
+    "observed": [
+      {"file": "web\\src\\features\\dashcam\\components\\dashcam\\ImportPanel.tsx", "line": 55, "detail": "Shared labeled file Inputs; shared pending/disabled Button."},
+      {"file": "web\\src\\components\\ui\\Tabs.tsx", "line": 73, "detail": "Arrow/Home/End automatic activation and roving tabindex exist in shared owner; focus styles and min-h-11 present."},
+      {"file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 149, "detail": "Uses explicit readOnly timeline, avoiding a false interactive reconstruction slider."},
+      {"file": "web\\src\\components\\motion\\FadeIn.tsx", "line": 24, "detail": "Existing motion preference disables initial animation and delay; no runtime reduced-motion validation."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx",
+        "line": 48,
+        "rule": "MDC-040 / shared Tabs consumer panel linkage",
+        "detail": "Tabs generates aria-controls panel IDs, but conditional descendants have no corresponding id/role=tabpanel/aria-labelledby. Shared owner explicitly assigns panel semantics to callers at Tabs.tsx:33-35.",
+        "fix": "Supply stable per-instance idBase and a linked active panel wrapper for all five tabs, preserving tab keys and conditional media lifecycle.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx",
+        "line": 50,
+        "rule": "MDC-040 / coherent listbox semantics",
+        "detail": "role=listbox contains li wrappers with selectable option buttons and separate delete buttons; no listbox arrow/Home/End management exists in this feature or SelectableCard. Native button activation is available, but does not establish the listbox keyboard pattern.",
+        "fix": "Choose a semantic ordinary list of named selectable buttons, or deliberately implement the complete shared listbox pattern with deletion outside option semantics; preserve selected state, Enter/Space selection and delete reachability.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashcam\\components\\dashcam\\RedactionEditor.tsx",
+        "line": 92,
+        "rule": "MDC-040 / default 44px touch target",
+        "detail": "Remove-region control explicitly uses h-8 w-8; unlike catalog deletion min-h-11/min-w-11 is not requested. Effective hit size may be larger through Button CSS, which was not measured.",
+        "fix": "Request the existing shared target-size convention for region deletion without removing labels, kind or coordinate controls; measure spacing and reachability.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "status": "source-inspected only",
+    "observed": [
+      {"name": "storage fallback", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 59, "detail": "Explicit non-persistent browser warning with actual fallback reason."},
+      {"name": "catalog loading/fatal/retained", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 78, "detail": "SourceContent only replaces affected catalog body; import/filter/detail neighbors remain. Fatal and refresh failures have catalog retry."},
+      {"name": "catalog empty/no matches", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx", "line": 26, "detail": "Distinct no-import and no-match states, with adjacent import guidance versus clear-filter action."},
+      {"name": "no selected clip", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 98, "detail": "Persistent detail-side EmptyState describes playback, masks, evidence and reconstruction."},
+      {"name": "import mutation", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ImportPanel.tsx", "line": 30, "detail": "Loading and disabled action; rejected import retains files and native error for retry, resets inputs only on success."},
+      {"name": "motion", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx", "line": 116, "detail": "not_run/ok/unavailable text and pending button; mutation rejection uses existing toast helper."},
+      {"name": "reconstruction prerequisites", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 49, "detail": "Cannot-align timestamp and no-vehicle guidance; no manufactured telemetry."},
+      {"name": "per-signal source trust", "file": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx", "line": 21, "detail": "Pending/failure/refresh failed/paused offline/unavailable/stale/refreshing/ready, actual timestamps and individual retry."},
+      {"name": "reconstruction retained/partial/empty", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 135, "detail": "Retained history boundary, loading/fatal/refresh recovery, missing selections, missing data and partial-versus-no-incident copy preserve evidence."},
+      {"name": "export error", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ExportManifestPanel.tsx", "line": 113, "detail": "Local manifest/still errors rendered in danger callout; decoder/canvas/encoding failures explicitly handled."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx",
+        "line": 61,
+        "rule": "MDC-026 / recoverable media failure",
+        "detail": "video.play() promise is discarded without rejection handling; video element at line 84 has no onError. Playback codec/decode or rejected play failures are not surfaced by this component, independent of motion-analysis errors.",
+        "fix": "Keep Blob playback, custom transport and unknown-duration fallback; surface localized media failure with a real retry/play recovery rather than inventing successful playback.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx",
+        "line": 34,
+        "rule": "MDC-026 / unknown source is not successful defaults",
+        "detail": "Settings read loading/failure falls back to defaultDashcamSettings without source notice, also in ImportPanel.tsx:37. A failed stored camera-offset read can silently change the alignment assumption; repeated default generation depends on current browser offset.",
+        "fix": "Keep actual stored/default values and timezone semantics; distinguish unresolved/failed settings using existing source feedback and retry, rather than presenting fallback alignment as confirmed saved settings.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+        "line": 79,
+        "rule": "MDC-026 / offline-paused source distinction",
+        "detail": "Catalog source mapping explicitly handles fatal/refresh/loading but not catalogState.isRefreshBlocked. Local queries inherit query policy; no assertion is made that an offline browser actually blocks IndexedDB reads. Per-signal history does have paused-source feedback.",
+        "fix": "Verify offline local-read behavior under the actual QueryClient policy before changing it; if paused, expose accurate paused state using existing trust feedback without classifying local clips as remote/offline or discarding retained data.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "line": 39,
+      "rule": "MDC-010/MDC-012 / restrained theme-aware selected surface",
+      "detail": "Inherited catalog surface hardcodes cyan focus/selection and bg-white/[0.02]/[0.04] hover surfaces at lines 39-43. This is fixed-white tint noise, not pure-white body text; not a neon/glow finding. It bypasses theme focus/accent/surface variables.",
+      "fix": "Shared owner should use existing focus-ring, theme-primary and neutral surface tokens while retaining selected/disabled/hover and aria-selected behavior. Do not add a dashcam-only card implementation.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\RedactionOverlay.tsx",
+      "line": 9,
+      "rule": "MDC-010 / visual intensity and semantic preservation",
+      "detail": "Face/plate/general overlays use three hardcoded 400 hues with 80% borders and 20% fills. This is a source-confirmed saturation concern over video, not measured fluorescent/glowing output. Colors indicate distinct mask kinds; regions must remain visible.",
+      "fix": "Use restrained existing semantic tokens for overlay strokes/tints, preserve kind labels, normalized geometry and the honest distinction between translucent playback indicators and black redacted PNG pixels.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+      "line": 60,
+      "rule": "MDC-010/MDC-025 / canonical warning surface",
+      "detail": "Page-level persistence warning overrides GlassPanel with literal amber border/background. Warning is legitimate semantic content, but the hue styling is independently specified instead of the existing warning callout.",
+      "fix": "Consider existing InlineCallout warning composition without losing fallback reason, visibility or persistence explanation. Do not remove the warning to reduce noise.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ExportManifestPanel.tsx",
+      "line": 15,
+      "rule": "MDC-045/MDC-070 / preserve actual export behavior, not claims",
+      "detail": "Comment calls PNG a snapshot of the current video frame, but handler creates a separate video from Blob and draws on loadeddata without seeking or receiving player progress. Actual source behavior is the separately decoded initial available frame, not the currently viewed playback frame.",
+      "fix": "Preserve existing PNG capability and honesty; clarify current source semantics. A future seek-position handoff would be an explicit behavior change, not a cosmetic fix or existing feature claim.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.tsx",
+      "line": 36,
+      "rule": "MDC-026/MDC-070 / evidence capability honesty",
+      "detail": "Empty copy suggests connecting telemetry derives event candidates, but rendered candidates come only from clip.eventCandidates. Current ClipDetailPanel/useReconstruction derive a separate incidentSequence; no inspected mounted path persists deriveTelemetryCandidates output to clip candidates.",
+      "fix": "Preserve metadata/motion candidates and separate reconstruction incidents. Clarify guidance rather than claiming or adding a telemetry-to-candidate write path during visual modernization.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+      "line": 26,
+      "rule": "MDC-046 / accurate network boundary",
+      "detail": "Page comment says only telemetry read network calls, but useSelectedVehicle invokes useVehicles. Clip bytes remain local in the inspected workflow; whole-app absence of all other network activity is not proved.",
+      "fix": "Describe local clip-byte storage/export accurately while acknowledging workspace vehicle catalog and telemetry reads; do not remove the existing selected-vehicle hook or its request.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\lib\\timelineAlignment.ts",
+      "line": 162,
+      "rule": "MDC-044 / localized derived explanations without data recasing",
+      "detail": "Gap notes and incident descriptions are English interpolated strings in the local derivation (also eventDetection basis and manifest disclaimers). Renderers pass these through; translated chrome alone does not establish full localized evidence.",
+      "fix": "Keep original evidence/source text and manifest schema intact. A future coordinated localization adapter may translate generated descriptions, but must not mutate user data, signal names, saved basis or exported evidence silently.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "reason": "Page already adopts current layout, filters, playback and retained-source migrations. Focus next on media/settings failure honesty, tab/list semantics and shared selected-surface tokens; no justification for a wholesale redesign.",
+    "order": ["preserve local playback/export/evidence and all five tabs", "media and settings failure states", "tabpanel/list semantics and target QA", "shared selected-surface token cleanup", "restrained overlay/warning presentation"],
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Token-align existing SelectableCard",
+      "existingOwnerFile": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "line": 39,
+      "rule": "MDC-010/MDC-012/MDC-040",
+      "detail": "Source-confirmed hardcoded cyan focus/selection and fixed-white hover/background remain in the shared card used by the catalog.",
+      "fix": "Adjust existing owner only, not a new variant or competing card.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": {
+        "preserveProps": ["selected", "disabled", "role", "ref", "ButtonHTMLAttributes", "className caller override"],
+        "states": ["unselected", "selected", "hover", "focus-visible", "disabled"],
+        "tokenNeeds": ["existing --focus-ring", "existing --theme-primary", "existing neutral surface/border tokens"],
+        "newPublicAPI": "none required by inspected consumer"
+      },
+      "usedBy": ["web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx:55"],
+      "dependsOn": ["docs\\frontend-design-contract.md:MDC-010/MDC-012/MDC-040", "shared owner theme/forced-colors/contrast verification"],
+      "scopeLimit": "Only this production consumer inspected; no claim of two-consumer evidence for a new composite."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx",
+      "line": 5,
+      "rule": "MDC-002 / one playback owner",
+      "detail": "Uses canonical data-display PlaybackControls. UI barrel also re-exports the same owner, not another implementation (ui/index.ts:78 and data-display/index.ts:131).",
+      "fix": "Keep current data-display import and Blob adapter; do not recreate transport or introduce native-player capability claims.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx",
+      "line": 15,
+      "rule": "MDC-002 / evidence owner reuse",
+      "detail": "Cross-domain SignalEvidenceSourceList is existing diagnostics-owned renderer. No second trust presenter was found in inspected mounted dashcam dependencies.",
+      "fix": "Coordinate shared ownership if generalized; preserve original owner and complete per-signal trust/retry rather than page-local replacement.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "E0BEDD7181B5BAD9196A3F1B4402A9B776B7145F0490AD6D3B57818A4296B8A2",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 116,
+    "pagePlusPresentationLineCount": 1247,
+    "presentationFileCount": 12,
+    "countScope": "Page plus non-test TSX files in web\\src\\features\\dashcam\\components\\dashcam; hooks/libs excluded from size total.",
+    "sectionCounts": {
+      "topLevelUserSurfaces": 5,
+      "detailTabs": 5,
+      "reconstructionContentGroups": 6,
+      "pageGlassPanelOpenTags": 2,
+      "pageLayoutCardOpenTags": 1,
+      "pageChartContainerOpenTags": 0
+    },
+    "sections": [
+      {"name": "Persistence warning (conditional fallback)", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 59},
+      {"name": "Local clip import", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 71},
+      {"name": "Clip search/facets/chips", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 75},
+      {"name": "Catalog, metadata, selection and deletion", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 88},
+      {"name": "Detail or no-selection placeholder", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 98},
+      {"name": "Player", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx", "line": 39},
+      {"name": "Redaction", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx", "line": 40},
+      {"name": "Events", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx", "line": 41},
+      {"name": "Reconstruction", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx", "line": 42},
+      {"name": "Export", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx", "line": 43}
+    ],
+    "reconstructionContentGroups": [
+      {"name": "Clock-offset assumption and signal selection", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 104},
+      {"name": "Lookback/retention caveats", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 117},
+      {"name": "Complete per-signal source trust", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 130},
+      {"name": "Read-only markers and pre/post-roll explanation", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 149},
+      {"name": "Per-series point count/coverage/gaps/first-last values", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 165},
+      {"name": "Statistical incidents or partial/no-incidents explanation", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 167}
+    ],
+    "actions": [
+      {"name": "Choose multiple video files and optional shared event.json; import and retry retained files", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ImportPanel.tsx", "line": 55},
+      {"name": "Search filename/notes; camera/source/event facets; clear individual chips/all/no-match filters", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipFilterBar.tsx", "line": 65},
+      {"name": "Select clip and delete clip locally", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx", "line": 55},
+      {"name": "Retry local catalog", "file": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx", "line": 86},
+      {"name": "Switch all five detail tabs", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx", "line": 48},
+      {"name": "Play/pause/restart/normalized seek local Blob", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx", "line": 100},
+      {"name": "Run local motion analysis", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx", "line": 123},
+      {"name": "Add/remove mask; edit kind/label/X/Y/width/height", "file": "web\\src\\features\\dashcam\\components\\dashcam\\RedactionEditor.tsx", "line": 60},
+      {"name": "Change camera UTC offset and selected dynamic signals", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx", "line": 104},
+      {"name": "Retry signal catalog/all reconstruction/individual affected history", "file": "web\\src\\features\\dashcam\\components\\dashcam\\SignalPicker.tsx", "line": 43, "additionalCitations": ["web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx:144", "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx:59"]},
+      {"name": "Download JSON manifest and redacted PNG", "file": "web\\src\\features\\dashcam\\components\\dashcam\\ExportManifestPanel.tsx", "line": 103}
+    ],
+    "dataBehavior": [
+      "Keep browser-local Blob storage, module singleton, IndexedDB identity/version/stores, explicit memory fallback warning and newest-created-first catalog.",
+      "Keep browser-wide catalog, clip vehicleId at import and current workspace vehicle for reconstruction; do not silently substitute clip.vehicleId or filter catalog by current vehicle.",
+      "Keep deterministic file-name/size/lastModified clip identity; same identity import currently overwrites the stored record. Preserve behavior unless an explicit business change is authorized.",
+      "One optional sidecar applies to every clip in an import batch. Source folder is detected only from actual webkitRelativePath; the file picker does not request directory selection, so do not invent reliable folder inference.",
+      "Unknown camera/source/timestamp/duration remain unknown, not fabricated zero measurements. Raw filename time is intentionally naive, displayed without automatic UTC/local reinterpretation.",
+      "Keep AND-ed facets and filename/notes search; filter selection does not clear selected detail because selection resolves against full clips.",
+      "Keep object URL cleanup, native local muted inline video, measured-duration fallback, play/pause/restart/seek; speed menu and global shortcuts are not enabled by this caller.",
+      "Playback masks are translucent indicators, NOT irreversible redacted video; PNG uses solid black rectangles. Never claim face/plate recognition, safe redacted playback bytes, or video export.",
+      "Keep metadata/motion candidate basis/confidence distinct from separate telemetry incidentSequence; no inspected mounted telemetry candidate persistence path.",
+      "Keep camera-offset assumption, 15s default pre/post-roll, bounded from-now lookback, dynamic signals, independent cache/cancellation/source retry, retained histories and explicit missing-history/retention caveats.",
+      "Keep reconstruction read-only and raw unknown-unit signal values; no guessed unit conversion, SI cache rewrite, clip-time server capability or physically calibrated accident claim.",
+      "Keep original manifest schemaVersion=1, metadata, candidates, masks, quality/notes/count/incident sequence and honesty disclaimers; PNG currently draws separately decoded initial frame, not current player position.",
+      "Preserve current PageLayout/LayoutCard/SourceContent, form/filter barrels, PlaybackControls, readOnly TimelineScrubber, source evidence list and formatting migrations; no legacy helper/import reintroduction.",
+      "notes, pre/post-roll settings and defaultRedactionKind exist in data models but are not all editable in this mounted UI; do not invent missing action preservation or discard stored fields."
+    ]
+  },
+  "evidenceLimits": {
+    "auditMode": "Phase 0 read-only source inspection; only assigned JSON and heartbeat written.",
+    "notExecuted": ["browser or production actions", "network/API requests", "visual screenshots", "viewport/overflow QA", "keyboard/screen-reader testing", "contrast/forced-colors testing", "playback/codec/canvas/IndexedDB runtime checks", "TypeScript", "tests", "lint/build", "Git", "agents"],
+    "reason": "Assignment forbids source/UI changes, Git, agents and full-repository validation. Shared full audit script was inspected but not executed because it invokes project TypeScript. Source path matching does not prove backend query semantics, retention, auth, live data or runtime success.",
+    "sourceChecks": {
+      "pageHashCommand": "Get-FileHash 'web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx' -Algorithm SHA256",
+      "pageHashExitCode": 0,
+      "pageCountCommand": "(Get-Content 'web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx').Count",
+      "pageCountOutput": "116",
+      "scopedPatternMethod": "PowerShell [regex]::Matches over only assigned page Get-Content -Raw; rawControls <(button|input|textarea|select|table)\\b; staticInlineStyle style=\\{\\{[^\\r\\n]*var\\(--; directRestrictedLibrary from.+(recharts|react-leaflet|framer-motion); neonOrGlow neon|glow; fixedWhite text-white|bg-white; opening-tag patterns for GlassPanel/LayoutCard/ChartContainer.",
+      "scopedPatternExitCode": 0,
+      "scopedPatternRawOutput": "ChartContainerOpen=0\nrawControls=0\nLayoutCardOpen=1\ndirectRestrictedLibrary=0\nfixedWhite=0\nGlassPanelOpen=2\nstaticInlineStyle=0\nneonOrGlow=0\npagePlusPresentationLines=1247\npresentationFiles=12",
+      "scopeWarning": "Zero pattern matches on page are not zero feature/shared violations or mounted visual acceptance. Shared white/cyan styling and overlay hue concerns are separately cited.",
+      "failedProbe": "Initial scoped counting PowerShell command exited 1 with ParserError from quoting the import regex; simplified regex retry exited 0 and produced the counts above.",
+      "sourceDrift": "Hash and line citations describe this audit read snapshot; concurrent source drift is possible and final page hash is checked before release."
+    },
+    "visualNoiseAssessment": "No neon/glow/fixed-white text matches in assigned page; not a global clean certificate. Fixed-white shared card tints and three overlay hues explicitly flagged. Native bg-black video and black PNG redaction are intentional media/privacy behavior, not decorative noise.",
+    "unreadDependencyLimits": "No complete API client/QueryClient/auth/shell/style/token inventory, motion-score algorithm, media metadata utility, backend handler/data query review or imported shared UI implementations beyond named reads. Discovery and grep results are not semantic review of all matched test files."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\index.ts",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ImportPanel.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ClipFilterBar.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\RedactionEditor.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\RedactionOverlay.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionSeriesList.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\SignalPicker.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\ExportManifestPanel.tsx",
+    "web\\src\\features\\dashcam\\components\\dashcam\\constants.ts",
+    "web\\src\\features\\dashcam\\components\\dashcam\\helpers.ts",
+    "web\\src\\features\\dashcam\\hooks\\useClipCatalog.ts",
+    "web\\src\\features\\dashcam\\hooks\\useDashcamDb.ts",
+    "web\\src\\features\\dashcam\\hooks\\useDashcamSettings.ts",
+    "web\\src\\features\\dashcam\\hooks\\useMotionAnalysis.ts",
+    "web\\src\\features\\dashcam\\hooks\\useReconstruction.ts",
+    "web\\src\\features\\dashcam\\lib\\types.ts",
+    "web\\src\\features\\dashcam\\lib\\clipParsing.ts",
+    "web\\src\\features\\dashcam\\lib\\clipFilter.ts",
+    "web\\src\\features\\dashcam\\lib\\eventDetection.ts",
+    "web\\src\\features\\dashcam\\lib\\timelineAlignment.ts",
+    "web\\src\\features\\dashcam\\lib\\redactionExport.ts",
+    "web\\src\\features\\dashcam\\lib\\db\\index.ts",
+    "web\\src\\features\\dashcam\\lib\\db\\indexedDbAdapter.ts",
+    "web\\src\\features\\dashcam\\lib\\db\\memoryAdapter.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\ui\\SelectableCard.tsx",
+    "web\\src\\components\\ui\\Tabs.tsx",
+    "web\\src\\components\\ui\\index.ts",
+    "web\\src\\components\\data-display\\PlaybackControls.tsx",
+    "web\\src\\components\\data-display\\TimelineScrubber.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go"
+  ]
+}
