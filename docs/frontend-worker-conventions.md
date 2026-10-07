@@ -78,3 +78,42 @@ the same fields where applicable and adds its tooling/build/query/theme
 findings; no full-repository lint/build runs during this audit.
 
 Return `DONE | <item-id> | files: docs\frontend-audits\<item-id>.json | shared change needed: <brief note or none>`.
+
+## Development-only QA tooling
+
+Use package-supported Node >=26. From the repository root:
+
+```powershell
+node web\scripts\frontend-qa.mjs --help
+node web\scripts\frontend-qa.mjs routes
+node web\scripts\frontend-qa.mjs scan --path src/features/battery
+node --test web\scripts\__tests__\frontend-qa.test.mjs
+```
+
+Browser commands require an already running, authorized application in
+`E2E_BASE_URL`; reuse `E2E_STORAGE_STATE` and the existing Playwright
+`chromium-smoke` configuration. Never use mocks for route acceptance.
+
+```powershell
+node web\scripts\frontend-qa.mjs capture --route /battery --theme dark
+node web\scripts\frontend-qa.mjs capture --route /battery --theme light
+node web\scripts\frontend-qa.mjs overflow --route /battery
+node web\scripts\frontend-qa.mjs overflow --route-map <authorized-route-map.json>
+```
+
+Capture covers 375, 768, 1440 and 1920 pixels. Overflow covers all ten
+mission widths. Parameter routes need real authorized mappings; unresolved
+routes are blocked, not silently skipped. The runner verifies mounted
+application mode, captures full-page and fixed-height main-scroll sections,
+and rejects authentication redirects, loading, failed and blank views.
+Artifacts and Playwright cache stay in ignored `qa-screenshots\`.
+`E2E_SENSITIVE=1` disables capture. Non-read requests are blocked.
+
+Exit 0 means the bounded command passed; 1 means findings; 2 means blocked
+or invalid input. Style scans are static candidates, not visual acceptance.
+Focused tooling tests do not establish browser, accessibility or application
+acceptance. Record actual command output and acceptance limitations.
+
+Import `web\e2e\fixtures\frontend-modernization.ts` only from tests or
+stories. Use its raw extreme values, long text and lazy row factory without
+injecting them into production hooks, API responses or application data.
