@@ -66,7 +66,7 @@ export function DiskForecastSummary({
         loading={loading && !retained}
         freshness={retained ? t('admin.operationalBrief.retained', 'Retained evidence') : undefined}
         provenance={growthHint} />
-      {error && <QueryError error={error} onRetry={onRetry}
+      {Boolean(error) && <QueryError error={error} onRetry={onRetry}
         resourceName={t('admin.diskForecast.pageTitle', 'Disk forecast')} />}
     </section>
   );
