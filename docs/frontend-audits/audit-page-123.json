@@ -1,0 +1,375 @@
+{
+  "item": "audit-page-123",
+  "page": "web\\src\\features\\driving\\pages\\SeasonalEfficiencyPage.tsx",
+  "routes": ["/seasonal-efficiency"],
+  "purpose": "Explain descriptive seasonal energy intensity using completed drives in the selected vehicle's latest returned history, vehicle-local calendar coverage, fitted harmonics and explicit evidence accounting.",
+  "primaryGoal": "Compare observed and fitted intensity without confusing sparse support, residual variation or in-sample fit with a causal explanation or forecast.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3463-3464 registers /drives with GET / handled by driveHandler.ListByVehicle.",
+      "owner": "useDriving query hook; driveHandler.ListByVehicle owns server retrieval; seasonalEfficiency.ts owns client analytical derivation",
+      "behavior": "Vehicle-required enablement, isolated ['drives', vehicleId, 'history', boundedLimit] key, MODERATE staleTime, safeArray normalization, request AbortSignal forwarding; no pagination or date bounds in this hook.",
+      "limits": "Router registration verified; backend SQL, actual returned ordering, response contents, auth and mounted requests unverified. The UI discloses a returned window, not guaranteed lifetime coverage."
+    },
+    {
+      "hook": "useSelectedVehicle, useUnits, useTimezone('vehicle'), useTranslation",
+      "file": "web\\src\\features\\driving\\pages\\SeasonalEfficiencyPage.tsx",
+      "line": 40,
+      "endpoint": null,
+      "owner": "Existing workspace vehicle selection, display-unit, vehicle-timezone and localization owners",
+      "behavior": "The page consumes these existing owners; their underlying settings/vehicle requests were not traced. No page-owned vehicle or date picker.",
+      "scopeEvidence": "web\\src\\lib\\workspaceScope.ts:23-77,154-166: seasonal-efficiency is not range-enabled and is not vehicle-disabled."
+    },
+    {
+      "hook": "useDataState(drivesQuery, { provenance: 'historical' })",
+      "file": "web\\src\\features\\driving\\pages\\SeasonalEfficiencyPage.tsx",
+      "line": 45,
+      "endpoint": null,
+      "owner": "web\\src\\hooks\\useDataState.ts and web\\src\\api\\dataState.ts",
+      "behavior": "Fatal error is distinct from refresh error; cached drives remain available. Paused refresh is distinguished by isRefreshBlocked."
+    },
+    {
+      "hook": "analyzeSeasonalEfficiency(drives, nowMs, timeZone, { historyLimit: 1000 })",
+      "file": "web\\src\\features\\driving\\lib\\seasonalEfficiency.ts",
+      "line": 778,
+      "endpoint": null,
+      "owner": "Driving feature analytical utility, not a presentation component",
+      "behavior": "SI distanceM, durationS and energyUsedWh feed Wh/m eligibility and distance-weighted analysis. Every returned row belongs to exactly one accounting category. Snapshot nowMs is captured once per page mount."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:8-15; SeasonalEfficiencyPage.tsx:76-83",
+      "role": "Existing full-width min-w-0 orchestration adapter and query freshness header; no replacement layout needed."
+    },
+    {
+      "name": "Grid and FadeIn",
+      "owner": "Existing @/components/layout and @/components/motion category owners",
+      "evidence": "SeasonalEfficiencyPage.tsx:6-7,33-34,88-128",
+      "role": "Five one-column-to-xl-two-column section grids and nine entrance groups. Motion implementation not inspected."
+    },
+    {
+      "name": "SeasonalSummaryBrief / SeasonalCoverageBrief / DrivingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "evidence": "DrivingSummaryBrief.tsx:23-55; OperationalBrief.tsx:119-200,240-276",
+      "role": "Four shared operational summaries with typed metrics, source status, provenance and Review details drawers. Existing useOperationalMetrics bridge is reused, not reimplemented."
+    },
+    {
+      "name": "Ten seasonal sections",
+      "owner": "web\\src\\features\\driving\\components\\seasonal-efficiency",
+      "evidence": "SeasonalEfficiencyPage.tsx:96-128",
+      "role": "Six charts, diagnostics, year directory, ranked months and methodology retain domain explanations."
+    },
+    {
+      "name": "ChartContainer / ChartLegend / ChartTooltip / chart barrel",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "evidence": "ChartContainer.tsx:130-146,629-637,730-815",
+      "role": "Existing image export, accessible fallback tables, sampling disclosure and keyed legend ownership. No CSV/fullscreen/annotation opt-in supplied by these six callers."
+    },
+    {
+      "name": "GlassPanel, PanelTitle, Text, Skeleton, EmptyState, QueryError, StaleRefreshWarning",
+      "owner": "Existing UI and feedback category owners",
+      "evidence": "SeasonalSectionBody.tsx:5-6,38-95; SeasonalSummaryBrief.tsx:91; SeasonalEfficiencyPage.tsx:84-86",
+      "role": "Retain surface, typography, passive state, retry and offline-refresh presentation; no new universal status registry."
+    },
+    {
+      "name": "Seasonal specialist formatters",
+      "owner": "web\\src\\features\\driving\\components\\seasonal-efficiency\\formatters.ts",
+      "evidence": "formatters.ts:39-110,113-165",
+      "role": "Convert SI only at display time; preserve intensity per selected distance/energy unit, signed yearly trend, precision, locale and null em dash."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalFittedCurve.tsx",
+      "line": 31,
+      "rule": "MDC-015/MDC-034; mission 0 shared reuse",
+      "detail": "Ten sections repeat GlassPanel + icon + PanelTitle + explanation + SeasonalSectionBody; six charts repeat CartesianGrid and tiny axis styling. This is a reuse opportunity, not permission to replace domain content or build another chart system.",
+      "fix": "Reuse existing layout/chart owners; consider a narrowly typed feature-local seasonal section composition only if it preserves every title, explanation, state requirement and chart control. Prefer shared chart tokens for axes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalResidualDistribution.tsx",
+      "line": 73,
+      "rule": "MDC-033",
+      "detail": "Four residual diagnostic tiles and eight component diagnostic rows render local metric collections alongside OperationalBrief summaries. They are different explanatory contexts, not disposable duplicate measurements.",
+      "fix": "Evaluate existing StatGroup/StatStrip contracts before adoption; keep specialist intensity formatting and all diagnostic values if equivalence is not established. Do not add another metric-card implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; all viewport behavior unverified",
+    "strategy": "Page section grids stack below xl; residual tiles use two columns then four at sm; diagnostics use one then two columns; year/rank collections use one then two at sm and three at xl; methodology uses one then three at xl. OperationalBrief compact metrics use one, sm two, md three and six at 1920px.",
+    "evidence": [
+      "SeasonalEfficiencyPage.tsx:33-34,92-122",
+      "SeasonalResidualDistribution.tsx:73",
+      "SeasonalComponentDiagnostics.tsx:40-46",
+      "SeasonalYearDirectory.tsx:32-57",
+      "SeasonalRankedMonths.tsx:40-56",
+      "SeasonalMethodology.tsx:23",
+      "web\\src\\components\\data-display\\OperationalBrief.tsx:169-174"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalRankedMonths.tsx",
+        "line": 42,
+        "rule": "MDC-043; mission 15",
+        "detail": "A rank, localized month/support and formatted intensity share a fixed horizontal row; the value is outside the min-w-0 flexible text block. Long translated text and long unit strings may exceed a narrow nested grid allocation.",
+        "fix": "Review at 320px and allocated card widths; allow the value to wrap/reflow without dropping rank, sample count or distance.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredReviewWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "additionalReview": "Long localized labels, RTL, 200% text, high-precision units, multi-year/extreme histories; no lossy mobile simplification."
+  },
+  "accessibility": {
+    "status": "runtime, keyboard, focus, screen reader, effective contrast and reduced motion unverified",
+    "sourceStrengths": [
+      "Six chart callers provide localized ariaLabel and dataColumns to the existing accessible table owner.",
+      "Decorative seasonal title icons have aria-hidden=true.",
+      "OperationalBrief labels its sections and retains shared Button/Drawer interactions.",
+      "Loading skeletons and passive states preserve section headings; all 14 sections are mounted independently of data availability.",
+      "Methodology communicates limitations in text rather than color alone."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalDeseasonalizedTrend.tsx",
+        "line": 50,
+        "rule": "MDC-034/MDC-040",
+        "detail": "The trend XAxis renders dateKey, which is timestampMs-driveId, without the date tick formatter used by SeasonalObservationTimeline.tsx:60. A localized date is prepared at line 22 but only used in the table.",
+        "fix": "Render vehicle-local localized dates on the axis while preserving the stable dateKey identity and accessible data table; do not change the analytical ordering.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SeasonalEfficiencyPage.tsx",
+        "line": 76,
+        "rule": "MDC-026/MDC-040",
+        "detail": "PageLayout receives query but no loading/busy/error state props. PageContainer.tsx:134-140 derives its load announcement from explicit loading/error props, not query; its aria-busy likewise uses loading/busy at line 163. Section skeletons exist, but the centralized page announcement does not track this fetch via these props.",
+        "fix": "Wire the existing explicit initial-loading/background-busy and fatal-error announcement contract without replacing retained content or hiding sections. Verify announcements in a mounted page.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Selected vehicle + initial DataState yields summary placeholders and section Skeleton. No vehicle yields a passive instruction to select the header-owned vehicle.",
+    "empty": "Resolved [] retains zero returned/included accounting while observation-dependent charts/directories use explanatory EmptyState. No eligible rows is differentiated from no returned drives.",
+    "insufficientEvidence": "Fit-dependent sections show passive eligibility guidance; observed month/profile/support/year/rank evidence remains available. Fit status and support factors remain visible.",
+    "fatalError": "SeasonalSummaryBrief supplies one actionable QueryError/refetch; other sections keep titles and direct the user to the evidence band.",
+    "refreshError": "Cached drives remain in analysis. Summary QueryError and retained labels are shown; section content is not destroyed.",
+    "offlinePaused": "Page-level StaleRefreshWarning is mounted when isRefreshBlocked. Cached content survives.",
+    "unknown": "Unresolved summary metrics are null, unavailable fitted values use em dash, and undefined drive arrays normalize safely.",
+    "evidence": [
+      "SeasonalEfficiencyPage.tsx:44-74,84-86",
+      "SeasonalSectionBody.tsx:38-95",
+      "SeasonalSummaryBrief.tsx:15-16,66-91",
+      "SeasonalCoverageBrief.tsx:17-19,106-144",
+      "web\\src\\api\\dataState.ts:190-250"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SeasonalCoverageBrief.tsx",
+        "line": 106,
+        "rule": "MDC-026; mission 25",
+        "detail": "Brief retained state is based only on refreshError. A paused cached refresh has refreshError=null and isRefreshBlocked=true, so local briefs can say Source available while the page warning says refresh is blocked. The page warning is preserved; this is inconsistent local trust wording, not proven data loss.",
+        "fix": "Thread the existing paused/retained trust distinction through the feature brief adapter, using localized sourceStatus or an explicit paused state. Do not infer offline from empty data or add a competing trust registry.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalFittedCurve.tsx",
+      "line": 59,
+      "rule": "MDC-013/MDC-034; mission 43",
+      "detail": "Six charts hardcode 10px axis ticks instead of consuming the existing typography/chart token owner. Readability under saved font scaling and composed backgrounds is not established.",
+      "fix": "Use the shared chart/typography tokens and validate text scaling; keep muted axes and subdued grids, not bright white/neon labels.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMonthProfile.tsx",
+      "line": 31,
+      "rule": "MDC-010/MDC-012/MDC-016; mission 43",
+      "detail": "Section icons alternate cyan, green, amber, purple and blue without a documented semantic distinction. These are restrained -300 tones rather than neon/glow, but multiple unrelated decorative hues still add noise and fixed light tones require light-theme contrast review.",
+      "fix": "Use neutral token-driven decorative icons, reserving semantic hues for meaning; retain chart series distinctions and the user's chosen chart palette. No theme reset.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMonthSupport.tsx",
+      "line": 58,
+      "rule": "MDC-034/MDC-045",
+      "detail": "Sample count and converted display distance use the same YAxis. Their numeric relationship changes when the distance preference changes even though the source evidence does not.",
+      "fix": "Preserve both series, legend state and data columns; provide clearly labeled distinct axes or separate aligned displays through the existing charts owner. Keep raw distanceM unchanged and conversions at render time.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalObservationTimeline.tsx",
+      "line": 21,
+      "rule": "MDC-034; no data loss",
+      "detail": "The chart and its accessible fallback use analysis.timeline, which is sampled to 240 points by default. Prose discloses deterministic sampling, but no ChartContainer metadata.sampling or full observations exportData is supplied. This is a current scope limitation, not an existing CSV feature to claim.",
+      "fix": "Keep the current plot and image exports; adopt existing sampling metadata and consider full observation fallback/export only with explicit source-scope labeling. Do not replace complete analysis.observations or aggregates with sampled data.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Correct trend date labels, distinguish count/distance axes, and align paused trust/announcements using existing owners.",
+    "then": "Token-based axis readability, restrained decorative icons and narrow-card review.",
+    "notAnEntryBlocker": "Current domain decomposition, returned-window disclosure, preservation of all sections and SI/display separation are source-confirmed; no redesign or runtime acceptance performed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical chart axis typography adoption",
+      "existingOwnerFile": "web\\src\\lib\\tokens.ts",
+      "concretePropsVariantsStates": "Reuse chartTokens.axisStroke and existing typography tokens for tick fill/size; any missing scale-aware tick contract belongs to the chart/tokens owner, not a per-page font-size engine. Must retain light/dark/custom themes, saved font preferences and forced-colors alternatives.",
+      "usedBy": [
+        "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalFittedCurve.tsx:59-60",
+        "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMonthProfile.tsx:59-60",
+        "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMonthSupport.tsx:57-58"
+      ],
+      "dependsOn": ["Existing chartTokens/typography public contract review", "Shared owner validation of scale-aware ticks"],
+      "disposition": "Reuse first; report a shared extension only if current tokens cannot express the needed behavior. No shared source edits authorized by this audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\seasonal-efficiency\\index.ts",
+      "line": 1,
+      "rule": "MDC-002; mission 0",
+      "detail": "The barrel still exports SeasonalAccounting, SeasonalCalendarCoverage, SeasonalEvidenceSupport and SeasonalKpiEvidenceBand while this page imports the OperationalBrief replacements. SeasonalKpiEvidenceBand.tsx:28-49 shows a separate GlassPanel/MetricCard evidence summary. Those exports are not mounted by this page; repository-wide use and deletion safety were not investigated.",
+      "fix": "Treat OperationalBrief as the current mounted summary owner. Do not revive the alternate summary or delete exports without a separate bounded consumer/preservation trace.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "ADBA9A403FC173289EDC83B94DC8042F9FA8851188DA0D2166F6211C24FB26BC",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 131,
+    "sectionCount": 14,
+    "counts": {
+      "pageLayout": 1,
+      "fadeInGroups": 9,
+      "twoColumnGrids": 5,
+      "operationalBriefInstances": 4,
+      "directSeasonalGlassPanels": 10,
+      "effectiveContentPanelsIncludingBriefs": 14,
+      "chartContainers": 6,
+      "keyedCharts": 4,
+      "summaryMetrics": 6,
+      "calendarMetrics": 4,
+      "supportMetrics": 6,
+      "accountingCategories": 9,
+      "componentDiagnosticRows": 8,
+      "residualDiagnosticTiles": 4
+    },
+    "sections": [
+      {"name":"Observed seasonal evidence","component":"SeasonalSummaryBrief","pageLine":88,"mustPreserve":"Included/returned/excluded counts, observed intensity/distance, fit status and samples per six parameters, signed descriptive trend, in-sample R², local month/day/week/year coverage, timezone, cap disclosure, evidence index/band and recency."},
+      {"name":"Vehicle-local calendar coverage","component":"SeasonalCoverageBrief kind=calendar","pageLine":92,"mustPreserve":"Months/12, observed span, active days/weeks, timezone and included-row context; no eligible rows differs from no returned rows."},
+      {"name":"Evidence support and fit eligibility","component":"SeasonalCoverageBrief kind=support","pageLine":93,"mustPreserve":"Support index/band, volume/month/week/year/sample-parameter factors, fit status/reason and 24-sample/300-day/9-month default eligibility explanation."},
+      {"name":"Fitted annual curve and residual band","component":"SeasonalFittedCurve","pageLine":98,"mustPreserve":"365-day curve, fitted line, lower offset and residual-width stacked band; the lower/width pair is not independently hideable."},
+      {"name":"Observed local-month profile","component":"SeasonalMonthProfile","pageLine":99,"mustPreserve":"Twelve month identities, observed/fitted intensity, sample counts, nulls, legend persistence and descriptive interpretation."},
+      {"name":"Observed-vs-fitted timeline","component":"SeasonalObservationTimeline","pageLine":103,"mustPreserve":"Stable timestamp-drive identities, local dates, actual/fitted/deseasonalized series, chronological ordering and sampling disclosure retaining first/last."},
+      {"name":"Deseasonalized trend","component":"SeasonalDeseasonalizedTrend","pageLine":107,"mustPreserve":"Adjusted intensity and calendar timeline; explanation that route/operating mix remains in residuals."},
+      {"name":"Residual distribution","component":"SeasonalResidualDistribution","pageLine":108,"mustPreserve":"P10/P50/P90 residuals, weighted RMSE, residual-bin identity/center/sample count/distance share and non-causal explanation."},
+      {"name":"Model component diagnostics","component":"SeasonalComponentDiagnostics","pageLine":113,"mustPreserve":"Annual/semiannual amplitudes, peak-to-trough half range, weighted RMSE/MAE, trend, sample/parameter ratio and support band."},
+      {"name":"Month support and distance profile","component":"SeasonalMonthSupport","pageLine":114,"mustPreserve":"Month/sample/distance values, both series and keyed visibility; support is not magnitude ranking."},
+      {"name":"Year-over-year directory","component":"SeasonalYearDirectory","pageLine":119,"mustPreserve":"Every year, samples, observed/deseasonalized intensities, distance and prior-year change including missing values."},
+      {"name":"Ranked local-month evidence","component":"SeasonalRankedMonths","pageLine":120,"mustPreserve":"Descending observed intensity, deterministic month tie-break, rank, localized month, sample volume and distance."},
+      {"name":"Returned-row accounting and recency","component":"SeasonalCoverageBrief kind=accounting","pageLine":124,"mustPreserve":"Nine mutually exclusive categories, returned=included+excluded, limit, first/last local dates, total energy/distance and cap warning."},
+      {"name":"Methodology and interpretation limits","component":"SeasonalMethodology","pageLine":127,"mustPreserve":"Six-term distance-weighted/ridge model, eligibility, timezone/history scope, unmodeled causes, null R² for constant observations, residual/support limitations and reconciliation."}
+    ],
+    "actions": [
+      {"name":"Select vehicle","owner":"Existing workspace header","evidence":"SeasonalEfficiencyPage.tsx:39-43; SeasonalSectionBody.tsx:38-46","mustPreserve":"No duplicate page picker; use the shared selection."},
+      {"name":"Retry history","owner":"Seasonal summary QueryError","evidence":"SeasonalEfficiencyPage.tsx:65; SeasonalSummaryBrief.tsx:91","mustPreserve":"Refetch the existing query after fatal or refresh error; cached analysis remains visible."},
+      {"name":"Review details / close drawer","owner":"OperationalBrief","evidence":"OperationalBrief.tsx:155-165,240-276","mustPreserve":"Four brief instances each retain metric context, source status/provenance and shared Drawer interaction; actual focus behavior unverified."},
+      {"name":"PNG / SVG / copy-image exports","owner":"ChartContainer","evidence":"ChartContainer.tsx:130-146,629-637","mustPreserve":"Existing shared exports on nonempty eligible charts. These callers do not supply exportData, so CSV availability is not claimed."},
+      {"name":"Toggle chart series","owner":"Existing keyed ChartLegend/ChartContainer","evidence":"SeasonalMonthProfile.tsx:44,54-65; SeasonalObservationTimeline.tsx:45,55-67; SeasonalMonthSupport.tsx:44,52-63","mustPreserve":"Keys seasonal-efficiency-month-profile, seasonal-efficiency-timeline, seasonal-efficiency-month-support; fitted-curve key also retained with intentional indivisible-band exception."}
+    ],
+    "dataBehavior": [
+      "Keep raw SI wire/cache values and existing Drive camelCase model access; no new legacy helpers or server capabilities.",
+      "Keep the isolated selected-vehicle history query, limit 1000, AbortSignal, safeArray and existing retry/cache policy.",
+      "The seasonal page intentionally describes the latest returned history. It currently has no range-enabled workspace control; do not add a second date picker or silently replace annual evidence with a short-range subset.",
+      "Retain vehicle-local IANA/DST calendar normalization, per-mount nowMs, mutually exclusive exclusion categories and exact row reconciliation.",
+      "Keep eligibility, six harmonic/trend parameters, distance weights, ridge sanitation, observed aggregates, fit status and null semantics unchanged.",
+      "Keep full observations distinct from the sampled timeline; downsample retains endpoints at maximum 240 default points (seasonalEfficiency.ts:513-520).",
+      "Preserve intensity/energy/distance unit preferences, signed trend formatter, number precision, locale and timezone.",
+      "Keep every section mounted through no-selection, initial, empty, insufficient-fit, fatal, retained-error and paused-refresh states."
+    ],
+    "scope": "Audit only; source bytes were not edited. Counts describe source-rendered top-level section instances, not mounted DOM or runtime proof."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "tests": "Not run: source-only Phase0 audit; no TypeScript, full lint, build or browser validation authorized.",
+    "backend": "Only router registration inspected; handler/repository execution, sorting/pagination, units on actual responses and authentication were not exercised.",
+    "tooling": [
+      "Get-FileHash page -Algorithm SHA256 returned the recorded source hash; Get-Content count returned 131.",
+      "A PowerShell invocation of rg failed because rg is not on PATH (exit 1); the dedicated rg tool was then used successfully for bounded source checks.",
+      "The audit-violations skill was loaded and audit.sh read; it unconditionally executes npx tsc, so the script was not run during the concurrent source-only audit.",
+      "One batched dependency read exceeded the tool display limit. Active page dependencies were subsequently inspected with direct view calls; truncated-only content is not treated as semantic evidence.",
+      "A guessed neighboring audit file did not exist; no sibling report was used.",
+      "No Git commands, source edits, queue edits, production mutations or full validation commands."
+    ],
+    "sourceChecks": "Dedicated rg search across the page/seasonal presentation directory and two seasonal brief files found no matching text-neon, text-white, text-gray, glow, style= or raw button/input/textarea/select/table patterns. This is a bounded pattern observation, not a complete violations/a11y certificate.",
+    "ownership": ["docs\\frontend-audits\\audit-page-123.json",".agent-status\\audit-page-123.txt"],
+    "acceptance": "Phase0 report only; mission section44 runtime/QA completion is not claimed."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\SeasonalEfficiencyPage.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SeasonalSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SeasonalCoverageBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\index.ts",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\types.ts",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\formatters.ts",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalFittedCurve.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMonthProfile.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalObservationTimeline.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalDeseasonalizedTrend.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalResidualDistribution.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalComponentDiagnostics.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMonthSupport.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalYearDirectory.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalRankedMonths.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalMethodology.tsx",
+    "web\\src\\features\\driving\\components\\seasonal-efficiency\\SeasonalKpiEvidenceBand.tsx",
+    "web\\src\\features\\driving\\lib\\seasonalEfficiency.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "internal\\api\\router.go"
+  ]
+}
