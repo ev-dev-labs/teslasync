@@ -1,0 +1,482 @@
+{
+  "item": "audit-page-134",
+  "phase": 0,
+  "page": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx",
+  "routes": [
+    {
+      "path": "/intelligence-packs",
+      "file": "web\\src\\App.tsx",
+      "line": 759,
+      "mount": "SafeRoute name=IntelligencePackMarketplace",
+      "evidence": "Source route declaration only; actual authenticated reachability not exercised."
+    }
+  ],
+  "purpose": "Review signed declarative analytics packs from a bundled catalog, manage device-local installation and explicit trust, preview synthetic sandbox results, inspect local audit history, import/export envelopes, and understand security limitations.",
+  "primaryGoal": "Make an informed explicit install/grant decision without confusing signature validity, publisher recognition, user trust, synthetic preview, and real vehicle analytics.",
+  "dataSources": [
+    {
+      "name": "Catalog",
+      "hooks": ["useCatalog", "useInstalledPacks"],
+      "file": "web\\src\\features\\intelligence-packs\\hooks\\useCatalog.ts",
+      "line": 17,
+      "endpoints": [],
+      "sourceOwner": "Feature-local CATALOG_ENTRIES imported from lib\\catalogFixtures.ts, annotated using repository.listInstalled().",
+      "behavior": "Catalog is bundled intentionally synthetic demonstration content, not invented runtime fleet data. Installed status is derived from local versions; unknown repository data currently maps to no installed version.",
+      "limits": "Catalog fixture module contents were not individually reviewed; no server route or network request is implied."
+    },
+    {
+      "name": "Installed records",
+      "hooks": ["useInstalledPacks"],
+      "file": "web\\src\\features\\intelligence-packs\\hooks\\useInstalledPacks.ts",
+      "line": 8,
+      "endpoints": [],
+      "sourceOwner": "PackRepositoryProvider -> createPackRepository -> KvStore; IndexedDB database teslasync-intelligence-packs, store kv.",
+      "behavior": "queryKey intelPackQueryKeys.installed; staleTime=0; repository.listInstalled(); versions, enabled state, original verification and rollback snapshots remain local."
+    },
+    {
+      "name": "Trust and mutations",
+      "hooks": ["useTrustDecision", "usePackActions"],
+      "file": "web\\src\\features\\intelligence-packs\\hooks\\usePackActions.ts",
+      "line": 21,
+      "endpoints": [],
+      "sourceOwner": "Feature-local repository and lib\\packActions.ts",
+      "behavior": "Install, upgrade, rollback, uninstall, enable/disable and trust decisions invalidate installed, audit and affected trust keys. Trust reads are enabled only for a truthy pack ID, staleTime=0. No actual action executed."
+    },
+    {
+      "name": "Verification",
+      "hooks": ["usePackVerification"],
+      "file": "web\\src\\features\\intelligence-packs\\hooks\\usePackVerification.ts",
+      "line": 16,
+      "endpoints": [],
+      "sourceOwner": "verifyPackEnvelope imported from feature lib\\verifyEnvelope.ts",
+      "behavior": "Local query keyed by digest or manifest/signature fallback; retry=false, staleTime=Infinity, enabled only with an envelope. Platform failures remain explicit.",
+      "limits": "Cryptographic implementation and browser support not validated; security text is a source-stated contract, not a penetration-test result."
+    },
+    {
+      "name": "Sandbox",
+      "hooks": ["useSandboxPreview", "useTrustDecision", "useCatalog"],
+      "file": "web\\src\\features\\intelligence-packs\\hooks\\useSandboxPreview.ts",
+      "line": 12,
+      "endpoints": [],
+      "sourceOwner": "Memoized runSandboxPreview imported from lib\\sandboxRunner.ts; bundled sample data.",
+      "behavior": "Synchronous bounded synthetic preview; installed grant is used when available, otherwise full requested capabilities are explicitly simulated. This is not a grant mutation or real telemetry access.",
+      "limits": "Interpreter implementation, ceilings enforcement and units of arbitrary manifest formula outputs were not validated."
+    },
+    {
+      "name": "Audit",
+      "hooks": ["useAuditLog"],
+      "file": "web\\src\\features\\intelligence-packs\\hooks\\useAuditLog.ts",
+      "line": 9,
+      "endpoints": [],
+      "sourceOwner": "repository.listAuditLog(limit)",
+      "behavior": "Local newest-first events, capped by imported MAX_AUDIT_LOG_ENTRIES; table is read-only and paginated."
+    },
+    {
+      "name": "File import/export and static methodology",
+      "hooks": ["useInstalledPacks", "usePackVerification"],
+      "file": "web\\src\\features\\intelligence-packs\\lib\\manifestImportExport.ts",
+      "line": 26,
+      "endpoints": [],
+      "sourceOwner": "FileReader, parseSignedEnvelope and browser Blob download; feature manifest/budget constants.",
+      "behavior": "File/paste import validates before opening the same detail/verification/confirmation flow; no direct installation. Export serializes the existing envelope as pretty JSON with sanitized filename. Methodology renders source-declared guarantees and non-guarantees.",
+      "limits": "Backend router inspection not applicable: inspected hooks do not use request(). No backend capability or runtime network isolation proof claimed."
+    }
+  ],
+  "components": [
+    {
+      "role": "Page/layout",
+      "owners": ["@/components/layout: PageLayout, LayoutCard, Grid, SourceContent"],
+      "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx",
+      "line": 18,
+      "contract": "Retain shared page width/gutters, card hierarchy and source-state presentation; do not add another marketplace shell.",
+      "inspection": "Consumer imports verified; shared implementations except explicitly listed Tabs/Toggle not inspected."
+    },
+    {
+      "role": "Navigation/motion",
+      "owners": ["web\\src\\components\\ui\\Tabs.tsx", "@/components/motion: FadeIn"],
+      "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx",
+      "line": 47,
+      "contract": "Tabs takes tabs, activeTab, onChange, ariaLabel and optional idBase; caller owns linked tabpanel. Preserve six keys and default catalog. FadeIn keyed by activeTab preserves current conditional mounting."
+    },
+    {
+      "role": "Actions/forms/overlays",
+      "owners": ["@/components/ui: Button, Toggle, Select, Input, Textarea, Modal, ConfirmDialog, CopyButton", "@/components/forms: FormSection"],
+      "file": "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx",
+      "line": 15,
+      "contract": "Existing loading/disabled, labeled fields, overlay focus and typed confirmation APIs remain canonical. No competing grant picker or confirmation system."
+    },
+    {
+      "role": "Tables/status/recovery",
+      "owners": ["@/components/ui: DataTable, Table, Badge", "@/components/feedback: EmptyState, AlertBanner, InlineCallout", "components\\PackRepositorySource.tsx"],
+      "file": "web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx",
+      "line": 164,
+      "contract": "Stable table IDs intelligence-packs:installed and intelligence-packs:audit-log; value filters, expanded detail, audit pagination and mobile details must survive."
+    },
+    {
+      "role": "Charts/measurements",
+      "owners": ["@/components/charts: EmbeddedChart and chart barrel", "@/components/data-display: MetricTile, KVList, OperationalBrief", "components\\operationalbrief-all\\SandboxRunBrief.tsx"],
+      "file": "web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx",
+      "line": 61,
+      "contract": "Retain sample/value accessible data columns, all declared widgets, formula unit text, budget/denied-field notices and sample-run provenance. Brief latency raw value is seconds (durationMs/1000), display remains source milliseconds."
+    },
+    {
+      "role": "Domain presentation",
+      "owners": ["CatalogCard", "PackDetailModal", "VerificationStatusBadge", "CompatibilityBadge", "PublisherFingerprintDisplay", "CapabilityRequestList", "TrustDistinctionNote", "PackRecommendations"],
+      "file": "web\\src\\features\\intelligence-packs\\components\\CatalogCard.tsx",
+      "line": 11,
+      "contract": "Retain signed/unsigned/tampered distinctions, fingerprint grouping/copy/mismatch, compatibility reasons, capability descriptions and manual-only recommendations."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx",
+      "line": 121,
+      "rule": "MDC-013",
+      "detail": "Publisher/capability/content headings and several sibling metadata blocks use repeated local typography classes; existing Text/Caption/Code/role wrappers already cover this need.",
+      "fix": "Adopt existing typography roles without replacing domain labels or adding a new composite.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\intelligence-packs\\components\\PackRepositorySource.tsx",
+      "line": 14,
+      "rule": "MDC-002",
+      "detail": "Installed, audit and export already share one repository-state adapter; verification, capabilities, fingerprints and recommendations also have dedicated owners.",
+      "fix": "Reuse these owners; no speculative shared marketplace components.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-only; all viewport behavior unverified",
+    "sourceStrategies": [
+      "CatalogPanel.tsx:36 uses Grid default=1/md=2/xl=3.",
+      "SandboxPreviewPanel.tsx:227 uses 1/sm=2/lg=3 widget columns.",
+      "Tabs.tsx:91-94 uses max-w-full, overflow-x-auto and nonwrapping labels.",
+      "InstalledInventoryPanel.tsx:173 prioritizes name/enabled; AuditLogPanel.tsx:80 prioritizes timestamp/action.",
+      "ImportExportPanel.tsx:122-134 truncates pack name in a flex row; PublisherFingerprintDisplay.tsx:41-42 wraps fingerprint/copy/status."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx",
+        "line": 173,
+        "rule": "MDC-023 / MDC-043",
+        "detail": "Explicit mobile column subset omits verification and lifecycle actions; audit subset similarly omits pack/detail. Whether DataTable exposes omitted fields/actions through its current mobile detail strategy was not inspected or exercised.",
+        "fix": "Verify full details, rollback/uninstall, verification and audit context remain reachable at every specified width; use existing DataTable mobile/detail APIs rather than dropping data.",
+        "owner": "integration",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx",
+        "line": 164,
+        "rule": "MDC-024 / MDC-043",
+        "detail": "Detail footer uses a nonwrapping action row; long translations and nested confirmation replacement require narrow-width/open-state inspection. No clipping has been proved.",
+        "fix": "Test 320px and 200% text with long names/capabilities/translations; reflow within existing Modal/ConfirmDialog contracts if needed.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "status": "source findings only; keyboard, screen-reader, focus, contrast and OS modes unverified",
+    "positiveEvidence": [
+      "Tabs.tsx:70-87 provides Left/Right and Home/End navigation; labels and focus styles are present.",
+      "CapabilityRequestList.tsx:36-39 uses Granted/Denied text, not only color.",
+      "SandboxPreviewPanel.tsx:63-72 supplies chart ariaLabel and sample/value data columns.",
+      "ImportExportPanel.tsx:81 names the file input and uses a shared Button to activate it.",
+      "PublisherFingerprintDisplay.tsx:43 names the fingerprint copy action."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx",
+        "line": 47,
+        "rule": "MDC-040 / existing Tabs panel contract",
+        "detail": "Tabs emits aria-controls to generated panel IDs (Tabs.tsx:112), but this consumer supplies no idBase and the following FadeIn/LayoutCard has no matching id, role=tabpanel or aria-labelledby. The accessible tab-to-panel relationship is absent in inspected consumer source.",
+        "fix": "Pass a stable idBase and mark the active panel with the matching id, role and tab label association, preserving six keys and conditional mounts.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx",
+        "line": 43,
+        "rule": "MDC-020 / MDC-040",
+        "detail": "Unavailable/pending enable switch is visually suppressed with opacity/pointer-events, but disabled is not passed to Toggle. Toggle supports native disabled; the guard prevents mutation but does not communicate disabled semantics to keyboard/assistive technology.",
+        "fix": "Use existing disabled={!interactive} plus truthful loading/unresolved/blocked explanation; preserve isEnableAllowed and the guarded callback.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Toggle.tsx",
+        "line": 13,
+        "rule": "MDC-040",
+        "detail": "The page requests size=sm, whose button track is h-5 w-9. No 44px hit area is visible in this implementation. Actual target spacing and applicability of WCAG exceptions remain unmeasured.",
+        "fix": "Shared owner should evaluate target reachability while preserving compact track visuals, existing sizing and switch semantics; do not add a page-local switch.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "present": [
+      "PackRepositorySource.tsx:16-35 separates unresolved/loading/fatal/retained/ready and offers retry; Installed/Audit/Export use it.",
+      "VerificationStatusBadge.tsx:29-53 separates checking, browser limitation, failure and unknown; subsequent switch distinguishes each verification status.",
+      "CatalogPanel.tsx:29, InstalledInventoryPanel.tsx:154, AuditLogPanel.tsx:68 and ImportExportPanel.tsx:117 retain domain empty states.",
+      "ImportExportPanel.tsx:104-113 shows up to ten parse errors; file read failures have explicit error copy.",
+      "SandboxPreviewPanel.tsx:113-159 retains missing formula, no rows, latest/average unknown, budget error and denied-field messages.",
+      "SandboxRunBrief.tsx:22,59-75 distinguishes budget-limited outputs from complete sample evaluation, never live-data freshness."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\intelligence-packs\\hooks\\useCatalog.ts",
+        "line": 21,
+        "rule": "MDC-026",
+        "detail": "Missing installed query data becomes an empty map and installedVersion=null; only isLoading is returned and CatalogPanel/SandboxPreviewPanel ignore it. A pending/failed local inventory can look like not installed despite the bundled catalog itself being available.",
+        "fix": "Keep bundled catalog visible, but expose repository trust state separately and label installed status unresolved/failed rather than inferring absence; retain installed data on refresh failure.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx",
+        "line": 57,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "Pending/error trust reads become an empty grant and none recorded; enable cell likewise treats unresolved trust as no trust. Unknown grant availability is not the same as explicit denied capability.",
+        "fix": "Render independent trust loading/error/retained states using existing source-state conventions; never loosen enable gating or fabricate approved capabilities.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx",
+        "line": 70,
+        "rule": "MDC-026 / mission section 24",
+        "detail": "Install/trust/block mutations await promises but no inline mutation error/recovery is rendered. Inventory rollback/uninstall/enable mutations similarly expose pending state without local error feedback. Persistence failure handling is not demonstrated.",
+        "fix": "Present independent mutation failure feedback and safe retry without auto-confirmation, capability changes or loss of retained records. Preserve trust-write-before-install ordering and acknowledged nontransactional behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\intelligence-packs\\components\\PackRepositorySource.tsx",
+        "line": 19,
+        "rule": "MDC-026",
+        "detail": "Retained state is passed but refreshError/paused reason is not supplied as visible retained feedback. Shared SourceContent behavior was not reviewed; distinct error/offline explanation cannot be certified.",
+        "fix": "Integration owner should inspect current SourceContent contract and exercise retained read failures before extending anything. Keep usable neighboring content and do not describe this local repository as a server outage.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "offline": "Local-first source does not need server availability; browser storage/crypto capability can still fail. No actual offline execution or fallback persistence test performed."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx",
+      "line": 85,
+      "rule": "MDC-010 / MDC-034 / mission sections 5 and 7",
+      "detail": "Formula charts hardcode saturated cyan #22d3ee, green #34d399 with fill #34d39933 (line 93), and purple #a78bfa (line 101), bypassing the current shared chart palette/theme preferences.",
+      "fix": "Use the existing chart palette/token contract with restrained defaults; preserve all series, kinds, units, data tables, sample indexing and explicitly saved chart preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\Toggle.tsx",
+      "line": 104,
+      "rule": "MDC-010 / MDC-011",
+      "detail": "Inherited switch focus ring and active track use fixed cyan-500/cyan-600 rather than semantic focus/active tokens (line 113). This is a saturated accent source, not proof of excessive rendered brightness.",
+      "fix": "Existing Toggle owner should align active/focus styling with canonical tokens while retaining state distinction, forced colors, density and saved theme choices.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\intelligence-packs\\components\\AuditLogPanel.tsx",
+      "line": 43,
+      "rule": "MDC-013 / mission section 43",
+      "detail": "Raw spans/p paragraphs use ad-hoc text-xs/text-sm metadata roles across Audit, Installed, Catalog intro, detail, compatibility and fingerprint surfaces. These often already use theme variables, so the finding is typography inconsistency, not pure-white text.",
+      "fix": "Use existing Text/Caption/Code wrappers with semantic as overrides; preserve mono fingerprints, tabular numerals, wrap/truncation and all labels.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx",
+      "line": 4,
+      "rule": "MDC-046 / documentation truth",
+      "detail": "Page comment mentions only IndexedDB/localStorage, while packRepositoryContext.tsx:34-38 and kvStore.ts:145-152 also permit memory. Provider exposes backend but inspected panels do not consume it; memory-only durability is not visibly disclosed in these consumers.",
+      "fix": "Report the existing provider.backend through a local explanatory notice; document memory fallback accurately. Do not invent transactional or durable guarantees or replace storage architecture.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\intelligence-packs\\lib\\kvStore.ts",
+      "line": 99,
+      "rule": "MDC-026 / MDC-046",
+      "detail": "localStorage write exceptions are swallowed; IndexedDB selection is existence-based and does not transparently switch after an open failure. Existing source comments about fallback are not runtime durability evidence.",
+      "fix": "Preserve current persistence semantics in presentation work and disclose evidence limits. Any reliability contract change needs a separately scoped integration owner and focused persistence tests.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Trust/grant status fidelity, explicit mutation recovery and tab semantics precede cosmetic modernization. Chart saturation/typography follow without changing install or consent behavior.",
+    "sequence": ["Resolve source-state and accessible navigation gaps", "Verify shared mobile table/overlay/switch contracts", "Adopt existing typography and chart palettes", "Run parent-owned viewport/theme/state/keyboard acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Review existing Toggle semantic color and touch target contract",
+      "existingOwnerFile": "web\\src\\components\\ui\\Toggle.tsx",
+      "propsVariantsStates": {
+        "existing": ["checked", "onChange", "disabled", "size=sm|md", "label", "aria-label", "aria-describedby"],
+        "preserve": ["native switch semantics", "disabled behavior", "forced-colors border", "compact track", "saved theme preferences"],
+        "review": ["semantic active/focus token consumption", "44px default touch reachability or documented spacing exception"]
+      },
+      "usedBy": ["web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx:35"],
+      "dependsOn": ["MDC-010", "MDC-011", "MDC-040", "Shared owner validation of actual composed target geometry and contrast"],
+      "disposition": "Review/extend existing owner only; no new shared component proposed. Cross-page consumer inventory is outside this one-page audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx",
+      "line": 85,
+      "rule": "MDC-034",
+      "detail": "Local hardcoded formula-series palette competes with the established chart palette owner, although chart components correctly use the category barrel and EmbeddedChart.",
+      "fix": "Adopt the existing palette, not another chart engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "4afeb36dda7d53609dff635127af088338dee2fba89008a68124019ce031bbbf",
+    "sourceHashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 84,
+    "featureProductionTsxLineCount": 1657,
+    "featureProductionTsxFileCount": 18,
+    "counts": {
+      "topLevelTabs": 6,
+      "pageLayoutCallsites": 1,
+      "pageLayoutCardCallsites": 1,
+      "pageGlassPanelCallsites": 0,
+      "pageChartContainerCallsites": 0,
+      "securityNestedLayoutCards": 4,
+      "importExportFormSections": 2,
+      "detailReviewSections": 3,
+      "detailConfirmationModes": 2,
+      "domainDataTables": 2,
+      "runtimeRenderedSectionCount": "unverified; dynamic widget/dashboard counts depend on manifest"
+    },
+    "sections": [
+      {"name": "Catalog", "key": "catalog", "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "line": 37, "preserve": "Bundled trust-state examples, source notes, descriptions, publisher/version, verification/compatibility, fingerprint copy, capability count and review/install entry point."},
+      {"name": "Installed", "key": "installed", "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "line": 38, "preserve": "Local inventory filters, original verification snapshot, enabled state, expandable grant/trust/history, catalog update hint, rollback, uninstall confirmation."},
+      {"name": "Sandbox preview", "key": "sandbox", "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "line": 39, "preserve": "Pack selector, explicit synthetic data/grant notice, every declared dashboard/widget, sample output data table, latest/average/range, budget/denial messages and run brief."},
+      {"name": "Audit log", "key": "audit", "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "line": 40, "preserve": "Newest-first timestamp/action/pack/detail, domain semantic action variants, value filters, pagination, local-only read semantics."},
+      {"name": "Import / export", "key": "importExport", "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "line": 41, "preserve": "File chooser and pasted JSON, structural parse errors, same detail verification/trust flow, installed envelope export and filename sanitization."},
+      {"name": "Security & methodology", "key": "security", "file": "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx", "line": 42, "preserve": "Trust distinction; nine source-stated guarantees; eight explicit non-guarantees; eight resource/budget rows; entire allowlist; browser/secure-context warning."}
+    ],
+    "actions": [
+      "Switch all six tabs; initial tab=catalog; selected tab conditionally mounts its panel.",
+      "Open/close detail, copy recomputed fingerprint, inspect publisher recognition and mismatch.",
+      "Signed valid install/upgrade requires explicit warning confirmation; failed verification remains blocked; unknown verification has no install button.",
+      "Unsigned local-development trust requires literal TRUST UNSIGNED; do not translate, bypass or prefill it.",
+      "Record blocked decision with empty approvedCapabilities; do not turn blocked state into an install path.",
+      "After confirmation record trust first, grant exactly manifest.capabilities, then install enabled=true or upgrade; no per-capability picker exists and none is authorized by this audit.",
+      "Enable/disable only with isEnableAllowed and pending guard; rollback to latest superseded version; uninstall only after explicit danger confirmation.",
+      "Choose any catalog pack for synthetic preview, including unsigned/tampered demonstrations; this does not install or grant real-data permissions.",
+      "Parse uploaded/pasted envelope, inspect errors, then review in detail; export installed envelope unchanged as JSON.",
+      "Filter/expand installed table; filter/paginate audit table; preserve stable table IDs and current DataTable-provided functionality."
+    ],
+    "dataBehavior": [
+      "No backend endpoint is used by the inspected feature hooks; no server, auth, subscription or live-telemetry capability is inferred.",
+      "Repository provider owns one local instance for all tabs; DB/store names, query keys and fallback selection remain unchanged.",
+      "Install records retain original verification and timestamps; upgrade preserves enabled/installedAt and caps previousVersions at five (packRepository.ts:44; packActions.ts:69-99).",
+      "Rollback pops latest retained snapshot, discards rolled-back-from version and preserves current enabled state (packActions.ts:114-138).",
+      "Uninstall removes installed/history record but repository.removeInstalled does not remove the separate trust table (packRepository.ts:127-132); do not invent trust deletion.",
+      "Trust/installed/audit blobs are independently queued, not cross-table transactions. No modernization may claim atomic consent+install persistence.",
+      "Verification result, known publisher and user trust remain separate. Compatibility is shown as informational evidence; existing installability branches only on verification status.",
+      "Synthetic denied-field evaluation as zero is existing interpreter-facing behavior disclosed by the widget text, not permission to zero-fill unknown real data.",
+      "Preview fallback grant simulation is clearly described; current formula outputs and manifest units remain unchanged rather than guessed/converter-adjusted.",
+      "Brief source run duration converts milliseconds to raw latency seconds only for shared display, with preserved source-ms formatter and synthetic provenance."
+    ],
+    "modernizationRule": "Preserve every listed section/action/data behavior; evaluate page plus extracted components rather than shrinking this 84-line orchestrator as a proxy for capability removal."
+  },
+  "evidenceLimits": {
+    "method": "Bounded source reads, route citation, page hash and case-sensitive production-feature regex counts only.",
+    "runtime": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboardFocusScreenReader": "NOTRUN",
+    "contrastForcedColorsReducedMotion": "NOTRUN",
+    "viewportThemeRtlZoom": "NOTRUN",
+    "installationTrustGrantExportMutations": "NOTRUN; no actual installation, capability grants, browser storage writes or downloads performed.",
+    "backend": "Not inspected or exercised; no endpoint present in inspected hooks, no invented runtime/backend proof.",
+    "tests": "No tests, TypeScript, lint or build executed. audit.sh was read but not run because it includes project-wide npx tsc --noEmit; assignment is source-only and forbids full-repository lint/build.",
+    "commandEvidence": [
+      {
+        "command": "Get-FileHash 'web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx' -Algorithm SHA256",
+        "exitCode": 0,
+        "output": "4AFEB36DDA7D53609DFF635127AF088338DEE2FBA89008A68124019CE031BBBF"
+      },
+      {
+        "command": "Get-ChildItem 'web\\src\\features\\intelligence-packs' -Recurse -File; filter production .ts/.tsx excluding __tests__; Select-String -CaseSensitive with listed patterns",
+        "exitCode": 0,
+        "output": [
+          "neon|glow|shadow-\\[ => 0",
+          "text-white|#fff(?:fff)?\\b => 0",
+          "style=\\{\\{ => 0",
+          "<(button|input|textarea|select|table)\\b => 0",
+          "from .(recharts|react-leaflet|framer-motion). => 0",
+          "#22d3ee|#34d399|#a78bfa => 3",
+          "fetch\\(|request\\(|/api/v1/ => 0",
+          "production TSX files=18 totalLines=1657"
+        ],
+        "interpretation": "Lexical counts, not AST completeness or runtime safety. No page-specific neon/glow/fixed-white literal matched; chart saturation exists; inherited shared styles are not covered by feature counts."
+      }
+    ],
+    "failedAttempts": [
+      "First PowerShell regex batch had a quoting ParserError (exit 1); corrected batch executed.",
+      "Initial corrected batch used case-insensitive Select-String and matched shared component names as raw HTML (13 false positives); final case-sensitive batch above supersedes it."
+    ],
+    "uninspectedDependencies": ["catalogFixtures.ts contents", "manifestValidator.ts", "verifyEnvelope.ts", "packCrypto.ts", "sandboxRunner.ts", "sampleTelemetry.ts", "shared Modal/ConfirmDialog/DataTable/SourceContent/FadeIn implementations", "global theme/token CSS", "translation catalogs"],
+    "historicalAcceptance": "No prior receipts treated as current acceptance; no Git operations.",
+    "ownership": ["docs\\frontend-audits\\audit-page-134.json", ".agent-status\\audit-page-134.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md (sections 0/1; 5/6/7; 15-25; 30/31; source architecture excerpt 33-37; visual gate 43)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\App.tsx (750-763; route/lazy declaration source search)",
+    "web\\src\\components\\layout\\Layout.tsx (route navigation source search only)",
+    "web\\src\\components\\ui\\Tabs.tsx",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\features\\intelligence-packs\\pages\\IntelligencePackMarketplacePage.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\CatalogPanel.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\CatalogCard.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\InstalledInventoryPanel.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\SandboxPreviewPanel.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\AuditLogPanel.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\ImportExportPanel.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\SecurityMethodologyPanel.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\PackDetailModal.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\CapabilityRequestList.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\PackRepositorySource.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\PublisherFingerprintDisplay.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\VerificationStatusBadge.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\CompatibilityBadge.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\PackRecommendations.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\TrustDistinctionNote.tsx",
+    "web\\src\\features\\intelligence-packs\\components\\operationalbrief-all\\SandboxRunBrief.tsx",
+    "web\\src\\features\\intelligence-packs\\hooks\\packRepositoryContext.tsx",
+    "web\\src\\features\\intelligence-packs\\hooks\\queryKeys.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\useCatalog.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\useInstalledPacks.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\useAuditLog.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\useTrustDecision.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\usePackVerification.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\useSandboxPreview.ts",
+    "web\\src\\features\\intelligence-packs\\hooks\\usePackActions.ts",
+    "web\\src\\features\\intelligence-packs\\lib\\packActions.ts",
+    "web\\src\\features\\intelligence-packs\\lib\\packRepository.ts",
+    "web\\src\\features\\intelligence-packs\\lib\\kvStore.ts",
+    "web\\src\\features\\intelligence-packs\\lib\\trust.ts",
+    "web\\src\\features\\intelligence-packs\\lib\\manifestImportExport.ts"
+  ]
+}
