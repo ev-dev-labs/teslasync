@@ -1,0 +1,373 @@
+{
+  "item": "audit-page-026",
+  "page": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+  "routes": ["/tesla-region"],
+  "purpose": "Display the Tesla account region, the Fleet API endpoint used by TeslaSync, and regional reference information.",
+  "primaryGoal": "Inspect the resolved account region and endpoint, copy the complete base URL, and explicitly re-resolve the region from Tesla.",
+  "dataSources": [
+    {
+      "hook": "useTeslaUserRegion",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 123,
+      "endpoint": "GET /api/v1/tesla/user/region",
+      "sourceOwnership": "Account snapshot, not selected-vehicle telemetry or a workspace date-range aggregate.",
+      "fields": ["data.region", "data.fleet_api_base_url", "fetched_at"],
+      "queryBehavior": "userKeys.teslaRegion = ['tesla-user-region']; STALE_TIMES.STATIC; forwards AbortSignal; no vehicle or date parameters.",
+      "citations": [
+        "web\\src\\api\\hooks\\useUser.ts:14,94-97,118-128",
+        "web\\src\\api\\client.ts:73-78,93",
+        "internal\\api\\router.go:3599-3603",
+        "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:33-46"
+      ],
+      "backendLimit": "Router registration inspected; handler, persistence, Tesla response guarantees, cache age and account authentication details were not traced or exercised."
+    },
+    {
+      "hook": "useRefreshTeslaRegion",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 131,
+      "endpoint": "POST /api/v1/tesla/user/region/refresh",
+      "sourceOwnership": "Existing explicit account-region mutation; no production mutation performed.",
+      "queryBehavior": "Invalidates the existing region query on success and emits one hook-owned success/error toast. Router applies 5 requests per minute by IP.",
+      "citations": [
+        "web\\src\\api\\hooks\\useUser.ts:131-142",
+        "internal\\api\\router.go:3603",
+        "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:35-39"
+      ]
+    },
+    {
+      "hook": "parseEndpoint / REGION_ZONE_KEYS / REGION_ZONE_FALLBACK",
+      "file": "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts",
+      "line": 17,
+      "endpoint": null,
+      "sourceOwnership": "Existing feature-owned derived display metadata and static NA/EU/CN reference descriptions.",
+      "queryBehavior": "URL parsing retains raw base URL; malformed URLs yield null host/protocol while attempting zone recognition. Unknown zones remain null.",
+      "citations": ["web\\src\\features\\admin\\components\\tesla-region\\helpers.ts:17-26,39-59"]
+    },
+    {
+      "hook": "useAccountSnapshotPeriod / useDateFormat / useOperationalMetrics",
+      "file": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx",
+      "line": 19,
+      "endpoint": null,
+      "sourceOwnership": "Existing shared locale/unit/currency formatting and account snapshot-period adapters; not an additional region source.",
+      "queryBehavior": "Validates fetched_at before presenting snapshot time, uses relative time for the summary and existing preference-aware operational metric formatting.",
+      "citations": [
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:5-16",
+        "web\\src\\hooks\\useOperationalMetrics.tsx:11-25",
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx:19-48"
+      ],
+      "backendLimit": "Formatting preference endpoints and deeper formatter internals were not inspected; no new physical-unit assumptions are needed for these text/status metrics."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / PageActions / DataSourceNotice",
+      "ownership": "Shared layout, header action placement, freshness, recoverable source notices and route-focus heading.",
+      "citations": [
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:1-17",
+        "web\\src\\components\\layout\\PageContainer.tsx:169-285",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:70-140",
+        "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:76-82"
+      ]
+    },
+    {
+      "name": "RegionOperationalBrief / OperationalBrief",
+      "ownership": "Feature adapter over the existing shared operational summary, retaining four metric identities and snapshot provenance.",
+      "citations": ["web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx:16-48"]
+    },
+    {
+      "name": "RegionEndpointDetails / LayoutCard / KVList / TimeStamp",
+      "ownership": "Feature endpoint details using shared card, metadata and timestamp owners.",
+      "citations": [
+        "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:9-42",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-63"
+      ]
+    },
+    {
+      "name": "RegionAboutPanel / GlassPanel / IconBox / Badge / typography",
+      "ownership": "Always-visible feature reference content, using existing UI primitives and helpers.",
+      "citations": ["web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx:15-62"]
+    },
+    {
+      "name": "Button / CopyButton / Skeleton / QueryError / EmptyState / FadeIn",
+      "ownership": "Existing shared actions, loading/recovery and motion primitives; do not replace with page-local implementations.",
+      "citations": [
+        "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:57-72,83-120",
+        "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:15-29",
+        "web\\src\\components\\ui\\CopyButton.tsx:93-146",
+        "web\\src\\components\\motion\\FadeIn.tsx:23-38"
+      ]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx",
+      "line": 37,
+      "rule": "MDC-002 / mission 0.6",
+      "detail": "RegionEndpointPanel and the mounted RegionEndpointDetails contain equivalent endpoint state branches and metadata. The legacy barrel still exports the old renderer. The mounted page uses only the newer renderer; old renderer tests are not evidence for the mounted implementation.",
+      "fix": "Keep one feature presentation owner and a neutral feature prop contract; migrate relevant behavior tests before considering removal. Do not transplant the older fixed-white/decorative styling.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": [
+        "web\\src\\features\\admin\\components\\tesla-region\\index.ts:1-3",
+        "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:3,9-42",
+        "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:25-26,85,101"
+      ]
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionSummary.tsx",
+      "line": 8,
+      "rule": "MDC-033 / mission 0.6",
+      "detail": "RegionSummary and RegionKpiBand retain four-card presentations of the same region/status/protocol/sync concepts now owned by RegionOperationalBrief. They are not mounted by this page.",
+      "fix": "Retain the current OperationalBrief owner and all four identities; reconcile alternate callers and tests before retiring old renderers. Do not introduce another stat grid.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": [
+        "web\\src\\features\\admin\\components\\tesla-region\\RegionKpiBand.tsx:22-91",
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx:21-48"
+      ]
+    }
+  ],
+  "responsive": {
+    "verified": "source-only",
+    "strategy": "Three named sections remain mounted. Endpoint and reference stack below xl, then split 2:1 across three columns. Endpoint URL uses min-w-0/break-all and a wrapping region heading; metadata requests KVList responsive layout. Shared PageLayout keeps allocated width.",
+    "citations": [
+      "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:84-118",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:20-32",
+      "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:11-13"
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "runtime": "unverified",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+        "line": 60,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Refresh explicitly uses Button size sm, whose shared default height is h-9 (36px), below the stronger 44px mobile target. Icon-only CopyButton also defaults to sm. Actual rendered target spacing and exceptions are unverified.",
+        "fix": "Use existing Button/CopyButton props and mobile sizing classes for reachable targets, preserving compact desktop density; validate spacing and long translations rather than globally changing button defaults.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": ["web\\src\\components\\ui\\Button.tsx:37-44", "web\\src\\components\\ui\\CopyButton.tsx:52-59"]
+      }
+    ]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "positiveEvidence": [
+      "Named semantic sections at TeslaRegionPage.tsx:84,100,116.",
+      "Decorative refresh icon hidden; pending header action disabled and aria-busy at TeslaRegionPage.tsx:62-69.",
+      "Copy URL has a localized accessible name at RegionEndpointDetails.tsx:29.",
+      "Reference list has aria-labelledby and native ul/li semantics at RegionAboutPanel.tsx:48-59.",
+      "Shared route-focus heading remains at PageContainer.tsx:190-198.",
+      "FadeIn honors the existing reduced-motion owner at FadeIn.tsx:24-33."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx",
+        "line": 29,
+        "rule": "MDC-040",
+        "detail": "CopyButton receives a fixed ariaLabel and neither withToast nor onCopyError. The shared primitive prioritizes that fixed label even after success; clipboard failure only logs unless a feedback option is supplied. There is no source-confirmed user-visible failure feedback in this composition.",
+        "fix": "Reuse CopyButton with its existing withToast or onCopyError contract for localized actionable feedback; verify success announcements with the explicit action name rather than adding a second clipboard controller.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": ["web\\src\\components\\ui\\CopyButton.tsx:97-106,109-117,127-141"]
+      }
+    ],
+    "pendingChecks": ["Tab order", "Focus visibility/restoration", "Screen-reader success/error announcements", "Effective contrast", "Forced colors", "200% text and RTL", "Actual reduced-motion rendering"]
+  },
+  "states": {
+    "initialLoading": "OperationalBrief receives loading only with no retained data; endpoint renders skeletons. Reference remains visible.",
+    "empty": "When neither region nor URL is present, endpoint renders localized EmptyState and Refresh action.",
+    "fatalError": "Only source.fatalError enters endpoint QueryError; GET retry remains separate from Tesla refresh mutation.",
+    "retainedRefreshFailure": "deriveDataState preserves payload; endpoint remains populated; PageContainer source notice and account summary status convey degradation.",
+    "offline": "Existing query/source contract handles paused reads; actual network/offline rendering unverified.",
+    "partial": "Individual fields null-safe to placeholders, but semantic partial classification is not passed to deriveDataState.",
+    "mutation": "Header refresh disables while pending and shows busy/spinning feedback; hook owns toast and invalidation.",
+    "citations": [
+      "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:33-46,68-69,86-114",
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx:15-39",
+      "web\\src\\api\\dataState.ts:194-233",
+      "web\\src\\components\\feedback\\DataSourceNotice.tsx:70-121"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+        "line": 34,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "deriveDataState receives no unavailable/partial options. A successful empty envelope or a snapshot missing one endpoint field is classified ok because envelope presence determines hasData. OperationalBrief can say Account snapshot available while endpoint shows No region on record; a partial endpoint can be labeled Configured without expressing missing metadata.",
+        "fix": "Derive feature-level unavailable/partial evidence from the existing payload and known backend contract, retaining every available field. Wire existing data-state/summary status owners; do not equate missing fields with zero or invent backend guarantees.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": [
+          "web\\src\\api\\dataState.ts:183-199",
+          "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts:15-20",
+          "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx:23-29"
+        ]
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx",
+        "line": 19,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "Empty-state Refresh has only onClick; pending mutation state is not part of RegionEndpointPanelProps. Header refresh disables, but this second trigger remains enabled during the same mutation.",
+        "fix": "Forward the existing mutation pending state through a feature contract and reuse shared action disabled/busy behavior for every trigger, preserving both entry points and the single toast owner.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": [
+          "web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx:17-31",
+          "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx:68-69,113"
+        ]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx",
+      "line": 34,
+      "rule": "MDC-010 / mission 43 COLOR",
+      "detail": "The informational reference heading uses decorative cyan IconBox. Its shared implementation consumes bg-neon-cyan/10 and ring-neon-cyan/20 rather than neutral reference chrome. No glow is applied by this IconBox; do not falsely report glowing text or borders.",
+      "fix": "Prefer a plain muted decorative icon or the existing shared neutral icon treatment. Preserve all reference prose and zone rows; do not create another icon surface or reset saved themes.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\components\\ui\\IconBox.tsx:25-31", "web\\src\\lib\\tokens.ts:21"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 157,
+      "rule": "MDC-032",
+      "detail": "getWorkspaceRouteScope('/tesla-region') resolves vehicle=true: this route is absent from VEHICLE_DISABLED_PATHS and does not match disabled prefixes. The actual region query is account-wide with no vehicle parameter, so the shell-owned vehicle picker conveys a scope that cannot affect this page. Range=false is appropriate for the account snapshot.",
+      "fix": "Integration owner should add this exact account route to the existing vehicle-disabled registry after scope reconciliation. Do not add a page-local selector, local scope bypass or range control.",
+      "owner": "integration",
+      "confidence": "high",
+      "citations": [
+        "web\\src\\lib\\workspaceScope.ts:96-134,157-169",
+        "web\\src\\api\\hooks\\useUser.ts:123-128"
+      ]
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "rationale": "Already uses current shared layouts and summary owners with retained-data protection. Prioritize contradictory empty/partial trust labels, consistent refresh pending behavior, truthful workspace scope, and action feedback before cosmetic cleanup.",
+    "runtimeAcceptance": "not established"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Correct existing workspace scope for account-region route",
+      "owner": "integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Existing getWorkspaceRouteScope returns { range: false, vehicle: false } for /tesla-region; no new selector API.",
+      "usedBy": ["/tesla-region", "existing shell workspace controls"],
+      "dependsOn": ["Reconcile exact account route registration at web\\src\\App.tsx:724"],
+      "citations": ["web\\src\\lib\\workspaceScope.ts:96-134,157-169", "web\\src\\App.tsx:724"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Region summary",
+      "canonicalMountedOwner": "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx",
+      "alternates": [
+        "web\\src\\features\\admin\\components\\tesla-region\\RegionKpiBand.tsx",
+        "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionSummary.tsx"
+      ],
+      "decision": "Reuse OperationalBrief and existing metric/preference pipeline; no new stats component. Alternates are not mounted here; other runtime callers were not proven absent."
+    },
+    {
+      "pattern": "Endpoint details",
+      "canonicalMountedOwner": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx",
+      "alternates": ["web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx"],
+      "decision": "Keep current LayoutCard/KVList/CopyButton implementation and consolidate feature contracts/tests without reverting to old presentation."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "92b420b3b0f68113feb83345157f6cd39c97ba7ed2257d72de897de4c8056ad9",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 123,
+    "mountedPresentationLineCounts": {
+      "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx": 123,
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx": 48,
+      "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx": 42,
+      "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx": 62
+    },
+    "mountedPresentationTotalLines": 275,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Region overview", "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "line": 84, "contents": "Region zone/description, endpoint configuration status and source, protocol and secure-transport context, last-sync relative time and account provenance."},
+      {"name": "Fleet API endpoint", "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "line": 100, "contents": "Full descriptive region, recognized zone badge, raw copyable base URL, region name, zone code, protocol, host and full timestamp; loading/error/empty recovery."},
+      {"name": "About your region", "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "line": 116, "contents": "Always-visible explanation of regional account homing and command/data routing; Fleet API zones subsection with ordered NA/EU/CN codes and full descriptions."}
+    ],
+    "counts": {"summaryMetrics": 4, "endpointMetadataRows": 5, "referenceZoneRows": 3, "referenceSubsections": 1, "pageGlassPanelTags": 0, "pageChartContainerTags": 0, "mountedReferenceGlassPanels": 1, "mountedEndpointLayoutCards": 1},
+    "actions": [
+      {"name": "Refresh from Tesla in header", "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "line": 67, "behavior": "POST mutation, disabled/busy pending, single hook-owned toast and GET invalidation."},
+      {"name": "Refresh from empty endpoint", "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx", "line": 19, "behavior": "Same POST handler; must remain reachable when no region is configured."},
+      {"name": "Retry failed region read", "file": "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx", "line": 112, "behavior": "GET refetch, separate from re-resolving via Tesla POST."},
+      {"name": "Copy Fleet API base URL", "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx", "line": 29, "behavior": "Shared clipboard owner copies complete original baseUrl; appears when URL exists."},
+      {"name": "Read endpoint description help", "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 36, "behavior": "Existing focusable description/Tooltip owner."},
+      {"name": "Read page subtitle help", "file": "web\\src\\components\\layout\\PageContainer.tsx", "line": 202, "behavior": "Existing compact-header localized help control."},
+      {"name": "Recover a failed or paused source", "file": "web\\src\\components\\feedback\\DataSourceNotice.tsx", "line": 192, "behavior": "Existing notice refetches only retryable sources."}
+    ],
+    "dataBehavior": [
+      "Preserve envelope fields, raw URL, query identity, cancellation, stale-time policy, invalidation and hook-owned toasts.",
+      "Keep zone inference and malformed/unknown URL behavior distinct from Tesla-provided region text.",
+      "Keep all available endpoint fields on background refresh failure; fatal errors alone may replace the endpoint content.",
+      "Keep unknown values as placeholders, not measured zeros; preserve known configuration and partial payload content.",
+      "Keep snapshot fetched_at, full and relative dates, localization, display preferences and valid-timestamp provenance.",
+      "No physical SI measurements are introduced or converted; raw wire/cache values remain unchanged.",
+      "Preserve named sections across all states and widths; no whole-page gate may hide the static reference.",
+      "No page export, chart, table, saved filter or selected-vehicle/date business scope was found in this inspected page."
+    ],
+    "sourceOnly": true
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewportBehavior": "unverified",
+    "tests": "Not run. RegionAboutPanel.test.tsx inspected as authored context, not passing evidence. Tests targeting older RegionKpiBand/RegionEndpointPanel do not establish mounted replacement coverage.",
+    "validation": "No Git, source edits, full lint/build or TypeScript executed. audit-violations skill script was read but not executed because it unconditionally runs project-wide TypeScript, outside this bounded Phase0 assignment.",
+    "boundedPatternScan": {
+      "method": "PowerShell regex counts across exactly the page and three mounted feature presentation files; source-only, not AST or runtime validation.",
+      "exitCode": 0,
+      "output": "Each of four files: staticInline=0; rawControls=0; directLibrary=0; oldApi=0; fixedWhiteOrNeon=0. Lines: 123,48,42,62. Total=275. Page sections=3 GlassPanel=0 ChartContainer=0.",
+      "limitations": "Counts do not cover transitive shared styles; IconBox neon chrome was separately traced. An initial regex command failed with PowerShell quoting ParserError (exit 1); corrected scoped command produced the recorded output."
+    },
+    "routeEvidence": "Source registration web\\src\\App.tsx:261,724; actual authenticated reachability/mount not exercised.",
+    "backendEvidence": "Only actual router registrations inspected; no backend handler/database/unit/cache/auth behavior invented.",
+    "scope": "Assigned mounted page and directly relevant owners/dependencies only. No full application inventory or unrelated route audit.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-026.json", ".agent-status\\audit-page-026.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\TeslaRegionPage.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\RegionOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionEndpointDetails.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\RegionSummary.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionAboutPanel.test.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionEndpointPanel.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\RegionKpiBand.tsx",
+    "web\\src\\features\\admin\\components\\tesla-region\\helpers.ts",
+    "web\\src\\features\\admin\\components\\tesla-region\\index.ts",
+    "web\\src\\api\\hooks\\useUser.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}
