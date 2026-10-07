@@ -1,0 +1,444 @@
+{
+  "item": "audit-page-039",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+  "routes": ["/intelligence/twin-lab"],
+  "purpose": "Vehicle-specific calibrated counterfactual simulation with editable canonical-SI scenarios, baseline measurements, modeled range uncertainty, sensitivity drivers, and evidence limitations.",
+  "primaryGoal": "Edit and explicitly submit scenarios for the workspace-selected vehicle, then compare supported modeled outcomes without implying physical actuation or guaranteed real-world results.",
+  "dataSources": [
+    {
+      "hook": "useRunTwinLab",
+      "owner": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 174,
+      "endpoint": "POST /api/v1/advanced-intelligence/twin-lab/scenarios",
+      "requestPath": "/advanced-intelligence/twin-lab/scenarios",
+      "sourceOwnership": "Typed mutation hook -> request client -> advanced-intelligence handler/service. Backend calculation and actual response behavior were not audited.",
+      "evidence": [
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:29,156-177",
+        "web\\src\\api\\client.ts:73-93",
+        "internal\\api\\router.go:3167,3917",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:69-72",
+        "web\\src\\types\\advancedIntelligence.ts:34-88"
+      ],
+      "behavior": "JSON body contains vehicle_id, scenarios and confirmed:true. Existing success/error toast callbacks remain. No automatic simulation read is made on mount."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwnership": "Existing workspace selection hook consumes fleet query and URL/store precedence; the page does not own another vehicle picker.",
+      "evidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:38",
+        "web\\src\\hooks\\useSelectedVehicle.ts:48-76",
+        "web\\src\\api\\hooks\\useVehicles.ts:73-78",
+        "internal\\api\\router.go:3319-3320"
+      ],
+      "behavior": "Fleet query forwards cancellation signal and uses existing FAST stale-time and safeArray selection. Only vehicleId is consumed here; fleet loading/error is not surfaced separately."
+    },
+    {
+      "hook": "useRetainedMutation",
+      "owner": "web\\src\\hooks\\useRetainedMutation.ts",
+      "line": 30,
+      "endpoint": null,
+      "sourceOwnership": "Existing shared mutation-publication adapter retains raw successful response and cloned submitted inputs for the matching primitive vehicle scope.",
+      "evidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:40-43,61",
+        "web\\src\\hooks\\useRetainedMutation.ts:44-96"
+      ],
+      "behavior": "Scope changes reset observer and render-guard old data; refresh failure keeps published data; paused/fetching state is exposed in source. Runtime race behavior was not exercised."
+    },
+    {
+      "hook": "useUnits, useNumberFormatting; AnalysisBrief -> useOperationalMetrics",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "line": 38,
+      "endpoint": null,
+      "sourceOwnership": "Existing user-formatting mechanisms; internals and their settings endpoints were not expanded in this bounded audit.",
+      "evidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:36,39,62-87,215",
+        "web\\src\\features\\advanced-intelligence\\formatters.ts:10-18",
+        "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx:30,68-123"
+      ],
+      "behavior": "Wire inputs remain m, s, m/s, degrees C and W; response energy stays Wh and efficiency Wh/m. Preferred units are applied only to display hints, stats, and derived chart rows."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "children"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:90-96; web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-16",
+      "decision": "reuse; current adapter forwards to PageContainer and retains w-full/min-w-0 container layout"
+    },
+    {
+      "name": "AlertBanner, EmptyState, MutationError",
+      "kind": "feedback",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+      "props": ["variant=info|danger", "title", "message", "error"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:97-105,132,195; web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx:8-20",
+      "decision": "reuse existing feedback primitives and feature mutation adapter"
+    },
+    {
+      "name": "InsightPanel -> LayoutCard + SourceContent",
+      "kind": "domain presentation adapter",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "props": ["title", "description", "empty", "emptyMessage", "query", "sourceState", "error", "onRetry", "children"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:11-21,35-68",
+      "decision": "reuse; integrate existing trust props rather than make another state/surface engine"
+    },
+    {
+      "name": "TwinScenarioForm -> Input, Button, Text, SiNumberInput",
+      "kind": "domain form",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "props": ["scenarios", "pending", "disabled", "onUpdate", "onRemove", "onAdd", "onSubmit"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx:10-18,33-149",
+      "decision": "retain complete form and native constraints; modernize existing owner, not a second scenario builder"
+    },
+    {
+      "name": "AnalysisBrief -> OperationalBrief",
+      "kind": "domain summary",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "props": ["id", "title", "description", "metrics", "vehicleId", "hasResult", "pending", "error", "query", "quality", "evidence", "limitations", "generatedAt", "provenance", "emptyMessage"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:137-156; web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx:99-156",
+      "decision": "reuse canonical OperationalBrief and numeric metric bridge; preserve narrative/details"
+    },
+    {
+      "name": "ChartCard -> EmbeddedChart -> ChartContainer",
+      "kind": "chart composite",
+      "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "props": ["size=standard", "toolbar", "exportable", "ariaLabel", "empty", "data", "dataColumns", "children"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:161-196; web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:13-45; web\\src\\components\\charts\\EmbeddedChart.tsx:19-39",
+      "decision": "reuse canonical chart frame, controls and accessible data pipeline; integrate missing state/empty/formatting props at caller"
+    },
+    {
+      "name": "EvidencePanel -> InsightPanel, KVList, Badge, Text",
+      "kind": "domain evidence composite",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "props": ["quality", "evidence", "limitations", "unsupported"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:225-233; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:38-128",
+      "decision": "reuse existing quality/source/limitations composition, including unsupported list"
+    },
+    {
+      "name": "FadeIn",
+      "kind": "motion",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "props": ["children", "delay"],
+      "evidence": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:107,136,159,199,224; web\\src\\components\\motion\\FadeIn.tsx:23-36",
+      "decision": "reuse; source uses existing motion preference and initial=false on reduction; browser/OS acceptance unverified"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 210,
+      "rule": "MDC-002/MDC-015",
+      "detail": "Local scenario cards repeat fixed-white border decoration also used by TwinScenarioForm:35 and EvidencePanel:81. Existing LayoutCard/InsightPanel already own neutral surfaces. This is scoped repeated presentation, not proof that another global component is needed.",
+      "fix": "Reuse existing surface tokens/composites where appropriate without changing nested information hierarchy.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 147,
+      "rule": "MDC-002/preservation",
+      "detail": "Quality, evidence and limitations are passed into both AnalysisBrief and EvidencePanel:225-228. One gives brief narrative/detail context and the other explicit specialist disclosure. Overlap is not authorization to remove either.",
+      "fix": "Keep both source-backed contexts; any future deduplication must demonstrate full metadata/action parity rather than drop sections.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source-only",
+    "evidence": [
+      "PageLayout adapter:12 uses @container, w-full and min-w-0.",
+      "TwinScenarioForm.tsx:53 reflows fields to md two/xl three columns; :129 wraps actions.",
+      "TwinLabPage.tsx:208 stacks sensitivity cards until md two columns.",
+      "EvidencePanel.tsx:45 stacks three evidence sections until lg.",
+      "TwinLabPage.tsx:184 fixes inner chart height to 300 while ChartCard selects standard sizing."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "line": 213,
+        "rule": "MDC-043",
+        "detail": "Driver label and percentage use a single nonwrapping flex row without explicit label wrapping/min-width handling; long server labels and translated scenario names need narrow-container review. The fixed 300px inner chart also needs comparison to the shared responsive frame.",
+        "fix": "Use existing wrapping text/KVList conventions and let canonical chart sizing own viewport geometry where equivalent; preserve every label/value and all three series.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverifiedWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "limits": "No mounted viewport, container resize, RTL, long-content, 200%-text or mobile control testing."
+  },
+  "accessibility": {
+    "verified": "source-only",
+    "positiveEvidence": [
+      "TwinScenarioForm.tsx:46 supplies translated remove-action name; icons are aria-hidden; native form submit and Input labels are retained.",
+      "TwinScenarioForm.tsx:55,63,76,90,102,115 supplies explicit per-index field IDs.",
+      "TwinLabPage.tsx:170-180 supplies chart ariaLabel and labeled fallback-data columns.",
+      "EvidencePanel.tsx:46,73,102 supplies named semantic sections.",
+      "FadeIn.tsx:24-33 uses existing reduce preference and omits initial motion when reduced."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "line": 190,
+        "rule": "MDC-034/MDC-040/MDC-044",
+        "detail": "Three bars have dataKey but no localized series name; default Tooltip is used, no visible legend is rendered, and the legend-audit skip explains only why all series stay together. Export/fallback column labels are localized, but tooltip/visible color-to-series association is not explicitly localized or supplied here.",
+        "fix": "Provide localized low/estimate/high series labels and a non-toggleable textual key or existing equivalent; reuse canonical ChartTooltip and number/unit formatting. Keep all bounds and estimate simultaneously visible.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+        "line": 46,
+        "rule": "MDC-040",
+        "detail": "Every remove button has the same generic name, although multiple scenario cards exist; size=sm needs actual 44px target/spacing verification.",
+        "fix": "Include scenario identity in the existing localized accessible action name; verify actual targets and focus after add/remove without replacing Button.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "limits": "Keyboard order, focus restoration, screen-reader output, target dimensions, effective contrast, forced-colors and actual reduced-motion behavior remain unverified."
+  },
+  "states": {
+    "sourceBehavior": [
+      "Initial state creates two editable scenario inputs, not simulated measurements; baseline metrics are missing until a response.",
+      "Null vehicle disables submit; AnalysisBrief explains vehicle selection.",
+      "Pending mutation drives form loading and baseline loading/refreshing.",
+      "MutationError displays error while useRetainedMutation retains prior same-vehicle response.",
+      "Baseline receives quality, observation window, provenance and generated timestamp through AnalysisBrief.",
+      "Chart remains mounted but requires at least two returned scenario rows; null range values stay null.",
+      "Sensitivity panel remains mounted and is empty only when there is no result or no scenario rows.",
+      "EvidencePanel independently shows absent quality/evidence/limitations and always receives explicit unsupported capabilities."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "line": 146,
+        "rule": "MDC-026/MDC-046",
+        "detail": "publication.source is passed only after result exists. The shared retained adapter exposes fetchStatus='paused', but initial paused simulation reaches AnalysisBrief as pending without its source; AnalysisBrief:41-65,75-78 cannot use paused-source messaging in that path. Initial offline/paused status is not distinguished from awaiting result.",
+        "fix": "Integrate the existing publication source for initial as well as retained results, preserving intentional pre-submit instructions; use existing paused/offline trust semantics rather than inventing empty success.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "line": 174,
+        "rule": "MDC-026/MDC-034",
+        "detail": "ChartCard receives empty but no loading/error/freshness state. Its nested specific EmptyState:195 is bypassed when the shared ChartContainer takes empty=true (ChartContainer:706-720), replacing the two-supported-results instruction with generic chart empty copy.",
+        "fix": "Pass the existing canonical emptyMessage/description and source-derived loading, fatal-only error and retained freshness metadata to ChartCard; keep usable prior chart data on refresh failure.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+        "line": 212,
+        "rule": "MDC-026/MDC-045",
+        "detail": "A scenario with null/empty sensitivity_drivers renders only its name without an explanation. The panel checks scenario count, not driver availability. Sensitivity and evidence neighbors also do not receive existing source trust props on retained or paused requests.",
+        "fix": "Give each scenario an explicit unknown/unavailable-driver explanation, not zero effects; use existing InsightPanel state integration or adjacent retained-source context without hiding successful neighbors.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "runtime": "unverified; no live request, fixture, simulation or production mutation executed"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 210,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Sensitivity card border uses fixed white/[0.07] rather than semantic surface/border tokens.",
+      "fix": "Use existing neutral semantic border/surface classes; preserve card grouping and heading.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "line": 35,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Scenario cards use fixed-white border and background tint. EvidencePanel.tsx:81 repeats the same theme-specific surface pattern.",
+      "fix": "Update the existing two domain owners to semantic neutral surfaces, without changing field names, default inputs, source metadata or persisted preferences.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 213,
+      "rule": "MDC-013",
+      "detail": "Driver rows use ad-hoc text-sm and raw spans; SiNumberInput.tsx:39 uses text-xs suffix rather than the canonical typography role.",
+      "fix": "Reuse Text/Caption roles with semantic markup and muted unit styling.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 186,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Grid, axes and Tooltip use library defaults instead of the exported shared chartGrid/axisTick/ChartTooltip presentation. Bars use the existing colorblind-safe green/blue/orange default (colors.ts:31-39,65), not the opt-in neon palette. A noise/contrast failure is not proven from source.",
+      "fix": "Apply existing restrained grid/axis/tooltip tokens; retain meaningful series colors and saved palette behavior. Verify composed contrast before declaring acceptance.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 210,
+      "rule": "MDC-046/data identity",
+      "detail": "Sensitivity scenario key is editable scenario.name. Form permits identical names and add derives the next name from current length, which can reuse a surviving name after removal. React sibling identity can collide; no actual duplicate-name runtime case was run.",
+      "fix": "Preserve names and request contract; use stable request/output identity where available or a scoped collision-safe presentation key, without inventing backend IDs or prohibiting previously allowed names.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "line": 66,
+      "rule": "MDC-021/MDC-045",
+      "detail": "SiNumberInput emits null for cleared/nonfinite values (:41-42), while distance, speed, horizon and auxiliary callbacks immediately replace null with zero (:66,79,93,118). Missing temperature remains null. Empty-required-field validation and unknown-vs-zero semantics need resolution; do not silently change existing SI request defaults during presentation modernization.",
+      "fix": "Retain a distinct local draft-empty state and validate before constructing the unchanged typed SI request, if behavior evidence confirms the gap. Preserve valid measured zero auxiliary load and nullable temperature.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Preserve trust/paused/retained state and specific uncertainty empty guidance first; then stable scenario identity, localized chart labeling, semantic surfaces and typography. No confirmed runtime crash or rendered visual failure is claimed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Twin scenario form preservation and neutral presentation",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+      "props": ["scenarios", "pending", "disabled", "onUpdate", "onRemove", "onAdd", "onSubmit"],
+      "variants": ["existing Button ghost/secondary/submit and Input numeric controls"],
+      "states": ["editable", "pending", "no selected vehicle", "one scenario minimum", "twelve scenario maximum", "empty numeric draft", "duplicate names"],
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:115"],
+      "dependsOn": ["web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx", "existing Input/Button/Text category owners"],
+      "requirement": "Remove fixed-white card styling, improve scenario-specific remove names and preserve empty/valid-zero distinction without changing SI payload, limits or actions."
+    },
+    {
+      "name": "Evidence panel neutral surface",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "props": ["quality", "evidence", "limitations", "unsupported"],
+      "variants": ["existing sufficient/limited/insufficient Badge meanings"],
+      "states": ["quality missing", "evidence missing", "limitations empty", "retained evidence"],
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:225"],
+      "dependsOn": ["web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "existing KVList/Badge/Text owners"],
+      "requirement": "Replace fixed-white evidence-card surface at :81 using existing tokens; keep source/date/sample metadata and all limitations/unsupported disclosures."
+    },
+    {
+      "name": "Existing mutation trust integration",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+      "props": ["query", "pending", "hasResult", "error", "emptyMessage", "generatedAt"],
+      "variants": ["existing OperationalBrief and InsightPanel/SourceContent trust composition"],
+      "states": ["not submitted", "initial pending", "initial paused", "fatal failure", "retained refresh", "refresh failure"],
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx:137"],
+      "dependsOn": ["web\\src\\hooks\\useRetainedMutation.ts", "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx"],
+      "requirement": "First integrate the current source contract at page callers; change the existing AnalysisBrief owner only if needed to distinguish pre-submit from paused initial requests. No new state engine or speculative public API."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+      "line": 161,
+      "rule": "MDC-002",
+      "detail": "ChartCard resolves through the category barrel to the existing ChartContainer pipeline; InsightPanel resolves to LayoutCard/SourceContent; AnalysisBrief resolves to OperationalBrief. These are current adapters, not evidence of competing replacements.",
+      "fix": "Reuse these owners and their existing props; do not introduce another chart frame, summary grid, panel library, form builder or workspace selector.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "328DC6729E3C64D8F5137FE7217C8D9B95626C7F305D2674A0314847A6413739",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 237,
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Simulation-only notice", "count": 1, "lines": "97-105"},
+      {"name": "Calibrated scenarios and mutation error", "count": 1, "lines": "107-134"},
+      {"name": "Calibrated baseline operational brief", "count": 1, "lines": "136-157"},
+      {"name": "Range-effect uncertainty comparison", "count": 1, "lines": "159-197"},
+      {"name": "Sensitivity drivers per scenario", "count": 1, "lines": "199-222"},
+      {"name": "Evidence, quality and limitations", "count": 1, "lines": "224-234"}
+    ],
+    "nestedSections": [
+      {"name": "Data quality", "count": 1, "evidence": "EvidencePanel.tsx:46-71"},
+      {"name": "Evidence sources", "count": 1, "evidence": "EvidencePanel.tsx:73-100"},
+      {"name": "Limitations and explicitly unsupported capabilities", "count": 1, "evidence": "EvidencePanel.tsx:102-126"}
+    ],
+    "sourceElementCounts": {"PageLayout": 1, "FadeIn": 5, "InsightPanel": 2, "AnalysisBrief": 1, "ChartCard": 1, "EvidencePanel": 1, "GlassPanel": 0, "ChartContainerDirect": 0},
+    "actions": [
+      "Edit all six scenario fields through onUpdate: name, distance, speed, horizon, temperature and auxiliary load.",
+      "Add scenarios up to existing 12 limit; remove down to existing one-scenario minimum.",
+      "Submit confirmed:true simulation for selected vehicle with pending/loading and error/toast feedback.",
+      "Use existing canonical chart toolbar, export and accessible data-table capabilities enabled by toolbar/exportable; actual open-state behavior unverified.",
+      "Use existing OperationalBrief summary/details context; actual drawer interaction unverified.",
+      "Retain original workspace vehicle selection ownership and source-scoped publication reset."
+    ],
+    "baselineMetrics": ["model_name", "baseline.efficiency_wh_per_m", "baseline.usable_battery_wh", "baseline.calibration_sample_count"],
+    "dataBehavior": [
+      "Default two named inputs use horizon_s=3600, distances 50000/60000 m, speeds 22/27 m/s, temperature 20 degrees C, auxiliary_load_w=1000.",
+      "Adding later scenarios keeps existing createScenario index/default logic and localized scenario numbering.",
+      "Do not replace missing baseline/range fields with zero.",
+      "Preserve all low/estimated/high signed modeled range deltas and nulls; units convert only for display.",
+      "Preserve all scenario names and every sensitivity driver/effect percentage with locale formatting.",
+      "Preserve quality status, sample count, coverage, observation window, reasons, evidence source/summary/sample/date, limitations and generated time.",
+      "Keep explicit unsupported vehicle commands/physical actuation and guaranteed outcomes.",
+      "Keep same-vehicle successful data through subsequent request/failure; do not publish old-vehicle data after workspace selection changes.",
+      "Typed response includes ambient baseline temperature, horizon and battery/thermal/wear deltas/bounds not currently visualized by this page. Keep raw response retention; do not invent existing UI sections for those fields."
+    ]
+  },
+  "evidenceLimits": {
+    "auditType": "atomic Phase0 source audit",
+    "routeEvidence": "Route array is the exact supplied assignment. Router mount, lazy loading and authenticated page reachability were not exercised or independently inventoried.",
+    "runtime": "NOT RUN",
+    "visual": "NOT RUN; no screenshot, composed contrast, viewport or saturation judgment claimed",
+    "keyboard": "NOT RUN",
+    "backend": "Only exact composition-root and handler route registration were inspected; business calculations, permissions, capability support and response payloads remain unverified.",
+    "formatting": "Existing formatting hooks were identified; settings/query internals were not expanded beyond page-specific consumption.",
+    "commands": [
+      {"command": "Get-FileHash -Algorithm SHA256 -LiteralPath 'web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx'", "exitCode": 0, "output": "328DC6729E3C64D8F5137FE7217C8D9B95626C7F305D2674A0314847A6413739"},
+      {"command": "Page-only PowerShell regex counts over TwinLabPage.tsx", "exitCode": 0, "output": "staticVariableInline=0\nrawInteractiveHtml=0\ndirectLibraryImports=0\nlegacyApiImports=0\nneonGlow=0\nfixedWhite=1\nadHocType=1"}
+    ],
+    "notRun": [
+      "audit.sh was inspected but not executed because it invokes project-wide TypeScript, prohibited for this atomic source-only audit.",
+      "verify.sh was not run over the multi-feature hook module; the assigned TwinLab endpoint and scoped vehicle query were manually traced to actual mounted routes.",
+      "No Git, source edits, project TypeScript, lint, test, build, browser, fixture or production mutation."
+    ],
+    "noiseAssessment": "No neon/glow classes or pure-white text found in the page pattern scan. Fixed-white translucent border/surface noise exists in page and scoped dependencies. Default chart palette is colorblind-safe, not neon; semantic warning/accent colors are not categorically violations.",
+    "assumptions": "Report shared requirements for existing imported owners only; their other consumers were not inventoried and are not fabricated."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\instructions\\prompt-engineering.instructions.md",
+    "web\\src\\features\\advanced-intelligence\\pages\\TwinLabPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\components\\TwinScenarioForm.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\SiNumberInput.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\MutationError.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\operationalbrief-all\\AnalysisBrief.tsx",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useRetainedMutation.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\colors.ts",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go"
+  ]
+}
