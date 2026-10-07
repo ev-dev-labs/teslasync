@@ -1,0 +1,277 @@
+{
+  "item": "audit-page-223",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+  "routes": ["/media-player"],
+  "purpose": "Read-only vehicle media dashboard showing current playback metadata, volume, returned listening statistics, source distribution and playback history.",
+  "primaryGoal": "Understand what the selected vehicle is playing and inspect returned media observations within the shared workspace range; this page does not issue playback commands.",
+  "dataSources": [
+    {
+      "hook": "useMedia(activeId)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 150,
+      "endpoint": "/media/latest?vehicle_id={vehicleId}",
+      "routeEvidence": "internal\\api\\router.go:4134-4136",
+      "owner": "useVehicleSystems / internal\\api\\media\\handler.go:104-136",
+      "behavior": "Enabled only with selected vehicle; standard polling; passes AbortSignal; uses existing media vehicle query key. Latest reads LiveState and projects 11 fields, returning null for missing signals.",
+      "limits": "Latest response does not provide created_at, vehicle_id or id although MediaSnapshot declares those required. Actual backend freshness enforcement and media duration signal units were not traced."
+    },
+    {
+      "hook": "useMediaHistory(activeId, { start, end })",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 159,
+      "endpoint": "/media?vehicle_id={vehicleId}&start={date}&end={date}",
+      "routeEvidence": "internal\\api\\router.go:4134-4135",
+      "owner": "useVehicleSystems / internal\\api\\media\\handler.go:63-101",
+      "behavior": "Date bounds participate in query key; AbortSignal forwarded; safeArray selection. Handler reads Timeline and collapses consecutive equal status/title/artist/album/source tuples, assigns response-local IDs and created_at. Volume-only and elapsed-only changes do not split rows.",
+      "limits": "Returned observations are not complete listening time or uniformly sampled volume history. No pagination/full-range completeness acceptance was exercised."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState / useNumberFormatting",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+      "line": 100,
+      "endpoint": null,
+      "owner": "Existing workspace selection, range and saved number-formatting owners",
+      "behavior": "Consumes selected vehicle and shared range, retains media-player.range key and 7d fallback. /media-player is range-enabled at web\\src\\lib\\workspaceScope.ts:50. No duplicate selector is rendered."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout, CardGrid, LayoutCard", "owner": "@/components/layout", "evidence": "MediaPlayerPage.tsx:11,315-322,337-340,492-497,629-632", "role": "Shared full-page and five panel composition"},
+    {"name": "MediaSlot", "owner": "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaSlot.tsx", "evidence": "MediaSlot.tsx:6-16", "role": "Placement-only adapter preserving existing panel contents"},
+    {"name": "VehicleSourceContent / SourceContent", "owner": "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx", "evidence": "VehicleSourceContent.tsx:17-29", "role": "Source-local fatal/retained presentation and retry"},
+    {"name": "MediaStats / VehicleOperationalBrief / OperationalBrief", "owner": "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaStats.tsx", "evidence": "MediaStats.tsx:59-104; operationalbrief-all\\VehicleOperationalBrief.tsx:30-78", "role": "Four typed source metrics, provenance and retained evidence"},
+    {"name": "DataTable, Badge, Text, Caption", "owner": "@/components/ui", "evidence": "MediaPlayerPage.tsx:12-14,199-274,649-679", "role": "Six-column sortable/filterable/paginated history with mobile cards and persisted table identity"},
+    {"name": "EmbeddedChart, LinearGauge and chart category exports", "owner": "@/components/charts", "evidence": "MediaPlayerPage.tsx:19-23,452-460,519-552,577-603", "role": "Shared chart frame, gauge, palette, axes and tooltip"},
+    {"name": "TimeStamp, EmptyState, QueryError, AlertBanner, Skeleton, FadeIn", "owner": "Existing category barrels", "evidence": "MediaPlayerPage.tsx:16-18,203-208,324-335,343-363", "role": "Formatting, loading, recovery, retained-state notices and motion"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+      "line": 126,
+      "rule": "MDC-002 / MDC-026",
+      "detail": "Page and MediaStats independently reconstruct loading/fatal/available/retained flags from the same DataState; each panel also specifies loading/error branches inside VehicleSourceContent, whose fatal SourceContent may already replace children.",
+      "fix": "Keep specialist empty/loading geometry and independent sources; reuse DataState fields and existing SourceContent ownership rather than introducing another generic state wrapper. Establish which layer owns fatal recovery.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "existing": [
+      "CardGrid requests half-width hero/chart placements and MediaSlot provides min-w-0.",
+      "Hero artwork shrinks from 112px to 64px, track text breaks words and badges wrap.",
+      "Charts use responsive containers and stepped heights.",
+      "DataTable explicitly configures mobile cards and six field roles."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+        "line": 217,
+        "rule": "MDC-031 / MDC-043 preservation",
+        "detail": "Desktop track and artist labels are truncated to 200px/160px with no page-supplied full-value disclosure. Long values and mobile full-field reachability depend on unexercised DataTable behavior.",
+        "fix": "Verify existing table full-value/detail affordances at long-label and narrow-container cases; use the existing disclosure pattern if these labels cannot be fully retrieved.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredChecks": ["320/375/390/430/768/1024/1280/1440/1920/2560 widths", "Allocated container widths", "Long titles, artist/source names and locale strings", "Mobile six-field detail access and touch recovery targets"]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, screen-reader, contrast and reduced-motion execution unverified",
+    "existing": [
+      "Localized section/chart names, decorative SourceIcon aria-hidden, status text plus semantic badges.",
+      "Progress meter reports name and numeric bounds when finite elapsed and positive duration are available.",
+      "Pie legend provides source names and counts as text; history has a caption and mobile display values."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+        "line": 518,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "Volume chart explicitly opts out of a table because the series is continuous. Continuous data still needs equivalent access; the history table has six fields but is not labelled as this chart's alternative and displays volume alongside max rather than the plotted sample collection.",
+        "fix": "Verify current EmbeddedChart keyboard/text support. Provide an accessible table or explicit link/association to equivalent timestamp-volume data using the existing chart owner; preserve every plotted finite reading.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\mediaPresentation.ts",
+        "line": 29,
+        "rule": "MDC-040",
+        "detail": "Positive sub-500ms duration rounds to durationSec=0, yielding a progressbar with equal min/max bounds. m:ss visual formatting also loses subsecond precision, as currently designed.",
+        "fix": "Preserve the existing display convention but validate meter bounds separately; omit invalid determinate semantics or use meaningful positive seconds for ARIA bounds.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "loading": "Per-source skeletons and PageLayout busy state exist; MediaStats supplies metric-level loading reasons but does not pass its aggregate loading prop to VehicleOperationalBrief.",
+    "empty": "No vehicle selection, missing latest object, empty history, empty volume/source series each retain their panel. Empty known history preserves zero distinct tracks, while missing average/top source remain null.",
+    "error": "Source-local fatal retry via VehicleSourceContent; aggregate alert exposes the first fatal source. Independent healthy panels and previously loaded payloads remain present.",
+    "staleOffline": "Retained data is marked for refresh errors or paused refreshes. No observed media signal timestamp is displayed, and no page max-age policy is supplied.",
+    "partialUnknown": "Finite volume readings are distinguished from missing. Missing source labels become an explicit Unknown distribution slice. Latest all-null projected object passes the truthy latest branch.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+        "line": 379,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "An all-null latest response renders No track rather than an unavailable/unknown track observation. Handler deliberately returns an 11-key object of nulls for missing signals, so !latest does not catch this condition. This risks presenting lack of evidence as a stopped/absent track.",
+        "fix": "Distinguish no reported title/artist from affirmative no-playback states using actual source fields; retain separate missing volume and progress messages and do not invent playback status.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaStats.tsx",
+        "line": 97,
+        "rule": "MDC-026 / mission 36",
+        "detail": "Brief availability requires both history and latest sources even when three history metrics or the latest volume-step metric are independently usable. Its mixed period is marked unknown and VehicleOperationalBrief consequently says Not a live-state observation, although one metric is explicitly latest-source based.",
+        "fix": "Keep all four independent metrics visible, describe partial source availability truthfully and preserve per-metric source context. Use existing brief contracts for mixed provenance rather than claiming all measurements share one historical or live freshness.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+      "line": 73,
+      "rule": "MDC-010 / MDC-012 / mission 7",
+      "detail": "Five source-icon categories select fixed emerald/indigo/amber/purple/cyan-300 text colors. These are toned down rather than neon, but remain theme-independent decorative hue choices and contrast is not measured.",
+      "fix": "Prefer neutral semantic token icons where source names already convey identity, or reuse a shared theme-aware source-category treatment. Preserve existing saved chart palette choices; do not force a palette reset.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+      "line": 108,
+      "rule": "MDC-032 / MDC-045",
+      "detail": "Page consumes date-only start/end instead of workspace startInstant/endInstantExclusive, sends those dates to the server and re-filters using browser-local midnight. Range hook explicitly preserves rolling live/24h and configured timezone as instants; backend date-only parsing is UTC. These three range interpretations can disagree.",
+      "fix": "Pass the existing workspace instant bounds through the typed media history hook, and remove or align the client guard to those exact bounds. Preserve rolling/custom/DST/timezone behavior and server filtering of charts, statistics and all history.",
+      "owner": "integration",
+      "confidence": "high",
+      "supportingEvidence": ["MediaPlayerPage.tsx:119,143-149", "web\\src\\hooks\\useRangeState.ts:656-689", "web\\src\\api\\hooks\\useVehicleSystems.ts:159-175", "internal\\api\\apiparams\\params.go:61-91", "internal\\api\\media\\handler.go:71-85"]
+    },
+    {
+      "file": "web\\src\\api\\types.ts",
+      "line": 2225,
+      "rule": "MDC-045 / typed source contract",
+      "detail": "One MediaSnapshot interface requires id, vehicle_id and created_at, but Latest projects media fields only, while List adds id and created_at without vehicle_id. Nullable media values are also represented as optional numbers/strings instead of explicit null. The page handles most nulls defensively, but the declared contract overstates backend guarantees.",
+      "fix": "Use accurate latest/history response types matching real JSON nullability. Do not fabricate timestamps, ownership or units, and keep raw media values unchanged.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaSlot.tsx",
+      "line": 2,
+      "rule": "MDC-002 component-first production imports",
+      "detail": "Feature placement adapter imports the nested layout-reference module rather than the layout category barrel. It is the existing renderer, not a competing implementation.",
+      "fix": "Use the canonical category export if available; if not, request an owner-managed export without creating another placement hook or layout engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Workspace instant-bound mismatch and unknown-versus-no-track trust semantics precede cosmetic modernization; preserve existing independent sources and all sections.",
+    "order": ["Align workspace/server bounds", "Correct typed source guarantees and missing-observation semantics", "Mixed-source brief provenance and chart accessibility", "Measured responsive/theme validation and restrained icon treatment"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Accurate media history bounds and latest/history source typing",
+      "owner": "web\\src\\api\\hooks\\useVehicleSystems.ts; web\\src\\api\\types.ts",
+      "propsVariantsStates": "History accepts startInstant/endInstantExclusive without date truncation, includes both in existing query key and passes AbortSignal. Latest and history model actual nullable fields and only metadata present in their respective responses.",
+      "usedBy": ["/media-player"],
+      "dependsOn": ["Existing useRangeState instant contract", "Existing media handler ParseDateRange RFC3339 semantics"],
+      "scope": "Integration-owned source correction, not a new component."
+    },
+    {
+      "name": "Canonical card placement export, conditional",
+      "owner": "web\\src\\components\\layout\\index.ts (export availability not inspected)",
+      "propsVariantsStates": "Expose existing useCardPlacement only if absent; preserve size/span/className and provider behavior.",
+      "usedBy": ["web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaSlot.tsx"],
+      "dependsOn": ["Existing layout-reference placement owner"],
+      "scope": "No new hook or speculative shared renderer; verify export before assigning work."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": [
+      "Page uses existing PageLayout, cards, chart frames, DataTable and OperationalBrief rather than parallel visual engines.",
+      "Local source icon/status mappings and duration labels are specialist helpers, not proof of an app-wide competing implementation.",
+      "Hook comment references another camelCase MediaSnapshot type, but that type was not inspected and is not declared a verified competing owner."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "8770e3e921c1e4a90a1a283d6d89171313be8d18faa420aa6bbb59ddfcccfac1",
+    "hashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact bytes of web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx at audit read; root page only, not an aggregate dependency hash.",
+    "currentLineCount": 687,
+    "pageSpecificPresentationLineCount": 859,
+    "lineCountBreakdown": {"page": 687, "MediaStats.tsx": 106, "MediaSlot.tsx": 18, "mediaPresentation.ts": 45, "index.ts": 3},
+    "sections": [
+      {"name": "Now playing", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx", "line": 340},
+      {"name": "Volume", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx", "line": 441},
+      {"name": "Listening stats", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx", "line": 480},
+      {"name": "Volume over time", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx", "line": 497},
+      {"name": "Source distribution", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx", "line": 557},
+      {"name": "Playback history", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx", "line": 630}
+    ],
+    "sectionCount": 6,
+    "sourceElementCounts": {"LayoutCard": 5, "EmbeddedChart": 2, "DataTable": 1, "GlassPanel": 0, "ChartContainer": 0, "MediaStats": 1},
+    "actions": [
+      "Source-local retry/refresh for latest and history; shared PageLayout query recovery remains delegated to its existing owner.",
+      "Sort six columns, value filtering, pagination and mobile cards through DataTable.",
+      "Retain tableId vehicle-systems:media-history, created_at descending default, caption and response-local row ID semantics.",
+      "No playback/vehicle commands or media mutations are present in the inspected page."
+    ],
+    "dataBehavior": [
+      "Keep title, artist, album, station, source and status metadata; volume, maximum, increment and progress.",
+      "Keep four metrics: unique nonempty titles, top reported source, arithmetic mean finite returned volume rounded as before, latest volume increment.",
+      "Keep all finite chart samples, chronological order, data-derived axis maximum and existing fallback 11 scale with explicit disclosure.",
+      "Keep Unknown source bucket and source frequency counts, not invented listening duration.",
+      "Keep the current source millisecond interpretation for playback labels pending authoritative signal-unit verification; never migrate units based on field names alone.",
+      "Raw SI/wire/cache values, workspace vehicle/range, cancellation, query keys, polling, saved formatting and localization must survive.",
+      "Missing readings remain unknown, not zero or silence. Retained values remain visible after refresh failures and independent neighbors remain usable."
+    ]
+  },
+  "evidenceLimits": {
+    "auditMode": "Phase 0 read-only source inspection",
+    "runtime": "unverified; no browser or production requests exercised",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified on actual composed backgrounds",
+    "viewport": "unverified",
+    "backend": "Routes and media handler projections inspected only; no live freshness, Timeline completeness or signal-unit acceptance claimed.",
+    "validation": [
+      "PowerShell Get-FileHash page -Algorithm SHA256: exit 0, hash recorded.",
+      "Scoped Python regex/line-count inspection: exit 0; raw controls 0, direct recharts/leaflet/framer imports 0, old relative API imports 0, neon text 0, fixed white/gray text 0, same-line static CSS-variable inline styles 0. These are pattern counts, not blanket violation or runtime acceptance.",
+      "An initial PowerShell pattern-count command failed with ParserError (exit 1); corrected with a read-only Python inspection.",
+      "TypeScript, audit.sh, full build/lint and tests NOTRUN. audit.sh unconditionally invokes project-wide TypeScript and was only read, not executed, to preserve bounded audit scope.",
+      "Historical receipts not borrowed; no Git, queue/source edits, backend mutations or vehicle commands."
+    ],
+    "writtenFiles": ["docs\\frontend-audits\\audit-page-223.json", ".agent-status\\audit-page-223.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\MediaPlayerPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaSlot.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\MediaStats.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\mediaPresentation.ts",
+    "web\\src\\features\\vehicle-systems\\components\\media-player-modernization\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\media\\handler.go",
+    "internal\\api\\apiparams\\params.go"
+  ]
+}
