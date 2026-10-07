@@ -1,0 +1,222 @@
+{
+  "item": "audit-page-100",
+  "page": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx",
+  "routes": ["/diagnostics/rul"],
+  "purpose": "Read-only, selected-vehicle component prognostics: next service, component health and a deterministic health forecast with confidence bounds.",
+  "primaryGoal": "Identify components needing attention, select a component, and interpret its remaining life without mistaking a model projection or missing history for a measured failure date.",
+  "dataSources": [
+    {
+      "name": "Component health board",
+      "hook": "useRUL(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useRUL.ts",
+      "line": 91,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/rul",
+      "sourceOwner": "internal\\api\\rul\\handler.go",
+      "evidence": ["web\\src\\api\\hooks\\useRUL.ts:91-98", "internal\\api\\router.go:3327-3328,3375-3384", "internal\\api\\rul\\handler.go:312-337"],
+      "behavior": "Query key ['rul', vehicleId]; enabled only for positive non-null IDs; analytics stale time; request cancellation signal forwarded. Board components and next_service are server supplied, not locally predicted."
+    },
+    {
+      "name": "Selected component forecast",
+      "hook": "useComponentRUL(vehicleId, activeComponent)",
+      "file": "web\\src\\api\\hooks\\useRUL.ts",
+      "line": 104,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/rul/{component}",
+      "sourceOwner": "internal\\api\\rul\\handler.go",
+      "evidence": ["web\\src\\api\\hooks\\useRUL.ts:104-112", "internal\\api\\router.go:3383-3384", "internal\\api\\rul\\handler.go:343-398"],
+      "behavior": "Independent query key ['rul-component', vehicleId, component]; disabled without both scope inputs. Response contains basis, EOL threshold, nominal-life references, notes and date/health/lower/upper projection points. Unknown keys produce 400 and unconfigured known components produce 404 in source."
+    },
+    {
+      "name": "Deterministic diagnostic inputs and limitations",
+      "file": "internal\\api\\rul\\handler.go",
+      "line": 96,
+      "sourceOwner": "internal\\api\\rul\\prognostics.go",
+      "evidence": ["internal\\api\\rul\\doc.go:8-29", "internal\\api\\rul\\handler.go:96-143,186-203,235-248,286-308,404-422", "internal\\api\\rul\\prognostics.go:173-188,316-459,468-533"],
+      "behavior": "Configs come from component_lifespans. HV battery uses a 400-day signal_log EnergyRemaining/BatteryLevel daily reconstruction and estimated nominal pack capacity. Tires/brakes use lifetime drive odometer plus a 90-day accumulation rate, without service resets. LV battery/filter use enrollment age, not replacement records. Battery confidence is R-squared times sample adequacy; wear confidence is sample-count adequacy; age confidence is capped at 0.6. Forecast bands are deterministic heuristic envelopes, not independently established probabilistic intervals.",
+      "units": "Inspected RUL DTOs actually expose km and days despite their SI-canonical comment. Preserve this deferred contract; remaining_km is multiplied by 1000 only at the existing useUnits display boundary. Do not migrate backend units during presentation work.",
+      "runtimeVerified": false
+    },
+    {
+      "name": "Workspace vehicle selection and client",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 9,
+      "sourceOwner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "evidence": ["web\\src\\hooks\\useSelectedVehicle.ts:9-28,61-88", "web\\src\\api\\client.ts:75-93,368", "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx:67-77,113-116"],
+      "behavior": "Shared URL/store/fleet vehicle precedence; no duplicate local picker. request adds /api/v1. No date-range selector exists here; model lookback/horizon are backend-owned, not workspace historical filtering."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout → PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "evidence": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17", "web\\src\\components\\layout\\PageContainer.tsx:124-171"], "contract": "Inherited shell scope, full allocated width, container layout, header/title/help, board-query freshness and page error isolation; do not replace."},
+    {"name": "NextServiceBrief → OperationalBrief", "kind": "domain/composite", "owner": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx", "evidence": ["web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx:6-64", "web\\src\\components\\data-display\\OperationalBrief.tsx:94-117,154-167,233-263"], "contract": "Two text metrics, source/scope/freshness/status, real missing values, Review details and closeable details drawer; narrative score remains not_scored unless actual source supplied."},
+    {"name": "SelectableCard", "kind": "primitive", "owner": "web\\src\\components\\ui\\SelectableCard.tsx", "evidence": ["web\\src\\components\\ui\\SelectableCard.tsx:27-49"], "contract": "Native button, selected state, caller role/name, visible focus and min-h-11; selection semantics need coordinated improvement."},
+    {"name": "LinearGauge, MetricBar, StatusPill", "kind": "measurement/status", "owner": "web\\src\\components\\charts\\LinearGauge.tsx", "evidence": ["web\\src\\components\\charts\\LinearGauge.tsx:37-57,211-225", "web\\src\\components\\data-display\\MetricBar.tsx:24-27,46-67,80-92", "web\\src\\components\\ui\\StatusPill.tsx:11-31"], "contract": "Health meter, confidence progressbar and textual status; preserve numeric values and missing semantics. Gauge tone and MetricBar solid fill are existing APIs."},
+    {"name": "EmbeddedChart → ChartContainer", "kind": "chart composite", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "evidence": ["web\\src\\components\\charts\\EmbeddedChart.tsx:18-41", "web\\src\\components\\charts\\ChartContainer.tsx:170-182,758-856"], "contract": "Fluid, embedded chart, source-backed accessibility table/description capability. Export/fullscreen default false in EmbeddedChart and are not existing RUL actions."},
+    {"name": "Skeleton, EmptyState, QueryError, StaleRefreshWarning, FadeIn", "kind": "feedback/motion", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "evidence": ["web\\src\\components\\feedback\\StaleRefreshWarning.tsx:57-115", "web\\src\\components\\motion\\FadeIn.tsx:24-38", "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx:172-195,282-300"], "contract": "Use current feedback category and individual retry; preserve retained source warnings. FadeIn honors shared motion preference."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 47, "rule": "MDC-025 semantic status reuse", "detail": "Local domain status metadata repeats color/tone presentation responsibilities. Its RUL classifications and translation keys are genuinely domain-specific; cross-page duplication was not established by this bounded audit.", "fix": "Keep RUL status mapping local but delegate presentation tones to existing shared APIs; do not introduce a second universal status registry.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verifiedAtRuntime": false,
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 197, "detail": "Cards use one column, md two, xl three; no sections are deliberately hidden on mobile."},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 303, "detail": "Chart height is h-72 then sm:h-80; responsive width, minTickGap=28 and 44px Y axis."},
+      {"file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 129, "detail": "Brief stacks until xl, wraps header metadata/actions and compact metric grid starts one column."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 223, "rule": "MDC-043 allocated-width mobile reflow", "detail": "Health readout remains w-32 shrink-0 beside a three-row definition list with no narrow-card stacking rule. At 320px or narrow shell allocation, long localized dt/dd pairs can compress severely; actual overflow is unverified.", "fix": "Use a narrow container-width stack/reflow while retaining every health/remaining/distance/date field; test 320/375/390/430 and narrow tablet columns with long translations.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 259, "rule": "MDC-043 long-content reachability", "detail": "Confidence label/readout depend on MetricBar's non-wrapping justify-between header; long localized labels compete with percentage/category text.", "fix": "Exercise long labels and 200% text zoom; if confirmed across consumers, add an opt-in wrapping header to the existing MetricBar rather than hide confidence.", "owner": "shared", "confidence": "medium"}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "runtimeKeyboardContrastAndAssistiveTechnologyVerified": false,
+    "positiveEvidence": [
+      "Board is a named section; card names are localized; decorative icons use aria-hidden (page:166,168,208,213).",
+      "SelectableCard is a native button with focus-visible ring/min-h-11 (SelectableCard.tsx:34-43).",
+      "Health and confidence have numeric meter/progressbar semantics (LinearGauge.tsx:211-225; MetricBar.tsx:59-66).",
+      "Statuses include visible text, not color alone (page:218-220).",
+      "Stale warnings use polite live status and retry (StaleRefreshWarning.tsx:88-115)."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 205, "rule": "MDC-040 valid selection semantics", "detail": "Cards have role=option and aria-selected from SelectableCard, but their parent grid is a plain div, not a listbox/group implementing the listbox keyboard contract. Native button activation is available, but option containment is source-invalid.", "fix": "Prefer native toggle-button semantics with aria-pressed in a named group for rich cards, or implement a complete shared listbox contract including parent role and arrow-key navigation. Preserve selection, names and full card metadata.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 305, "rule": "MDC-034/MDC-040 accessible chart evidence", "detail": "The no-table comment claims the composite is not tabular, although projection points contain explicit date/projected/lower/upper values. EmbeddedChart receives neither data/dataColumns nor ariaDescription; ChartContainer falls back to 'Chart: title'. Its accessible label describes shape but exposes no actual forecast values or confidence bounds.", "fix": "Pass actual projection rows with date, projected health, lower bound and upper bound through the existing data/dataColumns contract plus a source-backed explanation. Retain EOL, band, basis and chart; no fabricated readings.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 371, "rule": "MDC-042 reduced motion", "detail": "Forecast Line sets animationDuration=700 without using shared motion preference; confidence Area disables animation and FadeIn/MetricBar already honor preference. Recharts animation behavior under OS reduction is not exercised.", "fix": "Apply useMotionPreference to the existing Line isAnimationActive/duration; retain all forecast data and curve geometry.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 147, "rule": "MDC-040 async announcements", "detail": "Page passes query for freshness but no loading/busy/error values. PageContainer's useLoadAnnouncement consumes loading/error props, not query (PageContainer.tsx:135-141); therefore page-owned initial loading transitions are not wired to that shared announcer. Whether child feedback supplies equivalent announcements is unverified.", "fix": "Wire a non-destructive busy/announcement contract or existing scoped announcer for board/detail transitions without globally gating all sections.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "states": {
+    "runtimeVerified": false,
+    "inventory": [
+      {"name": "No vehicle", "evidence": "RemainingUsefulLifePage.tsx:72-77,172-178,282-286; useRUL.ts:95,109", "behavior": "Queries disabled; brief requests workspace selection; board/forecast show selection prompts."},
+      {"name": "Initial loading", "evidence": "RemainingUsefulLifePage.tsx:179-184,292-293; NextServiceBrief.tsx:51-54", "behavior": "Five 188px board skeletons; 340px forecast skeleton; brief loading suppression."},
+      {"name": "Board fatal failure", "evidence": "RemainingUsefulLifePage.tsx:77-78,185-188", "behavior": "Board QueryError and board retry; brief reports failure; no page-wide fatal gate."},
+      {"name": "Detail fatal failure", "evidence": "RemainingUsefulLifePage.tsx:94-99,294-295", "behavior": "Independent forecast error/retry; board remains."},
+      {"name": "Empty/no active component", "evidence": "RemainingUsefulLifePage.tsx:189-195,287-291,296-300", "behavior": "Dedicated board and chart empty messages; headers stay mounted."},
+      {"name": "Retained refresh failure/offline", "evidence": "RemainingUsefulLifePage.tsx:152,277; StaleRefreshWarning.tsx:57-115; dataState.ts:167-177", "behavior": "Nonfatal warnings retain prior board/detail payload with per-source retry; offline retained content is explicitly described."},
+      {"name": "Unknown/indeterminate prognosis", "evidence": "RemainingUsefulLifePage.tsx:102-116; prognostics.go:324-330,361-365,380-385,429-433", "behavior": "Absent replace-by date does not expose remaining_days sentinel; distance null displays dash; actual zero confidence remains zero. Backend default health and flat forecasts require explanation, not invented measurements."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx", "line": 40, "rule": "MDC-026 unknown is not healthy", "detail": "Any retained board without a projected next-service date says 'all components healthy'. NextServiceDue skips all null dates (prognostics.go:468-484), including overdue components whose builders deliberately omit dates. No projectable date does not prove healthy.", "fix": "Use neutral 'No service date projected' language, retaining actual board statuses/confidence/basis and source limitations; do not alter deterministic diagnostic calculations.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 377, "rule": "MDC-026 evidence completeness", "detail": "Only selected detail basis is displayed, and only inside the nonempty-chart branch. Board entries already carry basis but do not show it. Empty/unconfigured forecast states can hide the very rationale distinguishing an estimate from absent history.", "fix": "Keep selected source basis visible independently of chart availability and make each card's existing basis reachable; preserve the details action and confidence labels without fabricating provenance.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 225, "rule": "MDC-026 distinguish model defaults from observations", "detail": "Backend BatteryRUL's missing-history branch returns health_pct=0, confidence=0, healthy status but forecast inputs at 100 (prognostics.go:324-330); unconfigured wear/age return healthy 100 with no configuration (380-385,429-433). UI prints these numbers as health with little card-level evidence. These are existing server semantics, not data invented by this audit.", "fix": "Expose existing basis and inference limitation; request explicit availability metadata from the diagnostic owner before distinguishing missing numeric health from measured zero. Do not guess from confidence alone or change server math in page work.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 54, "rule": "MDC-025 unknown status", "detail": "Unrecognized runtime status silently maps to Healthy despite statusMeta accepting arbitrary strings. The inspected typed server emits four known values, so this is a defensive-contract risk rather than a confirmed current response.", "fix": "Preserve the four classifications but provide a localized neutral unknown fallback instead of asserting healthy.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 34, "rule": "MDC-010/MDC-034 restrained chart palette", "detail": "Electric cyan #22d3ee confidence bars, hardcoded #34d399/#fbbf24/#fb7185/#f87171 gauges/series, saturated rose EOL text and a 25% gradient band bypass semantic theme tones. Colors encode statuses, but intensity and fixed theme behavior need modernization. Runtime visual/contrast impact remains unverified.", "fix": "Reuse semantic gauge tones/current palette and existing MetricBar fill=solid for confidence; subdue EOL annotation while preserving status distinctions, confidence bounds and custom chart preferences.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ui\\SelectableCard.tsx", "line": 40, "rule": "MDC-010/MDC-012 restrained theme-aware selection", "detail": "Shared selected/focus presentation uses fixed cyan borders/rings and bg-white/[0.02]/[0.04] surfaces. Low-alpha white is not pure-white body text, but it is fixed-white decoration rather than theme surface tokens; rendered contrast was not measured.", "fix": "Shared owner should preserve interaction and focus but resolve selected/hover/focus presentation from existing theme/surface/border tokens; do not page-override each consumer.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 218, "rule": "MDC-042 no ambient decoration", "detail": "Overdue dots request pulse; StatusPill emits animate-pulse (StatusPill.tsx:27) with no local motion-safe condition. This is repeated ambient animation, not essential overdue information; global CSS/OS behavior was not inspected or exercised.", "fix": "Retain overdue text/semantic severity without constant pulse, or ensure shared preference-aware behavior if explicitly required elsewhere.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 275, "rule": "MDC-013/MDC-044 role typography and date formatting", "detail": "Forecast component subtitle bypasses role Text with text-sm/font-normal and fixed toned accent. Replace-by values and chart month ticks are raw ISO/slice formatting (248,323), unlike localized numbers.", "fix": "Use existing typography/date presentation helpers, retaining exact dates, source values and translated units; avoid reinterpreting date-only data as local timestamps.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx", "line": 86, "rule": "MDC-046 scoped selection consistency", "detail": "Local selected key remains across vehicle changes and wins over every new board's next_service/first component. With the current fixed five-component backend this retains a valid selection, but partial/missing config can lead to a detail 404 while board still renders all specs. Whether sticky component selection is intended is not established.", "fix": "Document/test retention versus reset behavior and validate against new source components without removing the existing explicit-select/default precedence.", "owner": "page", "confidence": "medium"},
+    {"file": "internal\\api\\rul\\dtos.go", "line": 6, "rule": "MDC-045 deferred wire unit contract", "detail": "DTO comment calls km/days SI-canonical, but actual fields are remaining_km/nominal_life_km/remaining_days. The page intentionally adapts km to metres for useUnits. This is a known integration boundary, not authorization to rename or rescale wire/cache values during a visual migration.", "fix": "Keep raw contract and display conversion unchanged; any later SI migration belongs to the coordinated backend/API owner with contract tests.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "First correct misleading all-healthy summary and missing diagnostic availability/provenance presentation, then invalid option semantics and accessible forecast values; visual restraint and mobile reflow follow without changing deterministic models.",
+    "runtimeReleaseGate": "Unverified; not production acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "SelectableCard theme and complete selection semantics",
+      "existingOwnerFile": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "propsVariantsStates": "Retain selected, disabled, name, native activation and forwarded button props. Add/document native aria-pressed selection mode or a complete listbox composition; use semantic selected/hover/focus tokens and retain >=44px target.",
+      "usedBy": ["web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx:203-210"],
+      "dependsOn": ["Existing UI token/theme owner", "Existing accessibility interaction policy; inventory other consumers before shared semantic changes"],
+      "evidence": ["web\\src\\components\\ui\\SelectableCard.tsx:27-49"]
+    },
+    {
+      "name": "Explicit RUL diagnostic availability metadata",
+      "existingOwnerFile": "internal\\api\\rul\\dtos.go",
+      "propsVariantsStates": "Source owner to define measured/inferred/unavailable/config-missing input evidence for health and projection, preserving current numbers, confidence, basis, deterministic math and wire units. Do not infer missingness solely from confidence=0.",
+      "usedBy": ["web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx:225-260,303-380"],
+      "dependsOn": ["internal\\api\\rul\\prognostics.go diagnostic owner", "web\\src\\api\\hooks\\useRUL.ts typed contract owner"],
+      "evidence": ["internal\\api\\rul\\prognostics.go:324-330,380-385,429-433"]
+    }
+  ],
+  "competingImplementations": {
+    "confirmedNewCompetingLibraries": [],
+    "detail": "Page uses category barrels, shared layout, query/data-trust, workspace scope, formatting and domain brief. Local status colors are presentation duplication; no alternate query/store/theme/formatter engine was found within inspected scope. MetricBar wrapping need is conditional QA, not a confirmed new shared implementation requirement."
+  },
+  "preservation": {
+    "sourceHash": "85377cfbf0b30961e20f576d41fb41202e66a1d727ed2c9e1d1e1f93259841a3",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Root-relative page file bytes only",
+    "currentLineCount": 388,
+    "directFeaturePresentationDependencies": [{"file": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx", "lineCount": 64}],
+    "combinedInspectedPageAndDirectFeatureLineCount": 452,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Next service due", "count": 1, "evidence": "RemainingUsefulLifePage.tsx:153-162; NextServiceBrief.tsx:44-62", "preserve": "Component/date metrics, true missing date, source, snapshot freshness, selected-vehicle scope, loading/error/retained states and Review details drawer."},
+      {"name": "Component health board", "count": 1, "evidence": "RemainingUsefulLifePage.tsx:164-267", "preserve": "Stable server order and all five tracked identities where supplied; health/status/remaining/distance/replace-by/confidence; card selection, loading, error, empty, no-vehicle states."},
+      {"name": "Health forecast", "count": 1, "evidence": "RemainingUsefulLifePage.tsx:269-385", "preserve": "Selected component title, actual projection date/health/confidence bounds, range Area, Line, EOL reference, axis domain, tooltip, basis and independent state/retry."}
+    ],
+    "sourceComponentCounts": {"GlassPanelOpeningTags": 4, "PanelTitleOpeningTags": 2, "EmbeddedChartOpeningTags": 1, "NextServiceBriefOpeningTags": 1, "FadeInOpeningTags": 3},
+    "countInterpretation": "Four GlassPanel tags include three mutually exclusive board fallback branches and one forecast panel; not four simultaneous sections. Shared brief includes its own GlassPanel and details drawer.",
+    "actions": [
+      {"name": "Choose workspace vehicle", "evidence": "RemainingUsefulLifePage.tsx:72; useSelectedVehicle.ts:9-28", "preserve": "Shell-owned selection; no local duplicate control."},
+      {"name": "Select component forecast", "evidence": "RemainingUsefulLifePage.tsx:86-99,203-208", "preserve": "Explicit selection, then next-service default, then first server component."},
+      {"name": "Retry board and detail fatal failures", "evidence": "RemainingUsefulLifePage.tsx:98-99,187,295", "preserve": "Separate refetch handlers."},
+      {"name": "Refresh retained stale sources", "evidence": "RemainingUsefulLifePage.tsx:152,277; StaleRefreshWarning.tsx:99-113", "preserve": "Source-specific retry and disabled refreshing state."},
+      {"name": "Review next-service details and close drawer", "evidence": "OperationalBrief.tsx:154-167,233-263", "preserve": "Real source metrics, provenance and existing shared narrative/details renderer."},
+      {"name": "Inspect chart tooltip", "evidence": "RemainingUsefulLifePage.tsx:333-341", "preserve": "Health percentage and lower-upper percentage formatting."}
+    ],
+    "dataBehavior": [
+      "No frontend model inference or generated forecast points; render server projection unchanged except [low,high] tuple folding.",
+      "Both sources use inferred provenance; preserve actual source confidence and explanatory basis, never replace with fabricated certainty.",
+      "Preserve server deterministic OLS/rate/status/projection math and model limits: no service reset, enrollment age proxy, nominal pack estimate and flat/default-horizon behavior.",
+      "Keep null replace-by/distance distinct from zero; do not show capped remaining_days sentinel as a real date.",
+      "Keep km/day wire values as currently contracted; convert remaining_km to metres only for useUnits display.",
+      "Preserve saved numeric precision, units, localization, raw labels/data and independent query enablement/keys/stale policies/cancellation.",
+      "Do not add export, fullscreen, schedule-service mutations or AI prediction actions absent from this source."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source inspection and narrowly scoped PowerShell regex/count/hash commands.",
+    "runtime": "Unverified: no browser, app mount, live API, viewport, keyboard, screen reader, contrast, screenshot or production action performed.",
+    "tests": "Not run. Full-repository lint/build and TypeScript prohibited by this assignment. Skill script inspected but not executed because it unconditionally runs full frontend TypeScript.",
+    "commandReceipts": [
+      {"command": "Get-FileHash web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx -Algorithm SHA256", "exitCode": 0, "output": "85377CFBF0B30961E20F576D41FB41202E66A1D727ED2C9E1D1E1F93259841A3"},
+      {"command": "$p='web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx'; $s=Get-Content $p -Raw; 'PAGE_LINES='+(Get-Content $p).Count; $rules=@{inlineStyle='style=\\{\\{';rawControls='<(button|input|textarea|select|table)\\b';directLibraries='from ''(recharts|react-leaflet|framer-motion)''';pureWhite='text-white|#fff\\b|#ffffff\\b';neonClass='neon-|glow'}; foreach($k in $rules.Keys){ $k+'='+[regex]::Matches($s,$rules[$k]).Count }; 'GLASSPANEL_OPEN='+[regex]::Matches($s,'<GlassPanel\\b').Count; 'EMBEDDEDCHART_OPEN='+[regex]::Matches($s,'<EmbeddedChart\\b').Count; 'NEXTSERVICE_LINES='+(Get-Content web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx).Count", "exitCode": 0, "output": "PAGE_LINES=388\ndirectLibraries=0\nneonClass=0\npureWhite=0\nrawControls=0\ninlineStyle=0\nGLASSPANEL_OPEN=4\nEMBEDDEDCHART_OPEN=1\nNEXTSERVICE_LINES=64"},
+      {"command": "Initial scoped regex/count command", "exitCode": 1, "output": "PowerShell ParserError: Unexpected token ']' in expression or statement. Corrected and rerun successfully; failed command produced no audit counts."}
+    ],
+    "scopeLimits": "Not a full-repo duplicate/style/theme audit. Shared dependencies inspected only for contracts used by this page; related file ranges and targeted matches are included in filesRead. No backend test assertions, actual observed vehicle inputs, latency or prediction accuracy claimed.",
+    "routeEvidence": "web\\src\\App.tsx:216,752 confirms lazy mount at diagnostics/rul inside SafeRoute; endpoint registration source matches both hooks.",
+    "visualLimits": "No direct neon/glow utility or pure-white text found in page regex scan; fixed saturated graphics and shared low-alpha white decoration are separately source-evidenced. No measured contrast failures or rendered glow claimed.",
+    "historicalAcceptanceUsed": false,
+    "sourceEdits": false,
+    "gitUsed": false,
+    "nestedAgentsUsed": false
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx",
+    "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx",
+    "web\\src\\api\\hooks\\useRUL.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\ui\\SelectableCard.tsx",
+    "web\\src\\components\\ui\\StatusPill.tsx",
+    "web\\src\\components\\charts\\LinearGauge.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\rul\\doc.go",
+    "internal\\api\\rul\\dtos.go",
+    "internal\\api\\rul\\handler.go",
+    "internal\\api\\rul\\prognostics.go"
+  ]
+}
