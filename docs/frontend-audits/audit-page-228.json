@@ -1,0 +1,363 @@
+{
+  "item": "audit-page-228",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+  "routes": ["/tire-pressure"],
+  "purpose": "Monitor canonical-Pa four-corner tire pressure, deterministic threshold status, TPMS flags, selected-window history and optional AI narration.",
+  "primaryGoal": "Identify missing or abnormal corner readings and inspect their history without mistaking missing readings or range-bound timestamps for live evidence.",
+  "dataSources": [
+    {
+      "name": "Latest pressure",
+      "hook": "usePressurePageLatest",
+      "owner": "web\\src\\api\\hooks\\usePressurePage.ts",
+      "file": "web\\src\\api\\hooks\\usePressurePage.ts",
+      "line": 17,
+      "endpoint": "GET /api/v1/tire-pressure/latest?vehicle_id={activeVehicleId}",
+      "routeEvidence": "internal\\api\\router.go:4098-4101",
+      "sourceOwnership": "TirePressureHandler.Latest; router constructor receives stateReader and liveStateReader at internal\\api\\router.go:1007. Actual backend projection/freshness semantics were not inspected.",
+      "behavior": "Strict non-null vehicle gate; query key tire-pressure-latest plus vehicle ID; abort signal forwarded; inherited query policy. Optional four corner fields and TPMS warning strings preserved."
+    },
+    {
+      "name": "Pressure history",
+      "hook": "usePressurePageHistory",
+      "owner": "web\\src\\api\\hooks\\usePressurePage.ts",
+      "file": "web\\src\\api\\hooks\\usePressurePage.ts",
+      "line": 31,
+      "endpoint": "GET /api/v1/tire-pressure?vehicle_id={activeVehicleId}&start={start}&end={end}",
+      "routeEvidence": "internal\\api\\router.go:4098-4100",
+      "sourceOwnership": "TirePressureHandler.List; history is identified by the page as historical. Server bound interpretation, result completeness and pagination are unverified.",
+      "behavior": "Both literal bounds enter query key and URL; strict non-null vehicle gate; abort signal forwarded; chronological copy for chart, independent sortable copy for table."
+    },
+    {
+      "name": "Optional AI trend narration",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AITirePressureTrendReasoning.tsx",
+      "file": "web\\src\\components\\ai\\AITirePressureTrendReasoning.tsx",
+      "line": 115,
+      "endpoint": "POST /api/v1/ai/tire-pressure/trends/explain",
+      "routeEvidence": "URL observed in consumer; router handler integration at internal\\api\\router.go:5078, exact endpoint registration not inspected.",
+      "sourceOwnership": "Existing withAiFeature gate and AI stream pipeline, not a replacement pressure source.",
+      "behavior": "Opt-in fixed recent-30-day description; vehicle_id body and scopeKey; positive finite vehicle required; independent of selected history range. Stream internals and feature-gate implementation not inspected."
+    },
+    {
+      "name": "Workspace and formatting preferences",
+      "owner": "Existing useSelectedVehicle/useRangeState/useUnits/usePressureFormat/useNumberFormatting",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+      "line": 167,
+      "endpoint": null,
+      "sourceOwnership": "Header owns vehicle/date scope; route listed at web\\src\\lib\\workspaceScope.ts:73. usePressureFormat bridges Pa to the existing kPa formatter only at presentation.",
+      "behavior": "Preserve tire-pressure.range key, units, precision, locale, localization and existing query defaults; do not add a competing selector or conversion engine."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout/CardGrid",
+      "owner": "@/components/layout",
+      "kind": "layout",
+      "evidence": "TirePressurePage.tsx:403-414,443-480",
+      "props": ["title", "subtitle", "query", "dataSources", "label", "items with stable IDs and full/third/half sizes"],
+      "behavior": "One grid placement owner for all four persistent groups; shared layout internals not audited."
+    },
+    {
+      "name": "PressureSummary / VehicleOperationalBrief",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureSummary.tsx",
+      "kind": "domain composite",
+      "evidence": "PressureSummary.tsx:23-85; operationalbrief-all\\VehicleOperationalBrief.tsx:24-71",
+      "props": ["summary", "lastUpdatedAt", "units", "precision", "locale", "latestLoading", "historyLoading", "retained"],
+      "behavior": "Four metrics through existing StatMetric/useOperationalMetrics/OperationalBrief; source-local loading context and undated latest snapshot remain distinct from history date."
+    },
+    {
+      "name": "PressureCurrentCard / ThresholdBar",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureCurrentCard.tsx",
+      "kind": "domain composite using LayoutCard and canonical chart primitive",
+      "evidence": "PressureCurrentCard.tsx:14-74; web\\src\\components\\charts\\ThresholdBar.tsx:140-210",
+      "props": ["source", "loading", "label", "status", "unit", "precision", "format", "domain", "bands", "convert"],
+      "behavior": "All four corners remain visible; unknown corner text; localized meter/status; extra actual-value caption outside clamped domain."
+    },
+    {
+      "name": "PressureHistoryCard / ChartContainer",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureHistoryCard.tsx",
+      "kind": "domain chart",
+      "evidence": "PressureHistoryCard.tsx:27-69",
+      "props": ["source", "loading", "rows", "label", "format", "unit"],
+      "behavior": "Four series, discontinuities, auto Y domain, tooltip, legend, hiddenSeries, chart key, accessible data columns and exportData; canonical category chart imports."
+    },
+    {
+      "name": "PressureHistoryTable / DataTable",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureHistoryTable.tsx",
+      "kind": "domain table",
+      "evidence": "PressureHistoryTable.tsx:20-47",
+      "props": ["source", "loading", "rows", "columns", "sortKey", "sortDir", "onSort"],
+      "behavior": "Embedded canonical table, stable tableId, raw-value filters, row IDs, compact pagination; mobile allow-list currently omits pressure columns."
+    },
+    {
+      "name": "PressureRefreshNotice / AlertBanner / Button",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureRefreshNotice.tsx",
+      "kind": "reused domain retained-data notice",
+      "evidence": "PressureRefreshNotice.tsx:14-30",
+      "props": ["source.hasData", "source.refreshError", "source.isRefreshBlocked", "source.retry", "label"],
+      "behavior": "One implementation reused by current/chart/table, localized refresh-versus-paused message and individual retry."
+    },
+    {
+      "name": "AITirePressureTrendReasoning / AIFeatureCard",
+      "owner": "web\\src\\components\\ai\\AITirePressureTrendReasoning.tsx",
+      "kind": "existing opt-in AI composite",
+      "evidence": "TirePressurePage.tsx:416; AITirePressureTrendReasoning.tsx:98-163; AIFeatureCard.tsx:249-356",
+      "props": ["vehicleId", "title", "description", "buttonLabel", "badgeLabel", "emptyHint", "canStart", "stream"],
+      "behavior": "Feature gate, positive vehicle requirement, Ask Helix action, stream disabled/busy state, output and error ownership stay in existing AI pipeline."
+    },
+    {
+      "name": "Badge / AlertBanner / FadeIn / Text / feedback primitives",
+      "owner": "Existing category barrels",
+      "kind": "primitive/shared feedback/motion",
+      "evidence": "TirePressurePage.tsx:5-8,365-396,420-443; PressureCurrentCard.tsx:34-64",
+      "props": ["semantic variants", "localized content", "aria-hidden decorative icons", "retry actions"],
+      "behavior": "Do not replace shared feedback, semantic severity, typography or motion systems."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+      "line": 97,
+      "rule": "MDC-002 domain identity owner",
+      "detail": "Four-corner identity is repeated locally in the page, pressureData, current card and history card. Threshold constants and refresh notice already have one owner; do not duplicate them again.",
+      "fix": "If consolidating, move the shared corner tuple/type into the existing pressureData domain module and preserve existing test-only exports. No new universal pressure renderer is justified.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verifiedBy": "Source inspection only",
+    "evidence": [
+      "TirePressurePage.tsx:443-479 uses one CardGrid with summary/table full, current third and history half.",
+      "PressureHistoryCard.tsx:32,53 uses min-w-0 and ResponsiveContainer.",
+      "PressureCurrentCard.tsx:46 stacks all four corners.",
+      "AIFeatureCard.tsx:314-337 uses min-w-0, wrapping and break-words."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureHistoryTable.tsx",
+        "line": 36,
+        "rule": "MDC-023/MDC-043 preserve full mobile data",
+        "detail": "mobileColumns contains only created_at and warnings. DataTable.tsx:725-726 hides excluded columns below md; its alternative full-detail adapter at 1385 requires mobilePresentation, which this consumer does not supply. The historical four-corner values therefore have no source-wired mobile row-detail alternative here.",
+        "fix": "Adopt the existing DataTable mobilePresentation contract with all four pressure values and warning/time metadata, preserving filters, sorting, row identity and pagination, or retain all columns in an intentional contained-scroll strategy. Do not build a second table pipeline.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["All ten requested viewport widths", "Allocated-container packing", "Long translations", "RTL", "200% text", "Actual clipping/overflow and touch targets"]
+  },
+  "accessibility": {
+    "evidence": [
+      "PressureHistoryCard.tsx:36-49 supplies chart ariaLabel and complete per-corner dataColumns.",
+      "ThresholdBar.tsx:145-154 supplies meter label/value/bounds/status text.",
+      "PressureCurrentCard.tsx:60-64 retains actual out-of-domain values as text.",
+      "TirePressurePage.tsx:422 and feedback corner icons explicitly hide decorative icons.",
+      "AIFeatureCard.tsx:297-304 supplies disabled, aria-disabled, aria-busy and action name."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+        "line": 365,
+        "rule": "MDC-025/MDC-040 severity not color-only",
+        "detail": "Historical pressure badges vary success/warning/danger but their supplied content is only the numeric reading. Unlike current ThresholdBar, the page supplies no pressure-status text or accessible name for each historical corner.",
+        "fix": "Add localized status to the existing badge's accessible or visible content while keeping corner/unit column names, numeric values and raw filter values unchanged; verify the composed Badge DOM before acceptance.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard and focus paths", "Screen reader output", "Effective composed contrast", "Forced colors", "Reduced-motion behavior", "Table and chart toolbar accessibility"]
+  },
+  "states": {
+    "initialLoading": "Current card shows four skeletons; chart/table suppress initial content without data. Summary retains independent per-source loading captions rather than blanking history date. Evidence: PressureCurrentCard.tsx:35-38; PressureHistoryCard.tsx:38; PressureHistoryTable.tsx:25; PressureSummary.tsx:36,45,54,63,80.",
+    "emptyUnavailable": "Current source has empty feedback and retry; individual unknown corners remain visible; history chart/table have empty feedback. readPressurePa excludes null, nonfinite and nonpositive no-reading sentinels without changing payloads.",
+    "fatalError": "deriveDataState feeds QueryError or ChartContainer error and retry independently, not one global data gate. PageLayout receives both queries; layout implementation was not inspected.",
+    "refreshErrorOfflinePaused": "PressureRefreshNotice preserves usable data on refreshError or isRefreshBlocked and offers retry. Summary retained flag reflects either source. Specific browser-offline and stale-age indicators remain unverified.",
+    "partialUnknown": "Latest state marks missing corners partial at TirePressurePage.tsx:247; summary reports measured-corner coverage; history gaps stay null; absent TPMS flags show unknown dash rather than affirmative OK at 387-390.",
+    "warning": "Conditional TPMS alert preserves hard-over-soft severity; threshold warning count is independently calculated from pressure values and explicitly not TPMS flag count.",
+    "AI": "Feature gate, no-vehicle hint, canStart, streaming busy/disabled and existing output error surface are source-wired; no stream executed."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+      "line": 134,
+      "rule": "MDC-010 semantic tokens rather than saturated local palette",
+      "detail": "pressureColor hardcodes emerald/amber/red hex values at 135-137 and appends alpha 8c for five threshold bands at 219. These are semantic severity colors, but fixed saturated values bypass current theme/token ownership. No page neon/glow/fixed-white class was found by the scoped scan.",
+      "fix": "Use the existing severity/theme token mapping for band fills, preserving thresholds, alpha intent and explicit localized status labels; do not reset user chart colors.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010/MDC-012 restrained themed accents",
+      "detail": "Shared AI button fixes cyan borders/background/focus/text including dark:text-cyan-100; badge at 214 fixes a separate cyan treatment. This is a source-visible saturated branding exception, not proof of poor measured contrast or neon/glow. No literal pure-white or glow treatment was observed in the inspected AI scaffold.",
+      "fix": "Have the existing AI scaffold owner review subdued semantic accent tokens for badge/action across themes, preserving Helix identity, disabled/busy/focus and localized accessible names. No page-local wrapper or new variant system.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+      "line": 227,
+      "rule": "MDC-032 exact rolling/timezone workspace bounds",
+      "detail": "Page passes useRangeState start/end calendar values to history at 239, rather than startInstant/endInstantExclusive. The hook's separate instant path at useRangeState.ts:656-673 represents rolling live/24h and timezone calendar bounds. This page/hook boundary cannot preserve that instant distinction as written. Server interpretation is not inspected and actual data divergence is unverified.",
+      "fix": "Pass the existing instant bounds through the typed pressure history hook, retaining both query-key bounds and cancellation. Coordinate backend bound support/encoding with integration owner; do not implement client filtering or a second date picker.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureHistoryCard.tsx",
+      "line": 5,
+      "rule": "MDC-002 component-first category imports",
+      "detail": "History and summary directly import useCardPlacement from layout/layout-reference rather than the layout category; existing domain type imports also point back into the page from pressureData/current/history/table. Type-only imports do not establish a runtime cycle, but page ownership unnecessarily anchors presentation contracts.",
+      "fix": "Use the canonical placement export if available and move domain identity into the existing pressure domain owner; preserve all public test helper exports. Verify export availability rather than inventing a wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+      "line": 88,
+      "rule": "MDC-045 canonical SI; compatibility helpers must stay out of production",
+      "detail": "Deprecated normaliseTpmsToPa and exported getTirePressureValue at 121 retain magnitude-based guesses and a zero sentinel. Current rendering uses readPressurePa and the canonical pressure bridge, not these adapters.",
+      "fix": "Keep compatibility exports quarantined until directly related tests are migrated; do not reuse guessed-unit helpers or silently remove their existing test contract during presentation work.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Mobile history preservation and exact workspace time-bound propagation take priority over restrained color/token cleanup. Existing page already uses modern layout/domain composites and source-local retained-data handling.",
+    "order": ["Preserve mobile historical corner values", "Resolve instant-bound integration", "Add historical status text", "Subdue local/shared fixed accent styling", "Consolidate domain identity without breaking tests"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing AI scaffold semantic accent review",
+      "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "props": ["Existing title/description/buttonLabel/badgeLabel/canStart/stream API unchanged"],
+      "variants": ["Existing outline Button and AIBadge styling; no new public variant requested"],
+      "states": ["idle", "no-input disabled", "streaming busy/disabled", "keyboard focus", "light/dark/custom theme"],
+      "usedBy": ["web\\src\\components\\ai\\AITirePressureTrendReasoning.tsx"],
+      "dependsOn": ["Existing semantic accent/text/focus tokens and Button ownership", "Centralized effective contrast/theme review"],
+      "evidence": "AIFeatureCard.tsx:214,296",
+      "scope": "Shared owner only; this audit proposes no shared source edit or speculative new composite. Other AI consumers were not inspected."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+      "line": 88,
+      "rule": "MDC-002/MDC-045 one production conversion",
+      "detail": "Test-compatibility magnitude normalizer coexists with canonical readPressurePa/usePressureFormat. It is not used by current production render; unknown downstream usage outside this scope is not asserted.",
+      "fix": "Keep canonical readPressurePa plus existing pressure formatting bridge as the sole production path; migrate compatibility tests deliberately, not by deleting helper behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "DC802517FF365901027945F48DD6ACA48147CF6F62D4DCF6397773DCAA13FECF",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 483,
+    "pageAndExtractedComponentLineCount": 867,
+    "pageAndDomainSourceLineCount": 867,
+    "lineCountScope": "483 page + 86 summary + 75 current + 70 chart + 48 table + 31 refresh notice + 74 pressureData; excludes barrel, tests and reused operational/AI/shared components. No historical baseline was inspected.",
+    "sections": [
+      {"name": "Latest-state summary", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx", "line": 447, "contents": ["Average reported pressure", "Minimum reported pressure", "Threshold warning count with reported-corner coverage", "Range-bound last-updated history timestamp"]},
+      {"name": "Current readings", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx", "line": 458, "contents": ["Front left", "Front right", "Rear left", "Rear right", "Five threshold bands", "Status text and actual extreme values"]},
+      {"name": "Pressure history chart", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx", "line": 466, "contents": ["Four chronological series", "Missing-value gaps", "Time axis", "Auto pressure axis", "Tooltip", "Legend", "Hidden-series state", "Accessible data/export payload"]},
+      {"name": "History table", "count": 1, "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx", "line": 472, "contents": ["Time", "Four pressures with units", "TPMS warning category", "Sorting", "Raw-value filters", "Compact pagination"]},
+      {"name": "Opt-in AI trend reasoning", "count": 1, "conditional": "Existing AI feature gate", "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx", "line": 416, "contents": ["Recent 30-day explanation", "Vehicle-required hint", "Narration action", "Streaming output and errors"]},
+      {"name": "TPMS warning alert", "count": 1, "conditional": "Hard or soft latest warning flag", "file": "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx", "line": 419, "contents": ["Hard-over-soft severity", "Localized title and actionable explanatory body"]}
+    ],
+    "persistentSectionCount": 4,
+    "conditionalSectionCount": 2,
+    "metricCount": 4,
+    "cornerCount": 4,
+    "chartSeriesCount": 4,
+    "tableColumnCount": 6,
+    "literalPageGlassPanelChartContainerCount": 0,
+    "extractedChartContainerCount": 1,
+    "extractedLayoutCardCount": 2,
+    "actions": [
+      "Header-owned selected vehicle and date range, no competing local selector",
+      "Independent latest/history retries and retained refresh warnings",
+      "Sort timestamp and all four pressure columns, newest-first initial sort",
+      "Raw canonical-Pa table filters with preferred-unit labels",
+      "DataTable pagination and existing table persistence ID vehicle-systems:tire-pressure-history",
+      "Chart hiddenSeries/legend and existing chart key tire-pressure-history",
+      "Chart accessible data and export payload passed to canonical frame; actual toolbar behavior unverified",
+      "Opt-in AI narration with vehicle scope reset and streaming disabled/busy affordance",
+      "Existing unit/precision/locale preferences and localized page/action/status labels"
+    ],
+    "dataBehavior": [
+      "Wire/query payloads remain canonical Pa and snake_case with unchanged keys and signal cancellation.",
+      "Exclude null/nonfinite/nonpositive no-reading values only at presentation; missing corners are never healthy zero measurements.",
+      "Mean/min use reported corners only; threshold warning count retains inclusive normal 250000–350000 Pa and explicit coverage.",
+      "Threshold soft limits 200000–400000 Pa, geometry domain 150000–450000 Pa; preserve extreme source-value text rather than silently clipping meaning.",
+      "Chronological chart copy preserves null gaps and all rows; independent table sort uses Pa magnitudes and timestamp descending default.",
+      "History date belongs only to selected window; latest summary has no fabricated observation timestamp.",
+      "Absent TPMS flags remain unknown; hard wins over soft; OK only when both flag fields are present and false.",
+      "Fatal errors and refresh errors retain distinct rendering; usable neighbors and independent summary/history metrics survive failure.",
+      "AI recent-30-day analysis is opt-in, vehicle scoped and distinct from deterministic chart/table selected-window history."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only audit; no source edits, git, TypeScript, tests, full lint/build, browser, production mutations or screenshots.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "backend": "Only scoped router excerpts/search were inspected. Handler implementation, timestamps, TPMS projection, range parsing, completeness and AI exact registration remain unknown.",
+    "auditSkill": "Read audit.sh; did not execute it because it unconditionally runs project TypeScript, forbidden for this atomic source-only assignment. Replaced with bounded page-only static pattern counts, not global acceptance.",
+    "checks": [
+      {
+        "command": "Get-FileHash web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx -Algorithm SHA256",
+        "exitCode": 0,
+        "output": "SHA256 DC802517FF365901027945F48DD6ACA48147CF6F62D4DCF6397773DCAA13FECF"
+      },
+      {
+        "command": "Get-Content line counts on page and six pressure-modernization implementation modules",
+        "exitCode": 0,
+        "output": "TirePressurePage.tsx=483; PressureSummary.tsx=86; PressureCurrentCard.tsx=75; PressureHistoryCard.tsx=70; PressureHistoryTable.tsx=48; PressureRefreshNotice.tsx=31; pressureData.ts=74"
+      },
+      {
+        "command": "Initial PowerShell page-only static pattern-count command",
+        "exitCode": 1,
+        "output": "ParserError: Unexpected token ']' in expression or statement. No scan ran; quoting corrected in next command."
+      },
+      {
+        "command": "Select-String on exact page: style=\\{\\{; <(?:button|input|textarea|select|table)\\b; from .(?:recharts|react-leaflet|framer-motion).; from .\\.\\./(?:\\.\\./)?api.; neon|glow|text-white|bg-white|#fff; <(?:GlassPanel|ChartContainer)\\b",
+        "exitCode": 0,
+        "output": "staticInlineStyles=0\nrawControls=0\ndirectLibraries=0\noldApiImports=0\nneonGlowWhite=0\nliteralFrameTags=0",
+        "limitation": "Literal source patterns only, no proof about composed shared UI or all violations."
+      }
+    ],
+    "assumptions": ["Assigned route identity retained exactly; mounted reachability not exercised.", "No missing capabilities or new shared composite inferred from uninspected consumers."]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\TirePressurePage.tsx",
+    "web\\src\\api\\hooks\\usePressurePage.ts",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureSummary.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureCurrentCard.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureHistoryCard.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureHistoryTable.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\PressureRefreshNotice.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\pressure-modernization\\pressureData.ts",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\hooks\\usePressureFormat.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ai\\AITirePressureTrendReasoning.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\charts\\ThresholdBar.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go"
+  ]
+}
