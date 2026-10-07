@@ -1,0 +1,428 @@
+{
+  "item": "audit-page-182",
+  "page": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+  "routes": ["/command-history"],
+  "purpose": "Historical audit of vehicle command attempts, parameters, errors, outcomes and activity within the workspace-selected window.",
+  "primaryGoal": "Review command outcomes for the selected vehicle, find particular commands, and understand activity without losing range, filter or pagination context.",
+  "dataSources": [
+    {
+      "name": "useCommandReliabilityHistory",
+      "file": "web\\src\\api\\hooks\\useCommands.ts",
+      "line": 55,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/commands/history",
+      "sourceOwner": "commandHandler.CommandHistory; internal\\api\\router.go:3338",
+      "pageUse": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx:157",
+      "behavior": "Full selected-window retrieval in 1000-entry cursor batches; from/to, before_created_at and before_id are snake_case. Identity includes string-normalized vehicle ID and both bounds. Each request forwards the query AbortSignal; invalid arrays or nonadvancing cursors fail the query rather than publishing partial success. enabled requires vehicle and both bounds; staleTime is STALE_TIMES.QUICK.",
+      "routeEvidence": ["internal\\api\\router.go:3319", "internal\\api\\router.go:3327", "internal\\api\\router.go:3337-3338"],
+      "limits": "Handler/repository filtering, status vocabulary, ordering, retention, authorization and cursor behavior were not exercised or independently traced beyond the route/comment. Do not assume response parameter units."
+    },
+    {
+      "name": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "vehicleHandler.List; internal\\api\\router.go:3319-3320",
+      "behavior": "Existing URL vehicle_id, persisted selection and first-fleet-vehicle precedence; known-vehicle reconciliation remains the hook's responsibility. useVehicles passes signal and applies safeArray, with STALE_TIMES.FAST.",
+      "limits": "Fleet loading/failure is not separately exposed to this page by the selected-vehicle result. Runtime selection and fallback were not exercised."
+    },
+    {
+      "name": "Workspace and display preferences",
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 149,
+      "endpoint": null,
+      "sourceOwner": "useRangeState, useProductPreferences, useTimezone('vehicle'), useNumberFormatting and useOperationalMetrics",
+      "behavior": "Header-owned range registered at workspaceScope.ts:35; range and vehicle controls both enabled by getWorkspaceRouteScope. Product default, shared preference and URL bounds remain canonical; startInstant/endInstantExclusive drive every command-derived summary. Physical command parameters remain raw source values, not invented SI measurements.",
+      "limits": "Preference-hook endpoint graphs are outside this page-specific audit; no settings request or backend capabilities were inferred."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "layout",
+      "usage": "Page title/subtitle, commands navigation, query freshness, full-width min-w-0 container; existing PageContainer adapter, not a new layout engine."
+    },
+    {
+      "name": "OperationalBrief + useOperationalMetrics + commandHistoryMetrics",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "featureOwner": "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx",
+      "kind": "composite and domain adapter",
+      "usage": "Six source-backed metrics, scope, recorded/loading/unavailable/stale labels, freshness and inherited details drawer. Null summary supplies missing measurements rather than fabricated zeroes."
+    },
+    {
+      "name": "GlassPanel, PanelTitle, Text, Caption, Badge",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing category primitives",
+      "usage": "Five explicit page panels; typography roles and neutral count badge already reused."
+    },
+    {
+      "name": "TabNav, Input, Pagination",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing controls",
+      "usage": "Pressed status filter buttons, accessible command search, URL-backed pagination with range clamp. Pagination.tsx also retains first/previous/next/last, page slots and validated direct jump."
+    },
+    {
+      "name": "EmbeddedChart -> ChartContainer",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "kind": "chart composite",
+      "usage": "Daily stacked counts; shared loading/error/empty handling, hidden-series controller, chartKey persistence and dataColumns fallback. Export and fullscreen default false in this embedded owner; do not invent existing export/fullscreen actions."
+    },
+    {
+      "name": "Timeline",
+      "owner": "web\\src\\components\\data-display\\Timeline.tsx",
+      "kind": "data-display composite",
+      "usage": "Named ordered list, accessible range/count summary, newest-first chronology, caller-supplied title/subtitle/time/icon/color."
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "kind": "data-display primitive",
+      "usage": "Top eight commands and success/failed/other distribution; existing color, fill='solid', label, ariaLabel, sublabel and size APIs are sufficient for restrained adoption."
+    },
+    {
+      "name": "useDataState, StaleRefreshWarning, QueryError, EmptyState, Skeleton, FadeIn",
+      "owner": "existing hooks and feedback/motion category owners",
+      "kind": "trust, feedback and motion",
+      "usage": "Historical provenance; fatal-only replacement, retained refresh warnings/retry, section-specific skeletons and empty messages. FadeIn already uses reduced-motion preferences."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 467,
+      "rule": "MDC-002/MDC-026: reuse established source-state composition",
+      "detail": "Top commands, timeline and status breakdown repeat isLoading -> fatal QueryError -> empty -> content ternaries (467-476, 507-520, 546-554). They share one query, not independent backend sources.",
+      "fix": "Consider the existing SourceContent with state, label, loadingContent, emptyContent and errorRecovery; retain each panel shell, geometry, specialist empty icon and fatal-versus-retained behavior. Do not create another state wrapper or duplicate the global retained warning.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verifiedBy": "Source inspection only",
+    "currentStrategy": [
+      "Filter stack below sm; sm row with full-width search narrowing to sm:w-64 (394-397).",
+      "Insights and details stack to one column; xl three-column grids with primary panels spanning two columns (423-425, 497-499).",
+      "PageLayout preserves w-full/min-w-0 and container context. ChartContainer owns responsive plot containment and minimum geometry.",
+      "Timeline title/time can wrap; subtitle does not have the same wrapping protection. Pagination already has narrow-container target sizing and a direct-jump alternative."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\Timeline.tsx",
+        "line": 134,
+        "rule": "MDC-043: long metadata must remain readable without page overflow",
+        "detail": "Subtitle is a plain p without break-words/overflow-wrap while title and time explicitly wrap. This page passes raw malformed parameters, parsed key/value text and server error strings (page 600-618); long unbroken tokens present a source-visible overflow risk.",
+        "fix": "Have the existing Timeline owner add robust subtitle wrapping, preserving every parameter/error character and list semantics. Alternatively a page-owned ReactNode subtitle may use existing Text with wrapping; do not truncate or hide forensic metadata.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated-container widths", "RTL", "200% text", "long errors/parameters", "chart height and overflow"]
+  },
+  "accessibility": {
+    "verifiedBy": "Source inspection only; no keyboard, browser, screen-reader or contrast acceptance",
+    "positiveEvidence": [
+      "Search has a localized accessible name (403); deferred filtering exposes role=status/aria-live (410-412).",
+      "KPI section has an accessible name (358); timeline receives a localized label and chronology (523-525).",
+      "Chart supplies ariaLabel, data and dataColumns (433, 439-444); ChartContainer retains the source-data alternative and distinguishes interactive group from static image semantics (ChartContainer.tsx:444-453, 688-692).",
+      "TabNav uses native buttons, aria-pressed and visible focus styling (TabNav.tsx:39-55). Page icons passed for status are explicitly decorative, not accessible outcome names.",
+      "FadeIn's reduced-motion path is implemented at FadeIn.tsx:25-33; runtime motion behavior remains unverified."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+        "line": 303,
+        "rule": "MDC-025/MDC-040: command outcome requires textual accessible meaning",
+        "detail": "Timeline items expose command title, params/error subtitle and time, but neither textual status nor a status accessible label. Success/failure distinction is carried by color and aria-hidden CheckCircle/XCircle (303-311). A failed row without error text cannot be distinguished from success by its spoken content.",
+        "fix": "Compose the existing Timeline title/subtitle ReactNode props with a localized semantic Badge or status Text. Keep the raw status and distinguish other/unknown values; do not invent a new universal status registry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+        "line": 395,
+        "rule": "MDC-040: grouped status filters need a name",
+        "detail": "TabNav renders role=group with an optional ariaLabel, but this page does not supply it. Individual button names and pressed states exist; the group's purpose is not named.",
+        "fix": "Pass a localized status-filter ariaLabel through the existing TabNav API. No shared API or catalog edit is authorized by this audit.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+        "line": 405,
+        "rule": "MDC-040: stronger mobile target default is 44px",
+        "detail": "Search explicitly selects Input size=sm; Input.tsx:29 sets min-h-9 (36px). TabNav.tsx:54 uses py-1.5 with text-xs and no min-h-11. Actual composed target geometry and WCAG spacing exceptions were not measured.",
+        "fix": "Use an existing page className min-h-11 for search on mobile; coordinate a shared TabNav target-height treatment rather than add raw buttons or change global density defaults.",
+        "owner": "shared",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+        "line": 413,
+        "rule": "MDC-042: feedback animation respects reduced motion",
+        "detail": "The deferred-search indicator applies animate-spin directly without a caller-level motion-reduce alternative. Global reduced-motion CSS may suppress it; that global behavior was not inspected or exercised in this scoped audit.",
+        "fix": "Retain the live filtering status/name while using the existing motion preference or motion-reduce:animate-none. Verify OS reduction and low-bandwidth reduction before claiming compliance.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Summary uses OperationalBrief loading; chart uses EmbeddedChart loading; top commands/status rail have 240/200-height skeletons; timeline has four 56-height skeletons. Panel shells stay present.",
+    "empty": "Vehicle prerequisite and selected-window emptiness are distinct in analytics; timeline distinguishes filter miss and no commands. Empty measurements are null through commandHistoryMetrics when commands are unresolved/no vehicle; a successful [] genuinely yields zero counts.",
+    "fatalError": "state.fatalError alone replaces summary/panel bodies with retriable QueryError; query data is not discarded on refresh error.",
+    "retainedRefreshFailure": "StaleRefreshWarning stays above retained content, with state.retry and blocked-refresh copy. The summary uses stale tone/label and last successful dataUpdatedAt rather than claiming live telemetry.",
+    "offline": "Retained paused query is covered by shared DataState/StaleRefreshWarning. Initial paused-without-data handling is not explicitly distinguished in page branches.",
+    "partial": "The command hook accumulates batches locally and publishes only on successful completion; a later batch failure must not be treated as a complete empty or partial result.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+        "line": 158,
+        "rule": "MDC-026: unresolved/blocked source is not empty",
+        "detail": "Panel branches use query.isLoading and commands ?? []; initial paused queries may be pending but not fetching, so isLoading can be false with no fatal error. StaleRefreshWarning.tsx:61 returns null with no retained data. Those branches can therefore show no-commands/range/filter empty messages before a source response. Summary does better by checking commands == null (380).",
+        "fix": "Map initial pending/paused state and vehicle prerequisites explicitly before empty checks, using existing trust and feedback owners. Show successful [] as empty only after resolution; retain cached commands on paused refresh.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+        "line": 327,
+        "rule": "MDC-026: prerequisites are distinct from filter misses",
+        "detail": "timelineEmptyMsg checks search/status filters before noVehicle, whereas analyticsEmptyMsg checks noVehicle first. A carried q/status with no selected vehicle reports 'No commands match' rather than the unresolved vehicle prerequisite.",
+        "fix": "Give the selected-vehicle prerequisite priority without clearing URL filters or adding a second vehicle selector. Coordinate fleet-loading versus genuinely empty fleet language through the existing selection owner.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 132,
+      "rule": "MDC-010/MDC-025/MDC-034: restrained existing semantic presentation",
+      "detail": "Three page-local hex outcome colors feed chart, timeline and metric bars; top commands cycle up to eight palette colors (284), unrelated to outcome semantics. Default MetricBar fill is a gradient (MetricBar.tsx:46, 97), adding decoration to every ranked/category bar.",
+      "fix": "Reuse existing gaugeTone success/danger/neutral and existing approved chart palette. Use MetricBar fill='solid', with a restrained common tone for ranked commands unless identity coloring is demonstrably necessary. Preserve outcome distinction, all series, legends and explicit saved palette choices. CSS-variable colors must not be fed to the default color+'99' gradient construction.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 427,
+      "rule": "MDC-010/MDC-012: decorative accents and borders follow semantic tokens",
+      "detail": "Daily/top/status headings each have fixed cyan decorative icons (427, 465, 543); search spinner has fixed cyan (413); total separator is fixed border-white/[0.06] (580). These are source-visible theme inconsistencies, not measured contrast failures. No neon text, glow classes or page-level inline styles were found.",
+      "fix": "Use existing secondary/muted text tokens for decorative icons, existing control/status tokens for the filtering cue and border-default/panel-border for the total separator. Do not alter user theme persistence or globally desaturate explicit chart preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 264,
+      "rule": "MDC-044: locale-aware, unambiguous temporal evidence",
+      "detail": "Daily buckets retain full day identity but expose day.slice(5) as MM-DD to axis and fallback table. Multi-year ranges can show identical labels for different days, and the label is not locale-formatted.",
+      "fix": "Keep the full calendar-day bucket key and timezone calculation; format display labels through existing date helpers with locale and supply full dates in accessible dataColumns. Do not reinterpret calendar keys as UTC timestamps or change server bounds.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 486,
+      "rule": "MDC-044: existing numeric formatting applies at display boundary",
+      "detail": "Top-command sublabels use String(count); status-bar sublabels interpolate raw integer counts (562, 569, 577) and the total renders a raw number (583). These bypass the shared numeric formatter although percentages already use fmtPercent.",
+      "fix": "Use useNumberFormatting's integer formatter for readouts while retaining numeric count/max inputs, raw cached data, percentage precision and sort/rank semantics.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 501,
+      "rule": "Inherited missing symbol; mission 34 predictable typed contracts",
+      "detail": "History is rendered at lines 501 and 518, but the lucide-react named imports at 43-46 do not include History and no local declaration exists. This is the explicitly inherited missing-History TypeScript problem; current source also indicates an unresolved JSX identifier on the mounted path. It was NOT fixed.",
+      "fix": "A later authorized page implementation should resolve History using the existing icon/import policy and verify mounted nonempty and empty branches. This audit does not edit source or claim fresh TypeScript execution.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 235,
+      "rule": "MDC-025/MDC-045: preserve raw outcome evidence, do not silently reclassify",
+      "detail": "Failed KPI is total minus successes, daily activity puts every non-success into failed (266), and timeline uses the failure icon/color for every non-success (303-311). Status breakdown instead counts only status='failed' and separately counts other (290-295). CommandLogEntry.status is string, so source admits values outside the two tabs; actual server vocabulary is unverified.",
+      "fix": "Record this mismatch for page/integration reconciliation with authoritative backend status semantics before changing calculations. Preserve all raw statuses and counts; if other states exist, make them explicit rather than silently delete/relabel them. Pure modernization must not change business calculations without that evidence.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 621,
+      "rule": "MDC-032/MDC-044: consistent contextual timezone presentation",
+      "detail": "Workspace bounds and daily buckets use vehicle timeZone; fallback timeline timestamps force UTC. Last-sent detail also forces UTC (commandSummaryMetrics.tsx:50-51), while summary freshness omits explicit timezone (page 385-386). The UTC fallback has no visible timezone suffix.",
+      "fix": "Preserve UTC wire timestamps and source instants. Reconcile absolute display timezone with the existing vehicle/user policy through existing formatters; label any deliberately retained UTC display instead of changing date-bound or bucket semantics. Relative-time tz arguments alone are not evidence of a user-visible timezone bug.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "first": "Inherited unresolved History symbol; initial blocked-data trust and accessible per-command outcome.",
+    "next": "Reconcile other-status semantics with backend evidence; named/mobile filters and long forensic metadata.",
+    "then": "Token/solid-fill adoption, locale counts/full dates and absolute timezone clarity.",
+    "acceptance": "Source audit complete, not implementation or runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Timeline forensic-metadata wrapping",
+      "existingOwnerFile": "web\\src\\components\\data-display\\Timeline.tsx",
+      "file": "web\\src\\components\\data-display\\Timeline.tsx",
+      "line": 134,
+      "rule": "MDC-043",
+      "detail": "Existing subtitle renderer lacks robust unbroken-string wrapping for this production command consumer.",
+      "fix": "Extend current subtitle presentation only, or allow the page to compose a wrapping Text ReactNode using the already-supported subtitle prop. No new timeline implementation.",
+      "owner": "shared",
+      "confidence": "medium",
+      "props": "Existing TimelineItemData.subtitle?: ReactNode, title, time, color, items, label and chronology remain unchanged; no new public prop is necessary.",
+      "variants": "Existing chronological ordered list; no competing mobile truncation variant.",
+      "states": ["long raw params", "malformed JSON fallback", "long server error", "ready", "retained stale", "RTL", "200% text", "320px container"],
+      "usedBy": ["/command-history"],
+      "dependsOn": ["Page preserves complete buildSubtitle output", "Existing typography/wrapping utilities", "Shared owner acceptance and responsive regression evidence"],
+      "scopeLimit": "Only this consumer was inspected. This is a bounded existing-owner presentation gap, not proof authorizing a new multi-consumer component."
+    },
+    {
+      "name": "TabNav mobile target treatment",
+      "existingOwnerFile": "web\\src\\components\\ui\\TabNav.tsx",
+      "file": "web\\src\\components\\ui\\TabNav.tsx",
+      "line": 54,
+      "rule": "MDC-040",
+      "detail": "Status buttons have compact padding but no explicit mobile 44px minimum. Parent/global target policy should remain shared rather than be recreated by the page.",
+      "fix": "Review measured size/spacing; if required, apply mobile min-height within the current TabNav owner while preserving compact desktop density. The page can already pass a localized group ariaLabel.",
+      "owner": "shared",
+      "confidence": "medium",
+      "props": "Existing tabs[{key,label,icon}], active, onChange(key), ariaLabel and className retained; no speculative API or new control registry.",
+      "variants": "Current selected/unselected segmented status filter; preserve horizontal overflow and button semantics.",
+      "states": ["pressed", "unpressed", "keyboard focus", "long translated labels", "mobile touch", "RTL"],
+      "usedBy": ["/command-history"],
+      "dependsOn": ["Shared density/target policy", "Actual composed target measurements or documented spacing exception", "Page atomic status/page URL updates", "Shared owner acceptance"],
+      "scopeLimit": "Do not alter global density defaults or assume other consumers were audited."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 132,
+      "rule": "MDC-002: one semantic fill owner",
+      "detail": "Page-local outcome hex constants overlap the existing gaugeTone owner at lib\\tokens.ts:340-350. Existing MetricBar can already accept solid fills; no additional progress renderer is needed.",
+      "fix": "Reuse existing semantic fills and fill='solid'; keep domain outcome classification in the feature, not shared presentation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+      "line": 467,
+      "rule": "MDC-002: one source-state presentation owner",
+      "detail": "Repeated local loading/error/empty branches overlap the existing SourceContent API. Current behavior is not inherently broken; any adoption must retain panel-specific geometry and messages.",
+      "fix": "Reuse or locally compose the existing SourceContent instead of creating another generic query-state component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "F4D5AF9116DA06427B6E659E73B55B32A93F1FFC29C005C02B7136E22B25B4C1",
+    "hashAlgorithm": "SHA256",
+    "sourcePath": "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+    "sourceHashBasis": "Current root file bytes, captured with Get-FileHash; not historical Git content.",
+    "lineCount": 625,
+    "featureDependencyLineCount": 108,
+    "lineCountNotes": "commandSummaryMetrics.tsx is a shared feature adapter also containing reliability metrics; its full 108 lines are not claimed as exclusive page-owned UI.",
+    "sections": [
+      {"name": "KPI/operational summary band", "line": 355, "count": 1, "metrics": ["Total commands", "Commands (24h)", "Success rate", "Failed", "Most used", "Last sent"]},
+      {"name": "Status/search filter bar", "line": 391, "count": 1},
+      {"name": "Daily activity", "line": 424, "count": 1},
+      {"name": "Top commands", "line": 462, "count": 1},
+      {"name": "Command timeline and pagination", "line": 498, "count": 1},
+      {"name": "Status breakdown", "line": 540, "count": 1}
+    ],
+    "sectionCounts": {"documentedBands": 4, "namedContentRegions": 6, "pageLiteralSectionElements": 3, "pageLiteralGlassPanels": 5, "pageLiteralEmbeddedCharts": 1, "pageLiteralChartContainers": 0, "summaryMetrics": 6},
+    "actions": [
+      "Navigate to /commands through the existing Link (344-350).",
+      "All/Success/Failed filters update status and reset page in one atomic URL write (183-185).",
+      "Search raw command identifiers and translated command labels through deferred q, resetting page atomically (187-202, 210-215).",
+      "Read/display filter-pending live status without blocking typing (408-415).",
+      "Paginate 25 matching commands with URL-backed page and clamp (219-224, 527-533); preserve shared first/previous/next/last, numbered and validated direct-jump controls.",
+      "Retry fatal query failures in every source-backed body and retry retained refresh failures through StaleRefreshWarning.",
+      "Toggle daily success/failed series using the existing chart legend and system-command-daily-activity persistence key.",
+      "Retain the inherited OperationalBrief details drawer and source/scope/freshness metadata.",
+      "Keep shell-owned vehicle and View settings controls; do not add page-owned replacements.",
+      "No command-send mutation, page-level table export, fullscreen or parameter editing exists here; do not invent them as preservation claims."
+    ],
+    "data": [
+      "Preserve CommandLogEntry id, vehicle_id, command, params, status, error and created_at fields as source evidence; no SI conversion is inferred for opaque params.",
+      "Retain complete range retrieval with cursor batches, validation, AbortSignal, query keys, enablement and stale/retry policy.",
+      "Summary, daily activity, top eight rankings and status breakdown use the full workspace-selected feed, not status/search-filtered timeline rows.",
+      "Total24h is the last 24 hours within the selected feed; most-used ranking and last command assume existing returned ordering/tie behavior. Do not silently change calculations.",
+      "Keep raw statuses and the existing other category while resolving the documented conflicting failure classification with integration evidence.",
+      "Bucket calendar days using vehicle timezone and preserve [startInstant,endInstantExclusive) query semantics, URL bounds, rolling presets, shared preferences and DST behavior.",
+      "Maintain filtered timeline source order, 25-row slices, URL clamp, atomic status/q/page writes and search localization fallback.",
+      "Retain JSON parameter rendering, raw parse-failure fallback, localized error prefix, timestamp fallback and original unmodified source strings.",
+      "Unknown/unresolved metrics remain missing; a successful empty result remains a real zero-count result. Stale or offline refresh does not discard retained payload.",
+      "Keep percentage precision, integer raw inputs, localized command labels, named list/chart alternatives, and all current metadata rather than hiding secondary detail on mobile."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only Phase 0 static audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotion": "unverified",
+    "backendFilteringAndCursor": "unverified beyond hook source and router comment",
+    "typeScript": "NOT RUN. Inherited missing History finding is confirmed by current source; no fresh compiler diagnostic or pass is claimed.",
+    "tests": "NOT RUN. Existing page test introduction was read for intended coverage only; mocks and historical receipts are not current acceptance.",
+    "auditScript": "Read but NOT RUN: its final step invokes whole-frontend TypeScript, prohibited by the concurrent Phase 0 design-contract validation policy. Equivalent narrowly scoped source-pattern counts were collected without invoking that gate.",
+    "sourcePatternCheck": {
+      "command": "Get-FileHash 'web\\src\\features\\system\\pages\\CommandHistoryPage.tsx' -Algorithm SHA256; $lines=Get-Content 'web\\src\\features\\system\\pages\\CommandHistoryPage.tsx'; \"Lines: $($lines.Count)\"; foreach ($pattern in @('style=','<(button|input|textarea|select|table)\\b','from [''\"''](recharts|react-leaflet|framer-motion)','from [''\"'']\\.\\./(\\.\\./)?api[''\"'']','text-neon-','<GlassPanel\\b','<section\\b','<History\\b')) { \"${pattern}: $(@($lines | Select-String -Pattern $pattern).Count)\" }",
+      "exitCode": 0,
+      "rawOutput": "SHA256 F4D5AF9116DA06427B6E659E73B55B32A93F1FFC29C005C02B7136E22B25B4C1\nLines: 625\nstyle=: 0\n<(button|input|textarea|select|table)\\b: 0\nfrom ['\"'](recharts|react-leaflet|framer-motion): 0\nfrom ['\"']\\.\\./(\\.\\./)?api['\"']: 0\ntext-neon-: 0\n<GlassPanel\\b: 5\n<section\\b: 3\n<History\\b: 2",
+      "scope": "Root page only; zero matches for these patterns is not zero overall findings."
+    },
+    "scope": "Only assigned page, its mounted route/workspace registration, direct presentation/data owners, mission/design/conventions and applicable instruction excerpts. No whole-app inventory or backend behavior was reconstructed.",
+    "mutations": "Only this report and .agent-status\\audit-page-182.txt written. No Git, source/shared/config/catalog/queue edits, full lint/build, browser calls or production mutations.",
+    "assumptions": ["Other command statuses may exist because the typed contract is string and the page explicitly renders an other category; actual backend vocabulary is unknown.", "Responsive/target/motion risks are source findings, not observed browser failures.", "Independent production consumers were not audited to justify any new shared composite."]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\CommandHistoryPage.tsx",
+    "web\\src\\features\\system\\pages\\CommandHistoryPage.test.tsx",
+    "web\\src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.tsx",
+    "web\\src\\api\\hooks\\useCommands.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUrlState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\Timeline.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\ui\\TabNav.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\api\\dataState.ts",
+    "internal\\api\\router.go"
+  ]
+}
