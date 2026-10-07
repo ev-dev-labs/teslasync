@@ -1,0 +1,519 @@
+{
+  "item": "audit-page-032",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+  "routes": ["/intelligence/component-survival"],
+  "purpose": "Read-only, vehicle-scoped probabilistic component maintenance guidance based on recorded exposure and component outcomes; not a diagnosis, failure guarantee, repair authorization or vehicle-control surface.",
+  "primaryGoal": "Review each component's event-free survival probability, P10/P50/P90 horizons, competing risks, modeled intervention sensitivity and the evidence limitations supporting those estimates.",
+  "dataSources": [
+    {
+      "hook": "useComponentSurvival",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 84,
+      "endpoint": "GET /api/v1/advanced-intelligence/component-survival?vehicle_id=<id>&limit=12&offset=<page-offset>",
+      "sourceOwner": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go",
+      "routeEvidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:19,26-27 sets page size 12 and offset (page-1)*12",
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:29,35-36,49-74,84-89 preserves vehicle/limit/offset query-key identity and forwards AbortSignal",
+        "internal\\api\\router.go:3917 delegates to advancedIntelligenceHandler.MountRoutes",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:69-74 mounts GET /advanced-intelligence/component-survival",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:127-142 parses list parameters, invokes the service and writes the response",
+        "web\\src\\api\\client.ts:93 adds the single /api/v1 prefix"
+      ],
+      "behavior": "Query enabled only for positive vehicle IDs. Snake_case vehicle_id, limit and offset; no page-local fetch, polling override, mutation or fabricated data. Existing inherited retry/cache policy is not overridden by this hook.",
+      "unitsEvidence": "web\\src\\types\\advancedIntelligence.ts:104-131 matches internal\\domain\\advancedintelligence\\survival_security_charging.go:17-42. Horizon and adjusted-P50 fields are nullable seconds; probabilities and assumed hazard delta are percentages, not 0-1 ratios.",
+      "backendEvidence": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go:13-29 uses a fixed trailing 2*365-day evidence window and paginates computed items. Lines 39-50 enumerate hv_battery, tires, brakes and charging_system. Lines 99-145 distinguish insufficient evidence from an empirical, limited-quality estimate; absence of events never becomes infinite survival. Lines 122-129 compute the survival probability over 365 days and event-free percentile horizons.",
+      "scopeLimits": "The service and DTO were inspected to establish page semantics, not audited or changed. The concrete repository source implementation, production data, network replies and authorization behavior were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "endpoint": "GET /api/v1/vehicles",
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "routeEvidence": [
+        "web\\src\\api\\hooks\\useVehicles.ts:73-76 requests /vehicles with AbortSignal",
+        "internal\\api\\router.go:3319-3320 mounts the vehicle-list GET"
+      ],
+      "behavior": "Shared owner resolves URL, persisted selection and first known vehicle. ComponentSurvivalPage.tsx:24 consumes the workspace vehicle without rendering another picker.",
+      "workspace": "web\\src\\lib\\workspaceScope.ts:22-76,96-137,158-172 yields vehicle:true, range:false for /intelligence/component-survival. The endpoint has a fixed service-owned evidence window, not a caller-supplied date range. Do not register a nonfunctional header range or introduce a local date/vehicle selector."
+    },
+    {
+      "hook": "useDataState through InsightPanel",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "line": 36,
+      "endpoint": null,
+      "sourceOwner": "web\\src\\api\\dataState.ts",
+      "behavior": "deriveDataState retains raw data on refresh errors and paused refreshes, separates fatalError from refreshError and forwards retry. InsightPanel maps fatal, loading, empty, ready and retained into canonical SourceContent; the evidence panel currently does not receive this query."
+    },
+    {
+      "hook": "useUnits and useNumberFormatting",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 22,
+      "endpoint": null,
+      "sourceOwner": "web\\src\\hooks\\useUnits.ts",
+      "behavior": "Horizon seconds are converted only at rendering through useUnits.formatDuration. Percentages use locale/precision-aware fmtNumber. Null duration produces the existing missing marker, zero remains a numeric zero. Settings transport was not traced.",
+      "evidence": [
+        "web\\src\\hooks\\useUnits.ts:125-170 derives preferences and delegates formatting without unit math",
+        "web\\src\\lib\\unitConversion.ts:475-483 handles nullable SI seconds",
+        "web\\src\\hooks\\useNumberFormatting.ts:19-42 subscribes to existing locale/precision preferences"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "kind": "layout",
+      "names": ["PageLayout", "Grid", "LayoutCard", "SourceContent"],
+      "owners": [
+        "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"
+      ],
+      "usage": "PageLayout retains PageContainer composition, full width, min-w-0 and a container context. InsightPanel owns the persistent LayoutCard/SourceContent shell. Grid is imported from the category barrel; its internal implementation was not separately inspected."
+    },
+    {
+      "kind": "data-display",
+      "names": ["StatCard", "MetricBar", "KVList"],
+      "owners": [
+        "web\\src\\components\\data-display\\StatCard.tsx",
+        "web\\src\\components\\data-display\\MetricBar.tsx"
+      ],
+      "usage": "Four StatCard metrics per item, named competing-risk progressbars and EvidencePanel quality metadata. StatCard explicitly preserves zero versus missing. KVList usage was read in EvidencePanel, not its implementation."
+    },
+    {
+      "kind": "existing modernization contract",
+      "names": ["StatStrip", "StatMetric", "StatPeriod", "MetricDisplayOptions"],
+      "owners": [
+        "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+        "web\\src\\components\\data-display\\stat-reference\\types.ts",
+        "web\\src\\lib\\metric-reference\\types.ts",
+        "web\\src\\lib\\metric-reference\\glossary.ts"
+      ],
+      "usage": "Reuse embedded StatStrip rather than another KPI grid when modernizing. Generic percent accepts existing 0-100 raw input; duration accepts seconds. Preserve the four domain labels and distinct P10/P50/P90 occurrence identities, nulls, precision and modeled provenance. Snapshot period may use generated_at; do not invent an analysis start or observation time. Existing display.formatter supports retaining specialist duration display when equivalence is not yet proved."
+    },
+    {
+      "kind": "domain",
+      "names": ["InsightPanel", "EvidencePanel"],
+      "owners": [
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx"
+      ],
+      "usage": "Reuse domain evidence/quality/limitations and source-state adapters. Do not build a second evidence renderer or replacement trust vocabulary."
+    },
+    {
+      "kind": "primitives and feedback",
+      "names": ["Badge", "Pagination", "Text", "Card", "AlertBanner", "EmptyState"],
+      "owners": [
+        "web\\src\\components\\ui\\Badge.tsx",
+        "web\\src\\components\\ui\\Pagination.tsx",
+        "web\\src\\components\\ui\\Card.tsx",
+        "web\\src\\components\\feedback\\AlertBanner.tsx"
+      ],
+      "usage": "Existing semantic badge variants, source-preserving pagination, typography roles and maintenance notice. Card supplies theme/forced-color/print surfaces. Text and EmptyState implementations were not separately inspected."
+    },
+    {
+      "kind": "motion and palette",
+      "names": ["FadeIn", "CHART_COLORS"],
+      "owners": [
+        "web\\src\\components\\motion\\FadeIn.tsx",
+        "web\\src\\components\\charts\\index.ts",
+        "web\\src\\lib\\colors.ts"
+      ],
+      "usage": "Two finite entrance wrappers; FadeIn respects existing motion preference. CHART_COLORS is the static CVD-safe palette, not the neon palette. Keep every risk at its existing source probability and retain accessible labels; there is no plotted time series, map or chart-toolbar capability on this page."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Four separately surfaced KPI tiles inside each component article",
+      "evidence": ["web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:72-90"],
+      "existingOwner": "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+      "decision": "Reuse embedded StatStrip with four raw metrics and existing label/description/display contracts. Avoid nested decorative card surfaces; retain every metric, existing precision, missing value and SI source."
+    },
+    {
+      "pattern": "Hand-written evidence and component-card surface chrome",
+      "evidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:62",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:81",
+        "web\\src\\components\\ui\\Card.tsx:25-55"
+      ],
+      "existingOwner": "web\\src\\components\\ui\\Card.tsx",
+      "decision": "Reuse existing surface tokens/Card. Preserve native article semantics with a semantic article wrapper around Card where needed; Card currently renders a div, so do not pass an invented as prop."
+    },
+    {
+      "pattern": "Data-quality status interpretation differs between page and domain evidence panel",
+      "evidence": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:68-70",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:19-23,55"
+      ],
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "decision": "Consolidate the existing domain mapping/translated display with the domain owner. Keep sufficient, limited and insufficient distinct without creating a universal status registry."
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport and overflow behavior unverified",
+    "sourceBehavior": [
+      "ComponentSurvivalPage.tsx:60 stacks component articles, then uses two columns at xl.",
+      "ComponentSurvivalPage.tsx:72 uses one metric column by default and two at sm.",
+      "EvidencePanel.tsx:45 stacks evidence subsections and uses three columns at lg.",
+      "PageLayout.tsx:11-12 exposes w-full/min-w-0/container context.",
+      "Pagination.tsx:45-47,51-52,70-124 retains touch-sized mobile navigation, wrapping and direct page jumps rather than deleting access to intermediate pages."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+        "line": 63,
+        "rule": "MDC-043 / MDC-031 / mission 15-16",
+        "detail": "Component heading and badge remain in a nonwrapping justify-between flex row; its inner heading group lacks min-w-0 or an explicit long-identifier wrapping policy. The unsupported-risk row at line 106 has the same constrained label/value pattern. Long source identifiers or translations can compete for width; no actual overflow was observed.",
+        "fix": "Use min-w-0, break-words and intentional narrow-container stacking/wrapping, keeping complete component/risk names, evidence counts and status text. Verify real allocated widths, 200% text and long labels.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+        "line": 60,
+        "rule": "MDC-043",
+        "detail": "Article and evidence layout use viewport breakpoints although the canonical shell exposes allocated-container scope. A narrow content allocation on a wide viewport can still request two component or three evidence columns. This is a source risk, not rendered clipping evidence.",
+        "fix": "Exercise allocated widths before changing reflow; use existing container-query layout contracts if needed, without removing metrics, risks, quality metadata or limitations.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "requiredChecks": ["320,375,390,430,768,1024,1280,1440,1920,2560px", "narrow shell allocation", "200% text", "long component/risk identifiers", "long localized pagination labels", "RTL"]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, focus, screen-reader, contrast and touch measurements unverified",
+    "sourceStrengths": [
+      "Page uses h3 component headings and h4 competing-risk headings through Text.as; decorative Activity/Wrench icons are aria-hidden.",
+      "EvidencePanel.tsx:46,73,102 labels each quality/evidence/limitations section.",
+      "MetricBar.tsx:57-63 supplies named progressbars and bounded values, keeping missing readings distinct; page sends probability and evidence context in the accessible label.",
+      "Pagination.tsx:50-57,74-104,116-137 supplies navigation naming, aria-current, live row-count text, labeled jump input and announced validation errors.",
+      "FadeIn.tsx:24-35 and MetricBar.tsx:48,84-88 respect existing reduced-motion source policy.",
+      "Card, Badge and MetricBar contain forced-color source rules; actual Windows High Contrast was not tested."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+        "line": 69,
+        "rule": "MDC-044 / MDC-025 / mission 21",
+        "detail": "The finite quality enum is rendered directly as English sufficient/limited/insufficient. Surrounding UI uses translations, but neither this badge nor EvidencePanel.tsx:55 localizes the known enum label. Component/risk identifiers and server-authored evidence prose are separate source content and must not be blindly recased or translated.",
+        "fix": "Use an existing domain-localized quality display mapping, preserving the exact wire enum and its accessible textual meaning. Keep unknown future statuses as source text rather than silently mapping them to an error.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "requiredChecks": ["keyboard pagination and retry", "focus retention after retry/page/scope change", "screen-reader heading/region/progressbar output", "effective AA contrast on light/dark/custom themes", "forced colors", "OS reduced motion and low-bandwidth preference"]
+  },
+  "states": {
+    "initial": "Notice and both panel shells persist. InsightPanel uses canonical loading status/skeleton for an active initial query; no query is passed when no vehicle exists.",
+    "noVehicle": "Cards use Select a vehicle to load intelligence. The workspace owns selection; page adds no duplicate control.",
+    "resolvedEmpty": "Cards use the survival-specific empty message and query-backed Refresh action. Evidence still renders quality/evidence/limitations fallbacks and the two explicit non-capabilities.",
+    "fatalError": "Cards use SourceContent/ErrorDisplay with query-backed retry; notice and evidence shell are not erased.",
+    "retainedRefreshFailure": "InsightPanel derives retained state and keeps existing component cards with a nonblocking warning/retry. Evidence reads the same retained first item but does not display its trust state.",
+    "initialPaused": "InsightPanel.tsx:44-48 supplies explicit initial-paused copy instead of claiming an empty server result.",
+    "retainedPaused": "deriveDataState marks retained paused results stale; InsightPanel displays the generic retained warning rather than a source-specific offline explanation.",
+    "partialUnsupported": "Nullable horizons/probability remain missing; null risk probability renders Unsupported while zero is a real MetricBar reading. The domain quality and limitations govern empirical support; no automatic repair action exists.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+        "line": 148,
+        "rule": "MDC-026 / MDC-046 / mission 22-25",
+        "detail": "EvidencePanel receives only representative metadata, never the query/state. Its inner InsightPanel therefore defaults to ready even during initial load, fatal error or paused refresh. Before resolution it states No supporting evidence was returned and No additional limitations were returned, although the source has not answered. After a failed refresh it presents retained evidence without its own source/trust context.",
+        "fix": "Extend the existing EvidencePanel domain contract with optional query/source state and scope-specific prerequisite message, and pass the same raw query from this page. Preserve persistent quality/evidence/limitations/unsupported sections; replace only unresolved dynamic content with truthful pending/fatal/retained states and the existing retry mechanism. Keep legacy source-less informational usages working.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+        "line": 26,
+        "rule": "MDC-032 / MDC-046",
+        "detail": "Caller-owned page state is not scoped/reset to vehicle selection, and Pagination is inside the source body that is replaced on empty. With a multi-page response, changing to a smaller vehicle result can retain an out-of-range offset and hide recovery navigation. The inspected current service emits at most four components, below PAGE_SIZE=12, so this scenario is not reachable with that implementation today; it is a latent contract risk, not a reproduced production defect.",
+        "fix": "When preserving pagination, associate page state with the selected vehicle and maintain a first-page recovery for out-of-range empty responses. Keep server offsets, query keys and AbortSignal; do not filter only loaded results or fabricate total counts.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 62,
+      "rule": "MDC-010 / MDC-012 / MDC-015 / mission 5-8",
+      "detail": "Component articles use fixed white-alpha border/background instead of the shared theme surface. Every component also gets a fixed cyan decorative icon at line 65 and a cyan-tinted intervention subpanel at line 121. EvidencePanel.tsx:81 repeats fixed white-alpha evidence cards. These choices bypass shared surface/theme/forced-color hierarchy; effective contrast was not measured.",
+      "fix": "Use existing panel/surface/border tokens and Card where semantically appropriate. Neutralize decorative Activity/evidence icons; keep restrained semantic quality/unsupported cues. Make intervention context a neutral inset, not an always-cyan highlight. No new palette, glows or theme preference reset.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\feedback\\AlertBanner.tsx",
+      "line": 25,
+      "rule": "MDC-010 / MDC-015 / mission 5-8",
+      "detail": "The required static probabilistic-maintenance notice inherits neon-cyan/25 border and neon-cyan/10 fill from AlertBanner.info; line 54 adds shadow and backdrop blur. This is shared presentation, not a neon chart-color finding. The page's CHART_COLORS[0] is CVD-safe blue, not the neon palette.",
+      "fix": "Have the feedback owner make the existing info presentation restrained and token-backed, retaining semantic info meaning, title/body/icon, native attributes and onClose behavior. Do not add a page-local banner or suppress the maintenance warning to reduce visual noise.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 102,
+      "rule": "MDC-034 / mission 7",
+      "detail": "Every competing risk uses the same valid static CVD-safe blue, but MetricBar defaults to gradient fill. A solid fill is already supported at MetricBar.tsx:27,44,89; the extra gradient is optional decoration rather than new data meaning.",
+      "fix": "Use the existing fill=solid option with the restrained current palette. Preserve each named risk, real zero, percentage, evidence count, progress semantics, unknown row and motion preference; do not recolor into a rainbow.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 29,
+      "rule": "MDC-001 / MDC-026 / MDC-045",
+      "detail": "All bottom-panel metadata comes from items[0]. Non-first components show only their quality status, with no access to their reasons, sample/coverage/window metadata, evidence counts, limitations or generated_at. This is not equivalent metadata: the builder at survival_security_charging.go:74-86,99-115,136-143 creates component-specific outcome evidence counts and distinct quality reasons. generated_at is returned for every component but never displayed.",
+      "fix": "Expose each component's existing evidence/quality/limitations and generation context through the existing domain owner, either inline or an explicitly labeled per-component detail disclosure. Retain the representative summary if useful, clearly identify its component, preserve source order and avoid unioning distinct component support into invented aggregate quality.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 74,
+      "rule": "MDC-033 / MDC-045 / mission 28",
+      "detail": "Survival probability omits the model horizon in its visible label/context. The inspected backend explicitly computes that probability over 365 days at survival_security_charging.go:122-123; P10/P50/P90 are different event-free percentile horizons, not probabilities over those durations. The current generic notice does not establish the probability period.",
+      "fix": "Add source-backed localized 365-day survival-probability context without changing the calculation. Keep the 2*365-day evidence window distinct from the 365-day forecast horizon and P10/P50/P90 estimates. If the backend model later changes, require an explicit verified contract rather than inferring a horizon from displayed percentile values.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 68,
+      "rule": "MDC-025 / MDC-002",
+      "detail": "Page maps both limited and insufficient to warning while EvidencePanel.qualityVariant maps insufficient to danger. The same selected component can have different semantic quality presentation in the card and evidence panel. This is presentation inconsistency, not evidence of an incorrect backend quality computation.",
+      "fix": "Reuse one domain quality mapping with localized finite labels and preserve a neutral unknown fallback; do not equate insufficient evidence with confirmed physical failure.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 73,
+      "rule": "MDC-033 / mission 4,7",
+      "detail": "Per-component KPIs are preformatted strings in four independent StatCards. This is currently null-safe and SI-correct, but bypasses the agreed raw-metric StatStrip pipeline and creates an extra surface per metric.",
+      "fix": "Reuse existing embedded StatStrip with numeric percent and duration rawValue, distinct occurrenceId and the existing labels/precision/formatting. Keep specialist formatting until its equivalence is verified; no new formatter, glossary inventory or calculation is required.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Resolve component-specific evidence visibility and truthful unresolved/retained evidence presentation before cosmetic modernization. Missing probability-period context affects interpretation of probabilistic guidance.",
+    "order": [
+      "Extend canonical domain evidence trust contract and expose per-component support without merging meanings.",
+      "Make probability horizon and generated/model context explicit from verified sources.",
+      "Consolidate quality presentation and preserve existing workspace/query/SI boundaries.",
+      "Adopt embedded raw-metric stats, neutral surfaces and restrained existing bar/banner options.",
+      "Exercise responsive, keyboard, contrast, trust and preservation cases in the parent-owned validation window."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel source-aware component evidence",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "evidence": [
+        "EvidencePanel.tsx:12-17 has metadata-only props",
+        "EvidencePanel.tsx:38-44 creates InsightPanel without query",
+        "ComponentSurvivalPage.tsx:148-155 supplies one representative with no source state"
+      ],
+      "props": {
+        "retain": ["quality?: DataQuality|null", "evidence?: Evidence[]|null", "limitations?: string[]|null", "unsupported?: string[]|null"],
+        "extend": ["query?: DataStateSource<unknown>", "sourceState?: SourceState", "sourceLabel?: string", "prerequisiteMessage?: string"],
+        "behavior": "Use the existing InsightPanel/useDataState/SourceContent path. Optional localized sourceLabel identifies a selected component without replacing existing evidence headings. Support both query-backed use and existing source-less informational use."
+      },
+      "variants": ["query-backed domain evidence", "source-less informational evidence"],
+      "states": ["no vehicle", "initial loading", "initial paused", "fatal error with retry", "resolved empty", "ready", "retained refresh error", "retained offline", "nullable quality/evidence/limitations"],
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx"],
+      "dependsOn": [
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "web\\src\\api\\dataState.ts",
+        "parent-owned shared acceptance before page adoption"
+      ],
+      "acceptance": "No pre-resolution claim that evidence/limitations were returned; no retained-data loss; all four evidence subsections remain reachable and explicitly unsupported guidance remains present. Broader consumers must be assessed by the shared owner, not inferred by this bounded audit."
+    },
+    {
+      "name": "Single domain data-quality presentation",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "props": {
+        "input": "DataQuality.status or unknown source status",
+        "output": "Localized label and existing Badge variant",
+        "behavior": "Consolidate existing qualityVariant interpretation and known quality-label display; keep sufficient/limited/insufficient distinct and unknown neutral. Do not mutate or translate wire enums."
+      },
+      "variants": ["existing Badge success", "existing Badge warning", "existing Badge danger", "existing Badge neutral for unknown"],
+      "states": ["sufficient", "limited", "insufficient", "unknown"],
+      "usedBy": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:68-70",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:55"
+      ],
+      "dependsOn": ["web\\src\\components\\ui\\Badge.tsx", "existing localization catalog policy", "shared owner chooses extraction within the domain; no global registry"],
+      "acceptance": "Same source status has consistent textual and semantic presentation across component and evidence views; insufficient evidence never becomes a physical-failure claim."
+    },
+    {
+      "name": "Restrained existing AlertBanner info presentation",
+      "existingOwner": "web\\src\\components\\feedback\\AlertBanner.tsx",
+      "props": {
+        "retain": ["variant", "title", "children", "icon", "onClose", "closeLabel", "HTMLAttributes"],
+        "behavior": "Adjust existing info palette/surface to semantic tokens through its owner; no new page wrapper, state engine or required API."
+      },
+      "variants": ["existing info"],
+      "states": ["persistent notice", "optional dismiss behavior unchanged", "light/dark/custom theme", "forced colors"],
+      "usedBy": ["web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:40-49"],
+      "dependsOn": ["canonical theme/surface/semantic tokens", "parent/shared owner tests existing info callers"],
+      "acceptance": "Maintenance uncertainty warning remains fully readable and present, with no default preference reset or stronger saturation."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Evidence source state",
+      "existing": "InsightPanel -> useDataState -> SourceContent",
+      "pageSpecificGap": "EvidencePanel omits that source state and renders informational ready fallbacks.",
+      "resolution": "Extend the existing domain adapter; do not introduce another query-state layer."
+    },
+    {
+      "pattern": "Quality semantics",
+      "existing": "EvidencePanel.qualityVariant and Badge",
+      "pageSpecificGap": "Component badge uses a separate binary ternary.",
+      "resolution": "One domain mapping; no universal status registry."
+    },
+    {
+      "pattern": "Stat and card surfaces",
+      "existing": "StatStrip/StatMetric and Card token surfaces",
+      "pageSpecificGap": "Four individually surfaced string StatCards plus raw white-alpha article/inset styling.",
+      "resolution": "Reuse existing embedded stats and surfaces while preserving component article semantics and all source values."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "b31efa08a2b3a7026e1ac2abcd27fb3bc6b0e58cec595d7e53bdc4c07b4a74fa",
+    "sourceHashAlgorithm": "SHA256 of exact root page bytes",
+    "currentLineCount": 160,
+    "lineCount": 160,
+    "source": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+    "routeEvidence": ["web\\src\\App.tsx:231 lazy import", "web\\src\\App.tsx:765 SafeRoute-mounted intelligence/component-survival"],
+    "sections": [
+      {"name": "Probabilistic maintenance guidance", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 40},
+      {"name": "Component survival cards", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 52},
+      {"name": "Component identity and data-quality badge", "count": "one per returned item", "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 63},
+      {"name": "Survival probability; P10; P50; P90", "count": "four metrics per returned item", "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 72},
+      {"name": "Competing risks, evidence counts and unsupported branches", "count": "one section per returned item; one row per risk", "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 91},
+      {"name": "Intervention sensitivity and adjusted P50", "count": "one section per returned item", "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 121},
+      {"name": "Pagination when total exceeds 12", "count": "one conditional control", "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 136},
+      {"name": "Evidence, quality, and limitations", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "line": 148},
+      {"name": "Data quality: samples, coverage, window, reasons", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 46},
+      {"name": "Evidence sources: source, summary, sample count, observed date", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 73},
+      {"name": "Limitations", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 102},
+      {"name": "Explicitly unsupported guaranteed failure date and diagnosis/repair authorization", "count": 1, "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "line": 116}
+    ],
+    "sectionCounts": {
+      "topLevelContentGroups": 3,
+      "pageInsightPanelCallSites": 1,
+      "pageEvidencePanelCallSites": 1,
+      "effectiveLayoutCardPanelsThroughAdapters": 2,
+      "statCardCallSites": 4,
+      "metricBarCallSites": 1,
+      "evidenceSubsectionGroupsIncludingUnsupported": 4,
+      "fadeInCallSites": 2,
+      "glassPanelCallSites": 0,
+      "chartContainerCallSites": 0,
+      "note": "Static source counts, not rendered acceptance. Server currently returns four component definitions; do not mistake one metric call site for one total rendered measurement."
+    },
+    "actions": [
+      {"name": "Workspace vehicle selection", "owner": "existing header/useSelectedVehicle", "behavior": "Retain URL/persisted/known-vehicle precedence; no local duplicate picker."},
+      {"name": "Source retry and refresh", "owner": "InsightPanel/SourceContent", "behavior": "Fatal and retained retry plus resolved-empty refresh invoke the query's refetch; do not add a mutation."},
+      {"name": "First, previous, numbered, next, last and direct page jump", "owner": "Pagination", "behavior": "Retain size 12, server total and offset semantics when total exceeds 12. Page does not offer page-size selection."},
+      {"name": "Evidence description help", "owner": "LayoutCard", "behavior": "Existing description control supports full description tooltip and keyboard focus/Escape; actual open state was not exercised."},
+      {"name": "No repair, diagnosis, vehicle command, export or editable intervention", "owner": "read-only page", "behavior": "Do not invent controls or capabilities. Current intervention string/delta is modeled source content, not user-editable service authorization."}
+    ],
+    "data": [
+      "Preserve raw vehicle_id, component identities, server ordering, total/limit/offset and every returned item.",
+      "Preserve survival_probability_pct, nullable horizon_p10_s/horizon_p50_s/horizon_p90_s, all competing_risks risk/probability_pct/evidence_count values and source ordering.",
+      "Preserve intervention_sensitivity intervention, signed assumed_hazard_delta_pct and nullable adjusted_p50_s; do not reinterpret the assumed -20 percent as measured intervention success.",
+      "Preserve each component's data_quality status/sample_count/coverage_pct/window_start/window_end/reasons, evidence source/observed_at/sample_count/summary, limitations and generated_at, including those currently not exposed by the first-item summary.",
+      "Keep real zero distinct from missing estimates and null risk probabilities; never fabricate infinite survival or a guaranteed failure date.",
+      "Keep query keys, positive-ID enablement, inherited cache/retry policy and AbortSignal cancellation; no source/request/store changes in this audit.",
+      "Keep seconds on wire/cache and display-only useUnits conversion with existing locale/precision. Do not add legacy helpers or convert cached data.",
+      "Keep fixed service-owned evidence window distinct from model forecast and percentile horizons; no nonfunctional shared range registration.",
+      "Retain loading, fatal, empty, initial-paused and retained-refresh branches and both unsupported explanatory statements."
+    ],
+    "sourceChanged": false,
+    "extractedComponentsCreated": false,
+    "comparison": "Read-only baseline: page remains 160 lines. No modernization or 70-percent preservation acceptance is claimed."
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 bounded read-only source audit",
+    "runtime": "unverified; no mounted page, production request, fixture-driven render or interaction exercised",
+    "visual": "unverified; no screenshot or browser rendering",
+    "accessibility": "unverified; source semantics only, no keyboard/screen-reader/focus/contrast/viewport exercise",
+    "tests": "not run; existing InsightPanel.test.tsx and survival-specific AdvancedIntelligenceClosure.test.tsx:221-255,268-283 inspected only",
+    "typescript": "not run under the assignment's no full-validation/mutation scope",
+    "lintBuild": "not run; full builds/lint prohibited",
+    "auditSkillScript": "Read but not executed because audit.sh unconditionally invokes project-wide npx tsc --noEmit. Page-only read/regex inspection was used instead.",
+    "sourceScan": {
+      "command": "PowerShell Get-Content -Raw plus [regex]::Matches on only web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx; full numbered page read via rg",
+      "exitCode": 0,
+      "rawOutput": "inlineStyles=0\nrawControls=0\ndirectLibraries=0\noldApiImports=0\nfixedWhiteSurface=2\nfixedCyanText=1\nfixedCyanPanel=1\nStatCard=4\nInsightPanel=1\nEvidencePanel=1\nGlassPanel=0\nChartContainer=0",
+      "interpretation": "These are scoped literal pattern counts, not a complete frontend violations/type/runtime pass. Shared dependencies contain their own styling findings described above.",
+      "failedAttempt": "An earlier PowerShell expression had a quote-escaping ParserError (exit 1) before execution. It was corrected and rerun; no report/source files were written by that failed attempt."
+    },
+    "backend": "Handler/service/DTO source establishes known path, SI and model semantics only. Repository queries, production values, auth and real pagination were not exercised.",
+    "pagination": "Multi-page and out-of-range scenarios remain unverified. Current inspected builder defines four components, so latent multi-page risk is explicitly not a reproduced current backend defect.",
+    "sharedScope": "Required shared changes are proposals only. No shared component, source, routing, config, catalog, queue or Git operation performed. Broader shared consumers were not audited.",
+    "reportValidation": {
+      "command": "python -c \"import json,pathlib,hashlib; r=json.loads(pathlib.Path(r'docs\\frontend-audits\\audit-page-032.json').read_text(encoding='utf-8')); p=pathlib.Path(r['page']); assert r['item']=='audit-page-032' and r['routes']==['/intelligence/component-survival']; assert hashlib.sha256(p.read_bytes()).hexdigest()==r['preservation']['sourceHash']; assert len(p.read_text(encoding='utf-8').splitlines())==r['preservation']['currentLineCount']; print('JSON identity, unchanged SHA256 and 160-line preservation: PASS')\"",
+      "exitCode": 0,
+      "rawOutput": "JSON identity, unchanged SHA256 and 160-line preservation: PASS",
+      "additionalSourceValidation": "PowerShell report-key and issue-field validation passed; all 12 issue citations were within existing source-file line bounds and every filesRead path existed. Citation bounds are not runtime proof."
+    },
+    "historicalEvidence": "Neighbor report used only for report-shape consistency, never as runtime acceptance. Existing mocked tests are preservation references, not executed proof.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-032.json", ".agent-status\\audit-page-032.txt"],
+    "assumptions": ["The assigned route/file is the exact audit identity.", "Fixed service-owned evidence window is intentional current behavior, not a missing caller date-filter capability."]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-031.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\features\\advanced-intelligence\\pages\\AdvancedIntelligenceClosure.test.tsx",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\metric-reference\\types.ts",
+    "web\\src\\lib\\metric-reference\\glossary.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\ui\\Card.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\data-display\\StatCard.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\types.ts",
+    "web\\src\\components\\feedback\\AlertBanner.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\domain\\advancedintelligence\\survival_security_charging.go",
+    "internal\\app\\advancedintelligencesvc\\survival_security_charging.go"
+  ]
+}
