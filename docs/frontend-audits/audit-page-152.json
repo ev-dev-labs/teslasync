@@ -1,0 +1,356 @@
+{
+  "item": "audit-page-152",
+  "page": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+  "routes": [
+    {
+      "path": "/onboarding",
+      "file": "web\\src\\App.tsx",
+      "line": 566,
+      "detail": "Standalone SafeRoute, lazy page import at line 336; not the ordinary Layout route. Source mount declaration confirmed, actual mounted runtime not exercised."
+    }
+  ],
+  "purpose": "Installation-level first-run setup checklist with account connection, vehicle sync, telemetry readiness, workspace persona configuration, resources, feature preview, refresh and skip/continue controls.",
+  "primaryGoal": "Complete or deliberately defer the three existing setup anchors without confusing durable completion with a later live-service outage.",
+  "dataSources": [
+    {
+      "name": "useOnboardingStatus",
+      "file": "web\\src\\api\\hooks\\useOnboarding.ts",
+      "line": 118,
+      "endpoint": "GET /api/v1/onboarding/status",
+      "requestPath": "/onboarding/status",
+      "routeEvidence": { "file": "internal\\api\\router.go", "line": 3318 },
+      "sourceOwner": "internal/api/onboarding handler registered as onboardingHandler; handler implementation and persistence were not audited",
+      "clientEvidence": { "file": "web\\src\\api\\client.ts", "line": 90 },
+      "fields": ["tesla_connected", "vehicle_count", "data_flowing", "last_telemetry_at", "telemetry_health", "setup_required", "setup_complete", "is_complete"],
+      "behavior": "Query key ['onboarding','status']; AbortSignal forwarded; select normalizes partial payloads; staleTime 15000ms; retry 2; poll 30000ms only while incomplete by default. Page does not opt into pollAfterSetup. Completion prefers setup_complete, then is_complete, then hook legacy three-anchor AND.",
+      "evidence": [{ "file": "web\\src\\api\\hooks\\useOnboarding.ts", "line": 59 }, { "file": "web\\src\\api\\hooks\\useOnboarding.ts", "line": 101 }],
+      "limits": "Actual response, authorization, latency, Fleet API sync timing and durable persistence are unverified. Timing comments and router documentation are not runtime proof."
+    },
+    {
+      "name": "useProductPreferences",
+      "file": "web\\src\\hooks\\useProductPreferences.ts",
+      "line": 19,
+      "endpoint": null,
+      "sourceOwner": "web\\src\\lib\\productPreferences.ts",
+      "behavior": "useSyncExternalStore; persona update merges into existing sanitized preferences. Local storage key teslasync:product-preferences:v1; blocked storage retains current-tab memory; storage events synchronize other tabs. Persona options owner/fleet_operator/analyst/administrator are presentation preferences, not permission changes.",
+      "evidence": [{ "file": "web\\src\\lib\\productPreferences.ts", "line": 6 }, { "file": "web\\src\\lib\\productPreferences.ts", "line": 204 }, { "file": "web\\src\\components\\forms\\PersonaSelect.tsx", "line": 88 }]
+    },
+    {
+      "name": "useOnboardingSkip",
+      "file": "web\\src\\features\\onboarding\\hooks\\useOnboardingSkip.ts",
+      "line": 8,
+      "endpoint": null,
+      "sourceOwner": "onboarding feature local external store",
+      "behavior": "Best-effort local flag teslasync:onboarding:skipped:v1, broadcast onboarding.skip.changed, storage-event synchronization. Skip sets the flag and navigates to /. No setup completion or OAuth mutation is performed by this page.",
+      "evidence": [{ "file": "web\\src\\features\\onboarding\\hooks\\useOnboardingSkip.ts", "line": 46 }, { "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 308 }],
+      "integration": "OnboardingGate honors skipped choice, allows onboarding/account/settings/login/public/watch routes, and avoids redirect on loading/error. Completion tracking remains gate-owned.",
+      "integrationEvidence": { "file": "web\\src\\features\\onboarding\\components\\OnboardingGate.tsx", "line": 78 }
+    },
+    {
+      "name": "data trust and display adapters",
+      "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+      "line": 56,
+      "endpoint": null,
+      "sourceOwner": "web\\src\\api\\dataState.ts; existing useDateFormat/useOperationalMetrics hooks",
+      "behavior": "deriveDataState retains refresh-failed/paused payloads, separates fatalError from refreshError. Feature status band passes null metrics when hasData is false and formats last telemetry time with existing date hook. No physical-unit conversion or workspace vehicle/range query is introduced.",
+      "limits": "Date formatter and operational-metric internals were not expanded; their usage was inspected, not their full implementation."
+    }
+  ],
+  "components": [
+    { "name": "PageLayout", "layer": "shared layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "Existing PageContainer adapter, full-width min-w-0 container, title/subtitle and inherited state/action APIs; standalone main retains viewport scroll ownership." },
+    { "name": "GlassPanel / Button / SectionTitle / Text", "layer": "shared primitives", "owner": "web\\src\\components\\ui", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 16, "contract": "Category imports; existing surfaces, typography and action variants. GlassPanel glow means hover-border tint in current implementation, not an actual luminous shadow." },
+    { "name": "IconBox", "layer": "shared primitive", "owner": "web\\src\\components\\ui\\IconBox.tsx", "line": 19, "contract": "color/size/className; bg/ring/text from neonColorMap. Shared subdued neutral treatment is currently missing." },
+    { "name": "PersonaSelect", "layer": "shared form composite", "owner": "web\\src\\components\\forms\\PersonaSelect.tsx", "line": 66, "contract": "Typed persona value/onChange; explicit stable id, translated label/options/hint; wraps existing Select." },
+    { "name": "Stepper", "layer": "onboarding domain component", "owner": "web\\src\\features\\onboarding\\components\\Stepper.tsx", "line": 81, "contract": "steps + renderCta; all rows visible; first incomplete row alone actionable, completed rows always completed, later incomplete rows pending; localized hidden status and aria-current=step." },
+    { "name": "OnboardingSetupStatusBand", "layer": "onboarding domain composite", "owner": "web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.tsx", "line": 24, "contract": "Account/count/telemetry/completion/loading/hasData/retained/lastTelemetryAt/error/onRetry; OperationalBrief with four StatMetric occurrences and contextual ProgressRing; QueryError is non-destructive." },
+    { "name": "OnboardingRuntimeHealthNotice", "layer": "onboarding domain composite", "owner": "web\\src\\features\\onboarding\\components\\OnboardingRuntimeHealthNotice.tsx", "line": 37, "contract": "Completed installations only; warning when authorization unavailable or telemetry stale; reconnect/status/alerts actions and stored-history explanation." },
+    { "name": "OnboardingResources / OnboardingFeaturePreview", "layer": "onboarding presentation", "owner": "web\\src\\features\\onboarding\\components", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 26, "contract": "Three help links and privacy copy; four static informational preview cards, no live commands." },
+    { "name": "DataStateNotice / FadeIn", "layer": "shared feedback/motion", "owner": "web\\src\\components", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 17, "contract": "Retained stale warning with preserveSeverity; existing FadeIn reduced-motion bridge. No alternate animation/state library is needed." }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+      "line": 163,
+      "rule": "MDC-020 / mission shared component rule",
+      "detail": "Refresh icons and callback pattern recur in vehicle-step CTA and footer Check again; icon boxes recur in page, resources and preview.",
+      "fix": "Continue reusing Button/IconBox; only extract a small feature helper if a later change actually requires coordinated behavior. Do not create another shared action or card system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      { "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 171, "detail": "h-screen/h-dvh standalone vertical scrolling, safe bottom padding, responsive gutters; actual mobile browser chrome/safe-area behavior unverified." },
+      { "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 213, "detail": "Persona block stacks until lg, then minmax columns; checklist/resources stack until xl three-column bento." },
+      { "file": "web\\src\\features\\onboarding\\components\\OnboardingFeaturePreview.tsx", "line": 71, "detail": "Preview grid 1 column, sm 2, lg 4; preserves all four cards." },
+      { "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 289, "detail": "Footer controls single-column full-width on small screens, wrapped flex at sm. wrapLabel preserves long action labels." },
+      { "file": "web\\src\\features\\onboarding\\components\\Stepper.tsx", "line": 117, "detail": "min-w-0/max-w-full/break-words/overflow-wrap protects list text; CTA width constrained." }
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\onboarding\\components\\OnboardingResources.tsx",
+        "line": 92,
+        "rule": "MDC-043 / preserve long content",
+        "detail": "Resource title is truncated rather than wrapped, risking visual loss of translated or enlarged labels; underlying accessible text remains present.",
+        "fix": "Allow multi-line resource titles and retain descriptions, target identity and 44px row minimum; check all required widths and text zoom.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredViewportQA": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "verifiedRuntime": false
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Main landmark; localized page title and shared headings/text.",
+      "Stepper ol/li, aria-current=step, visually hidden localized done/current/pending status; state is not color alone.",
+      "Resource nav has accessible label, native links, localized external new-tab description and visible focus styling.",
+      "Runtime health notice uses role=status and aria-live=polite.",
+      "PersonaSelect receives explicit onboarding-workspace-profile id and label.",
+      "Stepper spinner motion-reduce:animate-none and FadeIn useMotionPreference are present; browser/OS behavior is unverified."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+        "line": 134,
+        "rule": "MDC-020 / MDC-040 native interactive semantics",
+        "detail": "Telemetry Setup guide renders an anchor containing Button's native button. Nested interactive elements create ambiguous activation/focus semantics. Unlike the resources external links, this CTA supplies no localized new-tab announcement.",
+        "fix": "Render one native anchor with existing shared link chrome/BUTTON_BASE rather than a nested button; preserve href, new-tab rel, icon and label, and add localized new-tab description.",
+        "owner": "page",
+        "confidence": "high",
+        "dependencyEvidence": { "file": "web\\src\\components\\ui\\Button.tsx", "line": 66 }
+      },
+      {
+        "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+        "line": 143,
+        "rule": "MDC-040 stronger mobile target default",
+        "detail": "Step CTAs use size=sm, whose shared height/minimum is 36px. Runtime-health actions also use sm. These fall below the contract's default 44px mobile target; spacing exceptions and actual target geometry were not evaluated.",
+        "fix": "Use existing Button sizing/min-height capability at callsites for mobile target reachability; preserve desktop density, wrapping and disabled state. Verify keyboard and touch spacing before acceptance.",
+        "owner": "page",
+        "confidence": "high",
+        "dependencyEvidence": { "file": "web\\src\\components\\ui\\Button.tsx", "line": 37 }
+      },
+      {
+        "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+        "line": 125,
+        "rule": "MDC-016 decorative icon semantics",
+        "detail": "ArrowRight/RefreshCw/BookOpen/SkipForward and checklist Sparkles are supplied without explicit aria-hidden at several callsites; Button forwards supplied icons without universally hiding them. Actual assistive-technology naming impact is unverified.",
+        "fix": "Explicitly hide decorative action/checklist glyphs while retaining visible localized labels and all controls.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["keyboard traversal and activation", "focus visibility/restoration", "screen-reader output", "effective contrast 4.5:1 text and 3:1 UI", "forced colors", "OS/low-bandwidth reduced motion", "RTL and 200% text"]
+  },
+  "states": {
+    "loading": "SetupStatusBand loading={!hasData && isLoading}; summary values null without data. Checklist/resources/profile/preview/footer remain reachable, no whole-page loading gate.",
+    "empty": "A fresh valid response with zero vehicles is a normal incomplete setup state. Stepper's missing-list EmptyState is defensive; page always supplies three steps.",
+    "error": "fatalError is passed only to summary QueryError with refetch retry; other sections/actions remain. Retained refresh failure uses stale notice and retained summary.",
+    "stale": "deriveDataState marks retained errored/paused responses stale. Page retains source data and sets retained=true; runtime telemetry stale is separately modeled.",
+    "offline": "Retained paused query yields generic stale notice; no-data paused query remains initial. Offline-specific explanation is not wired.",
+    "complete": "setup_complete/is_complete keeps all three step rows completed; continue replaces skip. Completed setup with expired account/stale telemetry remains complete and shows separate recovery notice.",
+    "unknown": "Telemetry unknown is not offline. Summary raw metrics are null when !hasData, but checklist booleans/count default to false/zero and show the account CTA before source resolution.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+        "line": 60,
+        "rule": "MDC-026 / mission loading-offline-unknown distinction",
+        "detail": "Without a response, checklist still appears definitively incomplete with a current account-connect CTA. The summary correctly marks values unknown. Page ignores isRefreshBlocked/refreshError detail, so initial offline and retained offline are not distinguished in the page presentation.",
+        "fix": "Add a scoped unknown/loading/offline explanatory affordance using existing data-trust and feedback contracts, without hiding checklist or disabling intentional setup/navigation. Preserve pessimistic hook/gate normalization and source cache behavior.",
+        "owner": "page",
+        "confidence": "high",
+        "dependencyEvidence": { "file": "web\\src\\api\\dataState.ts", "line": 198 }
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\onboarding\\components\\OnboardingFeaturePreview.tsx",
+      "line": 79,
+      "rule": "MDC-010 / MDC-015 / mission no neon and limited visual intensity",
+      "detail": "Non-actionable preview cards opt into hover elevation and cyan glow prop. Current GlassPanel maps this to hover:border-cyan-400/40, not a luminous shadow. Combined with four colored IconBoxes, previews compete with the actionable checklist.",
+      "fix": "Keep all four informational cards/copy/list semantics; remove action-like colored hover emphasis and use neutral shared panel treatment.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 26,
+      "rule": "MDC-010 / mission no fluorescent default language",
+      "detail": "Page, resources and preview all reuse IconBox, which applies bg-neon-*/10 and ring-neon-*/20 via neonColorMap. Text is toned-down 300-level, not pure white; IconBox does not apply the map's glow property. Decorative multi-hue accents are source-confirmed, actual saturation/contrast is unmeasured.",
+      "fix": "Shared owner should provide a restrained neutral/semantic appearance on the existing IconBox API; adopt for decorative icons without modifying persisted theme names or meaningful statuses.",
+      "owner": "shared",
+      "confidence": "high",
+      "dependencyEvidence": { "file": "web\\src\\lib\\tokens.ts", "line": 22 }
+    },
+    {
+      "file": "web\\src\\features\\onboarding\\components\\OnboardingResources.tsx",
+      "line": 32,
+      "rule": "MDC-010 / MDC-012 / MDC-020 theme-aware surface and focus",
+      "detail": "Resource links use fixed-white 2%/4% fills and fixed cyan hover border/focus ring. This is white surface decoration, not pure-white text; theme composition is not runtime verified.",
+      "fix": "Reuse existing control/surface/focus tokens for link rows; preserve native link affordance, row size, localized help and privacy note.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.tsx",
+      "line": 111,
+      "rule": "MDC-010 / MDC-033 restrained semantic progress",
+      "detail": "ProgressRing uses fixed #22d3ee incomplete cyan and #10b981 completion green; it does not follow saved theme accent. Stepper repeats cyan/emerald colored borders/backgrounds. These are meaningful state hues, not reasons to remove progress.",
+      "fix": "Use existing gaugeTone/theme variables through ProgressRing's color prop and coordinated subdued semantic step styles; retain raw completed count, 3-step total, labels and glyph/status distinctions.",
+      "owner": "page",
+      "confidence": "high",
+      "dependencyEvidence": { "file": "web\\src\\lib\\tokens.ts", "line": 340 }
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+      "line": 187,
+      "rule": "MDC-026 / MDC-046 shared data-state integration",
+      "detail": "Page correctly uses deriveDataState/fatalError but maps every retained degradation to a generic stale notice and never forwards busy/loading/query state to PageLayout. Shared page load announcements therefore are not connected to this query.",
+      "fix": "Reuse existing PageLayout busy/query or localized scoped announcements as appropriate without supplying loading in a way that hides all interactive content. Preserve one query key, retained data and independent telemetry health.",
+      "owner": "integration",
+      "confidence": "medium",
+      "dependencyEvidence": { "file": "web\\src\\components\\layout\\PageContainer.tsx", "line": 134 }
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Functionally rich and already decomposed; prioritize nested CTA semantics and truthful unknown/offline presentation, then calm decorative accents and mobile target/long-label QA. No evidence warrants replacing step progression, account configuration or setup routing.",
+    "order": ["single-element external CTA", "unknown/offline presentation without gating controls", "shared subdued IconBox contract", "feature-specific decoration/token adoption", "responsive/accessibility/runtime acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Restrained appearance on existing IconBox",
+      "owner": "shared",
+      "existingOwnerFile": "web\\src\\components\\ui\\IconBox.tsx",
+      "file": "web\\src\\components\\ui\\IconBox.tsx",
+      "line": 19,
+      "rule": "MDC-010 / MDC-002",
+      "detail": "Current color API always selects neonColorMap backgrounds/rings; this page's repeated decorative use needs a neutral treatment without duplicating an icon-container implementation.",
+      "fix": "Consider an additive typed appearance='neutral'|'semantic' option coordinated with the design owner, preserving existing color/size/default behavior and shared import paths. This is a proposal, not an accepted or implemented API.",
+      "ownerContract": "Neutral foreground/surface/border tokens; semantic hues only when state meaning exists; sm/md/lg and className retained; no new theme or palette store; decorative icons retain aria-hidden at caller.",
+      "propsVariantsStates": ["existing color and size props unchanged", "proposed neutral appearance", "theme/light/dark/custom/forced-colors", "non-interactive decorative container; no new hover/click behavior"],
+      "usedBy": ["OnboardingPage workspace/checklist icons", "OnboardingResources resource icons", "OnboardingFeaturePreview four preview icons"],
+      "dependsOn": ["existing semantic/surface tokens in web\\src\\lib\\tokens.ts", "design-owner approval of subdued treatment", "focused shared API/theme regression validation"],
+      "confidence": "high",
+      "limits": "These are independently rendered consumers inside one assigned feature, not proof of independent production-feature demand. Broader inventory/deduplication remains orchestrator-owned; no new composite is requested."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\onboarding\\components\\OnboardingGate.tsx",
+      "line": 52,
+      "detail": "Gate comments refer to an unmounted OnboardingWizard, but that file/mount graph was not inspected; cannot certify competing wizard absence. Audited page is the App.tsx /onboarding route.",
+      "decision": "Do not restore or build another wizard. Keep this page's existing Stepper and gate/completion responsibilities.",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\components\\layout\\index.ts",
+      "line": 8,
+      "detail": "PageLayout category export already points to layout-reference implementation; reuse it, not a new onboarding layout system.",
+      "decision": "Existing primitives/domain decomposition are canonical for this scope.",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "AB4403ED96040AA11821583DC9D5BE2D6A326232379C71492101C4F0332D8C32",
+    "sourceLineCount": 338,
+    "pagePlusInspectedRenderingComponentsLineCount": 1069,
+    "componentLineCounts": { "Stepper.tsx": 182, "OnboardingResources.tsx": 151, "OnboardingFeaturePreview.tsx": 96, "OnboardingRuntimeHealthNotice.tsx": 112, "OnboardingSetupStatusBand.tsx": 190 },
+    "sectionCount": 7,
+    "sectionCountMeaning": "Seven named functional blocks, including the conditional runtime health notice; stale notice is an additional source-state affordance, not a business section.",
+    "sections": [
+      { "name": "Setup status", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 190, "count": 1, "children": ["Setup progress /3", "Tesla account", "Vehicles synced", "Telemetry", "scope", "last telemetry", "provenance", "retry on error"] },
+      { "name": "Runtime health recovery", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 204, "count": 1, "conditional": true },
+      { "name": "Tailor your workspace", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 211, "count": 1 },
+      { "name": "Setup checklist", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 249, "count": 1, "stepCount": 3 },
+      { "name": "Resources & help", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 268, "count": 1, "linkCount": 3, "privacyNoteCount": 1 },
+      { "name": "What you'll unlock", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 274, "count": 1, "cardCount": 4, "cards": ["Real-time tracking", "Drive history", "Charge analytics", "Vehicle control"] },
+      { "name": "Footer action band", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 282, "count": 1 }
+    ],
+    "sourceElementCounts": { "pageGlassPanelDeclarations": 3, "pageSectionDeclarations": 2, "pageChartContainerDeclarations": 0, "inspectedPagePlusComponentsGlassPanelDeclarations": 6, "inspectedPagePlusComponentsSectionDeclarations": 3 },
+    "countLimits": "Declaration counts are not mounted counts: preview GlassPanel maps four items; error panel and recovery notice are conditional. Shared OperationalBrief/PageContainer internals are not counted as business sections.",
+    "actions": [
+      { "name": "Connect Tesla account", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 79, "behavior": "Current account step navigates /tesla-account; OAuth/configuration remain destination-owned." },
+      { "name": "Vehicle Refresh", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 95, "behavior": "Current vehicle step refetches; disabled while isFetching and localized Checking label." },
+      { "name": "Telemetry Setup guide", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 110, "behavior": "Current telemetry step opens /docs/fleet-telemetry-setup in new tab with noopener/noreferrer." },
+      { "name": "Choose primary use", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 236, "behavior": "Update persona only; preserve stored preference schema, defaults and other values." },
+      { "name": "Resources", "file": "web\\src\\features\\onboarding\\components\\OnboardingResources.tsx", "line": 121, "behavior": "Internal /tesla-account plus new-tab /docs/fleet-telemetry-setup and /docs/ links." },
+      { "name": "Summary retry", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 200, "behavior": "Fatal source error refetch; no authentication submission." },
+      { "name": "Runtime recovery", "file": "web\\src\\features\\onboarding\\components\\OnboardingRuntimeHealthNotice.tsx", "line": 81, "behavior": "Conditional reconnect /tesla-account, stale telemetry /system-status, recovery notice /notifications/channels." },
+      { "name": "Check again", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 294, "behavior": "Manual refetch, disabled during isFetching, retains spin indication." },
+      { "name": "Skip for now", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 308, "behavior": "Incomplete only; local skip and navigate /; preserve localized explanatory title." },
+      { "name": "Continue to dashboard", "file": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx", "line": 325, "behavior": "Complete only; navigate /, not a new saved landing-page behavior." }
+    ],
+    "dataBehavior": [
+      "Only the first incomplete step shows its CTA; completed rows and pending rows remain visible.",
+      "Durable setupComplete overrides individual degraded anchors for checklist/progress completion, not the live health descriptions.",
+      "Keep normalized pessimistic gate behavior, query key, select, retry/stale policy, cancellation and incomplete-only 30s polling.",
+      "Keep source defaults and schema compatibility; any unknown-state presentation improvement must not change hook normalization or routing policy.",
+      "Retain fatal-vs-refresh error distinction, cached data, nullable summary measurements, telemetry timestamp/source explanations and independent live health warning.",
+      "No duplicate workspace range/vehicle selectors; first-run installation page remains usable without vehicles or telemetry.",
+      "Preserve localized setup timing/privacy/help copy, but treat the promises as existing UI copy, not verified backend/privacy capabilities.",
+      "No source data, user settings, exports, chart series or configuration submissions may be invented; this page currently has no export or chart actions."
+    ],
+    "scope": "Audit only; no source modernization or section removal occurred."
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 bounded source-only audit",
+    "governingDocs": [
+      { "file": "docs\\frontend-worker-conventions.md", "line": 43, "detail": "Phase 0 JSON schema, exclusive report/heartbeat ownership and source-only limits." },
+      { "file": "docs\\frontend-design-contract.md", "line": 40, "detail": "Reuse current architecture; MDC-010 through MDC-047 cover tokens, state trust, preservation, accessibility, responsiveness and persistence." },
+      { "file": "docs\\frontend-mission.md", "line": 17, "detail": "Sections 0/1 preserve capabilities and audit before redesign; sections 5–9 visual restraint, 15/16 responsiveness, 22–25 states, 30/31 accessibility/motion and 33 data separation were inspected." }
+    ],
+    "runtime": "NOT EXERCISED; no browser navigation, screenshots, live API calls, OAuth/account connection, preference/skip action or setup submission.",
+    "visual": "Source classes and composition only; neon/glow/saturation/fixed-white findings are not screenshot or measured-contrast acceptance. No pure-white text or actual luminous panel glow was found in the audited page source.",
+    "backend": "Only matching router registration/comments were inspected. Handler, database durability, permissions, Fleet API behavior, data-flow timing and privacy claims remain unverified.",
+    "dependencyScope": "Only mounted route declaration and page-specific UI/data dependencies expanded; no whole-app audit or unrelated routes. Select, operational formatting, date formatting and shared layout transitive internals were not fully traced.",
+    "tests": "No TypeScript, lint, build, tests or full audit script executed. The loaded audit script includes project-wide tsc, conflicting with this explicitly source-only bounded assignment; static page checks were run directly instead.",
+    "staticCheckOutput": ["raw controls=0", "inline styles=0", "pure white text=0", "legacy API imports=0", "neon text=0", "direct libraries=0", "PAGE_GLASS_PANELS=3", "PAGE_CHART_CONTAINERS=0"],
+    "staticCheckMethod": "PowerShell Get-Content -Raw of the assigned page and regex counts for raw control tags, style={, direct chart/map/motion library imports, relative old API imports, text-neon-, text-white, GlassPanel and ChartContainer declarations; exit 0. Counts exclude transitive dependencies and are not a clean whole-feature certificate.",
+    "reportValidation": {
+      "command": "Get-Content docs\\frontend-audits\\audit-page-152.json -Raw | ConvertFrom-Json; verify all 19 required keys, Test-Path for filesRead, and Get-FileHash web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx -Algorithm SHA256 against preservation.sourceSha256",
+      "exitCode": 0,
+      "rawOutput": "JSON_PARSE=PASS; REQUIRED_FIELDS=19/19; SOURCE_HASH_UNCHANGED=PASS; FILES_READ_EXIST=30; PAGE_LINES=338",
+      "meaning": "Valid report and unchanged page source only, not application runtime acceptance."
+    },
+    "commandFailures": "One initial PowerShell citation/count command had a quoting ParserError (exit 1), performed no reads/writes, and was corrected; successful bounded counts were subsequently captured.",
+    "sourceSnapshot": "Page SHA-256 and line counts taken from current bytes without Git. Concurrent shared source may evolve; these citations describe this audit snapshot.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-152.json", ".agent-status\\audit-page-152.txt"],
+    "notPerformed": ["Git operations", "UI/source changes", "full-repository lint/build", "agent delegation", "actual auth/setup submissions"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx",
+    "web\\src\\features\\onboarding\\components\\Stepper.tsx",
+    "web\\src\\features\\onboarding\\components\\OnboardingResources.tsx",
+    "web\\src\\features\\onboarding\\components\\OnboardingFeaturePreview.tsx",
+    "web\\src\\features\\onboarding\\components\\OnboardingRuntimeHealthNotice.tsx",
+    "web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.tsx",
+    "web\\src\\features\\onboarding\\hooks\\useOnboardingSkip.ts",
+    "web\\src\\features\\onboarding\\components\\OnboardingGate.tsx",
+    "web\\src\\api\\hooks\\useOnboarding.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useProductPreferences.ts",
+    "web\\src\\lib\\productPreferences.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\forms\\PersonaSelect.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\DataStateNotice.tsx",
+    "web\\src\\components\\data-display\\ProgressRing.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
