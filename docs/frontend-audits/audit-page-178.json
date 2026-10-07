@@ -1,0 +1,332 @@
+{
+  "item": "audit-page-178",
+  "page": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+  "routes": ["/s/:token"],
+  "purpose": "Chrome-less public report for an owner-selected drive, with the same route dispatching charging-session payloads to SharedSessionReport.",
+  "primaryGoal": "Read only owner-disclosed measurements and redacted route/profile information without an account; understand unavailable links and omitted measurements.",
+  "dataSources": [
+    {
+      "name": "Public share payload",
+      "hook": "useSharedDrive",
+      "owner": "web\\src\\api\\hooks\\useSharing.ts",
+      "endpoint": "GET /api/v1/share/{token}",
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:136-141", "web\\src\\api\\hooks\\useSharing.ts:17-19,115-123", "internal\\api\\router.go:2447-2452", "internal\\api\\share\\handler.go:356-471"],
+      "behavior": "Token-scoped shared-drive query key, enabled only for a nonempty parameter, retry=false, STALE_TIMES.SLOW, AbortSignal forwarded. Page branches charging_session before drive normalization. Error takes precedence over cached session/drive rendering.",
+      "ownership": "Server owns lookup, expiry, revocation lookup outcome, disclosure flags, model/color projection, coordinate clipping and view counting. Public route registration precedes the main API group and documents an external ForwardAuth exemption. Deployment enforcement is unverified.",
+      "privacy": "Only endpoint templates are recorded; no real token, address, coordinate or payload was accessed. A GET increments views; consequently no runtime public request was made."
+    },
+    {
+      "name": "Canonical and transitional public payload adapter",
+      "owner": "web\\src\\types\\sharing.ts",
+      "endpoint": null,
+      "evidence": ["web\\src\\types\\sharing.ts:18-79,124-129,158-266", "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:139-195"],
+      "behavior": "Canonical payloads are returned by reference based on presence of payload_version, including SI payloads tagged v1. Untagged legacy payloads upgrade distance/duration/speed/efficiency once; nullable scalars remain null and absent legacy profile arrays become empty arrays. Session discrimination uses share_type. Preserve this existing explicit share-link transition rather than introducing another adapter.",
+      "units": "Drive measurements: m, s, m/s, Wh/m; elevation fields are meters. Profile converters execute at display boundary. Telemetry power/elevation type names alone do not establish units, and the root page does not render telemetry."
+    },
+    {
+      "name": "Viewer formatting preferences",
+      "hooks": ["useUnits", "useNumberFormatting", "usePublicOperationalMetrics"],
+      "owners": ["web\\src\\hooks\\useUnits.ts", "web\\src\\hooks\\useSettings.ts", "web\\src\\hooks\\useNumberFormatting.ts", "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicReportBrief.tsx"],
+      "endpoint": "GET /api/v1/settings",
+      "evidence": ["web\\src\\hooks\\useUnits.ts:115-144", "web\\src\\hooks\\useSettings.ts:80-90,103-127", "web\\src\\api\\settings.ts:24", "internal\\api\\router.go:3659", "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicReportBrief.tsx:26-61"],
+      "behavior": "Public brief uses the explicit preference bridge; however root useUnits still invokes settings query and cross-tab settings subscription. NumberFormatting observes the existing formatter preference bridge. Defaults support unavailable settings. Anonymous failure/redirect behavior is not exercised."
+    },
+    {
+      "name": "Conditional map configuration and external tiles",
+      "owner": "web\\src\\components\\maps\\MapTileLayer.tsx",
+      "endpoint": "GET /api/v1/system/map-config",
+      "evidence": ["web\\src\\components\\maps\\MapTileLayer.tsx:17-90", "web\\src\\api\\settings.ts:133", "internal\\api\\router.go:4386", "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:239-269"],
+      "behavior": "Only mounted when more than one disclosed coordinate exists. map-config query selects configured provider or fallback OSM; low-bandwidth policy retains provider while choosing lighter tiles. No provider configuration or credentials were accessed. Tile/network privacy and anonymous configuration availability require integration review."
+    },
+    {
+      "name": "Charging-session dispatch dependency",
+      "owner": "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx",
+      "endpoint": "GET /api/v1/share/{token}",
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:202-214", "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx:30-46,93-164", "internal\\api\\share\\session.go:182-240"],
+      "behavior": "Same checked public payload, no additional session fetch. Preserve owner-selected summary and gated curve/cost. Session curve source exposes power_kw and energy_kwh despite v2 summary SI fields; this existing mixed-unit contract must not be silently converted twice or renamed during presentation work. Full curve derivation was not audited."
+    }
+  ],
+  "components": [
+    {
+      "kind": "layout and primitives",
+      "names": ["PageHeader", "LayoutCard", "GlassPanel", "Logo", "Text"],
+      "owners": ["web\\src\\components\\layout", "web\\src\\components\\ui"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:5-6,224-236,289-291,372-378"],
+      "contract": "Existing category barrels; retain standalone w-full/min-w-0 layout, localized public branding, source title/date/description, optional addresses and vehicle model/color. Do not mount authenticated workspace selectors or shell merely to obtain shared layout."
+    },
+    {
+      "kind": "public domain summary",
+      "names": ["PublicDriveBrief", "PublicReportBrief", "OperationalBrief"],
+      "owners": ["web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicDriveBrief.tsx", "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicReportBrief.tsx"],
+      "evidence": ["web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicDriveBrief.tsx:24-103", "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicReportBrief.tsx:26-61"],
+      "contract": "Raw source metrics plus specialist display callbacks, explicit units/currency preferences, event date, source provenance and raw evidence. Unknown is not zero; no scored confidence or inferred cause. Brief says date is event context, not freshness. Retain conditional metric inclusion and evidence access."
+    },
+    {
+      "kind": "charts",
+      "names": ["ChartCard", "EmbeddedChart", "ChartContainer", "ChartGradient", "chartGrid", "axisTick", "ResponsiveContainer", "AreaChart", "LineChart", "Tooltip"],
+      "owners": ["web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "web\\src\\components\\charts\\EmbeddedChart.tsx", "web\\src\\components\\charts\\ChartContainer.tsx"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:298-369", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:7-46", "web\\src\\components\\charts\\EmbeddedChart.tsx:18-42", "web\\src\\components\\charts\\ChartContainer.tsx:423-452,629-632,689-692,806-823"],
+      "contract": "Existing host/card and canonical export toolbar; preserve localized accessible names, both distance-indexed series, converted axis/tooltip values and image/vector export affordances. data/dataColumns are available for accessible rows and CSV but not supplied by root."
+    },
+    {
+      "kind": "map and motion",
+      "names": ["MapContainer", "Polyline", "CircleMarker", "MapTileLayer", "FadeIn"],
+      "owners": ["web\\src\\components\\maps\\MapTileLayer.tsx", "web\\src\\components\\motion\\FadeIn.tsx"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:239-269", "web\\src\\components\\motion\\FadeIn.tsx:24-38"],
+      "contract": "Render only returned clipped coordinates; scrollWheelZoom=false, current zoom/center and endpoint markers. FadeIn honors reduced-motion hook with initial=false and ignores delays when reduced. No runtime map/focus/motion acceptance inferred."
+    },
+    {
+      "kind": "feedback and public alternative",
+      "names": ["SharedDriveLoading", "ExpiredShareView", "Skeleton", "EmptyState", "SharedSessionReport"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:75-125,197-214,372-378"],
+      "contract": "Loading status and geometry, safe unavailable view with home navigation, aggregate route-empty explanation and session dispatch remain. Root has one exported component; two private state helpers are not an exported-component violation."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "line": 224,
+      "rule": "MDC-002 / mission sections 3-4",
+      "detail": "Public drive and session presentations repeat branded standalone header, optional vehicle card, chart tooltip chrome and footer. PublicReportBrief already consolidates measurement provenance; do not duplicate it.",
+      "fix": "Reuse existing primitives; assess a presentation-only public report frame for two confirmed consumers, preserving different hero/summary geometry and owner-redacted optional slots.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx:49-84,174-188"]
+    }
+  ],
+  "responsive": {
+    "observed": ["Root/sections use full width, min-w-0 and px-4; chart viewports are responsive width with fixed 200px heights.", "Hero uses 50vh; loading reserves hero even if owner omitted route. Loading has two-column metrics rising to three at md; loaded state is the shared brief, not that skeleton grid."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+        "line": 241,
+        "rule": "MDC-043 / mission sections 15-16",
+        "detail": "Fixed half-viewport hero and zoom=7 lack route fit/bounds logic at this call site; long/short disclosed traces can be poorly framed. Long header/address text, chart toolbar and metric evidence mobile behavior are unverified.",
+        "fix": "Validate 320-2560 widths and long localized source text; use existing map bounds capabilities if needed without requesting unredacted coordinates or changing disclosed data.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportTesting": "Unverified; no browser or device used."
+  },
+  "accessibility": {
+    "observed": ["Loading exposes role=status, aria-busy and localized name; expired-state icon is decorative.", "Charts have localized ariaLabel; links retain native semantics and external link uses noopener noreferrer.", "Shared FadeIn has source-confirmed reduced-motion support."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+        "line": 254,
+        "rule": "MDC-040 / mission section 30",
+        "detail": "Start/end map markers differ by red/green only at this call site; neither marker has a textual label or popup. This expresses endpoints of the clipped visible trace, not exact private trip endpoints.",
+        "fix": "Add localized visible/accessible start and end labels using existing map presentation; describe them explicitly as disclosed trace endpoints.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+        "line": 298,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "Both charts explicitly exempt dense traces from accessible tables; wrapper names do not expose per-sample values, and root does not pass data/dataColumns to the existing ChartCard contract.",
+        "fix": "Evaluate an accessible disclosed-samples table or appropriate equivalent through existing chart owner; use only returned profile values and maintain existing exports and privacy.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:339-346", "web\\src\\components\\charts\\ChartContainer.tsx:449-452,806-823"]
+      },
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+        "line": 221,
+        "rule": "MDC-040",
+        "detail": "Ready/loading/unavailable roots use div rather than a main landmark. Source has no usePageTitle in root. App provides RouteAnnouncer/RouteFocusManager, but title updates and actual h1 focus on this standalone report are not established.",
+        "fix": "Preserve chrome-less public layout while providing a main landmark and safe localized document title; verify shared PageHeader heading/focus integration and links at 44px target defaults.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["web\\src\\App.tsx:544-551", "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:78,104,387-394"]
+      }
+    ],
+    "runtime": "Keyboard, screen reader, focus, effective contrast, touch targets, forced colors, RTL, 200% text and reduced-motion rendering unverified."
+  },
+  "states": {
+    "loading": "SharedDriveLoading with named busy status, header, hero placeholder, six metric placeholders and two chart placeholders; conditional disclosed content may differ.",
+    "ready": "Drive normalization then public brief; optional vehicle/map/profiles. charging_session dispatch before drive-empty handling.",
+    "empty": "No data renders unavailable link; no route/profiles renders one explanatory EmptyState. Individual missing map/elevation/speed sections disappear; omission is owner/privacy/source-dependent, not permission to fetch private substitutes.",
+    "error": "Any query error renders expired/revoked explanation and home link, even when usable cached data exists. Cached payload cannot bypass failed token check.",
+    "staleOffline": "Root reads only data/isLoading/error, not freshness/fetchStatus/isPaused/dataUpdatedAt. Brief correctly says event date is not freshness. No explicit paused/offline/refresh-recovery presentation.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+        "line": 203,
+        "rule": "MDC-026 / MDC-046 / mission sections 24-25",
+        "detail": "Transport failure, server failure and invalid/expired/revoked token all produce the same expiry explanation without retry. Current fail-closed ordering protects cached public payload after a failed token check; ordinary retained-data guidance cannot blindly override it.",
+        "fix": "Integration-owner design must distinguish confirmed unavailable-token responses from connectivity/paused states and offer safe recovery, while preserving failed-token suppression and public-cache policy. Do not show stale private content merely to improve visual continuity.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "line": 365,
+      "rule": "MDC-010 / MDC-034 / mission sections 5,7,27",
+      "detail": "Speed uses fixed electric cyan #00f0ff, outside existing theme/palette preference; tooltip chrome is duplicated fixed black rgba at lines 320 and 358. Elevation uses a themed gradient. No glow classes were found in root.",
+      "fix": "Use existing restrained palette and shared ChartTooltip styling; preserve deliberate saved palette choices and data prominence rather than inventing another color engine.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "line": 388,
+      "rule": "MDC-012 / MDC-040",
+      "detail": "Footer link uses theme-primary/60 and unavailable-state icon background uses fixed white opacity. Effective contrast across custom/light themes is unknown; class names alone cannot establish a contrast failure.",
+      "fix": "Prefer canonical text/surface tokens and measure composed backgrounds and hover/focus states in centralized visual QA.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "line": 142,
+      "rule": "MDC-046 / public preference contract",
+      "detail": "useUnits calls useSettings, whose unconditionally enabled query refetches settings on mount and subscribes to settings broadcasts. Thus a chrome-less public route still depends on an authenticated settings mechanism; conditional MapTileLayer adds map-config query. The public metric bridge itself avoids such queries.",
+      "fix": "Integration owner should provide an explicit public-safe preference/config contract preserving current unit/locale/default behavior, without widening authentication or disclosing operator credentials. Page consumes it; shared hooks/config are outside a page worker's ownership.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\hooks\\useUnits.ts:115-116", "web\\src\\hooks\\useSettings.ts:80-90,120-127", "web\\src\\components\\maps\\MapTileLayer.tsx:55-61", "docs\\frontend-design-contract.md:168-172"]
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicDriveBrief.tsx",
+      "line": 39,
+      "rule": "MDC-045 / source provenance",
+      "detail": "Brief calls efficiency a recorded intensity, but inspected handler calculates an approximate value from battery delta and a fixed factor when distance exceeds 2000m. Frontend cannot establish measured energy or pack capacity from this payload.",
+      "fix": "Preserve existing calculation and value; adjust source-specific explanation with integration/backend owner to identify approximation and limitations rather than claiming new measured evidence.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["internal\\api\\share\\handler.go:427-434"]
+    },
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "line": 304,
+      "rule": "MDC-034",
+      "detail": "exportable enables shared image/vector controls but root supplies no exportData/data/dataColumns. CSV or raw-SI export capability is not established for these charts; do not describe exportable as proof of all formats.",
+      "fix": "Preserve current image/vector affordances; if adding table/CSV support, supply only owner-disclosed points with explicit SI field and display-unit contracts through existing chart API.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Public disclosure and expiry correctness constrain modernization; resolve public preference/auth coupling and error semantics before cosmetic adoption. Follow with equivalent accessible samples/endpoints and restrained chart presentation."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Public-safe preference and map configuration boundary",
+      "owner": "web\\src\\hooks\\useUnits.ts; web\\src\\hooks\\useSettings.ts; web\\src\\components\\maps\\MapTileLayer.tsx (integration coordination)",
+      "propsVariantsStates": ["Explicit existing UnitPref/locale/precision inputs and documented anonymous defaults", "No authenticated workspace/settings subscription required by public presentation", "Map provider fallback and low-bandwidth behavior; no credentials in audit/telemetry", "Preserve public metric bridge"],
+      "usedBy": ["SharedDrivePage", "SharedSessionReport"],
+      "dependsOn": ["Existing formatter preference bridge", "usePublicOperationalMetrics", "External ForwardAuth policy", "Integration review of settings/map-config availability"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:142", "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx:33", "web\\src\\components\\maps\\MapTileLayer.tsx:55-76"],
+      "necessity": "Confirmed integration gap; do not change shared interfaces from page scope."
+    },
+    {
+      "name": "Public share trust/recovery presentation policy",
+      "owner": "web\\src\\api\\hooks\\useSharing.ts; web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "propsVariantsStates": ["Initial loading", "Confirmed expired/revoked/missing link", "Transport/server failure with localized retry", "Offline/paused and freshness unknown", "Failed token check suppresses cached drive AND session"],
+      "usedBy": ["SharedDrivePage drive branch", "SharedDrivePage session branch"],
+      "dependsOn": ["Existing API error status handling", "Server token lookup/expiry", "Query cache and HTTP public max-age policy"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:197-214", "internal\\api\\share\\handler.go:365-387,470"],
+      "necessity": "Policy coordination, not a new generic state engine."
+    },
+    {
+      "name": "Reuse public frame and chart accessibility contracts",
+      "owner": "Existing PageHeader/LayoutCard/ChartCard/ChartContainer; public frame missing as a dedicated owner",
+      "propsVariantsStates": ["Localized branded header and optional source metadata", "Optional disclosed hero/vehicle slots and footer", "Existing chart ariaDescription/data/dataColumns/export contracts", "Omitted source remains omitted; never private-source recovery"],
+      "usedBy": ["SharedDrivePage", "SharedSessionReport"],
+      "dependsOn": ["PublicReportBrief", "Existing category barrels", "Public-safe preference boundary", "Confirmed anonymous chart/map QA"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:224-395", "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx:49-190", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:14-45"],
+      "necessity": "Reuse/possible extension after two-consumer preservation review; no speculative replacement library."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+      "line": 320,
+      "rule": "MDC-002 / MDC-034",
+      "detail": "Feature tooltip styling repeats shared chart chrome and session chart implementation. Existing public metric summary is already consolidated. Root correctly imports chart/map/motion category barrels rather than direct vendor libraries.",
+      "fix": "Reuse canonical chart tooltip presentation without altering specialist SI-to-display callbacks or public disclosure.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx:358", "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx:132"]
+    }
+  ],
+  "preservation": {
+    "sourceHash": "93e6d1fe41ec74db000ad50da33db09b66fd75650112a8ac788242832421e032",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root page bytes only; not dependency/runtime/cryptographic share verification.",
+    "currentLineCount": 400,
+    "sectionNames": ["Public header/source metadata and description", "Disclosed hero route map", "Owner-shared measurements brief", "Optional vehicle model/color", "Elevation profile", "Speed profile", "Combined no-route/profile fallback", "Attribution/learn-more footer"],
+    "sectionCounts": {
+      "readyDriveLogicalSections": 8,
+      "rootChartCardDeclarations": 2,
+      "rootLayoutCardDeclarations": 1,
+      "rootGlassPanelDeclarations": 1,
+      "rootPublicDriveBriefDeclarations": 1,
+      "rootMapContainerDeclarations": 1,
+      "alternativeStateHelpers": 2,
+      "sessionDispatch": 1
+    },
+    "actions": ["Unavailable-link home navigation", "Learn-more external navigation with noopener noreferrer", "Leaflet pan/zoom; wheel zoom disabled", "Existing shared chart image/vector export toolbar", "Public brief evidence/details through existing OperationalBrief contract, runtime unverified"],
+    "dataBehavior": [
+      "Keep public /s/:token lazy route outside Layout, SafeRoute wrapper and existing guards; no second workspace selectors.",
+      "Preserve nonempty-token enablement, query key, retry=false, stale policy and AbortSignal; never expose raw token in audit/log/storage changes.",
+      "Server lookup and expiry remain authoritative; current error precedence suppresses cached drive/session. HTTP public max-age=300 and view increment are existing behavior requiring explicit policy review, not a UI correctness guarantee.",
+      "Never reconstruct deleted/redacted coordinates or source identifiers. Handler exposes model/color rather than VIN/IDs and clips three positions from both ends for traces longer than six; source clipping is not proof of anonymization.",
+      "Addresses are included in inspected drive summary projection; include_map controls map points, not blanket address redaction. Do not imply stronger privacy than source establishes.",
+      "Speed summaries/profiles respect IncludeSpeed; map points respect IncludeMap. Elevation profiles are produced inside the shared positions loop; do not invent an independent elevation permission.",
+      "Preserve canonical-by-discriminator behavior and exact explicit legacy share-link SI upgrade; never convert canonical v1-tagged SI twice.",
+      "Drive display conversions: m to km/mi; m/s to km/h/mph; elevation m to ft only for miles preference; Wh/m to Wh/km then optional Wh/mi. Keep nullable measurements distinct from zero.",
+      "Preserve distance/duration, optional efficiency, battery endpoints, max/average speed and elevation gain with raw source evidence. Elevation loss and telemetry exist in types but are not root-rendered sections; do not invent them as current functionality.",
+      "Preserve session branch summary, curve/cost disclosure and existing mixed curve wire units; no fake measurements, scored confidence or cryptographic attestation.",
+      "Map/profile/vehicle optional gates are disclosure-sensitive. Missing-data modernization must not reveal what the owner omitted."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit with two authorized documentation/status outputs.",
+    "runtime": "UNVERIFIED: no application, browser, network request, real sharing, token creation/revocation, download or production mutation exercised.",
+    "security": "Source behavior descriptions only; no vulnerability review or proof of token entropy, cryptographic signature, deployment authentication exemption, anonymization or revocation propagation. SHA-256 is a preservation checksum only.",
+    "validation": "No Git, TypeScript, full-repository lint/build, skill audit script or nested agent used. Skill script was read but not run because it unconditionally performs project-wide TypeScript. Targeted source patterns were inspected instead.",
+    "sourcePatternResults": {"rootStaticInlineStyleAttributes": 0, "rootRawButtonInputTextareaSelectTableMatches": 0, "rootDirectRechartsLeafletFramerMotionImports": 0, "rootElectricCyanStrokeMatches": 1, "rootFixedBlackTooltipStyles": 2, "rootChartNoTableExemptions": 2},
+    "commandEvidence": [
+      {"command": "Get-FileHash web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx).Count", "exitCode": 0, "output": "SHA256 93E6D1FE41EC74DB000AD50DA33DB09B66FD75650112A8AC788242832421E032; 400"},
+      {"command": "PowerShell rg -n 'GetPublicShare' internal\\api -g '*.go'", "exitCode": 1, "output": "rg: The term 'rg' is not recognized. Replaced with supplied functions.rg for scoped source inspection."}
+    ],
+    "unknowns": ["Effective theme contrast and map control targets", "Actual route mounting/anonymous deployment guards", "Public settings/config network fallback and session-refresh behavior", "Repository token revocation/cache distribution", "Exact export runtime and all shared brief interactions", "Long text, RTL, zoom and mobile chart labels", "Session signal curve unit derivation; pattern-only review is not a full backend audit"],
+    "snapshot": "Line citations describe inspected concurrent-source snapshot, not a frozen whole-application baseline."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-177.json",
+    "web\\src\\features\\sharing\\pages\\SharedDrivePage.tsx",
+    "web\\src\\features\\sharing\\pages\\SharedSessionReport.tsx",
+    "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicDriveBrief.tsx",
+    "web\\src\\features\\sharing\\components\\operationalbrief-public\\PublicReportBrief.tsx",
+    "web\\src\\api\\hooks\\useSharing.ts",
+    "web\\src\\types\\sharing.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\maps\\MapTileLayer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\share\\handler.go",
+    "internal\\api\\share\\session.go"
+  ]
+}
