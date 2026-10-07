@@ -1,0 +1,405 @@
+{
+  "item": "audit-page-119",
+  "page": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+  "routes": ["/journey-fragmentation"],
+  "purpose": "Describe continuity and fragmentation within one vehicle's capped returned drive-history window, not lifetime history or trip intent.",
+  "primaryGoal": "Adjust the maximum parking gap and inspect observed chains, stopovers, structural and energy indicators, calendar profiles, ranked chains and evidence limitations.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected vehicle>&limit=1000",
+      "requestPath": "/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}",
+      "owner": "integration",
+      "sourceOwner": "internal\\api\\drives\\listing.go:21-58",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Enabled only with a vehicle; isolated drivingKeys.history key; bounded limit; MODERATE staleTime; safeArray selection; request receives cancellation signal. Listing validates vehicle_id and delegates pagination/date bounds to repository. No date bounds or pagination beyond this single request are supplied by this page.",
+      "unknowns": "Repository ordering, live server response, pagination cap implementation, complete history coverage and runtime API compatibility were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle')",
+      "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+      "line": 38,
+      "endpoint": null,
+      "owner": "shared",
+      "sourceOwner": "Existing workspace selection/timezone hooks; implementations not inspected.",
+      "behavior": "Workspace selected vehicle supplies history identity; vehicle timezone supplies calendar grouping. No competing local vehicle selector. /journey-fragmentation is absent from RANGE_ENABLED_PATHS (web\\src\\lib\\workspaceScope.ts:23-77); this is explicitly a capped-history report, not an existing selected-date report. Do not silently replace its history with a date subset."
+    },
+    {
+      "hook": "analyzeJourneyFragmentation",
+      "file": "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+      "line": 711,
+      "endpoint": null,
+      "owner": "page",
+      "sourceOwner": "Feature pure analytical library",
+      "behavior": "Memoized derived model, frozen analysis clock, stable segmented time sorting, mutually exclusive row/pair accounting, address/GPS continuity, threshold sensitivity, SI distance/energy/duration operands and local-calendar profiles. Missing energy remains null; complete-energy distance weights intensity. UI minutes are analysis thresholds, not changed wire units.",
+      "evidence": ["web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:40-53", "web\\src\\features\\driving\\lib\\journeyFragmentation.ts:283-321,360-453,454-483,567-590,711-872"]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid / LayoutCard",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout",
+      "evidence": ["web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:7,61-76,90-104,109", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-15", "web\\src\\components\\layout\\PageContainer.tsx:118-280", "web\\src\\components\\layout\\Grid.tsx:12-22,73-104", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-66"],
+      "props": "Page title/subtitle, freshness query, contextActions; Grid cols/default=1/lg=2 and gap=4; LayoutCard title and full report-context children."
+    },
+    {
+      "name": "JourneyEvidenceBrief / DrivingSummaryBrief / NestedDrivingBrief / OperationalBrief",
+      "kind": "composite",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "evidence": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx:7-65", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:10-57", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:13-66", "web\\src\\components\\data-display\\OperationalBrief.tsx:43-63,105-155"],
+      "props": "Raw StatMetric measurements via useOperationalMetrics; title/description/scope/provenance; loading/retained/unavailable; fatal retry through DrivingSummaryBrief. Existing details-drawer affordance must survive."
+    },
+    {
+      "name": "Six ChartContainer-backed bar charts",
+      "kind": "composite",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "evidence": ["web\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx:23-54", "web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx:15-56", "web\\src\\components\\charts\\ChartContainer.tsx:78-219,422-434,627-637"],
+      "props": "Localized titles/subtitles/ariaLabel, data/dataColumns, loading/empty, height=280, category chart exports/palette/grid/tooltip. Sensitivity retains chartKey=journey-fragmentation-threshold-sensitivity and two independently hidden series. Default PNG/SVG/copy image exports apply when populated. No exportData, fullscreen or annotations are supplied; do not invent existing CSV/fullscreen/annotation capabilities."
+    },
+    {
+      "name": "Select / Text / MetricValue / GlassPanel / EmptyState / StaleRefreshWarning / FadeIn",
+      "kind": "primitive-and-feedback",
+      "owner": "Existing category barrels",
+      "evidence": ["web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:6-13,67-77", "web\\src\\components\\ui\\Select.tsx:13-38,76-118", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:47-132", "web\\src\\components\\motion\\FadeIn.tsx:24-40"],
+      "props": "Accessible select name, controlled value/options/onChange; shared stale notice with retry; OS/low-bandwidth motion preference respected by FadeIn source."
+    },
+    {
+      "name": "Twelve domain sections",
+      "kind": "feature",
+      "owner": "web\\src\\features\\driving\\components\\journey-fragmentation",
+      "evidence": ["web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx:15-29,90-107", "web\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts:3-6"],
+      "props": "JourneyFragmentationSectionProps result and optional loading. Page composition keeps all sections mounted; some child bodies switch to EmptyState."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx",
+      "line": 7,
+      "rule": "MDC-002 / mission 33 / DRY",
+      "detail": "Start, weekday, monthly, chain and gap charts repeat the same single-series count-bar frame, tooltip, integer Y axis, fallback columns and empty branch.",
+      "fix": "Reuse existing ChartContainer and category chart primitives; consider a local typed count-distribution renderer only after preserving unique summaries, labels, empty messages and export behavior. Do not create a new global chart engine.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+      "line": 58,
+      "rule": "MDC-002 / DRY",
+      "detail": "Rows and pair accounting duplicate label/value tile markup at lines 58 and 62.",
+      "fix": "Use the current metric/layout owner or one feature-local accounting list, retaining all six categories in each group and totals.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "strategy": "Page grids stack until lg; directory cards use md two-column layout; accounting groups split at lg, with two small tiles per group throughout; toolbar wraps. Grid supports minItemWidth but this page uses viewport columns.",
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx",
+        "line": 25,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Directory switches to two inner columns at md even when its parent becomes half-width at lg; long source addresses at lines 37-41 lack explicit anywhere wrapping. Narrow allocated cards and overflow are risks, not observed failures.",
+        "fix": "Use existing container-aware Grid/minItemWidth or reviewed CardGrid behavior and source-address wrapping; verify all addresses and ranks remain reachable at ten widths, sidebar states and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx",
+        "line": 45,
+        "rule": "MDC-043 / MDC-044",
+        "detail": "Seven full localized weekday labels share an X axis; twelve local-time buckets and potentially many month labels also use default axis tick behavior. Label clipping/omission is unverified.",
+        "fix": "Exercise long-label locales and allocated container widths using existing chart sizing/tick policies; retain full data table and all underlying counts rather than dropping categories.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "keyboard, screen reader, effective contrast, forced colors and target spacing unverified",
+    "strengths": "Select has a localized accessible name; shared focus styling; panels use h2 typography; domain decorative icons generally aria-hidden; all six charts have ariaLabel and data/dataColumns; sensitivity has ariaDescription; shared FadeIn honors reduced-motion preference in source; shared OperationalBrief names its section.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+        "line": 71,
+        "rule": "MDC-040",
+        "detail": "Threshold Select uses size=sm, mapped to min-h-9 (36px) in Select.tsx:33, below the contract's default 44px mobile target. Actual target spacing/WCAG exception has not been measured.",
+        "fix": "Apply existing larger/density-aware sizing or page-level minimum target class on touch layouts; keep native selection semantics and accessible label.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Six ChartContainers receive loading; summary receives loading and suppresses raw values. Other panels inspect empty derived result first, showing empty messages rather than initial skeletons.",
+    "empty": "All fourteen section shells remain mounted; domain/chart bodies use empty states. Methodology always remains readable. Report context describes returnedRows=0.",
+    "noVehicle": "History query disabled; summary instructs selection using shared workspace owner; analytical result derives from [] and empty shells stay visible.",
+    "fatalError": "JourneyEvidenceBrief receives drivesState.fatalError and retry; PageLayout receives only freshness query, not a replacement error prop, so neighboring section shells survive.",
+    "staleOffline": "StaleRefreshWarning preserves retained data and offers retry; summary receives retained. Nested metric summaries currently do not receive retained/unavailable flags.",
+    "success": "All sections derive from the same result and selected continuity threshold.",
+    "partial": "Incomplete records, excluded rows, unusable boundaries and complete-energy support explicitly represented; not evidence of independent backend sources.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+        "line": 20,
+        "rule": "MDC-026 / mission 44",
+        "detail": "Initial request uses result=[]; elapsed component selects EmptyState before its loading-aware brief. StructureIndicators, EnergyIntensityPanel, JourneyDirectory, AccountingPanel and footer similarly communicate empty/no rows before a response. Several accept loading through the common interface but never consume it.",
+        "fix": "Propagate a typed source-state/loading contract to each panel body; show loading/unavailable versus verified empty distinctly while keeping all shells, methodology and retained payload visible.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+        "line": 97,
+        "rule": "MDC-026 / MDC-033",
+        "detail": "Nested summaries for structure, elapsed and energy are not passed retained/unavailable state, despite NestedDrivingBrief supporting both (lines 20-21,60-66). During failed/offline refresh the page warning says retained while nested badges default to Returned evidence.",
+        "fix": "Thread existing DataState meaning to nested briefs, using existing retained/unavailable props; retain values and independent retry at source level without labeling cached data fresh.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx",
+      "line": 27,
+      "rule": "MDC-010 / MDC-012 / MDC-015 / mission 43",
+      "detail": "Directory cards use fixed-white translucent border/background; accounting tiles use bg-white/[0.03] at lines 58,62. These bypass semantic surface/border tokens across light/custom themes.",
+      "fix": "Use existing neutral surface/border variables or current shared Card/LayoutCard variants, retaining ranks, addresses, distance, durations and gap counts.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx",
+      "line": 39,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "The same journeys count receives different CHART_COLORS indices across chain/hour/weekday/month sections (0,3,4,5), while gap count uses 1 and sensitivity uses 0/2. Source suggests decorative multihue emphasis rather than a consistent measure mapping; actual saturation is unverified.",
+      "fix": "Adopt existing restrained palette/series policy for repeated count measures and semantic comparison roles. Preserve saved explicit chart preferences, every series and sensitivity legend key.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx",
+      "line": 64,
+      "rule": "MDC-002 / MDC-015 / mission 43",
+      "detail": "Three sections put a surface-owning OperationalBrief inside GlassPanel, repeat section/brief titles and descriptions, and each adds its details affordance. This produces nested panel chrome in elapsed, structure and energy rather than one clear section hierarchy.",
+      "fix": "Reuse the accepted layout/composite composition contract; coordinate an embedded presentation variant only if existing owners cannot preserve summary scope/provenance/details inside one surface. Do not remove explanations or drawers to reduce noise.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+      "line": 13,
+      "rule": "MDC-044",
+      "detail": "User-visible returned/included dates use fixed en-US Intl formatting, although vehicle timezone is preserved. _types.ts:8-10 formats percentages with Math.round/string interpolation, and sensitivity threshold labels use a hardcoded 'min' suffix at line 10.",
+      "fix": "Use existing locale/date and number formatting owners at the display boundary; localize duration/band labels and energy supportBand values while preserving calculation keys and timezone.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+      "line": 324,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "distanceM maps absent/nonfinite/nonpositive distance to 0. Directory and included-distance totals can therefore display measured zero for source distance that is unknown. Energy correctly excludes incomplete distance/energy, but no distance-coverage field distinguishes missing operands.",
+      "fix": "Integration/domain owner should assess a nullable or coverage-aware derived display contract without changing the wire/cache or silently redefining existing aggregates. Until reviewed, preserve model behavior and disclose unavailable distance rather than claiming observed zero.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx",
+      "line": 4,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Active evidence brief derives props through ComponentProps<typeof EvidenceBand>, coupling its presentation contract to an unmounted alternate metric-card renderer that remains barrel-exported.",
+      "fix": "Use one explicit shared feature evidence-props contract; confirm references before retiring or adapting alternate implementation. Do not restore old colored MetricCard composition.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Distinguish initial/unavailable/retained states in all panels; review missing-distance semantics.",
+    "next": "Neutralize fixed-white tiles, resolve nested summary surfaces, locale formatting and touch/container behavior without changing analysis scope."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "OperationalBrief embedded composition review",
+      "existingOwnerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "props": "Assess optional panel/embedded presentation preserving title, metrics, scope, provenance, details drawer, loading suppression and statusTone; compact currently adjusts density but still owns a GlassPanel.",
+      "variants": ["Existing compact", "Potential embedded only after owner review"],
+      "states": ["loading", "retained", "unavailable", "measured zero", "missing", "invalid"],
+      "usedBy": ["ElapsedComposition", "StructureIndicators", "EnergyIntensityPanel"],
+      "dependsOn": ["Accepted existing layout composition", "DrivingSummaryBrief/NestedDrivingBrief adapters", "Second independent production-consumer evidence before extending global API"],
+      "disposition": "Conditional shared extension; page worker must not edit shared owner. Feature-internal duplication alone does not establish two independent production consumers."
+    },
+    {
+      "name": "Source trust propagation reuse",
+      "existingOwnerFile": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+      "props": "Existing loading, retained and unavailable; feature sections need typed source-state input and verified-empty distinction.",
+      "variants": ["Existing compact OperationalBrief"],
+      "states": ["initial", "empty", "fatal", "retained", "offline"],
+      "usedBy": ["ElapsedComposition", "StructureIndicators", "EnergyIntensityPanel", "JourneyFragmentationPage"],
+      "dependsOn": ["web\\src\\hooks\\useDataState.ts", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx"],
+      "disposition": "Reuse existing API; no global state component required."
+    },
+    {
+      "name": "Existing ChartContainer and responsive Grid reuse",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "props": "Preserve data/dataColumns, localized emptyMessage, ariaLabel/ariaDescription, loading/error/onRetry, existing chartKey/hiddenSeries; Grid supports minItemWidth.",
+      "variants": ["Existing panel", "Existing embedded only under reviewed host"],
+      "states": ["loading", "empty", "failure", "retained", "populated"],
+      "usedBy": ["All six journey charts", "JourneyDirectory"],
+      "dependsOn": ["web\\src\\components\\layout\\Grid.tsx", "Existing palette and sizing policies"],
+      "disposition": "No shared replacement needed; adapt callers and run parent-owned browser acceptance."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "EvidenceBand versus JourneyEvidenceBrief",
+      "file": "web\\src\\features\\driving\\components\\journey-fragmentation\\EvidenceBand.tsx",
+      "line": 19,
+      "rule": "MDC-002 / single presentation owner",
+      "detail": "Alternate five-MetricCard evidence renderer remains exported in index.ts:5; assigned route instead mounts JourneyEvidenceBrief (page:79). The alternate is not counted as mounted coverage. Other consumers were not searched.",
+      "existingOwner": "JourneyEvidenceBrief -> DrivingSummaryBrief -> OperationalBrief",
+      "recommendation": "Keep a single active owner; review references before consolidation. Preserve the same five KPIs and cap/row scope, not the old colorful card chrome.",
+      "fix": "Use an explicit feature evidence-props contract and consolidate only after reference checks.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "03b25a2e4828748ba031dde2dd463655e6afa050c7db211a34ccaa4b2f57c19b",
+    "hashAlgorithm": "SHA-256 of current raw page bytes",
+    "currentLineCount": 124,
+    "pagePlusMountedJourneyComponentsLineCount": 739,
+    "lineCountScope": "Page plus twelve mounted journey-fragmentation TSX sections; excludes unmounted EvidenceBand and operational brief adapters, so 739 is not a full feature total.",
+    "sectionCount": 14,
+    "sectionNames": [
+      "Journey evidence and summary",
+      "Chain-length distribution",
+      "Stopover-gap distribution",
+      "Threshold sensitivity",
+      "Elapsed composition",
+      "Short-fragment and chain structure",
+      "Observed energy-intensity comparison",
+      "Local two-hour journey-start profile",
+      "Weekday journey-start profile",
+      "Monthly observed trend",
+      "Ranked observed journey directory",
+      "Evidence and continuity accounting",
+      "Methodology and interpretation limits",
+      "Report context"
+    ],
+    "sectionEvidence": "Page:79-88,90-94,97-104,106-120. Six ChartContainer sites, six GlassPanel sites in twelve mounted domain sections, one summary composite and one LayoutCard footer.",
+    "sectionDetails": [
+      "Summary: five raw metrics; journey/included count, linked/adjacent count, multi-drive share/count, short fragment count/denominator, active days/weeks; evidence band and 1000-row cap.",
+      "Chain distribution: fragments versus journey count, median and p90.",
+      "Gap distribution: linked minute bands/count, median/p90 and supporting gap count.",
+      "Sensitivity: thresholds 30/60/120/240; journeys and linked pairs, two legend series with persisted visibility.",
+      "Elapsed: driving seconds, observed linked parking seconds and linked stopovers.",
+      "Structure: short fragments/denominator, short-fragment distance/share, compact chains, included distance and display-unit boundary explanation.",
+      "Energy: single/multi-drive intensities, complete/total group journey counts, distance coverage and complete-energy distance; observed difference, support band/minimum; missing-energy and noncausality caveat.",
+      "Profiles: two-hour local starts, seven local weekdays, sparse local calendar months.",
+      "Directory: top eight by fragments then distance; rank, leading trophy, included-drive count, distance, start/end address with unknown fallbacks, elapsed duration and linked-gap count.",
+      "Accounting: returned rows and all six row category entries; adjacent pairs and six pair categories; returned/included spans, days since latest included drive and active local days/weeks.",
+      "Methodology: six explanations for segmented ordering, continuity (GPS tolerance/gap), journey-count invariant, complete-energy intensity, frozen clock/timezone, capped scope/noncausality.",
+      "Report context: empty versus populated explanatory text; additional empty-state message when no returned rows."
+    ],
+    "actions": [
+      {"name": "Maximum parking gap", "evidence": "Page:34,40,55-58,67-73", "behavior": "Native shared Select; 30/60/120/240 minutes, default 120; recomputes model locally without issuing a different source query."},
+      {"name": "Retry fatal source", "evidence": "Page:83-85; DrivingSummaryBrief:55", "behavior": "QueryError refetches the same drivesQuery."},
+      {"name": "Retry stale/offline source", "evidence": "Page:77; StaleRefreshWarning:115-129", "behavior": "Shared retry uses source retry; disabled while refreshing."},
+      {"name": "Sensitivity series visibility", "evidence": "ThresholdSensitivityChart:29,33-47", "behavior": "ChartLegend toggles journeys/linkedPairs via existing hidden-series owner and stable chartKey."},
+      {"name": "Chart image export/copy", "evidence": "ChartContainer:422-429,627-633", "behavior": "Existing default PNG, SVG and copy image when six charts are populated; no configured CSV/fullscreen/annotations."},
+      {"name": "Summary interpretation/details drawers", "evidence": "OperationalBrief:106-119,153-155", "behavior": "Shared OperationalBrief details affordance used by evidence and nested summaries; drawer interaction not exercised."},
+      {"name": "Page subtitle help", "evidence": "PageContainer:194-216", "behavior": "Compact header keeps subtitle in existing help tooltip."},
+      {"name": "Workspace vehicle change", "evidence": "Page:38-43", "behavior": "Shared vehicle owner changes history query identity, not a duplicated local selector."}
+    ],
+    "dataBehavior": [
+      "History is a single capped observed window, never guaranteed lifetime data; no workspace date control is currently consumed.",
+      "Analysis clock is fixed once on page mount; refresh/threshold/timezone changes do not advance it.",
+      "Source array is not mutated; segmented stable sort, unusable boundaries, excluded categories and adjacent-pair categories are preserved.",
+      "Each included drive belongs to exactly one journey; included drives minus linked pairs equals journey count.",
+      "Continuity requires included adjacent records, nonnegative gap within threshold, normalized-address match or valid GPS within 250m.",
+      "Short stopover 30min, short fragment 5000m, compact chain 50000m; energy recommended support three complete journeys per group.",
+      "Complete-energy journeys only, distance-weighted Wh/m, absent energy is null, descriptive difference is not causality.",
+      "Raw SI remains in wire/cache/domain; useUnits conversion only in presentation, with existing specialist energy formatter retained.",
+      "All section shells and explanations survive no vehicle, empty and fatal outcomes; retained data survives background refresh failure."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "Not run; no validation baton requested or granted. No TypeScript, full build, lint, Git or browser commands run.",
+    "skill": "Read audit-violations audit.sh. Did not execute because it also launches project-wide TypeScript; used bounded source-only pattern counting instead.",
+    "sourceChecks": {
+      "scope": "Assigned page and twelve mounted journey TSX components",
+      "command": "python -c \"from pathlib import Path; import re; p=Path(r'web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx'); fs=[p]+[f for f in Path(r'web\\src\\features\\driving\\components\\journey-fragmentation').glob('*.tsx') if f.name!='EvidenceBand.tsx']; print('Mounted page + 12 components lines:',sum(len(f.read_text().splitlines()) for f in fs)); pats={'inlineStyle':r'style=','rawControls':r'<(?:button|input|textarea|select|table)\\b','directLibraries':r'from .(?:recharts|react-leaflet|framer-motion).','neonText':r'text-neon','whiteSurface':r'(?:bg|border)-white','ChartContainer':r'<ChartContainer','GlassPanel':r'<GlassPanel'}; [(print(k,sum(len(re.findall(v,f.read_text())) for f in fs))) for k,v in pats.items()]; [(print(str(f),i,line.strip())) for f in fs for i,line in enumerate(f.read_text().splitlines(),1) if re.search(pats['whiteSurface'],line)]\"",
+      "exitCode": 0,
+      "rawOutput": "Mounted page + 12 components lines: 739\ninlineStyle 0\nrawControls 0\ndirectLibraries 0\nneonText 0\nwhiteSurface 4\nChartContainer 6\nGlassPanel 6",
+      "interpretation": "Regex matches, not complete violation or render acceptance. Four whiteSurface tokens are on three lines. Shared wrappers/brief files outside counted scope were read separately.",
+      "failedProbes": "Two preliminary PowerShell scoped counter attempts returned exit 1 without output; replaced by successful explicit Python counters. No claims based on failed commands."
+    },
+    "reportValidation": {
+      "command": "python -c \"import json,hashlib; from pathlib import Path; p=Path(r'docs\\frontend-audits\\audit-page-119.json'); d=json.loads(p.read_text()); required='item page routes purpose primaryGoal dataSources components duplicatedPatterns responsive accessibility states visualIssues architectureIssues priority requiredSharedChanges competingImplementations preservation evidenceLimits filesRead'.split(); assert all(k in d for k in required); assert d['page']==r'web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx'; assert d['routes']==['/journey-fragmentation']; assert d['preservation']['sourceHash']==hashlib.sha256(Path(d['page']).read_bytes()).hexdigest(); assert len(d['preservation']['sectionNames'])==d['preservation']['sectionCount']; print('PASS JSON parse; 20 required fields; exact page/routes; current raw-byte SHA256; 14 named sections')\"",
+      "exitCode": 0,
+      "rawOutput": "PASS JSON parse; 20 required fields; exact page/routes; current raw-byte SHA256; 14 named sections"
+    },
+    "routing": "Lazy import and mounted route source confirmed at App.tsx:100,870; actual authentication/mount/navigation unverified.",
+    "backend": "Read route/listing implementation only; repository SQL/order, live data, response conversion and maximum cap internals not verified.",
+    "ownership": ["docs\\frontend-audits\\audit-page-119.json", ".agent-status\\audit-page-119.txt"],
+    "sourceChanges": "None",
+    "assumptions": "Conventions specify field names rather than a machine-readable schema file; report includes every specified field, issue contract and preservation evidence. Existing capped-history semantics are intentional until domain owner authorizes a different source scope."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md (sections 0,1,15,33,43,44)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\JourneyFragmentationPage.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\AccountingPanel.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\ChainLengthChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\ElapsedComposition.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\EnergyIntensityPanel.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\EvidenceBand.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\JourneyDirectory.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\MethodologyPanel.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\MonthlyTrendChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\StartProfileChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\StopoverGapChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\StructureIndicators.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\ThresholdSensitivityChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\WeekdayProfileChart.tsx",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\_types.ts",
+    "web\\src\\features\\driving\\components\\journey-fragmentation\\index.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\JourneyEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\features\\driving\\lib\\journeyFragmentation.ts",
+    "web\\src\\types\\driving.ts (lines 1-120)",
+    "web\\src\\api\\hooks\\useDriving.ts (lines 110-160)",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\App.tsx (route/import search excerpts)",
+    "web\\src\\lib\\workspaceScope.ts (lines 1-110 and scope search excerpts)",
+    "internal\\api\\router.go (drive route search excerpts)",
+    "internal\\api\\drives\\listing.go (lines 1-170)",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx (interface, toolbar/export and state excerpts)",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx (lines 1-250)",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ui\\Select.tsx"
+  ]
+}
