@@ -1,0 +1,257 @@
+{
+  "item": "audit-page-128",
+  "page": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx",
+  "routes": ["/trip-planner"],
+  "purpose": "Deterministic vehicle trip planning with geocoded endpoints, battery and speed assumptions, planned charging, optional Helix draft, shared destination import, arrival confidence and EV/gas cost comparison.",
+  "primaryGoal": "Plan a feasible route for the workspace-selected vehicle, inspect battery/charging/cost evidence, and optionally send the destination to that vehicle.",
+  "dataSources": [
+    {
+      "name": "usePlanTrip",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 342,
+      "endpoint": "POST /api/v1/trip-planner/plan",
+      "routeEvidence": "internal\\api\\router.go:4012-4014",
+      "owner": "Typed driving mutation; page retains the last successful TripPlan independently of mutation error.",
+      "behavior": "Explicit submit; vehicle_id, origin, destination, current_soc, charge_limit_soc=90, min_arrival_soc, speed_factor, include_weather=true, prefer_superchargers=true. Toast success/error. No server persistence claim.",
+      "status": "Source-matched; runtime unverified"
+    },
+    {
+      "name": "useGeocodeSearch through AddressInput",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 368,
+      "endpoint": "GET /api/v1/geocode/search?q={encodedQuery}&limit=5",
+      "routeEvidence": "internal\\api\\router.go:4018",
+      "owner": "Driving query and AddressInput feature adapter over shared Combobox",
+      "behavior": "400ms input debounce; minimum three characters; geocode-search query key; SLOW staleTime; safeArray; AbortSignal forwarded. Selection resolves display_name/lat/lng; editing invalidates coordinates.",
+      "status": "Source-matched; runtime unverified"
+    },
+    {
+      "name": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-76; internal\\api\\router.go:3319-3320",
+      "owner": "Workspace vehicle store and existing vehicles query",
+      "behavior": "URL/store/first-vehicle precedence, fleet reconciliation, vehicle battery annotation; no competing page picker.",
+      "status": "Source-matched; underlying query reviewed by targeted excerpt only"
+    },
+    {
+      "name": "useVehicleCommand",
+      "file": "web\\src\\api\\hooks\\useVehicleCommand.ts",
+      "line": 50,
+      "endpoint": "POST /api/v1/vehicles/{vehicleID}/command",
+      "routeEvidence": "internal\\api\\router.go:3319,3335",
+      "owner": "Shared vehicle-command mutation",
+      "behavior": "navigation_request with lat/lon; requiresLiveMode=true; networkMode=always; HTTP-success payload success=false is a failure; shared toasts, cache invalidations, expired-auth replay queue retained.",
+      "status": "Source-matched; no live command executed"
+    },
+    {
+      "name": "useTripConfidence through TripCopilotCard",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 356,
+      "endpoint": "POST /api/v1/trip-planner/confidence",
+      "routeEvidence": "internal\\api\\router.go:4014",
+      "owner": "Driving mutation and TripCopilotCard",
+      "behavior": "Manual remaining_km input plus current_soc/min_arrival_soc; endpoint request type carries no vehicle_id. Response includes explanation, arrival_soc, margin_kwh and verdict. Backend estimation defaults not inspected.",
+      "status": "Source-matched; legacy-unit typed boundary explicitly identified, not silently converted"
+    },
+    {
+      "name": "AITripPlannerLLMAgent -> useAiStream",
+      "file": "web\\src\\components\\ai\\AITripPlannerLLMAgent.tsx",
+      "line": 76,
+      "endpoint": "POST /api/v1/ai/trips/plan/draft",
+      "routeEvidence": "Router handler construction inspected at internal\\api\\router.go:1570-1575; exact mount not established in bounded inspection.",
+      "owner": "Existing AI gate, AIFeatureCard, and streaming hook",
+      "behavior": "Opt-in trip-planner-llm-agent; requires vehicle and both endpoints; vehicle/route scopeKey; draft rendered separately and never automatically installed into deterministic plan.",
+      "status": "Endpoint source-known; exact backend mount and stream runtime unverified"
+    },
+    {
+      "name": "useTripShareTarget",
+      "file": "web\\src\\features\\driving\\hooks\\useTripShareTarget.ts",
+      "line": 16,
+      "endpoint": null,
+      "owner": "Feature hook using existing tripShareTarget cache/parser utility",
+      "behavior": "share_target URL marker; consume CacheStorage payload once per pending import; coordinates/text/error status; destination-only prefill; replace URL to remove marker; cancellation guard.",
+      "status": "Hook inspected; parser/service-worker/native share delivery unverified"
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / LayoutCard", "owner": "web\\src\\components\\layout", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 17, "role": "Existing shared page and insights frame; reuse, do not introduce another layout/surface owner"},
+    {"name": "FormSection / Button / Select / Slider / Text / Caption", "owner": "Existing forms and UI category barrels", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 18, "role": "Typed controls and role typography; retain labels, values, disabled states and event handlers"},
+    {"name": "DrivingSummaryBrief / TripCostBrief", "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z", "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx", "line": 35, "role": "Feature adapter over existing OperationalBrief and useOperationalMetrics; preserve source scope, provenance, unavailable/loading/retained status and all nine metrics"},
+    {"name": "AddressInput", "owner": "Feature adapter over web\\src\\components\\forms\\Combobox.tsx", "file": "web\\src\\features\\driving\\components\\AddressInput.tsx", "line": 29, "role": "Two instances share geocode/autocomplete presentation; shared Combobox documents keyboard/ARIA ownership"},
+    {"name": "SOCRouteChart", "owner": "Feature adapter over web\\src\\components\\charts\\ChartContainer.tsx", "file": "web\\src\\features\\driving\\components\\SOCRouteChart.tsx", "line": 86, "role": "Canonical chart frame with accessible data columns; existing image/export/fullscreen infrastructure must survive"},
+    {"name": "TripPlannerMap", "owner": "Feature map over existing maps category barrel", "file": "web\\src\\features\\driving\\components\\TripPlannerMap.tsx", "line": 4, "role": "Geometry guard, endpoints, route line and charging popups; preserve information instead of replacing with illustration"},
+    {"name": "TripCopilotCard / TripLegList / TripShareImportBanner", "owner": "web\\src\\features\\driving\\components", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 31, "role": "Existing domain panels; keep confidence interaction, complete leg/stop detail and import status"},
+    {"name": "AlertBanner / EmptyState / StaleRefreshWarning / FadeIn", "owner": "Existing feedback/motion categories", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 22, "role": "Retain source-specific feedback and reduced-motion owner; actual animation acceptance not exercised"},
+    {"name": "AITripPlannerLLMAgent / AIFeatureCard", "owner": "web\\src\\components\\ai", "file": "web\\src\\components\\ai\\AITripPlannerLLMAgent.tsx", "line": 113, "role": "Reuse shared opt-in/stream scaffold; no new AI card, gate, or overlay engine"}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 169, "rule": "MDC-033", "detail": "Three inline duration metric formatters repeat the local clock presentation; TripLegList separately formats minutes. These have intentionally different granularity, not proven equivalent.", "fix": "Reuse shared duration display only after proving existing rounding, zero-charging placeholder, localization and unit semantics; retain specialist formatter until then.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 376, "rule": "MDC-025", "detail": "Feasibility, estimate and weather notes use hand-composed border/background/icon rows while shared AlertBanner already owns feedback elsewhere on this page.", "fix": "Compose existing semantic feedback primitives where equivalent without deleting any explanation, weather detail or feasibility meaning; no speculative new universal card.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "status": "Source-inspected; all viewports unverified",
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "sourceStrategy": "Page uses single-column mobile, md two-address columns, sm three assumption columns, xl form/map 1:2 and chart/insights 2:1, 3xl map span 3; two-column copilot/cost starts at xl. Actions wrap with min-h-11; map has fixed 400px height; SOC chart has fixed 300px inner viewport.",
+    "issues": [
+      {"file": "web\\src\\features\\driving\\components\\TripLegList.tsx", "line": 81, "rule": "MDC-043 / preservation", "detail": "Both endpoint labels truncate inside a compact flex header with no visible full-name fallback in this component. Long geocoded labels may become inaccessible visually at narrow widths.", "fix": "Allow wrapping or offer a keyboard-reachable full-name disclosure while retaining both names and direction; verify at 320px and 200% text.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\driving\\components\\SOCRouteChart.tsx", "line": 105, "rule": "MDC-034 / MDC-043", "detail": "ResponsiveContainer is hardcoded to height=300 inside the shared frame; long axis/reference labels and frame sizing may diverge on small allocated widths.", "fix": "Use the existing frame sizing contract where supported; preserve data table, all reference lines and exports; verify clipping before changing geometry.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "accessibility": {
+    "status": "Keyboard, screen reader, effective contrast, forced colors and target reachability unverified",
+    "sourcePositives": [
+      "Plan Your Trip section has a localized aria-label; form uses shared labeled controls; plan/send icons aria-hidden; actions min-h-11 and wrapLabel.",
+      "Combobox documents active-descendant/listbox, arrow/Home/End/Enter/Escape/Tab semantics at web\\src\\components\\forms\\Combobox.tsx:9-35; no execution claimed.",
+      "SOCRouteChart supplies ariaLabel and distance/SOC dataColumns at web\\src\\features\\driving\\components\\SOCRouteChart.tsx:86-101.",
+      "Map region is localized at web\\src\\features\\driving\\components\\TripPlannerMap.tsx:133-135; route details remain in TripLegList."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 260, "rule": "MDC-040 / MDC-026", "detail": "Deterministic Plan Trip can be disabled for missing vehicle or unresolved coordinates without an adjacent explanation of which prerequisite is missing; optional AI card has such hints but can be off.", "fix": "Add localized prerequisite help associated with deterministic controls; preserve disabled predicate and shared workspace vehicle owner.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "states": {
+    "loading": "Plan button says Planning; summary only suppresses initial metrics; old successful plan stays. Copilot shows Skeleton during check. Geocoder covers debounce plus query loading. Share import has loading banner. AI uses existing stream card.",
+    "empty": "Form, summary, chart, insights, copilot, cost and legs remain reachable before a plan; map shows an empty frame. AI off intentionally renders no DOM. Infeasibility banner is condition-dependent by business meaning.",
+    "error": "Plan fatal error in form; retained-plan failure uses StaleRefreshWarning; command handles rejected payload and thrown error plus shared toast/auth recovery. Copilot ErrorText exists; address error is not consumed.",
+    "success": "Plan retained in local state and success toast; command shared success toast; copilot badge/explanation; shared destination coordinates/text confirmations.",
+    "disabled": "Plan requires selected vehicle and resolved endpoints and not pending; send disables during command; confidence requires finite positive km and not pending; AI explains missing inputs.",
+    "staleOffline": "Page passes mutation error/fetching into useDataState but omits paused fetch status and success timestamp. No executed offline or retained-data acceptance.",
+    "issues": [
+      {"file": "web\\src\\features\\driving\\components\\AddressInput.tsx", "line": 40, "rule": "MDC-026", "detail": "Only data/isLoading are consumed from geocode query; failed search and empty results both reach options=[] without source-specific error/retry feedback.", "fix": "Keep retained suggestions when available and add localized geocode failure/retry feedback in feature adapter using existing feedback owners; do not replace Combobox or query policy.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 121, "rule": "MDC-026 / MDC-046", "detail": "Mutation trust adapter lacks fetchStatus/dataUpdatedAt; shared dataState detects paused at its line 193. Offline-paused planning may look indefinitely recomputing and successful plan observation time is never recorded.", "fix": "Expose mutation paused state and last successful computation timestamp through the existing trust contract while retaining plan on errors; preserve explicit-submit behavior.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 400, "rule": "MDC-026 / MDC-045", "detail": "Absent weather takes the same branch as efficiency_factor=1 and says no significant weather impact expected, converting unavailable evidence into a benign claim.", "fix": "Distinguish unavailable weather from a returned neutral factor with localized text; retain note/factor and avoid inventing weather measurements.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\driving\\components\\TripCopilotCard.tsx", "line": 69, "rule": "MDC-026", "detail": "Pending/error branches replace the prior usable confidence result; retained verdict badge can remain while explanation is replaced, leaving mixed trust context.", "fix": "Use existing data-trust/retained-error presentation for result and badge together; keep retry action and current source values, never fabricate a successful verdict.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 401, "rule": "MDC-010 / MDC-011 / MDC-015", "detail": "Weather row uses border-white/bg-white alpha surfaces; TripLegList line 73 repeats these rather than theme-resolving neutral surfaces. This is fixed-white decoration, not proof of measured contrast failure.", "fix": "Adopt existing neutral surface/border tokens and semantic feedback variants; no global palette reset, glow, new glass wrapper or increased saturation.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\driving\\components\\SOCRouteChart.tsx", "line": 108, "rule": "MDC-010 / MDC-012 / MDC-034", "detail": "Green/yellow/red gradient, literal green/red/blue series/reference colors, white-alpha axis labels and dark literal tooltip bypass current theme/chart palette owners; gradient colors are not tied to actual SOC thresholds.", "fix": "Reuse canonical chart palette/grid/tooltip/text styling; use restrained area opacity and retain distinct SOC series, minimum threshold, charging markers and all readable labels.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\driving\\components\\TripPlannerMap.tsx", "line": 27, "rule": "MDC-011 / MDC-034", "detail": "Literal marker/path colors and MapTileLayer style=dark force presentation independent of theme; meaning must not be removed during de-noising.", "fix": "Reuse existing maps palette/tile preference contract if supported, with text/popups preserving origin/destination/charging distinctions; keep route and geometry guards.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 67, "rule": "MDC-032 / MDC-046", "detail": "Last successful plan is local state not associated with a submitted vehicle/input snapshot. Changing workspace vehicle or form changes command target/map endpoints/thresholds while summary and legs still reflect old response.", "fix": "Retain last plan with its submitted scope and explicitly label changed/current inputs versus computed result; protect Send to Car from misleading cross-scope association. Do not silently delete old evidence.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\driving\\components\\TripCopilotCard.tsx", "line": 62, "rule": "MDC-045 / mission-33", "detail": "Confidence uses legacy remaining_km request and margin_kwh result; no selected vehicle parameter is supported by inspected type. Do not describe this as selected-vehicle calibrated or rename frontend fields alone.", "fix": "Integration owner must inspect backend confidence model and coordinate any SI contract change end-to-end; page modernization keeps current request/value meaning until resolved. Display preferences apply only after an authoritative SI boundary exists.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\driving\\components\\TripLegList.tsx", "line": 18, "rule": "MDC-026 / MDC-045", "detail": "finiteOrZero and distance/duration/cost fallbacks turn absent or invalid source fields into measured zeros; chart points and map charge summaries also use ??0. Main summary preserves raw optional values instead.", "fix": "Render unknown placeholders and missing reasons; exclude malformed chart points rather than plotting zero; preserve real numeric zero and all valid measurements. No upstream payload rewriting.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\driving\\components\\TripLegList.tsx", "line": 69, "rule": "preservation / mission-0", "detail": "Stops are paired to legs only by index and rendered inside leg iteration; surplus stops are omitted and no legs returns early even when stops exist.", "fix": "Retain all charge-stop records and explicit source ordering; obtain authoritative leg-stop association if available rather than inventing geometry or dropping unmatched stops.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AITripPlannerLLMAgent.tsx", "line": 118, "rule": "mission-0 / data trust", "detail": "AI description says clicking Plan will save a proposed plan, but inspected deterministic action only submits current form and stores response in component state; no AI draft application or persistence is established.", "fix": "Reconcile copy with confirmed behavior, keeping opt-in drafting separate and all deterministic planning actions; integration must verify any actual save capability before advertising it.", "owner": "integration", "confidence": "medium"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve cross-scope retained-plan trust, missing-as-zero/weather claims and confidence legacy contract before cosmetic adoption; then theme-safe chart/map and narrow-width detail preservation.",
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Confidence SI/backend scope contract reconciliation",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useDriving.ts",
+      "nameOfRelatedOwner": "web\\src\\types\\driving.ts:388-405; internal\\api\\router.go:4014",
+      "propsVariantsStates": "Typed confidence request/result; explicit unit and optional selected-vehicle semantics confirmed with backend; preserve verdict, explanation, arrival SOC, margin and request defaults. Backend handler internals not inspected.",
+      "usedBy": ["web\\src\\features\\driving\\components\\TripCopilotCard.tsx", "/trip-planner"],
+      "dependsOn": ["Integration-owned backend contract inspection and Phase-48 methodology before any SI field changes"],
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": {
+    "assessment": "No new shared component is justified by this bounded page review. Existing OperationalBrief, ChartContainer, Combobox, feedback and workspace owners cover the presentation needs. Inline specialist duration formatting and local alert rows are consolidation candidates, not permission to build another system.",
+    "workspaceOwner": {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 182,
+      "routeScope": {"vehicle": true, "range": false},
+      "analysis": "Trip planner consumes useSelectedVehicle and has no duplicate vehicle/date picker. Forward-looking manual plan inputs are not an analysis date window; do not register global range solely for modernization."
+    },
+    "restrainedNoise": "Preserve semantic infeasible/charging/SOC distinctions but replace fixed-white surfaces, chart literals and forced-dark map styling through existing owners; keep saved units/theme/motion preferences. No neon/glow found in page source; dependency palette issues remain."
+  },
+  "preservation": {
+    "sourceHash": "59C9AE7D9657AC4B15CEAE2A162AA92E80DCDFDE4D127F218F419040DFCB5DF0",
+    "currentLineCount": 472,
+    "pagePlusInspectedFeatureComponentsLineCount": 1332,
+    "lineCountScope": "Page plus eight inspected direct feature component files; excludes hook, shared AI, and shared library files. No source edits made.",
+    "sectionCount": 10,
+    "sections": [
+      {"name": "Optional Helix trip draft", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 209, "count": 1, "condition": "Existing opt-in gate; no DOM when off"},
+      {"name": "Shared destination import feedback", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 212, "count": 1, "condition": "Idle hidden; loading/coordinates/text/error banner retained"},
+      {"name": "Plan Your Trip control form", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 220, "count": 1},
+      {"name": "Route map", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 311, "count": 1},
+      {"name": "Trip summary", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 325, "count": 1, "metrics": ["distance","total time","driving time","charging time","energy","estimated cost"]},
+      {"name": "Battery Along Route chart", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 356, "count": 1},
+      {"name": "Trip Insights", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 363, "count": 1, "subsections": ["feasibility verdict and explanation","straight-line estimate disclaimer","weather impact note and conditional factor"]},
+      {"name": "Trip Copilot", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 445, "count": 1},
+      {"name": "Trip Cost vs Gas", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 446, "count": 1, "metrics": ["EV cost","gas cost","savings"], "context": ["gas gallons","savings percentage","gas price per gallon","gas MPG"]},
+      {"name": "Route Breakdown", "file": "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx", "line": 454, "count": 1}
+    ],
+    "sectionCountingMethod": "Ten named functional regions, not JSX section tag count. Three literal section tags; zero direct GlassPanel/ChartContainer tags in page because frames are delegated. Separate stale warning and infeasibility/error alerts are mandatory auxiliary feedback.",
+    "auxiliaryFeedback": ["StaleRefreshWarning at page:321","Conditional infeasibility AlertBanner at page:342","Plan fatal error at page:297","Command thrown/payload failure at page:302","Vehicle battery annotation at page:286"],
+    "actions": [
+      "Edit origin/destination; resolve each via geocode options; edits clear old coordinates.",
+      "Set current SOC 10-100 (default 80), min arrival SOC 5-50 (default 20), speed factors 0.8/1.0/1.1/1.2 (default 1.0).",
+      "Plan Trip explicit mutation and retry/recompute through existing retained-error warning.",
+      "Send to Car navigation_request to current selected vehicle; pending disable; live guard, payload failure, toast and auth recovery.",
+      "Enter finite positive remaining km and run arrival confidence; preserve badge/explanation/arrival SOC/energy margin.",
+      "Opt-in Helix draft stream; keep missing-input help and generated output separate from deterministic form.",
+      "Import destination from share_target cache payload and remove only share marker via replace navigation.",
+      "Map pan/zoom, route/endpoints/charging popups; chart shared table/fullscreen/export capabilities subject to actual frame availability.",
+      "Workspace vehicle selection remains shell-owned; number/unit/currency/locale preferences remain existing-hook-owned."
+    ],
+    "dataBehavior": [
+      "Retain last successful plan on pending/failed recomputation; preserve route, all legs, charge stops, weather, SOC curve and cost comparison.",
+      "Distance/duration/energy on deterministic plan use m/s/Wh as typed; convert at display boundary only. Confidence and gas comparison retain explicit legacy/source-unit fields pending integration review.",
+      "Keep 90% charge limit and weather/supercharger preferences; no new waypoints/departure-date controls or backend capabilities invented.",
+      "Map validates finite WGS84 coordinates, uses per-leg geometry or direct endpoint fallback, includes all valid charge markers and charging details.",
+      "SOC chart preserves distance/SOC columns, min-arrival reference, stop markers and rounding-to-one-decimal display conversion.",
+      "Breakdown keeps leg labels, distance/time/energy/start-to-arrival SOC and stop name/time/SOC/energy/cost/recommended disclaimer.",
+      "Keep actual zero distinct from unavailable and retain estimate caveats, provenance, scope, specialist duration rounding and zero-charging placeholder until equivalence is proven."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified; no numeric contrast claim",
+    "viewport": "unverified at every required width",
+    "sourceOnly": true,
+    "boundedScope": "Only assigned page and direct presentation/data ownership trace; not whole-app or foundation audit. No backend handlers/data queries modified or semantically audited.",
+    "routeEvidence": "App.tsx:685 source mounts trip-planner through SafeRoute. No authenticated browser navigation performed; exact AI route mount not confirmed.",
+    "notRun": ["TypeScript","full violations script (includes project TypeScript)","lint","build","tests","browser/runtime acceptance","live mutations","Git"],
+    "reason": "Phase0-only assignment prohibits source edits/full lint/build; worker contract reserves centralized validation. Audit script was read but not executed because it unconditionally runs project TypeScript.",
+    "sourceChecks": {
+      "command": "PowerShell Select-String against assigned page only: style=; case-sensitive <(button|input|textarea|select|table)\\b; direct recharts/react-leaflet/framer-motion imports; text-neon|shadow-glow; GlassPanel|ChartContainer; Get-FileHash -Algorithm SHA256; Get-Content line counts",
+      "exitCode": 0,
+      "output": ["style=: 0","case-sensitive raw HTML matches: 0","direct library imports: 0","text-neon|shadow-glow: 0","GlassPanel|ChartContainer: 0","page lines: 472","page plus inspected feature components: 1332"],
+      "qualification": "Initial case-insensitive PowerShell raw-tag search counted three shared Select/Slider occurrences; corrected case-sensitive command returned zero raw tags. These counts are page-only and do not certify all dependency styling or architecture."
+    },
+    "unknowns": ["AI exact route mounting, feature gate and transport internals","shared renderer actual browser accessibility/export behavior","backend confidence defaults and SI/persistence guarantees","share parser/cache/service-worker delivery","real theme/RTL/forced-colors/motion and extreme-data behavior"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\TripPlannerPage.tsx",
+    "web\\src\\features\\driving\\components\\AddressInput.tsx",
+    "web\\src\\features\\driving\\components\\SOCRouteChart.tsx",
+    "web\\src\\features\\driving\\components\\TripCopilotCard.tsx",
+    "web\\src\\features\\driving\\components\\TripLegList.tsx",
+    "web\\src\\features\\driving\\components\\TripPlannerMap.tsx",
+    "web\\src\\features\\driving\\components\\TripShareImportBanner.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\TripCostBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\hooks\\useTripShareTarget.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicleCommand.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\components\\ai\\AITripPlannerLLMAgent.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\forms\\Combobox.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
