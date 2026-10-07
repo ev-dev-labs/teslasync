@@ -375,7 +375,7 @@ describe('checked-in locale artifacts', () => {
       '/vehicles': 'vehicles',
     })
     expect(usageManifest.namespaceFallbackBundles.chart).toBe('detail-chart')
-    expect(nested(emitted.get('dashboard'), 'chart.noDataDescription')).toEqual(catalog.chart.noDataDescription)
+    expect(nested(emitted.get('detail-chart'), 'chart.noDataDescription')).toEqual(catalog.chart.noDataDescription)
   })
 
   it('keeps auto-open changelog UI readable without loading release-note content', () => {

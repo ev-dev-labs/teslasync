@@ -1,5 +1,15 @@
 {
   "operations": {
+    "sourceStatus": {
+      "initial": "Awaiting source",
+      "initialFailure": "Source unavailable",
+      "ok": "Source loaded",
+      "stale": "Retained source",
+      "partial": "Partial source",
+      "unavailable": "No source data",
+      "refreshing": "Refreshing source",
+      "loading": "Loading source"
+    },
     "reviewDetails": "Review details",
     "reviewAll": "Review all",
     "detailTitle": "{{title}} details",

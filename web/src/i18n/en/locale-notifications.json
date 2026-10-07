@@ -1,4 +1,17 @@
 {
+  "alertFatigue": {
+    "summary": {
+      "period": "Recorded notification history",
+      "periodReason": "Rates use the recorded firing span, not a complete requested analysis period; read tracking includes delivered notifications only.",
+      "brief": {
+        "eyebrow": "Alert fatigue",
+        "title": "Rule noise and engagement",
+        "empty": "No recorded rules",
+        "fatiguing": "Fatiguing rules detected",
+        "available": "Rules scored"
+      }
+    }
+  },
   "alertPacks": {
     "severityColumn": "Severity",
     "scrollHint": "Scroll horizontally to review every rule setting. Use tab to move between fields.",
@@ -601,7 +614,9 @@
       "longBurn": "24h burn rate",
       "failures": "{{failed}} failed · {{sent}} sent",
       "status": "Budget status",
-      "deferred": "{{count}} deferred by DND"
+      "deferred": "{{count}} deferred by DND",
+      "noLongOutcomes": "No delivery outcomes in the last 24 hours",
+      "noShortOutcomes": "No delivery outcomes in the last hour"
     },
     "timeline": {
       "title": "Delivery outcomes by hour",
@@ -621,6 +636,16 @@
       "title": "Severity breakdown",
       "empty": "No notification outcomes are available in the last 24 hours.",
       "outcomes": "{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending"
+    },
+    "summary": {
+      "period": "Recorded outcomes · 1h and 24h windows",
+      "periodReason": "Short and long windows are separate; only sent and failed outcomes consume the 1% error budget. Deferred DND and pending attempts are excluded.",
+      "brief": {
+        "eyebrow": "Delivery SLO",
+        "title": "Delivery reliability and error budget",
+        "empty": "No eligible delivery outcomes",
+        "available": "Delivery outcomes recorded"
+      }
     }
   },
   "notificationHealth": {
@@ -868,8 +893,57 @@
     },
     "viewContext": "View context"
   },
+  "analytics": {
+    "weeklyDigest": {
+      "aiNarration": {
+        "badge": "Helix",
+        "description": "Get a short, Helix-written recap of your week from the digest data above.",
+        "generateButton": "Generate narration",
+        "title": "Helix narration"
+      }
+    }
+  },
+  "anomaly": {
+    "aiBaseline": {
+      "badge": "Helix",
+      "description": "Compute statistical anomaly bounds (mean, stddev, p5/p95) from this vehicle's recent signal history and walk through how each signal compares to the static safe-range fallback.",
+      "generateButton": "Train baseline",
+      "title": "Learn per-vehicle baseline"
+    },
+    "aiExplanation": {
+      "badge": "Helix",
+      "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
+      "emptyHint": "Select a vehicle above to explain its anomalies.",
+      "generateButton": "Generate explanation",
+      "title": "Helix explanation"
+    }
+  },
   "automations": {
     "builder": {
+      "aiBuilder": {
+        "badge": "Helix",
+        "description": "Describe the automation you want and get a typed graph draft you can review and save below.",
+        "draftButton": "Draft automation",
+        "inputLabel": "Automation description",
+        "noPrompt": "Describe the automation you want Helix to draft.",
+        "noVehicle": "Pick a vehicle above to let Helix draft an automation for it.",
+        "placeholder": "e.g. precondition the cabin to 22°C when I leave work on weekdays",
+        "title": "Draft from natural language"
+      },
+      "aiGeofenceAware": {
+        "actionsLabel": "Actions",
+        "applyButton": "Apply to form",
+        "badge": "Helix",
+        "conditionsLabel": "Conditions",
+        "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
+        "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "proposalLabel": "Proposed automation",
+        "rejectedLabel": "Proposal rejected by validator",
+        "suggestButton": "Suggest automation",
+        "title": "Suggest a geofence-aware automation",
+        "triggersLabel": "Triggers",
+        "unnamed": "(unnamed)"
+      },
       "signals": {
         "batteryLevel": "Battery level",
         "insideTemp": "Inside temperature",
@@ -881,6 +955,14 @@
         "speed": "Speed",
         "state": "Vehicle state"
       }
+    }
+  },
+  "battery": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
+      "generateButton": "Narrate forecast",
+      "title": "Explain the battery health forecast"
     }
   },
   "browserNotifications": {
@@ -940,16 +1022,83 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "chargePlanner": {
+    "aiAgent": {
+      "badge": "Helix",
+      "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
+      "emptyHint": "Select a vehicle and a rate plan to draft a schedule.",
+      "generateButton": "Draft a schedule",
+      "title": "Draft a schedule with Helix"
+    }
+  },
+  "charging": {
+    "aiClustering": {
+      "badge": "Helix",
+      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
+      "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
+      "generateButton": "Explain clusters",
+      "title": "Explain the charging-curve cluster fingerprints"
+    },
+    "aiMlClustering": {
+      "badge": "Helix",
+      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
+      "generateButton": "Train charging-curve clusters",
+      "title": "Learn per-vehicle charging-curve clusters"
+    },
+    "detail": {
+      "aiDiagnosis": {
+        "badge": "Helix",
+        "description": "Get a 2-4 paragraph plain-language explanation of any flags raised on this charging session — trickle, expensive, low-power, or interrupted — generated from the same deterministic aggregation metrics shown above.",
+        "emptyHint": "Waiting for a charging session…",
+        "generateButton": "Generate diagnosis",
+        "title": "Charging diagnosis"
+      }
+    }
+  },
   "chart": {
     "col": {
       "date": "Date",
       "value": "Value"
     }
   },
+  "climate": {
+    "aiPreheatPrecool": {
+      "badge": "Helix",
+      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule.",
+      "generateButton": "Draft schedule",
+      "title": "Suggest a preheat or precool schedule"
+    }
+  },
   "combobox": {
     "maxReached": "Maximum reached",
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
+  },
+  "compare": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the deterministic period-over-period analytics — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign. The numbers are the same the chart and table below show; the narrator only explains them and is honest about zero-baseline windows and best-effort cost figures.",
+      "generateButton": "Narrate comparison",
+      "noVehicleHint": "Pick a vehicle to enable Helix narration.",
+      "title": "Narrate the period comparison"
+    }
+  },
+  "costAnalysis": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the deterministic charging-cost forecast — the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.",
+      "generateButton": "Narrate forecast",
+      "title": "Narrate the charging-cost forecast"
+    }
+  },
+  "dataRepair": {
+    "aiSuggestions": {
+      "badge": "Helix",
+      "button": "Draft repair plan",
+      "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
+      "title": "Helix repair suggestions"
+    }
   },
   "dataState": {
     "refreshBlocked": {
@@ -996,6 +1145,14 @@
   "developerReference": {
     "stats": {
       "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
         "charge": {
           "avgDuration": {
             "description": "Existing average session duration calculation, expressed in canonical seconds.",
@@ -1050,6 +1207,22 @@
           "description": "Measured energy; canonical input is watt-hours.",
           "label": "Energy"
         },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
         "number": {
           "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
           "label": "Value"
@@ -1065,6 +1238,10 @@
         "pressure": {
           "description": "Pressure in kilopascals.",
           "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
         },
         "ratio": {
           "description": "Dimensionless coefficient, not a percentage.",
@@ -1131,6 +1308,29 @@
     "unknownTime": "a moment ago",
     "useDraft": "Use draft"
   },
+  "driveDetail": {
+    "aiCoaching": {
+      "badge": "Helix",
+      "description": "Get a 2-4 paragraph plain-language coaching summary of this drive — efficiency, regen use, and notable braking or acceleration moments — generated from the same per-drive metrics shown above.",
+      "generateButton": "Generate coaching",
+      "title": "Drive coaching"
+    },
+    "aiSpeedProfile": {
+      "badge": "Helix",
+      "description": "Get a short plain-language interpretation of this drive’s speed regime distribution — city / suburban / highway buckets, outliers, and how the speed envelope compares to a typical drive — generated from the same per-drive aggregates shown in the chart.",
+      "generateButton": "Generate insights",
+      "title": "Speed-profile insights"
+    }
+  },
+  "drives": {
+    "aiSearch": {
+      "badge": "Helix",
+      "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
+      "searchButton": "Search with Helix",
+      "title": "Find a drive in natural language"
+    }
+  },
   "editConflict": {
     "banner": {
       "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
@@ -1190,6 +1390,25 @@
       "importDrives": "Import drives"
     }
   },
+  "exports": {
+    "aiRedaction": {
+      "badge": "Helix",
+      "button": "Suggest redactions",
+      "description": "Ask Helix to recommend which PII classes to redact from a shared export. The recommendation is catalog-based — Helix never reads the rows of your export; it consults a deterministic per-export-type PII catalog and surfaces the highly-recommended redactions plus the optional ones that depend on your consent. Apply the recommendation by toggling the matching options in your export request.",
+      "exportType": {
+        "account": "Account",
+        "analytics": "Analytics",
+        "backup": "Backup",
+        "charging": "Charging",
+        "drives": "Drives",
+        "trips": "Trips"
+      },
+      "exportTypeLabel": "Export type",
+      "exportTypePlaceholder": "Select an export type…",
+      "noTypeHint": "Pick an export type to enable Helix.",
+      "title": "Plan PII redactions before sharing"
+    }
+  },
   "feedback": {
     "statSkeleton": {
       "loading": "Loading statistics"
@@ -1217,6 +1436,19 @@
       "vehicle": "Vehicle"
     }
   },
+  "geofences": {
+    "aiSuggest": {
+      "applyButton": "Apply to form",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "description": "Propose a typed geofence draft (centroid, radius, and name) for this visited location based on its visit pattern. Review only — Helix never saves the geofence; you confirm and save via the existing baseline Add geofence form.",
+      "proposalLabel": "Proposed geofence",
+      "radiusLabel": "Radius",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest geofence",
+      "title": "Suggest a geofence for this location"
+    }
+  },
   "helix": {
     "ariaLabel": "Helix",
     "badge": "Helix",
@@ -1236,6 +1468,17 @@
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },
   "help": {
+    "aiHelp": {
+      "askButton": "Ask the assistant",
+      "badge": "Helix",
+      "description": "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
+      "inputLabel": "Ask a question about the app",
+      "placeholder": "e.g. How do I enable energy cost forecasting?",
+      "title": "Ask the help assistant"
+    },
+    "alertFatigue": {
+      "fatiguingIconLabel": "More info about fatiguing rules"
+    },
     "fields": {
       "alertStudio": {
         "alertBehavior": "Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'.",
@@ -1266,8 +1509,26 @@
       "started": "Impersonation started"
     }
   },
+  "incidentTimeline": {
+    "aiSummary": {
+      "badge": "Helix",
+      "button": "Summarize",
+      "description": "Get a 3-6 sentence factual summary of this incident’s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
+      "title": "Helix timeline summary"
+    }
+  },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "aiQA": {
+      "askButton": "Ask",
+      "badge": "Helix",
+      "description": "Ask Helix a natural-language question about your all-time stats — total distance, charging savings, achievements, personal records. Answers are grounded in the same deterministic envelope the dashboard below shows; the narrator never invents numbers.",
+      "inputLabel": "Your question",
+      "noQuestion": "Type a question to ask Helix about your lifetime stats.",
+      "noVehicle": "Select a vehicle to ask about its lifetime stats.",
+      "placeholder": "e.g. How far have I driven in total? How much have I saved on fuel?",
+      "title": "Ask about your lifetime stats"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -1279,6 +1540,45 @@
       "title": "Live data unavailable"
     },
     "unknown": "Unknown"
+  },
+  "liveLogs": {
+    "aiSummary": {
+      "badge": "Helix",
+      "button": "Summarize",
+      "description": "Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.",
+      "emptyHint": "Waiting for a valid log window…",
+      "title": "Helix log/trace summary"
+    }
+  },
+  "locations": {
+    "aiAutoName": {
+      "applyButton": "Apply to form",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
+      "proposalLabel": "Proposed name",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest name",
+      "title": "Suggest a name for this location"
+    }
+  },
+  "maintenance": {
+    "aiPredictive": {
+      "badge": "Helix",
+      "button": "Predict maintenance",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "emptyHint": "Select a vehicle first.",
+      "title": "Helix maintenance advisor"
+    }
+  },
+  "mqttSseInspector": {
+    "aiExplainer": {
+      "badge": "Helix",
+      "button": "Explain streams",
+      "description": "Get a 3-6 sentence factual explanation of the current MQTT broker, SSE hub, and background-job state. The explainer reads only the deterministic broker-status envelope (broker connectivity, per-vehicle stream stats, SSE client counts, job freshness) — broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The explanation is informational; the broker-status snapshot above remains the canonical raw view.",
+      "emptyHint": "A valid time window is required.",
+      "title": "Helix stream explainer"
+    }
   },
   "notifications": {
     "alertStudio": {
@@ -1297,6 +1597,18 @@
         "draftButton": "Draft alert",
         "title": "Draft from natural language"
       },
+      "aiConflicts": {
+        "badge": "Helix",
+        "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
+        "detectButton": "Detect conflicts",
+        "emptyMessage": "No structural conflicts found in the current rule set.",
+        "kind": {
+          "overlapping_threshold": "Overlapping threshold",
+          "redundant_duplicate": "Redundant duplicate"
+        },
+        "reviewButton": "Review rule",
+        "title": "Detect cross-rule conflicts"
+      },
       "aiTemplate": {
         "applyButton": "Apply to editor",
         "badge": "Helix",
@@ -1306,6 +1618,14 @@
         "previewPlaceholders": "Placeholders: {{keys}}",
         "suggestButton": "Suggest template",
         "title": "Suggest a message template"
+      },
+      "aiTuning": {
+        "applyButton": "Apply to form",
+        "badge": "Helix",
+        "description": "Review recent firings and propose a typed AlertRule patch. Descriptive replay only — review before saving.",
+        "previewLabel": "Proposed patch (review before saving):",
+        "suggestButton": "Suggest tuning",
+        "title": "Suggest lower-noise tuning"
       },
       "boolean": {
         "false": "False",
@@ -1373,6 +1693,8 @@
         "noSignalTitle": "Choose a signal",
         "numericValueLabel": "Numeric value",
         "operatorLabel": "Operator",
+        "presetTagFilter": "Filter message presets by tag",
+        "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
         "severityLabel": "Severity",
         "signalNameLabel": "Signal",
         "signalNamePlaceholder": "Select a telemetry signal",
@@ -1519,6 +1841,9 @@
       "toggledOff": "Channel disabled",
       "toggledOn": "Channel enabled",
       "typeLabel": "Channel type"
+    },
+    "device": {
+      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
     },
     "group": {
       "collapse": "Hide similar",
@@ -1730,9 +2055,19 @@
       "summary": {
         "alwaysAllow": "Always allowed",
         "alwaysAllowSub": "Severities that break through",
+        "brief": {
+          "available": "Schedules loaded",
+          "empty": "No schedules",
+          "eyebrow": "Quiet-hours policy",
+          "title": "Schedules, delivery status, and bypass policy"
+        },
         "enabled": "Enabled",
         "enabledSub": "Active on schedule",
         "label": "Quiet hours summary",
+        "noBypass": "No bypass severities configured",
+        "noWindows": "No configured windows",
+        "period": "Configured schedules · right now",
+        "periodContext": "Enabled schedules and their bypass severities; current status uses the local weekday and time.",
         "resource": "quiet-hours windows",
         "statusActive": "Delivering",
         "statusActiveSub": "No window active now",
@@ -1780,9 +2115,17 @@
     },
     "stats": {
       "activeChannels": "Active channels",
+      "brief": {
+        "available": "Statistics available",
+        "eyebrow": "Notification delivery",
+        "title": "Delivery channels and recorded outcomes",
+        "unavailable": "No statistics supplied"
+      },
       "failed": "Failed",
       "loading": "Loading notification statistics",
       "pending": "Pending",
+      "period": "Delivery statistics and current channels",
+      "periodReason": "Delivery counts have no reported time bounds; active channels are the configured enabled/total count.",
       "resource": "notification statistics",
       "sent": "Total sent"
     },
@@ -1937,6 +2280,14 @@
       "wed": "Wed"
     }
   },
+  "range": {
+    "aiPredict": {
+      "badge": "Helix",
+      "description": "Compute per-bucket (temperature × speed) learned Wh/km from this vehicle's recent drives and walk through how each bucket compares to the static heuristic curve the projection uses today.",
+      "generateButton": "Train range model",
+      "title": "Learn per-vehicle range model"
+    }
+  },
   "rbac": {
     "toasts": {
       "saved": "RBAC matrix updated."
@@ -1952,6 +2303,23 @@
   },
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
+  },
+  "routeEfficiency": {
+    "aiSuggestions": {
+      "badge": "Helix",
+      "description": "Get a short plain-language suggestion for lower-consumption habits and route choices grounded in your own historical route data — the dominant route, its kWh/100mi figure, a comparison across your other routes, and one or two concrete, non-mutating ideas you can try yourself.",
+      "emptyHint": "Select a vehicle to generate route-efficiency suggestions.",
+      "generateButton": "Generate suggestions",
+      "title": "Route-efficiency suggestions"
+    }
+  },
+  "safetySettings": {
+    "aiExplainer": {
+      "badge": "Helix",
+      "button": "Explain my settings",
+      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "title": "Explain my safety settings"
+    }
   },
   "savedViews": {
     "announceApplied": "View {{name}} applied",
@@ -1977,12 +2345,29 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
+  "search": {
+    "aiSearch": {
+      "badge": "Helix",
+      "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "searchButton": "Search with Helix",
+      "title": "Search with natural language"
+    }
+  },
   "settings": {
     "tab": {
       "badge": "Show unread count in browser tab",
       "flash": "Flash tab title on critical alerts",
       "heading": "Browser tab signals",
       "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications, and mirrors the count onto the installed app icon while the app is open where supported. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background."
+    }
+  },
+  "sharing": {
+    "aiTripPostcard": {
+      "badge": "Helix",
+      "button": "Generate share card",
+      "description": "Ask Helix to draft a propose-only image prompt and preview spec for the selected trip's share card. Helix only sees the redacted trip context (distance, duration, drive count, vehicle name) — never raw coordinates or street addresses. The draft is never published automatically; review it here, then use the existing Share button on the trip to publish a static share card.",
+      "noTripHint": "Pick a trip from the list above to enable Helix.",
+      "title": "Draft a Helix share-card image"
     }
   },
   "shortcuts": {
@@ -1996,6 +2381,15 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "softwareUpdates": {
+    "aiNarration": {
+      "badge": "Helix",
+      "button": "Summarize updates",
+      "description": "Ask Helix to walk through your firmware update history — the current version, the install cadence, and the headline release-note themes. The narrator quotes only the deterministic update events your vehicle reported plus public Tesla release notes for the versions you have installed; it never invents firmware versions or claims features your installed build does not have.",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
+      "title": "Summarize my software update history"
+    }
   },
   "sourceLayer": {
     "age": "age",
@@ -2017,6 +2411,15 @@
       "desc": "Source layer unknown."
     }
   },
+  "stateMachineDebugger": {
+    "aiNarrator": {
+      "badge": "Helix",
+      "button": "Narrate transitions",
+      "description": "Get a 3-6 sentence factual narration of the current vehicle FSM transition trace. The narrator reads only the deterministic FSM envelope (vehicle id, window bounds, per-FSM-name counts, per-edge counts, flap count, transition stream) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narration is informational; the transition table, state diagram, and FSM health panel above remain the canonical raw view.",
+      "emptyHint": "Select a vehicle and a valid time window first.",
+      "title": "Helix FSM narrator"
+    }
+  },
   "tagInput": {
     "added": "{{count}} tags added",
     "addedOne": "Tag added",
@@ -2029,6 +2432,32 @@
     "removed": "Removed {{tag}}",
     "tagsList": "Tags: {{tags}}",
     "tagsNone": "No tags yet"
+  },
+  "tco": {
+    "aiNarration": {
+      "badge": "Helix",
+      "button": "Explain ownership cost",
+      "description": "Ask Helix to explain the deterministic operating-cost evidence below. Lifetime equivalent gas cost is derived from positive-drive distance, configured gas price per unit, and comparison MPG; only monthly equivalent gas rows estimate distance from recorded-cost charging energy. The layer also discloses the positive-cost charging filter, the flat $50-per-modeled-month maintenance heuristic, and the excluded ownership costs.",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
+      "title": "Explain my lifetime operating cost"
+    }
+  },
+  "tempImpact": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
+      "emptyHint": "Select a vehicle to narrate its temperature impact.",
+      "generateButton": "Narrate impact",
+      "title": "Narrate the cabin-temperature impact"
+    }
+  },
+  "tirePressure": {
+    "aiTrendReasoning": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
+      "generateButton": "Narrate trend",
+      "title": "Narrate the 30-day tire-pressure trend"
+    }
   },
   "toast": {
     "admin": {
@@ -2285,5 +2714,85 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "tripPlanner": {
+    "aiAgent": {
+      "badge": "Helix",
+      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
+      "generateButton": "Draft a plan",
+      "noDestination": "Set a destination for Helix to plan the route to.",
+      "noOrigin": "Set a starting point for Helix to plan the route from.",
+      "noVehicle": "Select a vehicle to let Helix draft a trip plan.",
+      "title": "Draft a plan with Helix"
+    }
+  },
+  "trips": {
+    "detail": {
+      "aiSuggestName": {
+        "badge": "Helix",
+        "description": "Get a short, propose-only name suggestion grounded in this trip’s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically — review the proposed name in the panel and click Save to apply it.",
+        "generateButton": "Suggest a name",
+        "title": "Suggest a trip name"
+      }
+    }
+  },
+  "vampireDrain": {
+    "aiNarrative": {
+      "badge": "Helix",
+      "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
+      "generateButton": "Narrate drain",
+      "title": "Explain the recent vampire drain"
+    }
+  },
+  "vehicles": {
+    "aiPaintPreview": {
+      "badge": "Helix",
+      "button": "Preview paint color",
+      "description": "Ask Helix to draft a propose-only paint-color image prompt for this vehicle. Helix only sees the redacted vehicle context (model, trim, current exterior color) — never the display name, VIN, license plate, or location. The draft is never applied automatically; review the proposed image prompt here, then use the existing Color setting below to apply the new paint if you'd like to keep it.",
+      "noVehicleHint": "Open a vehicle detail page to enable Helix.",
+      "title": "Draft a Helix paint preview"
+    }
+  },
+  "voiceMode": {
+    "actions": {
+      "muteTts": "Mute spoken replies",
+      "muteTtsShort": "Mute Helix",
+      "startListening": "Start listening",
+      "startListeningShort": "Speak",
+      "stopAll": "Stop Helix",
+      "stopAllShort": "Stop",
+      "stopListening": "Stop listening",
+      "stopListeningShort": "Stop mic",
+      "unmuteTts": "Unmute spoken replies",
+      "unmuteTtsShort": "Unmute Helix"
+    },
+    "button": "Speak to Helix",
+    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
+    "emptyHint": "Tap the mic and dictate a question first.",
+    "errors": {
+      "sttFailed": "Voice input failed: {{reason}}",
+      "unsupported": "Your browser does not support voice input. Try Chrome, Edge, or Safari."
+    },
+    "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
+    "listeningHint": "Listening — speak now…",
+    "title": "Voice mode",
+    "transcriptLabel": "Voice transcript",
+    "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."
+  },
+  "watchFaceNL": {
+    "badge": "Helix",
+    "button": "Ask about my car",
+    "description": "Ask Helix a glance-style natural-language question about your vehicle right now — battery, range, charging, locks, climate, recent alerts. Helix only reads a typed snapshot of canonical state values; it never claims to have changed a setting or sent a vehicle command. To lock, unlock, start climate, or send another command use the watch-face tap icons or the phone app.",
+    "inputLabel": "Your question for Helix",
+    "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
+    "title": "Ask Helix about your watch face"
+  },
+  "yearReview": {
+    "aiNarration": {
+      "badge": "Helix",
+      "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "generateButton": "Generate narration",
+      "title": "Helix narration"
+    }
   }
 }

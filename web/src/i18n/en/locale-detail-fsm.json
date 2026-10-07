@@ -92,6 +92,27 @@
       "d30": "Last 30 days",
       "d90": "Last 90 days",
       "all": "All time"
+    },
+    "brief": {
+      "eyebrow": "State-machine observability",
+      "title": "Transition and live-state evidence",
+      "description": "Inspect page-scoped transitions and flap evidence alongside the matching server total and independently fetched current state.",
+      "bounds": "{{label}} · [{{start}}, {{end}}) · {{timezone}}",
+      "sourceStatus": "Transitions: {{history}} · Live state: {{live}}",
+      "freshness": "Transitions: {{history}} · Live state: {{live}}"
+    },
+    "statstrip": {
+      "pageDescription": "Transition rows loaded on this server page, not all transitions in the selected range.",
+      "pageTotal": "{{page}} / {{total}}",
+      "pageUnknown": "Page or total count not supplied",
+      "totalDescription": "Server-reported matching transitions across all pages for this vehicle, FSM filter and transition window.",
+      "flapsDescription": "Transition IDs flagged by the existing flap detector on the loaded page only.",
+      "pageOnly": "Loaded transition page only",
+      "stateDescription": "Textual current state from the separate live-state query, not historical state in the transition window.",
+      "liveContext": "Live-state snapshot; independent of the transition range and timeline freeze",
+      "provenance": "Page and flap counts cover the loaded server page; total covers matching transitions in the selected window. Current state comes from a separate live-state snapshot.",
+      "alltimeProvenance": "All matching transition history; page and flap counts cover only loaded rows. Current state is a separate live snapshot.",
+      "unknownPeriod": "Transition bounds were not supplied. Page and flap counts remain page-scoped; current state is a separate live snapshot."
     }
   }
 }

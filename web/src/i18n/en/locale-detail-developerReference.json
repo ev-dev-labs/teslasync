@@ -382,6 +382,14 @@
         "title": "Embedded group uses the same renderer"
       },
       "metric": {
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
         "charge": {
           "avgDuration": {
             "description": "Existing average session duration calculation, expressed in canonical seconds.",
@@ -436,6 +444,22 @@
           "description": "Measured energy; canonical input is watt-hours.",
           "label": "Energy"
         },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
         "number": {
           "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
           "label": "Value"
@@ -455,6 +479,10 @@
         "ratio": {
           "description": "Dimensionless coefficient, not a percentage.",
           "label": "Ratio"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
         },
         "score": {
           "description": "Numeric score on a declared 100-point scale.",
@@ -524,8 +552,13 @@
         "units": "Local measurement profile"
       },
       "reason": {
+        "bytes": "Expected a non-negative byte count",
         "count": "Expected a non-negative safe integer count",
+        "countTotal": "Expected a non-negative safe integer total",
         "duration": "Expected a non-negative duration for this display",
+        "formatter": "Expected a non-empty formatted measurement",
+        "identifier": "Expected a non-negative safe integer identifier",
+        "latency": "Expected a non-negative latency",
         "missing": "No measurement supplied",
         "nonfinite": "Expected a finite numeric measurement",
         "overflow": "Display conversion exceeded the finite numeric range",

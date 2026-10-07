@@ -52,6 +52,7 @@ import {
   useAuditLogs,
   useWebErrorsSummary,
   useSecurityEvents,
+  useLatestSecurityEvent,
   useDBStats,
   useMigrations,
   useConnectionPool,
@@ -654,6 +655,37 @@ describe('useWebErrorsSummary', () => {
 // ---------------------------------------------------------------------------
 
 describe('useSecurityEvents', () => {
+  it('sends exact workspace bounds, keeps all returned history, and isolates both range keys', async () => {
+    const rows = [{ id: 'older-than-seven-days', locked: false, createdAt: '2020-02-10T00:00:00Z' }];
+    mockedRequest.mockResolvedValue(rows);
+    const { qc, wrapper } = makeWrapper();
+    const start = '2020-02-01T08:00:00Z';
+    const endExclusive = '2020-03-01T08:00:00Z';
+    const { result, rerender } = renderHook(
+      ({ from, to }) => useSecurityEvents('42', from, to),
+      { wrapper, initialProps: { from: start, to: endExclusive } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [path, options] = callArgs();
+    const url = new URL(path, 'http://localhost');
+    expect(url.pathname).toBe('/security');
+    expect([...url.searchParams.keys()]).toEqual(['end', 'start', 'vehicle_id']);
+    expect(url.searchParams.get('start')).toBe(start);
+    expect(url.searchParams.get('end')).toBe(endExclusive);
+    expect(url.searchParams.get('vehicle_id')).toBe('42');
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual(rows);
+    expect(qc.getQueryCache().find({ queryKey: adminKeys.securityEvents('42', start, endExclusive) })).toBeDefined();
+    expect(adminKeys.securityEvents('43', start, endExclusive)).not.toEqual(adminKeys.securityEvents('42', start, endExclusive));
+
+    rerender({ from: '2020-02-02T08:00:00Z', to: endExclusive });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(new URL(callArgs(1)[0], 'http://localhost').searchParams.get('start')).toBe('2020-02-02T08:00:00Z');
+    rerender({ from: '2020-02-02T08:00:00Z', to: '2020-03-02T08:00:00Z' });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3));
+    expect(new URL(callArgs(2)[0], 'http://localhost').searchParams.get('end')).toBe('2020-03-02T08:00:00Z');
+  });
+
   it('GETs /security with a snake_case vehicle_id query param', async () => {
     mockedRequest.mockResolvedValueOnce([{ id: 's1', locked: true, createdAt: 'now' }]);
     const { wrapper } = makeWrapper();
@@ -664,13 +696,36 @@ describe('useSecurityEvents', () => {
     expect(result.current.data?.[0].locked).toBe(true);
   });
 
+  describe('useLatestSecurityEvent', () => {
+    it('preserves the live query key, five-second polling, payload and abort signal', async () => {
+      const latest = { locked: false, sentryMode: 'On', doorState: 'Closed' };
+      mockedRequest.mockResolvedValue(latest);
+      const { qc, wrapper } = makeWrapper();
+      const { result } = renderHook(() => useLatestSecurityEvent('42'), { wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(callArgs()[0]).toBe('/security/latest?vehicle_id=42');
+      expect(callArgs()[1].signal).toBeInstanceOf(AbortSignal);
+      expect(result.current.data).toEqual(latest);
+      expect(adminKeys.latestSecurityEvent('42')).toEqual(['security-latest', '42']);
+      expect(qc.getQueryCache().find({ queryKey: adminKeys.latestSecurityEvent('42') })?.options.refetchInterval).toBe(5000);
+    });
+
+    it('does not request live state without a selected vehicle', async () => {
+      const { wrapper } = makeWrapper();
+      const { result } = renderHook(() => useLatestSecurityEvent(''), { wrapper });
+      expect(result.current.fetchStatus).toBe('idle');
+      expect(mockedRequest).not.toHaveBeenCalled();
+    });
+  });
+
   it('URL-encodes a vehicle id that carries reserved characters', async () => {
     mockedRequest.mockResolvedValueOnce([]);
     const { wrapper } = makeWrapper();
     renderHook(() => useSecurityEvents('7 8&x=1'), { wrapper });
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
-    expect(callArgs()[0]).toBe('/security?vehicle_id=7%208%26x%3D1');
+    expect(callArgs()[0]).toBe('/security?vehicle_id=7+8%26x%3D1');
+    expect(new URL(callArgs()[0], 'http://localhost').searchParams.get('vehicle_id')).toBe('7 8&x=1');
   });
 
   it('is disabled (never fires) when the vehicle id is empty', async () => {

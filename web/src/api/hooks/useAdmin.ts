@@ -3,6 +3,7 @@ import { request, SudoCanceledError } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS } from '@/lib/constants';
+import { scopedPath } from '@/api/scope';
 import type {
   APIKey, APICallLog, APICallLogStats, BackupConfig, BackupRun,
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
@@ -37,7 +38,11 @@ export const adminKeys = {
   extendedHealth: ['system-status', 'extended-health'] as const,
   runtimeStatus: ['runtime-status'] as const,
   auditLogs: ['audit-logs'] as const,
-  securityEvents: (vehicleId: string) => ['security-events', vehicleId] as const,
+  securityEvents: (vehicleId: string, start?: string, endExclusive?: string) =>
+    start === undefined && endExclusive === undefined
+      ? ['security-events', vehicleId] as const
+      : ['security-events', vehicleId, start, endExclusive] as const,
+  latestSecurityEvent: (vehicleId: string) => ['security-latest', vehicleId] as const,
   dbStats: ['db-stats'] as const,
   migrations: ['migrations'] as const,
   connectionPool: ['connection-pool'] as const,
@@ -286,11 +291,21 @@ export function useWebErrorsSummary() {
   });
 }
 
-export function useSecurityEvents(vehicleId: string) {
+export function useLatestSecurityEvent(vehicleId: string) {
   return useQuery({
-    queryKey: adminKeys.securityEvents(vehicleId),
+    queryKey: adminKeys.latestSecurityEvent(vehicleId),
     queryFn: ({ signal }) =>
-      request<SecurityEvent[]>(`/security?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
+      request<SecurityEvent>(scopedPath('/security/latest', { vehicleId }), { signal }),
+    enabled: !!vehicleId,
+    refetchInterval: 5000,
+  });
+}
+
+export function useSecurityEvents(vehicleId: string, start?: string, endExclusive?: string) {
+  return useQuery({
+    queryKey: adminKeys.securityEvents(vehicleId, start, endExclusive),
+    queryFn: ({ signal }) =>
+      request<SecurityEvent[]>(scopedPath('/security', { vehicleId, start, end: endExclusive }), { signal }),
     enabled: !!vehicleId,
     select: safeArray,
   });

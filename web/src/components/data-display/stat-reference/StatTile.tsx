@@ -47,7 +47,7 @@ export function StatTile({ metric, preferences, loading }: StatTileProps) {
       : <Text as="span" variant="metricValue" className={cn('mt-1 block leading-tight', styles.value,
         result.text.length > 18 && styles.longValue, result.text.length > 28 && styles.extremeValue)}>
         <span data-stat-value>{result.value}</span>
-        {result.unit && <>{['temperature', 'percent', 'score'].includes(definition.format) ? '' : ' '}
+        {result.unit && <>{['temperature', 'percent', 'score', 'multiplier'].includes(definition.format) ? '' : ' '}
           <span data-stat-unit className="font-normal text-[var(--text-secondary)]">{result.unit}</span></>}
       </Text>}
     {loading && <VisuallyHidden>{t('developerReference.stats.state.loading', 'Loading measurements')}</VisuallyHidden>}

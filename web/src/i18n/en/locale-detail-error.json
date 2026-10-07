@@ -1,5 +1,6 @@
 {
   "error": {
+    "unexpected": "An unexpected error occurred",
     "loadFailed": "Failed to load data",
     "retry": "Retry",
     "notFound": {

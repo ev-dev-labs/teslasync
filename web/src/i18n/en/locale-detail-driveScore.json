@@ -27,9 +27,9 @@
     },
     "emptyTitle": "No scored drives",
     "overall": "Overall score",
-    "basedOn": "Based on {{count}} drives",
+    "basedOn": "Based on {{displayCount}} drives",
     "gradeLabel": "Grade: {{grade}}",
-    "drivesInPeriod": "{{count}} drives in period",
+    "drivesInPeriod": "{{displayCount}} drives in period",
     "avgConsumption": "Avg consumption",
     "powerRange": "Power range",
     "avgMaxSpeed": "Avg max speed",
@@ -100,6 +100,13 @@
       "max": "Max",
       "range": "Score range",
       "drives": "Drives"
-    }
+    },
+    "sourceError": "Drive score evidence could not be loaded",
+    "historySource": "Drive history",
+    "serverSource": "Server drive score",
+    "serverUnavailable": "Server drive score is unavailable; scored history remains visible",
+    "serverUnavailableOnly": "Server drive score is unavailable",
+    "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
+    "selectVehicle": "Select a vehicle in the header to load drive score evidence."
   }
 }

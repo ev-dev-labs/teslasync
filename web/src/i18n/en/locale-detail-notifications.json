@@ -294,7 +294,15 @@
       "pending": "Pending",
       "activeChannels": "Active channels",
       "loading": "Loading notification statistics",
-      "resource": "notification statistics"
+      "resource": "notification statistics",
+      "period": "Delivery statistics and current channels",
+      "periodReason": "Delivery counts have no reported time bounds; active channels are the configured enabled/total count.",
+      "brief": {
+        "eyebrow": "Notification delivery",
+        "title": "Delivery channels and recorded outcomes",
+        "available": "Statistics available",
+        "unavailable": "No statistics supplied"
+      }
     },
     "channels": {
       "add": "Add channel",
@@ -470,7 +478,9 @@
         "testMessageLabel": "Test message",
         "signalHint": "Use {{SignalName}}",
         "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
-        "kindLabel": "Rule type"
+        "kindLabel": "Rule type",
+        "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
+        "presetTagFilter": "Filter message presets by tag"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -617,7 +627,17 @@
         "statusQuietSub": "{{count}} window active now",
         "statusActiveSub": "No window active now",
         "alwaysAllow": "Always allowed",
-        "alwaysAllowSub": "Severities that break through"
+        "alwaysAllowSub": "Severities that break through",
+        "noWindows": "No configured windows",
+        "noBypass": "No bypass severities configured",
+        "period": "Configured schedules · right now",
+        "periodContext": "Enabled schedules and their bypass severities; current status uses the local weekday and time.",
+        "brief": {
+          "eyebrow": "Quiet-hours policy",
+          "title": "Schedules, delivery status, and bypass policy",
+          "empty": "No schedules",
+          "available": "Schedules loaded"
+        }
       },
       "guide": {
         "title": "How quiet hours work",
@@ -666,6 +686,9 @@
         "payloadSource": "Always \"teslasync\".",
         "payloadTimestamp": "RFC3339 server time."
       }
+    },
+    "device": {
+      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
     }
   }
 }

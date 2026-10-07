@@ -54,7 +54,12 @@
       "publisher": "Publisher",
       "recommendationsCount": "{{count}} automation recommendations (suggestions only — never auto-applied)",
       "trustAndInstall": "Trust as local-development pack…",
-      "upgradeTo": "Upgrade to v{{version}}"
+      "upgradeTo": "Upgrade to v{{version}}",
+      "recommendations": "Automation recommendations",
+      "recommendationRationale": "Rationale",
+      "recommendationTrigger": "Suggested trigger",
+      "recommendationCondition": "Suggested condition",
+      "recommendationAction": "Suggested action"
     },
     "export": {
       "download": "Export",
@@ -116,7 +121,8 @@
       "usingFullGrant": "Preview mode: simulating full requested-capability grant (not installed)",
       "usingInstalledGrant": "Using installed capability grant",
       "row": "Sample",
-      "value": "Value"
+      "value": "Value",
+      "installedGrantUnavailable": "Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available."
     },
     "security": {
       "browserNote": "Ed25519 in Web Crypto requires a secure context (HTTPS or localhost) and a modern browser (roughly Chrome/Edge 137+, Firefox 130+, Safari 17+ — exact floors vary by OS). Older or locked-down browsers cannot install signed packs; this is by design, not a bug.",
@@ -175,6 +181,11 @@
       "unsigned": "Unsigned — preview only",
       "validRecognized": "Signature valid · recognized publisher",
       "validUnrecognized": "Signature valid · unrecognized publisher"
+    },
+    "source": {
+      "unresolved": "{{label}} availability has not resolved yet.",
+      "paused": "The local {{label}} read is paused; no empty result is inferred.",
+      "error": "Could not read {{label}} from local storage."
     }
   },
   "achievements": {
@@ -326,6 +337,14 @@
   "developerReference": {
     "stats": {
       "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
         "charge": {
           "avgDuration": {
             "description": "Existing average session duration calculation, expressed in canonical seconds.",
@@ -380,6 +399,22 @@
           "description": "Measured energy; canonical input is watt-hours.",
           "label": "Energy"
         },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
         "number": {
           "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
           "label": "Value"
@@ -395,6 +430,10 @@
         "pressure": {
           "description": "Pressure in kilopascals.",
           "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
         },
         "ratio": {
           "description": "Dimensionless coefficient, not a percentage.",

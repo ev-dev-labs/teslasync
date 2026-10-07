@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
 import type { OperationalNarrative } from '@/types/operationalNarrative'
+import type { MetricRaw } from '@/lib/metric-reference'
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails'
 
 export type OperationalTone =
@@ -26,8 +27,10 @@ export interface OperationalBriefMetric {
   key: string
   label: string
   value: ReactNode
-  detail: string
+  detail: ReactNode
   tone?: OperationalTone
+  rawValue?: MetricRaw
+  valueState?: 'value' | 'missing' | 'invalid'
 }
 
 export interface OperationalAttention {
@@ -55,6 +58,7 @@ export interface OperationalBriefProps {
   metricColumns?: 2 | 3 | 4
   /** Dense layout for pages where the evidence grid follows a compact page header. */
   compact?: boolean
+  loading?: boolean
 }
 
 const TONE_TEXT: Record<OperationalTone, string> = {
@@ -88,6 +92,7 @@ export function OperationalBrief({
   testId,
   metricColumns = 4,
   compact = false,
+  loading = false,
 }: OperationalBriefProps) {
   const { t } = useTranslation()
   const titleId = useId()
@@ -110,7 +115,7 @@ export function OperationalBrief({
 
   return (
     <>
-      <section aria-labelledby={titleId} data-testid={testId}>
+      <section aria-labelledby={titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
         <GlassPanel
           className={cn(
             'overflow-hidden border-[var(--border-default)] bg-[var(--surface-1)] shadow-e1',
@@ -167,20 +172,25 @@ export function OperationalBrief({
                 <div
                   key={metric.key}
                   role="listitem"
+                  data-operational-metric={metric.key}
+                  data-value-state={metric.valueState}
                   className={cn('min-w-0 bg-[var(--surface-2)]', compact ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4')}
                 >
                   <div className={cn(compact && 'flex items-baseline justify-between gap-3')}>
                     <MetricLabel className={compact ? 'min-w-0 text-xs' : undefined}>{metric.label}</MetricLabel>
                     <MetricValue
+                      data-operational-value={loading ? undefined : true}
                       className={cn(
-                        compact ? 'shrink-0 whitespace-nowrap text-base sm:text-lg' : 'mt-1 truncate text-xl sm:text-2xl',
+                        compact ? 'min-w-0 break-words text-base sm:text-lg' : 'mt-1 break-words text-xl sm:text-2xl',
                         TONE_TEXT[metric.tone ?? 'neutral'],
                       )}
                     >
-                      {metric.value}
+                      {loading ? (
+                        <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
+                      ) : metric.value}
                     </MetricValue>
                   </div>
-                  <Text as="p" size="2xs" color="muted" className={cn('mt-1', !compact && 'line-clamp-2')}>
+                  <Text as="div" size="2xs" color="muted" className="mt-1">
                     {metric.detail}
                   </Text>
                 </div>
@@ -244,12 +254,15 @@ export function OperationalBrief({
                     as="span"
                     size="sm"
                     weight="bold"
+                    aria-busy={loading || undefined}
                     className={cn('tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
                   >
-                    {metric.value}
+                    {loading ? (
+                      <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
+                    ) : metric.value}
                   </Text>
                 </div>
-                <Text as="p" size="xs" color="muted" className="mt-1">
+                <Text as="div" size="xs" color="muted" className="mt-1">
                   {metric.detail}
                 </Text>
               </div>

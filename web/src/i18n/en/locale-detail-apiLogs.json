@@ -1,5 +1,12 @@
 {
   "apiLogs": {
+    "summary": {
+      "rangeScope": "Totals, error rate, and average duration use the View settings range; request-list filters do not change these metrics.",
+      "selectedRange": "View settings range",
+      "last24hScope": "Independent rolling 24-hour count, not the View settings range. The response does not record its exact bounds.",
+      "title": "Request activity",
+      "rangeBounds": "{{start}} – {{end}} ({{timezone}}, exclusive end)"
+    },
     "title": "API logs",
     "subtitle": "Record of all API calls with request/response details",
     "statsScope": "API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.",

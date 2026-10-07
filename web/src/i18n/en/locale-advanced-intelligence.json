@@ -166,7 +166,8 @@
         "cost": "Expected cost without supported tariff and currency data",
         "meter": "Meter energy when no meter source is recorded"
       },
-      "vehicleEnergy": "Vehicle energy"
+      "vehicleEnergy": "Vehicle energy",
+      "exportScope": "Exports include the full reconciliation result with canonical SI values, uncertainty bounds, and currency, regardless of visible columns."
     },
     "form": {
       "displayEquivalent": "Display equivalent: {{value}}"
@@ -501,7 +502,12 @@
     "save": "Save guard",
     "saveError": "Save failed",
     "recent": "Recent activity",
-    "acted": "acted"
+    "acted": "acted",
+    "events": {
+      "empty": "No recent storm activity was returned.",
+      "error": "Recent storm activity could not be loaded.",
+      "unresolved": "Recent storm activity has not resolved yet; no empty result is inferred."
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -602,6 +608,14 @@
   "developerReference": {
     "stats": {
       "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
         "charge": {
           "avgDuration": {
             "description": "Existing average session duration calculation, expressed in canonical seconds.",
@@ -656,6 +670,22 @@
           "description": "Measured energy; canonical input is watt-hours.",
           "label": "Energy"
         },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
         "number": {
           "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
           "label": "Value"
@@ -671,6 +701,10 @@
         "pressure": {
           "description": "Pressure in kilopascals.",
           "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
         },
         "ratio": {
           "description": "Dimensionless coefficient, not a percentage.",

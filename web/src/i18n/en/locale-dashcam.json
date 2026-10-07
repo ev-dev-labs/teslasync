@@ -19,13 +19,28 @@
       "emptyMessage": "Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.",
       "emptyTitle": "No event candidates yet",
       "title": "Event evidence",
-      "wholeClip": "whole clip"
+      "wholeClip": "whole clip",
+      "type": {
+        "sentry_trigger": "Sentry trigger",
+        "manual_save": "Manual save",
+        "impact": "Impact",
+        "hard_brake": "Hard brake (statistical)",
+        "hard_accel": "Hard accel (statistical)",
+        "sharp_turn": "Sharp turn (statistical)",
+        "motion": "Motion detected",
+        "unknown": "Unclassified"
+      }
     },
     "export": {
       "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
       "manifest": "Download incident manifest (JSON)",
       "still": "Export redacted still (PNG)",
-      "title": "Local export"
+      "title": "Local export",
+      "canvasUnavailable": "This browser could not create a still-image canvas.",
+      "imageUnavailable": "This browser could not encode the still image.",
+      "failed": "The local still export failed.",
+      "decodeFailed": "This browser could not decode the clip for a still export.",
+      "manifestFailed": "The local manifest export failed."
     },
     "filters": {
       "all": "All",
@@ -108,6 +123,21 @@
       "player": "Player",
       "reconstruction": "Reconstruction",
       "redaction": "Redaction"
+    },
+    "camera": {
+      "front": "Front",
+      "back": "Back",
+      "left_repeater": "Left repeater",
+      "right_repeater": "Right repeater",
+      "left_pillar": "Left pillar",
+      "right_pillar": "Right pillar",
+      "unknown": "Unknown camera"
+    },
+    "source": {
+      "RecentClips": "Recent",
+      "SavedClips": "Saved",
+      "SentryClips": "Sentry",
+      "unknown": "Unknown source"
     }
   },
   "achievements": {
@@ -253,6 +283,14 @@
   "developerReference": {
     "stats": {
       "metric": {
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
         "charge": {
           "avgDuration": {
             "description": "Existing average session duration calculation, expressed in canonical seconds.",
@@ -307,6 +345,22 @@
           "description": "Measured energy; canonical input is watt-hours.",
           "label": "Energy"
         },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
         "number": {
           "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
           "label": "Value"
@@ -322,6 +376,10 @@
         "pressure": {
           "description": "Pressure in kilopascals.",
           "label": "Pressure"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
         },
         "ratio": {
           "description": "Dimensionless coefficient, not a percentage.",

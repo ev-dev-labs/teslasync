@@ -259,6 +259,9 @@
       "body": "The observed window runs from the first drive in the picked period to its end. Driving hours come from logged drive durations; everything else is the car sitting still. Costs use your electricity rate from Settings and cover energy only.",
       "iconLabel": "More info about utilization",
       "methodologyLabel": "More info about utilization coverage"
+    },
+    "alertFatigue": {
+      "fatiguingIconLabel": "More info about fatiguing rules"
     }
   }
 }

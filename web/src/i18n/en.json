@@ -4374,6 +4374,9 @@
       "body": "The observed window runs from the first drive in the picked period to its end. Driving hours come from logged drive durations; everything else is the car sitting still. Costs use your electricity rate from Settings and cover energy only.",
       "iconLabel": "More info about utilization",
       "methodologyLabel": "More info about utilization coverage"
+    },
+    "alertFatigue": {
+      "fatiguingIconLabel": "More info about fatiguing rules"
     }
   },
   "date": {
@@ -4443,6 +4446,16 @@
     }
   },
   "operations": {
+    "sourceStatus": {
+      "initial": "Awaiting source",
+      "initialFailure": "Source unavailable",
+      "ok": "Source loaded",
+      "stale": "Retained source",
+      "partial": "Partial source",
+      "unavailable": "No source data",
+      "refreshing": "Refreshing source",
+      "loading": "Loading source"
+    },
     "reviewDetails": "Review details",
     "reviewAll": "Review all",
     "detailTitle": "{{title}} details",
@@ -5078,7 +5091,12 @@
     "wp": {
       "name": "Name",
       "type": "Type",
-      "distance": "Distance"
+      "distance": "Distance",
+      "kind": {
+        "supercharger": "Supercharger",
+        "destination": "Destination",
+        "waypoint": "Waypoint"
+      }
     },
     "subtitle": "Live location tracking and navigation status",
     "refresh": "Refresh",
@@ -5392,6 +5410,9 @@
     }
   },
   "routes": {
+    "mobileGridReference": "Mobile grid reference",
+    "layoutReference": "Layout reference",
+    "statReference": "Stat reference",
     "notificationHealth": "Notification health",
     "teslaApiUsage": "Tesla API usage",
     "teslaPhysics": "Tesla physics",
@@ -6282,7 +6303,8 @@
     "category": "Category",
     "percentage": "%",
     "timestamp": "Timestamp",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "noDataAvailable": "No data available"
   },
   "units": {
     "km": "km",
@@ -6576,6 +6598,14 @@
       "emptyMessage": "Add widgets to start building your dashboard.",
       "addWidgets": "Add widgets",
       "browseTemplates": "Browse starter layouts"
+    },
+    "tipCards": {
+      "noRecommendations": "No recommendations",
+      "impact": {
+        "high": "high",
+        "medium": "medium",
+        "low": "low"
+      }
     }
   },
   "charging": {
@@ -7495,6 +7525,22 @@
       }
     },
     "admin": {
+      "operationalBrief": {
+        "retained": "Retained evidence",
+        "snapshot": "Source snapshot",
+        "unmeasured": "Not measured",
+        "periodUnknown": "Observation time and complete analysis bounds are not supplied by this source."
+      },
+      "diagnostics": {
+        "brief": {
+          "selectVehicle": "No vehicle selected",
+          "retained": "Retained measurements",
+          "loading": "Loading measurements",
+          "failed": "Read failed",
+          "loaded": "Source loaded",
+          "missing": "No measurements supplied"
+        }
+      },
       "apiKey": {
         "create": {
           "success": "API key created",
@@ -9267,6 +9313,7 @@
     }
   },
   "error": {
+    "unexpected": "An unexpected error occurred",
     "loadFailed": "Failed to load data",
     "retry": "Retry",
     "notFound": {
@@ -9328,6 +9375,9 @@
     "endpointCount": "{{count}} endpoints available"
   },
   "admin": {
+    "auditLog": {
+      "verifyError": "Verification failed"
+    },
     "systemStatus": {
       "clientPerformance": {
         "title": "Client performance",
@@ -9673,9 +9723,40 @@
         "null": "Null",
         "sublabel": "{{count}} · {{pct}}%",
         "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here."
+      },
+      "brief": {
+        "eyebrow": "Feature flag operations",
+        "title": "Registry and recent changes",
+        "description": "Review stored value types alongside the recent audit subset. Registry edits and deletions remain sudo-gated and audited.",
+        "sourceStatus": "Registry: {{registry}} · Audit: {{audit}}",
+        "freshness": "Registry: {{registry}} · Audit: {{audit}}"
+      },
+      "statstrip": {
+        "type": {
+          "boolean": "{{count}} {{kind}} values",
+          "number": "{{count}} {{kind}} values",
+          "string": "{{count}} {{kind}} values",
+          "object": "{{count}} {{kind}} values",
+          "array": "{{count}} {{kind}} values",
+          "null": "{{count}} {{kind}} values"
+        },
+        "registryMissing": "Registry snapshot not supplied",
+        "auditContext": "Returned recent audit rows only (limit 50); not lifetime totals or a selected date range.",
+        "totalDescription": "Current registry entries, across all stored JSON value types.",
+        "booleanDescription": "Boolean-valued flags, including both true and false.",
+        "structuredDescription": "Object-valued and array-valued flags in the current registry.",
+        "changesDescription": "Number of returned recent audit rows, including deletions.",
+        "deletesDescription": "Delete operations among returned recent audit rows.",
+        "actorsDescription": "Distinct non-empty trimmed actor identities in returned recent audit rows.",
+        "period": "Registry snapshot + recent audit subset",
+        "provenance": "Registry counts describe the current feed. Changes, deletes and contributors describe only the separately fetched latest 50 audit rows; their date bounds are not supplied."
       }
     },
     "xray": {
+      "brief": {
+        "boundsUnknown": "Exact query bounds are not supplied",
+        "generatedAt": "Generated at"
+      },
       "chart": {
         "title": "Samples per bucket",
         "subtitle": "Time-series of ingested telemetry rows over the selected window.",
@@ -9825,6 +9906,10 @@
       },
       "board": {
         "aria": "Orders board"
+      },
+      "brief": {
+        "title": "Order progress",
+        "description": "Order progress and the soonest upcoming delivery from your Tesla account."
       }
     },
     "diskForecast": {
@@ -9837,12 +9922,34 @@
       "col": {
         "count": "Count",
         "severity": "Severity"
+      },
+      "brief": {
+        "eyebrow": "Credential observability",
+        "title": "Rotation and expiry outlook",
+        "description": "Review server-classified rotation thresholds, known credential ages and signed time to expiry. This surface observes credentials; it does not rotate them.",
+        "unsupported": "Tracker not configured"
+      },
+      "statstrip": {
+        "trackedDescription": "All returned tracked credentials, including unknown severity.",
+        "healthyDescription": "Returned credentials classified OK by their server-side per-kind thresholds.",
+        "soonDescription": "Returned credentials classified warn by their server-side per-kind thresholds.",
+        "overdueDescription": "Returned credentials classified critical by their server-side per-kind thresholds.",
+        "oldestDescription": "Largest known age among tracked credentials. Raw input is seconds; displayed in days.",
+        "expiryDescription": "Smallest known signed time to expiry. Negative values mean already expired. Raw input is seconds; displayed in days.",
+        "period": "Rotation tracker snapshot",
+        "provenance": "Returned credentials and server-computed per-kind thresholds; not a selected date-range aggregate.",
+        "unknown": "{{count}} tracked credentials have unknown severity"
       }
     },
     "slowQueries": {
       "colQuery": "Query"
     },
     "dataQuality": {
+      "summary": {
+        "window": "Scoring window",
+        "inclusiveWindow": "Server window: {{start}} through {{end}} UTC (inclusive end). Normalization totals and critical fields use this same window; no exclusive upper bound is attested.",
+        "unknownBounds": "The response has not supplied the scoring window bounds."
+      },
       "pageTitle": "Data quality",
       "subtitle": "Per-field signal freshness, gaps and duplicates, with normalization-version provenance for the same bounded window.",
       "notConfigured": "The data-quality scorer is not configured on this deployment. Scoring requires the signal_log hypertable connection to be wired.",
@@ -9889,6 +9996,9 @@
       "fieldsEmptyTitle": "No field scores",
       "fieldsEmptyMessage": "No signal fields were persisted during this scoring window.",
       "fieldsEmptyTable": "No field scores"
+    },
+    "schemaDrift": {
+      "driftedBodyUnknownCounts": "The live schema fingerprint differs from the seed. Object-count comparisons are unavailable; inspect the available fingerprints and confirm migrations before making changes."
     }
   },
   "systemStatus": {
@@ -10022,7 +10132,34 @@
       "estSavings": "Estimated savings",
       "ratio": "Compression ratio",
       "compressed": "Compressed",
-      "savings": "Savings"
+      "savings": "Savings",
+      "allVehicles": "All vehicles",
+      "battery": "Battery level",
+      "batteryAria": "battery {{percent}}%",
+      "brokerDisconnected": "MQTT broker disconnected",
+      "chargingSessions": "Charging sessions",
+      "connectedVehicles": "{{count}} connected",
+      "drives": "Drives",
+      "emptyAfterLink": "page to see per-vehicle telemetry status.",
+      "emptyBeforeLink": "No vehicles configured yet. Add a vehicle from the",
+      "last": "last: {{time}}",
+      "liveness": "Liveness:",
+      "mqttInspector": "MQTT inspector",
+      "next": "next: {{time}}",
+      "noneConfigured": "none configured",
+      "openCoverage": "Open telemetry coverage",
+      "poll": "poll",
+      "pollingDisabled": "polling engine disabled",
+      "positions": "GPS positions",
+      "signalLog": "Signal log",
+      "statusAria": "telemetry status: {{status}}",
+      "stream": "stream",
+      "streamConnected": "Fleet Telemetry connected",
+      "streamingOnly": "polling engine off (streaming-only)",
+      "teslaAccount": "Tesla account",
+      "vehicleFallback": "Vehicle {{id}}",
+      "vehiclesUnavailable": "Vehicle telemetry is unavailable until the vehicle list loads.",
+      "vinTail": "VIN ···{{tail}}"
     },
     "operations": {
       "title": "Operations",
@@ -10073,7 +10210,17 @@
       "snapshotNote": "Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.",
       "targetValue": "Target {{target}}%",
       "target": "Target",
-      "targetAria": "Target uptime percentage"
+      "targetAria": "Target uptime percentage",
+      "healthyComponents": "{{healthy}} / {{total}} components healthy",
+      "loadFailed": "Failed to load uptime data.",
+      "windowLabel": "{{window}} · {{label}}",
+      "windows": {
+        "day": "Last 24 hours",
+        "month": "Last 30 days",
+        "quarter": "Last 90 days",
+        "week": "Last 7 days",
+        "year": "Last year"
+      }
     },
     "incidents": {
       "active": "Active incidents",
@@ -10119,7 +10266,15 @@
       "startInvalid": "Invalid start time.",
       "startRequired": "Pick a start time.",
       "title": "Scheduled maintenance",
-      "until": "Until {{time}}"
+      "until": "Until {{time}}",
+      "activeUntil": "Active until {{time}} ({{minutes}} min remaining)",
+      "defaultMessage": "Scheduled maintenance · ends {{time}}",
+      "description": "Schedule a window for upgrades or hardware moves. The status banner will switch to blue “Maintenance” instead of red “Down”.",
+      "durationInvalid": "Duration cannot exceed 1,440 minutes.",
+      "durationRequired": "Enter a valid duration in minutes.",
+      "readOnly": "Maintenance controls are read-only",
+      "unsaved": "You have unsaved maintenance-window details. Discard them?",
+      "within24h": "Within 24h"
     },
     "updateCheck": "Update check",
     "backupStatistics": "Backup statistics",
@@ -10127,9 +10282,132 @@
     "backupConfiguration": "Backup configuration",
     "vehicles": "Vehicles",
     "sourceUnavailable": "{{label}} is unavailable.",
-    "sourceLoadError": "Unable to load {{label}}."
+    "sourceLoadError": "Unable to load {{label}}.",
+    "authAria": "Tesla account authentication",
+    "refreshHint": "Press r to refresh",
+    "resourcesCopy": {
+      "dbConnections": "DB connections",
+      "goroutines": "goroutines",
+      "inUse": "of {{count}} in use",
+      "positions": "{{displayCount}} positions",
+      "runtimeThreads": "Runtime threads",
+      "tables": "across {{count}} tables",
+      "title": "Server resources",
+      "uptime": "Uptime"
+    },
+    "statusLabels": {
+      "degraded": "degraded",
+      "down": "down",
+      "healthy": "healthy",
+      "maintenance": "maintenance"
+    },
+    "summary": {
+      "awaitingCheck": "Awaiting first check",
+      "checked": "Last checked {{time}}",
+      "checkedStale": "Last checked {{time}} (stale)",
+      "connected": "Connected",
+      "databaseConnected": "connected",
+      "healthFailed": "Health check failed — {{error}}",
+      "healthy": "{{healthy}} / {{total}} healthy",
+      "minutesAgo": "{{count}}m ago",
+      "noData": "no data",
+      "notConnected": "Not connected",
+      "tokenExpired": "Token expired",
+      "tokenExpires": "Expires in {{days}}d",
+      "unhealthyWorkers": "{{down}} of {{total}} workers unhealthy",
+      "vehiclesTelemetry": "{{count}} vehicles · {{positions}} positions",
+      "vehicleTelemetry": "{{count}} vehicle · {{positions}} positions"
+    },
+    "systemInfoCopy": {
+      "appVersion": "App version",
+      "chartVersion": "Chart version",
+      "goroutines": "Goroutines",
+      "goRuntime": "Go runtime",
+      "loading": "Loading system info…",
+      "platform": "OS / arch",
+      "unavailable": "System info is unavailable."
+    },
+    "authDetail": {
+      "disconnected": "No Tesla account is currently connected.",
+      "expiredDays": "Expired {{days}}d ago — re-authenticate to resume Fleet API calls.",
+      "expiredToday": "Expired today — re-authenticate to resume Fleet API calls.",
+      "expiresDays": "Token expires in {{days}} days.",
+      "expiresToday": "Token expires later today.",
+      "expiresTomorrow": "Token expires in 1 day.",
+      "expiryInvalid": "Token expiry unparseable.",
+      "expiryUnknown": "Token expiry unknown — re-authenticate to refresh."
+    },
+    "authLabels": {
+      "ok": "Connected",
+      "warn": "Expires soon",
+      "expired": "Token expired",
+      "disconnected": "Not connected",
+      "unknown": "Unknown"
+    },
+    "pipelineStates": {
+      "asleep": "asleep",
+      "charging": "charging",
+      "driving": "driving",
+      "offline": "offline",
+      "online": "online",
+      "sending": "sending",
+      "slow": "slow",
+      "stale": "stale",
+      "unknown": "unknown"
+    },
+    "pipelineTime": {
+      "secondsAgo": "{{count}}s ago",
+      "secondsAhead": "in {{count}}s",
+      "minutesAgo": "{{count}} min ago",
+      "minutesAhead": "in {{count}} min",
+      "hoursAgo": "{{count}}h ago",
+      "hoursAhead": "in {{count}}h",
+      "daysAgo": "{{count}}d ago",
+      "daysAhead": "in {{count}}d"
+    },
+    "telemetrySources": {
+      "pollSource": "REST polling",
+      "streamSource": "Fleet Telemetry stream",
+      "streamUnknown": "Fleet Telemetry connection unknown"
+    },
+    "workerStates": {
+      "healthy": "all healthy",
+      "degraded": "degraded",
+      "down": "down",
+      "unknown": "unknown"
+    },
+    "workerInstanceStates": {
+      "healthy": "healthy",
+      "unhealthy": "unhealthy",
+      "down": "down"
+    },
+    "workersCopy": {
+      "apiLogs": "API logs",
+      "empty": "No background workers reporting. Ensure the notification, export, and automation worker processes are running and reachable on their configured ports.",
+      "groupStatus": "{{name}} status: {{status}}",
+      "instanceCount": "{{count}} instances",
+      "instanceCounts": "{{healthy}} of {{total}} instances",
+      "instances": "Instances",
+      "instanceStatus": "instance status: {{status}}",
+      "oneInstance": "1 instance",
+      "replicated": "Replicated",
+      "replicatedType": "{{replicated}} of {{total}} type",
+      "replicatedTypes": "{{replicated}} of {{total}} types",
+      "singleEach": "single instance each",
+      "typeCounts": "{{healthy}} of {{total}} types",
+      "types": "Worker types",
+      "unavailable": "Background worker health is unavailable.",
+      "replicationGuidance": "Running multiple instances of a worker? Set <notification>{{notification}}</notification>, <export>{{export}}</export>, or <automation>{{automation}}</automation> to a comma-separated list of hostnames. Each instance will then appear here with its own status and latency."
+    }
   },
   "apiLogs": {
+    "summary": {
+      "rangeScope": "Totals, error rate, and average duration use the View settings range; request-list filters do not change these metrics.",
+      "selectedRange": "View settings range",
+      "last24hScope": "Independent rolling 24-hour count, not the View settings range. The response does not record its exact bounds.",
+      "title": "Request activity",
+      "rangeBounds": "{{start}} – {{end}} ({{timezone}}, exclusive end)"
+    },
     "title": "API logs",
     "subtitle": "Record of all API calls with request/response details",
     "statsScope": "API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.",
@@ -10862,7 +11140,8 @@
         "confirmDismissDescription": "Dismissal changes case metadata only. Source sessions remain untouched and the decision is audited.",
         "reasonPlaceholder": "Explain why these findings are false positives"
       },
-      "metricsRetained": "Retained metrics"
+      "metricsRetained": "Retained metrics",
+      "readOnly": "Repair controls are read-only"
     },
     "quarantine": {
       "all": "All records",
@@ -12301,7 +12580,9 @@
         "cancelled": "Cancelled",
         "test": "Test",
         "undo": "Undone"
-      }
+      },
+      "detailUnavailable": "Execution details are unavailable.",
+      "loadFailed": "Could not load execution history."
     },
     "readOnly": {
       "title": "Automation controls are read-only"
@@ -14339,7 +14620,10 @@
     "serviceMode": "Service Mode",
     "speedLimit": "Speed limit",
     "centerDisplay": "Center display",
-    "homelinkDevices": "HomeLink Devices"
+    "homelinkDevices": "HomeLink Devices",
+    "sparkline": {
+      "retained": "Trend may be out of date"
+    }
   },
   "activity": {
     "drive": "drive",
@@ -14964,7 +15248,9 @@
       "noDetails": "No plan details",
       "ratePlans": "Rate plans",
       "noRates": "No rate plans",
-      "noData": "No charge plans or rate data"
+      "noData": "No charge plans or rate data",
+      "plansError": "Unable to load charge plans",
+      "ratesError": "Unable to load rate plans"
     },
     "chargeSessionChart": {
       "total": "Total",
@@ -15026,7 +15312,11 @@
       "title": "Charging schedule",
       "noTimes": "No scheduled times set",
       "currentLevel": "Current level",
-      "status": "Status"
+      "status": "Status",
+      "scheduleUnavailable": "Charging schedule unavailable",
+      "vehicleUnavailable": "Vehicle charging state unavailable",
+      "scheduleRetained": "Previously loaded charging schedule remains visible while this source recovers.",
+      "vehicleRetained": "Previously loaded vehicle charging state remains visible while this source recovers."
     },
     "chargingSessionDetail": {
       "chartAria": "Charging power and battery state of charge over the latest session",
@@ -15043,7 +15333,10 @@
       "chargerSupercharger": "Supercharger",
       "chargerDcFast": "DC fast",
       "chargerAcHome": "AC / home",
-      "time": "Time"
+      "time": "Time",
+      "telemetry": "Charging telemetry",
+      "telemetryError": "Charging telemetry could not be loaded.",
+      "telemetryRetained": "Previously loaded charging telemetry remains visible while it refreshes."
     },
     "chargingTelemetry": {
       "voltage": "Voltage",
@@ -15234,7 +15527,8 @@
       "empty": "No recent drives",
       "title": "Drive telemetry",
       "noTelemetry": "No telemetry for this drive",
-      "time": "Time"
+      "time": "Time",
+      "telemetryRetained": "Previously loaded drive telemetry remains visible while this source recovers."
     },
     "drivetrainHealth": {
       "statusGood": "Healthy",
@@ -15250,7 +15544,9 @@
       "inverterHealth": "Inverter",
       "driveState": "Drive state",
       "noData": "No drivetrain data",
-      "title": "Drivetrain health"
+      "title": "Drivetrain health",
+      "assessmentError": "The drivetrain assessment could not be loaded.",
+      "assessmentRetained": "The previous drivetrain assessment remains visible while it refreshes."
     },
     "drivingCoach": {
       "potentialSavings": "Potential savings: {{pct}}%",
@@ -15339,7 +15635,12 @@
       "recentTransitions": "Recent transitions",
       "duration": "Duration",
       "share": "Share",
-      "stateLabel": "State"
+      "stateLabel": "State",
+      "noTransitions": "No recent transitions",
+      "statsError": "State distribution could not be loaded.",
+      "statsRetained": "Previously loaded state distribution remains visible while it refreshes.",
+      "transitionsError": "Recent transitions could not be loaded.",
+      "transitionsRetained": "Previously loaded transitions remain visible while they refresh."
     },
     "geofence": {
       "noZone": "No zone",
@@ -15438,7 +15739,11 @@
       "every": "Every",
       "months": "mo",
       "recentService": "Recent service",
-      "noRecords": "No service records yet"
+      "noRecords": "No service records yet",
+      "itemsError": "Configured maintenance could not be loaded.",
+      "itemsRetained": "Previously loaded maintenance intervals remain visible while they refresh.",
+      "recordsError": "Service records could not be loaded.",
+      "recordsRetained": "Previously loaded service records remain visible while they refresh."
     },
     "noMediaPlayed": "No tracks played",
     "mediaHistory": "Media history",
@@ -15486,7 +15791,8 @@
       "statorTemp": "Stator temp",
       "gearState": "Gear state",
       "lateralG": "Lateral G",
-      "longitudinalG": "Longitudinal G"
+      "longitudinalG": "Longitudinal G",
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
     },
     "mqtt": {
       "title": "MQTT status",
@@ -15629,7 +15935,9 @@
       "noData": "No signals in catalog",
       "signalsAvailable": "signals available",
       "searchPlaceholder": "Search signals…",
-      "noResults": "No matching signals"
+      "noResults": "No matching signals",
+      "observationsUnavailable": "Signal observations unavailable",
+      "observationsRetained": "Previously loaded signal observations remain visible while this source recovers."
     },
     "signalHealth": {
       "secAgo": "{{count}}s ago",
@@ -15647,7 +15955,10 @@
       "degraded": "Degraded",
       "critical": "Critical",
       "unknown": "Unknown",
-      "staleSignals": "Stale / gap signals"
+      "staleSignals": "Stale / gap signals",
+      "sourceCatalog": "Signal catalog",
+      "sourceLive": "Live signals",
+      "sourceStatistics": "Signal statistics"
     },
     "signalLog": {
       "signalsPerSec": "signals/sec",
@@ -15710,7 +16021,11 @@
       "fast": "Fast",
       "empty": "No drive data yet",
       "drivesSuffix": "drives",
-      "noData": "No data"
+      "noData": "No data",
+      "averageSpeed": "Average speed",
+      "day": "Day",
+      "driveCount": "Drive count",
+      "hour": "Hour"
     },
     "speedProfile": {
       "sampleScope": "Observed speed samples · average power is not energy efficiency",
@@ -15763,7 +16078,12 @@
       "statusOk": "Healthy",
       "statusDegraded": "Degraded",
       "statusUnknown": "Unknown",
-      "statusDown": "Down"
+      "statusDown": "Down",
+      "healthError": "Unable to load service health",
+      "noDatabaseData": "No database size data",
+      "databaseError": "Unable to load database size",
+      "noPoolData": "No connection pool data",
+      "poolError": "Unable to load connection pool data"
     },
     "telemetryErrors": {
       "unknown": "Unknown",
@@ -15774,7 +16094,11 @@
       "errorVINs": "error VINs",
       "activeVINs": "{{count}} VINs with errors",
       "noErrors": "No errors recorded",
-      "recent": "recent"
+      "recent": "recent",
+      "vinsUnavailable": "Error VIN summary unavailable",
+      "feedUnavailable": "Telemetry error sample unavailable",
+      "vinsRetained": "Previously loaded error VIN summary remains visible while this source recovers.",
+      "feedRetained": "Previously loaded telemetry error sample remains visible while this source recovers."
     },
     "tirePressureHistory": {
       "fl": "FL",
@@ -15887,7 +16211,9 @@
       "title": "Version info",
       "os": "OS",
       "arch": "Arch",
-      "noData": "No version data available"
+      "noData": "No version data available",
+      "versionError": "Version information could not be loaded.",
+      "versionRetained": "Previously loaded version information remains visible while it refreshes."
     },
     "wallConnector": {
       "noSite": "No Tesla energy site linked",
@@ -15964,9 +16290,55 @@
       "title": "Year in review"
     },
     "updateStatus": "{{status}}",
-    "moreInfoAbout": "More info about {{title}}"
+    "moreInfoAbout": "More info about {{title}}",
+    "digitalTwinSources": {
+      "state": "Vehicle state",
+      "security": "Security state",
+      "charging": "Charging state",
+      "unavailable": "{{source}} unavailable",
+      "retained": "{{source}}: previously loaded data remains visible while this source recovers."
+    },
+    "vehicleAccessMobileError": "Unable to load mobile access",
+    "vehicleAccessDriversError": "Unable to load authorized drivers",
+    "vehicleAccessInvitationsError": "Unable to load pending invitations",
+    "fleetStats": {
+      "sourceError": "Unable to load {{source}}",
+      "recentDrives": "Recent drives",
+      "recentCharges": "Recent charging sessions"
+    }
+  },
+  "operationalSummary": {
+    "retained": "Retained source data",
+    "unavailable": "Source unavailable",
+    "loading": "Loading sources",
+    "snapshot": "Queried snapshot",
+    "unknown": "Source values unknown"
+  },
+  "signalsWorkspace": {
+    "summary": {
+      "snapshot": "Current workspace state",
+      "workspaceScope": "Selection, mode and pins are current workspace state; live rate has its own one-second SSE window.",
+      "liveRateScope": "Last-second SSE event count",
+      "liveInactive": "Live stream is not active",
+      "liveRateDescription": "Vehicle-scoped events received in the last second; not the chart’s rolling five-minute window.",
+      "diffPeriod": "Two selected snapshots",
+      "diffScope": "Changed and visible counts compare the selected A/B snapshots; pins describe current workspace state.",
+      "title": "Selection and stream context",
+      "diffAvailable": "Snapshot comparison available",
+      "diffUnavailable": "Snapshot comparison unavailable"
+    }
   },
   "anomaly": {
+    "summary": {
+      "snapshot": "Current detector snapshot",
+      "period": "Current snapshot · last 7 days · last 24 hours",
+      "scope": "Coverage and health categories describe the current detector snapshot. Anomaly counts retain their separate 7-day and 24-hour source windows.",
+      "sevenDays": "Last 7 days",
+      "day": "Last 24 hours",
+      "title": "Coverage and anomaly windows",
+      "available": "Detector snapshot available",
+      "unavailable": "Detector snapshot unavailable"
+    },
     "title": "Anomaly detection",
     "subtitle": "Automatic health monitoring and signal anomaly detection",
     "monitored": "Signals monitored",
@@ -16860,7 +17232,8 @@
       "planTrip": "Plan trip",
       "sendToCar": "Send to car",
       "vehicleBattery": "Vehicle at {{level}}%",
-      "error": "Failed to compute trip plan. Please try again."
+      "error": "Failed to compute trip plan. Please try again.",
+      "commandError": "Could not send the destination to the vehicle. Try Send to Car again."
     },
     "stats": {
       "distance": "Distance",
@@ -16903,9 +17276,9 @@
     },
     "emptyTitle": "No scored drives",
     "overall": "Overall score",
-    "basedOn": "Based on {{count}} drives",
+    "basedOn": "Based on {{displayCount}} drives",
     "gradeLabel": "Grade: {{grade}}",
-    "drivesInPeriod": "{{count}} drives in period",
+    "drivesInPeriod": "{{displayCount}} drives in period",
     "avgConsumption": "Avg consumption",
     "powerRange": "Power range",
     "avgMaxSpeed": "Avg max speed",
@@ -16976,7 +17349,14 @@
       "max": "Max",
       "range": "Score range",
       "drives": "Drives"
-    }
+    },
+    "sourceError": "Drive score evidence could not be loaded",
+    "historySource": "Drive history",
+    "serverSource": "Server drive score",
+    "serverUnavailable": "Server drive score is unavailable; scored history remains visible",
+    "serverUnavailableOnly": "Server drive score is unavailable",
+    "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
+    "selectVehicle": "Select a vehicle in the header to load drive score evidence."
   },
   "drives": {
     "analysis": "Trends and highlights",
@@ -17131,6 +17511,12 @@
     },
     "empty": {
       "cta": "Reset filters"
+    },
+    "sourceError": "Drive history could not be loaded",
+    "sourceUnavailable": "Drive history is unavailable",
+    "fsdMissing": {
+      "title": "Per-drive FSD evidence is unavailable",
+      "message": "This response has no per-drive FSD attribution. Drive history remains available; FSD filters and sorting stay disabled."
     }
   },
   "efficiency": {
@@ -17495,7 +17881,9 @@
       "suggestCharging": "Likely charging",
       "suggestOther": "Visited; charging not observed",
       "title": "Visited places to review",
-      "useTemplate": "Use in template"
+      "useTemplate": "Use in template",
+      "loadFailed": "Visited place suggestions could not be loaded.",
+      "unavailable": "Visited place suggestions are unavailable."
     },
     "selectVehicle": "Select a vehicle first",
     "noPosition": "No position data available for this vehicle",
@@ -17667,7 +18055,10 @@
     },
     "bucketAria": "Average efficiency line chart by temperature range bucket",
     "monthlyAria": "Monthly drive count bars and average temperature line",
-    "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive"
+    "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive",
+    "detective": {
+      "loadFailed": "Efficiency diagnosis could not be loaded."
+    }
   },
   "notifications": {
     "title": "Notifications",
@@ -17964,7 +18355,15 @@
       "pending": "Pending",
       "activeChannels": "Active channels",
       "loading": "Loading notification statistics",
-      "resource": "notification statistics"
+      "resource": "notification statistics",
+      "period": "Delivery statistics and current channels",
+      "periodReason": "Delivery counts have no reported time bounds; active channels are the configured enabled/total count.",
+      "brief": {
+        "eyebrow": "Notification delivery",
+        "title": "Delivery channels and recorded outcomes",
+        "available": "Statistics available",
+        "unavailable": "No statistics supplied"
+      }
     },
     "channels": {
       "add": "Add channel",
@@ -18140,7 +18539,9 @@
         "testMessageLabel": "Test message",
         "signalHint": "Use {{SignalName}}",
         "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
-        "kindLabel": "Rule type"
+        "kindLabel": "Rule type",
+        "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
+        "presetTagFilter": "Filter message presets by tag"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -18287,7 +18688,17 @@
         "statusQuietSub": "{{count}} window active now",
         "statusActiveSub": "No window active now",
         "alwaysAllow": "Always allowed",
-        "alwaysAllowSub": "Severities that break through"
+        "alwaysAllowSub": "Severities that break through",
+        "noWindows": "No configured windows",
+        "noBypass": "No bypass severities configured",
+        "period": "Configured schedules · right now",
+        "periodContext": "Enabled schedules and their bypass severities; current status uses the local weekday and time.",
+        "brief": {
+          "eyebrow": "Quiet-hours policy",
+          "title": "Schedules, delivery status, and bypass policy",
+          "empty": "No schedules",
+          "available": "Schedules loaded"
+        }
       },
       "guide": {
         "title": "How quiet hours work",
@@ -18336,6 +18747,9 @@
         "payloadSource": "Always \"teslasync\".",
         "payloadTimestamp": "RFC3339 server time."
       }
+    },
+    "device": {
+      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
     }
   },
   "orders": {
@@ -18456,6 +18870,10 @@
     },
     "filter": {
       "all": "All statuses"
+    },
+    "brief": {
+      "title": "Account feature configuration",
+      "description": "Enabled and disabled features in the latest Tesla account configuration."
     }
   },
   "gas": {
@@ -19038,6 +19456,11 @@
       "na": "North America & Asia-Pacific (excl. China)",
       "eu": "Europe, Middle East & Africa",
       "cn": "China"
+    },
+    "brief": {
+      "eyebrow": "Tesla account",
+      "title": "Region and endpoint",
+      "description": "Your account region, Fleet API endpoint and latest synchronization."
     }
   },
   "tesla": {
@@ -19767,6 +20190,27 @@
       "d30": "Last 30 days",
       "d90": "Last 90 days",
       "all": "All time"
+    },
+    "brief": {
+      "eyebrow": "State-machine observability",
+      "title": "Transition and live-state evidence",
+      "description": "Inspect page-scoped transitions and flap evidence alongside the matching server total and independently fetched current state.",
+      "bounds": "{{label}} · [{{start}}, {{end}}) · {{timezone}}",
+      "sourceStatus": "Transitions: {{history}} · Live state: {{live}}",
+      "freshness": "Transitions: {{history}} · Live state: {{live}}"
+    },
+    "statstrip": {
+      "pageDescription": "Transition rows loaded on this server page, not all transitions in the selected range.",
+      "pageTotal": "{{page}} / {{total}}",
+      "pageUnknown": "Page or total count not supplied",
+      "totalDescription": "Server-reported matching transitions across all pages for this vehicle, FSM filter and transition window.",
+      "flapsDescription": "Transition IDs flagged by the existing flap detector on the loaded page only.",
+      "pageOnly": "Loaded transition page only",
+      "stateDescription": "Textual current state from the separate live-state query, not historical state in the transition window.",
+      "liveContext": "Live-state snapshot; independent of the transition range and timeline freeze",
+      "provenance": "Page and flap counts cover the loaded server page; total covers matching transitions in the selected window. Current state comes from a separate live-state snapshot.",
+      "alltimeProvenance": "All matching transition history; page and flap counts cover only loaded rows. Current state is a separate live snapshot.",
+      "unknownPeriod": "Transition bounds were not supplied. Page and flap counts remain page-scoped; current state is a separate live snapshot."
     }
   },
   "changelog": {
@@ -19902,7 +20346,18 @@
     "col": {
       "day": "Day"
     },
-    "dailyActivityAria": "Stacked bar chart of daily command success and failure counts"
+    "dailyActivityAria": "Stacked bar chart of daily command success and failure counts",
+    "summary": {
+      "rollingScope": "Last 24 hours within the selected window",
+      "scope": "Selected vehicle history; status and search filters apply only to the timeline."
+    },
+    "brief": {
+      "title": "Command history summary",
+      "loading": "Loading command history",
+      "unavailable": "Command history unavailable",
+      "empty": "No commands recorded",
+      "recorded": "Recorded command history"
+    }
   },
   "audit": {
     "title": "Audit log",
@@ -20035,6 +20490,12 @@
     "vehicle": "Vehicle"
   },
   "dbHealth": {
+    "summary": {
+      "snapshot": "{{source}} snapshot",
+      "unknownObservation": "Last successful fetch time unknown; this source is independent of the other database sources.",
+      "observed": "Last successful fetch: {{time}}. This source is independent of the other database sources.",
+      "busyPool": "Pool usage ≥ 80%"
+    },
     "title": "DB health",
     "table": {
       "name": "Table",
@@ -20301,6 +20762,20 @@
       "synced": "Last synced from Tesla",
       "syncedSub": "Latest fetch from the Fleet API",
       "empty": "No account activity to show yet."
+    },
+    "stats": {
+      "syncedAt": "Last synced: {{date}}",
+      "notSynced": "Not synced yet",
+      "source": "Latest Tesla account snapshot — not a date-range total"
+    },
+    "brief": {
+      "eyebrow": "Tesla account",
+      "loading": "Loading account snapshot",
+      "unavailable": "Account source unavailable",
+      "retained": "Retained account snapshot",
+      "partial": "Partial account snapshot",
+      "empty": "No account data returned",
+      "available": "Account snapshot available"
     }
   },
   "liveMonitor": {
@@ -20347,6 +20822,13 @@
     "disconnectedBanner": "Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals."
   },
   "mqtt": {
+    "summary": {
+      "period": "Latest broker status snapshot",
+      "scope": "Vehicle totals sum the returned broker counters. Signals / sec sums the reported vehicle rates, not the throughput chart’s per-poll deltas.",
+      "title": "Broker counters and reported rates",
+      "available": "Broker snapshot available",
+      "unavailable": "Broker snapshot unavailable"
+    },
     "vin": "VIN",
     "state": "State",
     "signals": "Signals",
@@ -21478,7 +21960,45 @@
       },
       "batteryAria": "Battery current and remaining levels bar chart",
       "driveTrendAria": "Recent drive distance and duration area chart",
-      "speedHistoryAria": "Vehicle speed history area chart"
+      "speedHistoryAria": "Vehicle speed history area chart",
+      "brief": {
+        "chargeTitle": "Charging options",
+        "overviewTitle": "Range and charging",
+        "overviewDescription": "Rated and ideal range with the reported charging state, range-added rate and available time-to-full estimate.",
+        "fanDescription": "Reported fan value using the existing fan-status then fan-speed fallback order.",
+        "seatLeftDescription": "Reported left-seat heater level; missing is distinct from zero.",
+        "seatRightDescription": "Reported right-seat heater level; missing is distinct from zero.",
+        "climateDescription": "Cabin and outside temperatures, driver setpoint, fan speed, seat heating, defrost and climate power; missing readings remain unknown.",
+        "voltageDescription": "Rear pack voltage, falling back to the front reading when absent; displayed in volts.",
+        "currentDescription": "Front motor current displayed in amperes.",
+        "frontTorqueDescription": "Front axle torque displayed in newton-metres.",
+        "rearTorqueDescription": "Rear axle torque displayed in newton-metres.",
+        "frontRpmDescription": "Direct front axle-speed reading in RPM; no inferred angular-speed conversion.",
+        "rearRpmDescription": "Direct rear axle-speed reading in RPM; no inferred angular-speed conversion.",
+        "motorDescription": "Shift state, pack voltage, front motor current, axle torque and RPM, and peak known motor temperature.",
+        "quickTitle": "Live vehicle readings",
+        "quickDescription": "Battery, range, odometer, motion, temperatures, power and vehicle state from the current source snapshot.",
+        "liveContext": "{{source}} · {{status}}",
+        "windowsPartial": "Other window states are unknown.",
+        "securityDescription": "Lock, sentry, doors and windows retain their individual source states; unknown is not unlocked, off or closed.",
+        "tireDescription": "Four corner pressures with source-derived low, normal, high or critical status and explicit missing-data reasons.",
+        "loading": "Loading source",
+        "retained": "Retained source snapshot",
+        "unavailable": "Source unavailable",
+        "snapshot": "Source snapshot",
+        "unknown": "No source readings",
+        "provenance": "{{source}} · {{time}}"
+      },
+      "summaryMixedSources": "Lock and sentry: live state; doors and windows: security telemetry.",
+      "vehicleNumber": "Vehicle #{{id}}",
+      "batteryRange": "Battery & range",
+      "liveStateResource": "Live vehicle state",
+      "overview": "Live overview",
+      "liveState": "Live state",
+      "quickStats": "Quick stats",
+      "systems": "Vehicle systems",
+      "summaryUnknown": "Source time unknown",
+      "summaryProvenance": "{{source}} snapshot"
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
@@ -22773,7 +23293,8 @@
       "level": "Level",
       "message": "Message",
       "fields": "Fields",
-      "noLevel": "—"
+      "noLevel": "—",
+      "fullEvent": "Full log event"
     },
     "empty": {
       "noEvents": "No log events yet. Trigger activity (e.g. start a charging session) to see live output."
@@ -23820,7 +24341,21 @@
       "climateOff": "Turn climate off"
     },
     "cached": "Cached",
-    "batteryGauge": "Battery {{battery}}; range {{range}}"
+    "batteryGauge": "Battery {{battery}}; range {{range}}",
+    "timeToFullUnknown": "Time to full unknown",
+    "updated": {
+      "justNow": "just now",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "state": {
+      "driving": "driving",
+      "charging": "charging",
+      "asleep": "asleep",
+      "online": "online",
+      "offline": "offline"
+    }
   },
   "arrivalReliability": {
     "bands": {
@@ -24473,7 +25008,8 @@
     "footer": {
       "empty": "All analytical shells remain visible while the returned history window is empty.",
       "note": "Charts and directories describe returned records at the selected continuity threshold.",
-      "waiting": "No returned drive rows are available for this vehicle yet."
+      "waiting": "No returned drive rows are available for this vehicle yet.",
+      "title": "Report context"
     }
   },
   "seasonalEfficiency": {
@@ -26110,7 +26646,8 @@
       "span": "Observed time span",
       "subtitle": "Coverage describes the returned history window, never lifetime driving behavior.",
       "timestamped": "Timestamp-valid rows",
-      "title": "History coverage and bounded-window disclosure"
+      "title": "History coverage and bounded-window disclosure",
+      "sourcePeriod": "Returned drive-history window"
     },
     "directory": {
       "assignmentDistance": "Assignment distance",
@@ -26878,7 +27415,9 @@
       "longBurn": "24h burn rate",
       "failures": "{{failed}} failed · {{sent}} sent",
       "status": "Budget status",
-      "deferred": "{{count}} deferred by DND"
+      "deferred": "{{count}} deferred by DND",
+      "noLongOutcomes": "No delivery outcomes in the last 24 hours",
+      "noShortOutcomes": "No delivery outcomes in the last hour"
     },
     "timeline": {
       "title": "Delivery outcomes by hour",
@@ -26898,6 +27437,16 @@
       "title": "Severity breakdown",
       "empty": "No notification outcomes are available in the last 24 hours.",
       "outcomes": "{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending"
+    },
+    "summary": {
+      "period": "Recorded outcomes · 1h and 24h windows",
+      "periodReason": "Short and long windows are separate; only sent and failed outcomes consume the 1% error budget. Deferred DND and pending attempts are excluded.",
+      "brief": {
+        "eyebrow": "Delivery SLO",
+        "title": "Delivery reliability and error budget",
+        "empty": "No eligible delivery outcomes",
+        "available": "Delivery outcomes recorded"
+      }
     }
   },
   "notificationLatency": {
@@ -27102,13 +27651,28 @@
       "emptyMessage": "Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.",
       "emptyTitle": "No event candidates yet",
       "title": "Event evidence",
-      "wholeClip": "whole clip"
+      "wholeClip": "whole clip",
+      "type": {
+        "sentry_trigger": "Sentry trigger",
+        "manual_save": "Manual save",
+        "impact": "Impact",
+        "hard_brake": "Hard brake (statistical)",
+        "hard_accel": "Hard accel (statistical)",
+        "sharp_turn": "Sharp turn (statistical)",
+        "motion": "Motion detected",
+        "unknown": "Unclassified"
+      }
     },
     "export": {
       "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
       "manifest": "Download incident manifest (JSON)",
       "still": "Export redacted still (PNG)",
-      "title": "Local export"
+      "title": "Local export",
+      "canvasUnavailable": "This browser could not create a still-image canvas.",
+      "imageUnavailable": "This browser could not encode the still image.",
+      "failed": "The local still export failed.",
+      "decodeFailed": "This browser could not decode the clip for a still export.",
+      "manifestFailed": "The local manifest export failed."
     },
     "filters": {
       "all": "All",
@@ -27191,6 +27755,21 @@
       "player": "Player",
       "reconstruction": "Reconstruction",
       "redaction": "Redaction"
+    },
+    "camera": {
+      "front": "Front",
+      "back": "Back",
+      "left_repeater": "Left repeater",
+      "right_repeater": "Right repeater",
+      "left_pillar": "Left pillar",
+      "right_pillar": "Right pillar",
+      "unknown": "Unknown camera"
+    },
+    "source": {
+      "RecentClips": "Recent",
+      "SavedClips": "Saved",
+      "SentryClips": "Sentry",
+      "unknown": "Unknown source"
     }
   },
   "fleetOps": {
@@ -27645,7 +28224,12 @@
       "publisher": "Publisher",
       "recommendationsCount": "{{count}} automation recommendations (suggestions only — never auto-applied)",
       "trustAndInstall": "Trust as local-development pack…",
-      "upgradeTo": "Upgrade to v{{version}}"
+      "upgradeTo": "Upgrade to v{{version}}",
+      "recommendations": "Automation recommendations",
+      "recommendationRationale": "Rationale",
+      "recommendationTrigger": "Suggested trigger",
+      "recommendationCondition": "Suggested condition",
+      "recommendationAction": "Suggested action"
     },
     "export": {
       "download": "Export",
@@ -27707,7 +28291,8 @@
       "usingFullGrant": "Preview mode: simulating full requested-capability grant (not installed)",
       "usingInstalledGrant": "Using installed capability grant",
       "row": "Sample",
-      "value": "Value"
+      "value": "Value",
+      "installedGrantUnavailable": "Installed pack: synthetic preview is simulating the full requested-capability grant because no installed grant is currently available."
     },
     "security": {
       "browserNote": "Ed25519 in Web Crypto requires a secure context (HTTPS or localhost) and a modern browser (roughly Chrome/Edge 137+, Firefox 130+, Safari 17+ — exact floors vary by OS). Older or locked-down browsers cannot install signed packs; this is by design, not a bug.",
@@ -27766,6 +28351,11 @@
       "unsigned": "Unsigned — preview only",
       "validRecognized": "Signature valid · recognized publisher",
       "validUnrecognized": "Signature valid · unrecognized publisher"
+    },
+    "source": {
+      "unresolved": "{{label}} availability has not resolved yet.",
+      "paused": "The local {{label}} read is paused; no empty result is inferred.",
+      "error": "Could not read {{label}} from local storage."
     }
   },
   "resaleVault": {
@@ -27955,7 +28545,8 @@
       "title": "Warranty"
     },
     "certificate": {
-      "loadError": "The battery certificate could not be loaded."
+      "loadError": "The battery certificate could not be loaded.",
+      "retryVerify": "Retry verification"
     }
   },
   "rootCauseIntelligence": {
@@ -28027,7 +28618,11 @@
       "subtitle": "Each series independently scaled to 0–1 for visual comparison; ranking uses the raw robust statistics, not this view",
       "title": "Normalized signal timeline"
     },
-    "title": "Root-cause intelligence"
+    "title": "Root-cause intelligence",
+    "sources": {
+      "aggregateLimit": "Signal histories are combined for this analysis. This source does not provide per-signal freshness or individual failure details.",
+      "refreshFailed": "Some signal histories could not be refreshed. Available evidence remains visible."
+    }
   },
   "serviceEvidencePack": {
     "errors": {
@@ -28406,7 +29001,8 @@
         "cost": "Expected cost without supported tariff and currency data",
         "meter": "Meter energy when no meter source is recorded"
       },
-      "vehicleEnergy": "Vehicle energy"
+      "vehicleEnergy": "Vehicle energy",
+      "exportScope": "Exports include the full reconciliation result with canonical SI values, uncertainty bounds, and currency, regardless of visible columns."
     },
     "form": {
       "displayEquivalent": "Display equivalent: {{value}}"
@@ -28967,7 +29563,12 @@
         "emissions": "Attributed emissions",
         "liability": "Total liability",
         "roadUsage": "Road-usage charge",
-        "unassigned": "Unassigned"
+        "unassigned": "Unassigned",
+        "mixedCurrency": "Mixed currencies; see the jurisdiction amounts below.",
+        "unknownCurrency": "The recorded liability currency is unknown.",
+        "periodSource": "Recorded apportionment window; source coverage and limitations are shown in the evidence below.",
+        "unknownPeriod": "No recorded apportionment window is available.",
+        "unknownDrives": "Drive count unknown"
       },
       "subtitle": "Apportion every metre you drove to the jurisdiction it happened in, price it against that jurisdiction’s road-usage rate, and seal the period into an immutable filing record.",
       "summary": {
@@ -28977,6 +29578,11 @@
       "unsupported": {
         "polygon": "True polygon boundaries — jurisdictions are approximated by bounding boxes",
         "submit": "Submitting to a tax authority, and any legal interpretation of what is owed"
+      },
+      "brief": {
+        "title": "Recorded period liability",
+        "description": "Distance, road-usage liability and attributed emissions for the recorded apportionment window.",
+        "recorded": "Recorded apportionment"
       }
     },
     "consumables": {
@@ -28989,7 +29595,9 @@
         "ofRated": "{{value}} of rated life",
         "remaining": "Remaining",
         "replace": "Projected replacement",
-        "used": "Distance on part"
+        "used": "Distance on part",
+        "wearCost": "Part wear cost",
+        "history": "Service history ({{count}} events)"
       },
       "econ": {
         "blended": "Blended wear cost",
@@ -29992,7 +30600,8 @@
     "needsSetup": {
       "title": "Needs setup",
       "empty": "All caught up — no auto-discovered places need review.",
-      "review": "Review"
+      "review": "Review",
+      "unavailable": "The place review queue is unavailable."
     },
     "table": {
       "title": "Place directory",
@@ -30039,7 +30648,8 @@
       "pricingTab": "Rates & pricing",
       "activityTab": "Charging activity",
       "tabsLabel": "Charging place detail sections",
-      "pricingIntro": "Rate changes never rewrite protected actual costs. The rate active today estimates older unpriced sessions automatically; use preview and apply when you have exact historical rates."
+      "pricingIntro": "Rate changes never rewrite protected actual costs. The rate active today estimates older unpriced sessions automatically; use preview and apply when you have exact historical rates.",
+      "pricingLoadFailed": "Rate setup data could not be loaded."
     },
     "rateForm": {
       "title": "Add a rate",
@@ -30071,7 +30681,8 @@
       "previewSessions": "Preview sessions",
       "previewHelp": "Preview sessions shows which historical charges match a rate and what would change before anything is applied.",
       "deleteTitle": "Cancel this scheduled rate?",
-      "deleteMessage": "The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted."
+      "deleteMessage": "The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted.",
+      "unavailable": "Rate history is unavailable."
     },
     "previewApply": {
       "title": "Session pricing preview",
@@ -30095,14 +30706,17 @@
       "estimatedCost": "Estimated cost",
       "noMatches": "No sessions match this place and rate period. Check the zone location and radius, or broaden the optional date range. Sessions without coordinates can match an identical saved place name.",
       "attributionOnly": "All matched costs are protected. Apply can still assign unlinked sessions to this place without changing their cost.",
-      "applied": "Processed {{matched}} matched sessions: {{priced}} priced, {{skipped}} protected or unchanged, {{cost}} total."
+      "applied": "Processed {{matched}} matched sessions: {{priced}} priced, {{skipped}} protected or unchanged, {{cost}} total.",
+      "loadFailed": "Session pricing preview could not be loaded."
     },
     "summary": {
       "title": "Charging summary",
       "empty": "No priced charging activity at this place yet.",
       "sessions": "Sessions",
       "energy": "Energy",
-      "spend": "Spend"
+      "spend": "Spend",
+      "loadFailed": "Charging summary could not be loaded.",
+      "unavailable": "Charging summary is unavailable."
     },
     "activity": {
       "title": "Charging activity",
@@ -30112,7 +30726,9 @@
       "energy": "Energy",
       "cost": "Cost",
       "source": "Source",
-      "pageInfo": "Showing {{from}}–{{to}}"
+      "pageInfo": "Showing {{from}}–{{to}}",
+      "loadFailed": "Charging activity could not be loaded.",
+      "unavailable": "Charging activity is unavailable."
     },
     "costSource": {
       "manual": "Manual",
@@ -30120,11 +30736,31 @@
       "geofence_tariff": "Place rate",
       "default_estimate": "Default estimate",
       "unknown": "Unknown"
-    }
+    },
+    "rateLoading": "Loading rate…",
+    "rateUnavailable": "Rate unavailable",
+    "directoryUnavailable": "Place directory is unavailable."
   },
   "coverage": {
     "destinations": {
       "aria": "Horizontal bar chart showing routed field counts per destination"
+    },
+    "brief": {
+      "eyebrow": "Routing configuration",
+      "title": "Fleet telemetry coverage",
+      "description": "Review catalogue routes, configured subscriptions and orphan fields before inspecting the destination and field evidence below."
+    },
+    "statstrip": {
+      "categoriesDescription": "Categories in the package-derived routing catalogue.",
+      "routedDescription": "Unique fields in routing categories; dual-write destinations are not counted twice.",
+      "subscribedDescription": "Routed fields included in the current subscription configuration.",
+      "unsubscribedDescription": "Routed fields absent from the current subscription configuration.",
+      "orphansDescription": "Configured fields without a matching proto catalogue route.",
+      "coverageDescription": "Subscribed routed fields divided by all routed fields, on a 0–100 scale. An empty routing catalogue retains the existing 0% convention.",
+      "denominator": "{{subscribed}} subscribed / {{routed}} routed fields",
+      "noSnapshot": "No routing snapshot supplied",
+      "period": "Package configuration snapshot",
+      "provenance": "routing.yaml and teslaconfig.Builder; not per-vehicle telemetry or a time-range aggregate."
     }
   },
   "departureForecast": {
@@ -30308,7 +30944,12 @@
     "save": "Save guard",
     "saveError": "Save failed",
     "recent": "Recent activity",
-    "acted": "acted"
+    "acted": "acted",
+    "events": {
+      "empty": "No recent storm activity was returned.",
+      "error": "Recent storm activity could not be loaded.",
+      "unresolved": "Recent storm activity has not resolved yet; no empty result is inferred."
+    }
   },
   "comfort": {
     "title": "Cabin comfort Autopilot",
@@ -30412,7 +31053,10 @@
         "price": "$/kWh",
         "health": "Health",
         "corridor": "Off route"
-      }
+      },
+      "loadFailed": "Candidate stops could not be loaded.",
+      "scoreFailed": "Stops could not be scored. Review the candidates and try again.",
+      "scoreFor": "Score for {{site}}"
     },
     "departure": {
       "title": "When to leave",
@@ -30424,7 +31068,8 @@
       "leaveAt": "Leave {{time}}",
       "socNow": "Battery {{pct}}% now",
       "allWarn": "Every hour warns — delay if you can",
-      "slots": "Departure hours"
+      "slots": "Departure hours",
+      "loadFailed": "Departure advice could not be loaded."
     },
     "checklist": {
       "title": "Ready to roll",
@@ -30445,7 +31090,25 @@
         "attention": "Check",
         "action": "Fix now",
         "unknown": "Unknown"
-      }
+      },
+      "loadFailed": "The readiness checklist could not be loaded.",
+      "refreshFailed": "Readiness could not be checked. Try the checklist again."
+    },
+    "nudge": {
+      "loadFailed": "The departure nudge could not be loaded."
+    },
+    "live": {
+      "loadFailed": "The live trip could not be loaded."
+    },
+    "replan": {
+      "loadFailed": "The route assessment could not be loaded.",
+      "rescoreFailed": "Stops could not be rescored. Try rescoring again."
+    },
+    "arrival": {
+      "loadFailed": "Arrival advice could not be loaded."
+    },
+    "report": {
+      "loadFailed": "The trip report could not be loaded."
     }
   },
   "dayLog": {
@@ -31392,6 +32055,14 @@
         "title": "Embedded group uses the same renderer"
       },
       "metric": {
+        "bytes": {
+          "description": "Recorded byte count, displayed with binary size units.",
+          "label": "Data size"
+        },
+        "byteRate": {
+          "description": "Recorded bytes per second; the displayed interval is explicit.",
+          "label": "Data rate"
+        },
         "charge": {
           "avgDuration": {
             "description": "Existing average session duration calculation, expressed in canonical seconds.",
@@ -31446,6 +32117,22 @@
           "description": "Measured energy; canonical input is watt-hours.",
           "label": "Energy"
         },
+        "latency": {
+          "description": "Recorded non-negative elapsed time in seconds, displayed in milliseconds or seconds.",
+          "label": "Latency"
+        },
+        "mass": {
+          "description": "Recorded mass in kilograms.",
+          "label": "Mass"
+        },
+        "identifier": {
+          "description": "Source identifier, retained without grouping or rounding.",
+          "label": "Identifier"
+        },
+        "multiplier": {
+          "description": "Dimensionless multiplier, not a percentage.",
+          "label": "Multiplier"
+        },
         "number": {
           "description": "Unclassified numeric quantity; semantic meaning remains unknown.",
           "label": "Value"
@@ -31465,6 +32152,10 @@
         "ratio": {
           "description": "Dimensionless coefficient, not a percentage.",
           "label": "Ratio"
+        },
+        "rate": {
+          "description": "Source-defined rate; the caller declares the quantity and time unit.",
+          "label": "Rate"
         },
         "score": {
           "description": "Numeric score on a declared 100-point scale.",
@@ -31534,8 +32225,13 @@
         "units": "Local measurement profile"
       },
       "reason": {
+        "bytes": "Expected a non-negative byte count",
         "count": "Expected a non-negative safe integer count",
+        "countTotal": "Expected a non-negative safe integer total",
         "duration": "Expected a non-negative duration for this display",
+        "formatter": "Expected a non-empty formatted measurement",
+        "identifier": "Expected a non-negative safe integer identifier",
+        "latency": "Expected a non-negative latency",
         "missing": "No measurement supplied",
         "nonfinite": "Expected a finite numeric measurement",
         "overflow": "Display conversion exceeded the finite numeric range",
@@ -31743,6 +32439,66 @@
   "powerSql": {
     "editor": {
       "copyFailed": "Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C."
+    }
+  },
+  "drivingSecondary": {
+    "states": {
+      "historyError": "Could not load drive history."
+    }
+  },
+  "operationalSource": {
+    "status": {
+      "initial": "Loading source",
+      "ok": "Snapshot loaded",
+      "stale": "Retained source data",
+      "partial": "Partial source data",
+      "unavailable": "No source data",
+      "initialFailure": "Source unavailable"
+    },
+    "fetchedAt": "Fetched {{time}}",
+    "unknownFreshness": "Fetch time not supplied",
+    "retained": "Showing retained measurements"
+  },
+  "account": {
+    "privacy": {
+      "stats": {
+        "sources": "Browser-local privacy and deployment policy",
+        "period": "Local browser state and the latest deployment policy have no common date range.",
+        "policyLoading": "Loading deployment consent policy"
+      },
+      "brief": {
+        "retained": "Retained deployment policy",
+        "unavailable": "Deployment policy unavailable",
+        "available": "Deployment policy available",
+        "eyebrow": "Browser privacy",
+        "title": "Browser-local privacy",
+        "description": "Manage local page history and your consent choice alongside the deployment policy."
+      }
+    }
+  },
+  "alertFatigue": {
+    "summary": {
+      "period": "Recorded notification history",
+      "periodReason": "Rates use the recorded firing span, not a complete requested analysis period; read tracking includes delivered notifications only.",
+      "brief": {
+        "eyebrow": "Alert fatigue",
+        "title": "Rule noise and engagement",
+        "empty": "No recorded rules",
+        "fatiguing": "Fatiguing rules detected",
+        "available": "Rules scored"
+      }
+    }
+  },
+  "commandReliability": {
+    "summary": {
+      "scope": "Selected vehicle command history, with existing success and retry-intent definitions."
+    },
+    "brief": {
+      "title": "Command reliability summary",
+      "loading": "Loading command outcomes",
+      "unavailable": "Command outcomes unavailable",
+      "empty": "No attempts recorded",
+      "recorded": "Recorded command outcomes"
     }
   }
 }

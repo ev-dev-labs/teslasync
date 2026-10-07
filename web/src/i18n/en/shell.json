@@ -283,7 +283,8 @@
     "category": "Category",
     "percentage": "%",
     "timestamp": "Timestamp",
-    "unavailable": "Unavailable"
+    "unavailable": "Unavailable",
+    "noDataAvailable": "No data available"
   },
   "compat": {
     "banner": {
@@ -863,7 +864,12 @@
     "wp": {
       "name": "Name",
       "type": "Type",
-      "distance": "Distance"
+      "distance": "Distance",
+      "kind": {
+        "supercharger": "Supercharger",
+        "destination": "Destination",
+        "waypoint": "Waypoint"
+      }
     },
     "subtitle": "Live location tracking and navigation status",
     "refresh": "Refresh",
@@ -1468,6 +1474,7 @@
     "journeyFragmentation": "Journey fragmentation",
     "journeys": "Journeys",
     "jurisdictionCompliance": "Jurisdiction compliance",
+    "layoutReference": "Layout reference",
     "legacyAlertRulesRedirect": "Legacy alert rules redirect",
     "legacyAlertStudioRedirect": "Legacy alert studio redirect",
     "lifetimeStats": "Lifetime stats",
@@ -1481,6 +1488,7 @@
     "mileage": "Mileage",
     "mileageBudget": "Mileage budget",
     "milestones": "Milestones",
+    "mobileGridReference": "Mobile grid reference",
     "modelTrust": "Model trust",
     "myActivity": "My activity",
     "navigationRoute": "Navigation route",
@@ -1566,6 +1574,7 @@
     "softwareUpdates": "Software updates",
     "speedProfile": "Speed profile",
     "speedSweetSpot": "Speed sweet spot",
+    "statReference": "Stat reference",
     "stateMachineDebugger": "State machine debugger",
     "statistics": "Statistics",
     "statusApiDocs": "Status API docs",
