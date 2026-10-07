@@ -1,0 +1,476 @@
+{
+  "item": "audit-page-167",
+  "page": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx",
+  "routes": [
+    {
+      "path": "/science",
+      "file": "web\\src\\App.tsx",
+      "line": 606,
+      "detail": "ScienceLab lazy import at line 50; SafeRoute wrapper. Source registration verified, mounted runtime not exercised."
+    }
+  ],
+  "purpose": "Vehicle-scoped scientific evidence explorer for battery proxies, thermal fits, weather associations, tire model sensitivity and generated lab records.",
+  "primaryGoal": "Inspect observations, eligibility, uncertainty, assumptions and provenance before interpreting a derived fit; never read this as a battery health grade or causal diagnosis.",
+  "dataSources": [
+    {
+      "hook": "useScienceElectrochem",
+      "file": "web\\src\\api\\hooks\\useScience.ts",
+      "line": 35,
+      "endpoint": "GET /api/v1/science/electrochem",
+      "routeCitation": "internal\\api\\router.go:3532",
+      "owner": "useScience.ts / scienceHandler.Electrochem; frontend envelope ScienceElectrochem",
+      "consumers": ["ScienceEvidenceOverview", "ElectrochemPanel"],
+      "behavior": "Historical query policy; vehicle enablement; scoped vehicle_id/start/end query key and request; AbortSignal forwarded. Raw report kept in cache.",
+      "unitEvidence": "web\\src\\api\\types.ts:3948-4047; ElectrochemPanel.tsx:36-159. Wh, seconds, Celsius, ohms and amps used by the presentation. rest_hours is an actual source field converted to seconds for the duration metric; mV and temperature-delta fields also exist. No claim of universal SI purity or verified backend calculations."
+    },
+    {
+      "hook": "useScienceThermal",
+      "file": "web\\src\\api\\hooks\\useScience.ts",
+      "line": 45,
+      "endpoint": "GET /api/v1/science/thermal",
+      "routeCitation": "internal\\api\\router.go:3533",
+      "owner": "useScience.ts / scienceHandler.Thermal; frontend envelope ScienceThermal",
+      "consumers": ["ScienceEvidenceOverview", "ThermalPanel"],
+      "behavior": "Same historical policy, scope and cancellation; independent state and retry.",
+      "unitEvidence": "web\\src\\api\\types.ts:4049-4074; ThermalPanel.tsx:31-46. tau_s and interval use duration formatting; fitted ambient is absolute Celsius; residual_rmse_c is formatted as a temperature difference, not absolute temperature."
+    },
+    {
+      "hook": "useScienceWeather",
+      "file": "web\\src\\api\\hooks\\useScience.ts",
+      "line": 55,
+      "endpoint": "GET /api/v1/science/weather",
+      "routeCitation": "internal\\api\\router.go:3534",
+      "owner": "useScience.ts / scienceHandler.Weather; frontend envelope ScienceWeather",
+      "consumers": ["ScienceEvidenceOverview", "WeatherPanel"],
+      "behavior": "Historical, scoped, cancellable read; nullable coefficients remain unknown; linked drive identifiers are preserved.",
+      "unitEvidence": "web\\src\\api\\types.ts:4076-4105; WeatherPanel.tsx:76-92. Celsius and m/s use preferences; density remains kg/m³, precipitation mm, energy/distance Wh/m converts at display. pressure_hpa exists in the type but is not displayed by this page."
+    },
+    {
+      "hook": "useScienceTires",
+      "file": "web\\src\\api\\hooks\\useScience.ts",
+      "line": 65,
+      "endpoint": "GET /api/v1/science/tires",
+      "routeCitation": "internal\\api\\router.go:3535",
+      "owner": "useScience.ts / scienceHandler.Tires; frontend envelope ScienceTires",
+      "consumers": ["ScienceEvidenceOverview", "TiresPanel"],
+      "behavior": "Historical, scoped, cancellable read; unknown flag suppresses pressure/energy measurements rather than substituting zero.",
+      "unitEvidence": "web\\src\\api\\types.ts:4107-4127; TiresPanel.tsx:29-63. kPa, Wh and meters formatted at display; underinflation fraction multiplied by 100 only for percentage presentation. extra_model_low/high formatted as energy by existing consumer; backend dimensions not independently verified."
+    },
+    {
+      "hook": "useScienceNotebook",
+      "file": "web\\src\\api\\hooks\\useScience.ts",
+      "line": 75,
+      "endpoint": "GET /api/v1/science/notebook",
+      "routeCitation": "internal\\api\\router.go:3536",
+      "owner": "useScience.ts / scienceHandler.Notebook; frontend envelope ScienceNotebook",
+      "consumers": ["ScienceEvidenceOverview", "NotebookPanel", "EntryDetail"],
+      "behavior": "Historical, scoped, cancellable read; accordion reveals generated records, method, confidence intervals, holdout and residuals.",
+      "unitEvidence": "web\\src\\api\\types.ts:4138-4170; EntryDetail.tsx:18-73. Parameter keys and values are source-owned and generic numbers are formatted without guessed physical conversion. Holdout fraction becomes percent at display."
+    },
+    {
+      "hook": "useSelectedVehicle / useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "endpoint": null,
+      "owner": "Existing workspace vehicle selection and fleet hook",
+      "behavior": "URL/store/first-vehicle precedence; null may occur before vehicle query resolution as well as with an empty fleet. This audit did not trace the vehicle endpoint or authentication implementation."
+    },
+    {
+      "hook": "useAnalysisWindow",
+      "file": "web\\src\\hooks\\useAnalysisWindow.ts",
+      "line": 4,
+      "endpoint": null,
+      "owner": "Existing URL analysis-window helper",
+      "behavior": "7/30-day presets with 7 default; valid explicit start/end accepted only if end > start and duration <= 30 days; otherwise anchored Date.now at mount. Picking a preset writes days/start/end and preserves other query parameters. This is not useRangeState and does not consume workspace from/to."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "kind": "layout",
+      "contract": "Existing PageContainer props, title/subtitle/copyLink/metadataActions; w-full/min-w-0 container. Shell owns scope and navigation."
+    },
+    {
+      "name": "LayoutCard / SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "line": 17,
+      "kind": "composites",
+      "contract": "Persistent named card shell; SourceContent.tsx:11-31 supports ready/loading/error/empty/retained, localized labels, recovery and caller-prepared skeleton/empty bodies."
+    },
+    {
+      "name": "OperationalBrief / ScienceSummaryBrief",
+      "owner": "web\\src\\features\\science\\components\\operationalbrief-all\\ScienceSummaryBrief.tsx",
+      "line": 11,
+      "kind": "domain adapter over shared composite",
+      "contract": "Typed StatMetric array through useOperationalMetrics; independent DataState array, window/report, limited and testId. Shared OperationalBrief owns review drawer, accessible metric list, provenance, scope and freshness."
+    },
+    {
+      "name": "Button / Text / Caption / SectionTitle / Badge / Accordion / Table / DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 144,
+      "kind": "existing UI owners",
+      "contract": "Category barrel imports; semantic text and controls; stable tableId, columns and row keys; existing pagination, persistence and loaded-row export pipeline. No full-result export fetcher is supplied by science."
+    },
+    {
+      "name": "AreaChartWrapper",
+      "owner": "web\\src\\components\\charts\\AreaChartWrapper.tsx",
+      "line": 63,
+      "kind": "chart",
+      "contract": "Responsive width, numeric series, x/y formatters and ariaLabel; two electrochem charts backed by table alternatives, downsampled to 400 while tables retain full supplied arrays."
+    },
+    {
+      "name": "Skeleton / EmptyState / StaleRefreshWarning",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "line": 48,
+      "kind": "feedback",
+      "contract": "Independent source loading/empty/retry; stale warning beside retained content with polite status and existing retry."
+    },
+    {
+      "name": "NoVehicleSelected",
+      "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "line": 44,
+      "kind": "domain prerequisite",
+      "contract": "Governed vehicle prerequisite explanation and setup navigation; no fabricated science measurements."
+    },
+    {
+      "name": "SciencePanels / ScienceEvidenceOverview / EntryDetail / MissingBadges",
+      "owner": "web\\src\\features\\science\\components\\SciencePanels.ts",
+      "line": 1,
+      "kind": "feature owners",
+      "contract": "Existing feature barrel and specialized evidence presentation; source strings and identities remain source-owned."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\science\\components\\ElectrochemPanel.tsx",
+      "line": 170,
+      "rule": "MDC-002/MDC-031 hierarchy",
+      "detail": "Overview, electrochem, weather and tires wrap ScienceSummaryBrief in LayoutCard with the same title. Shared brief itself renders a GlassPanel and heading (OperationalBrief.tsx:118-145), repeating surface/header hierarchy. Electrochem adds two more nested briefs.",
+      "fix": "Use one canonical shell per summary or an existing-owner embedded presentation contract; retain every metric, caveat, recovery action and review drawer.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\science\\components\\ThermalPanel.tsx",
+      "line": 53,
+      "rule": "MDC-026 reuse",
+      "detail": "Five panels repeat the same SourceContent state/recovery pattern; already reuse the shared owner, so this is not evidence for another generic science state renderer.",
+      "fix": "Keep SourceContent and existing trust adapter; avoid speculative extraction or query ownership changes.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "ScienceLabPage.tsx:47-50,69: wrapping metadata/window controls and single-column section stack.",
+      "LayoutCard.tsx:31-41: min-w-0, wrapped header and break-words.",
+      "OperationalBrief.tsx:166-169: compact metrics reflow from one to two/three/six columns.",
+      "AreaChartWrapper.tsx:93-98: responsive width; chart height uses shared resolver.",
+      "DataTable.tsx:715-725: mobileColumns excludes columns with hidden md:table-cell."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\science\\components\\ThermalPanel.tsx",
+        "line": 77,
+        "rule": "MDC-023/MDC-043 no mobile information loss",
+        "detail": "mobileColumns retains kind/tau/samples but hides start, 95% interval, R², residual, ambient and solar below md. Rest/IR/pulse/weather tables likewise supply restricted mobileColumns without mobilePresentation or expandable details. Source proves hidden cells; alternative access via table controls/export has not been exercised.",
+        "fix": "Reuse DataTable mobilePresentation/full row details to expose all diagnostics and links at narrow widths; retain IDs, sort/pagination and loaded-row export scope. No secondary content deletion.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\science\\components\\EntryDetail.tsx",
+        "line": 23,
+        "rule": "MDC-043 long-content containment",
+        "detail": "Generic source parameter values and long keys render in semantic tables; this consumer supplies no explicit narrow-width strategy. Actual overflow is unverified.",
+        "fix": "Verify long keys/values at 320px and 200% text; use existing table containment or wrapping while keeping exact source identities and full values.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewports": {
+      "required": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "tested": [],
+      "status": "unverified"
+    }
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "ScienceLabPage.tsx:52-61: localized group name and aria-pressed preset state.",
+      "LayoutCard.tsx:28,41: heading association.",
+      "SourceContent.tsx:42: localized loading status; StaleRefreshWarning.tsx:101-106: polite retained-data status.",
+      "EntryDetail.tsx:23-27: named semantic table and scope=row headers.",
+      "ElectrochemPanel.tsx:205,227: chart ariaLabel; adjacent tables expose actual observations.",
+      "OperationalBrief.tsx:118,153-160: named section and localized review action."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx",
+        "line": 57,
+        "rule": "MDC-040 stronger mobile target",
+        "detail": "Preset Buttons use size=sm; shared Button.tsx:39 defines h-9 (36px), below the 44px stronger mobile default. This alone is not proof of a WCAG target-spacing failure.",
+        "fix": "Use existing Button sizing/class composition with min-h-11 on small screens, or document/test applicable spacing exception. Preserve pressed semantics and labels.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard reachability", "focus visibility/restoration", "screen-reader output", "actual contrast", "forced colors", "RTL", "200% text", "review drawer and notebook open states", "OS reduced motion"]
+  },
+  "states": {
+    "loading": "Independent five-source DataState and panel skeletons; overview maintains individual pending labels. No page-wide loading gate.",
+    "empty": "Null report gets SourceContent empty state and retry; successful empty/null lists handled by asList. Empty electrochem tables, weather explanation and notebook explanation differ from absent reports.",
+    "failure": "fatalError alone replaces affected source body; shell and neighbors survive. Retry provided for each panel.",
+    "refreshFailure": "Retained report remains ready; StaleRefreshWarning supplies non-blocking retry and brief/overview labels refresh failure.",
+    "offline": "Paused refresh with retained report indicated through isRefreshBlocked; no claim of network testing. Initial paused source still uses initial skeleton.",
+    "partial": "Overview/brief distinguishes pending or failed peers from retained reports. Domain-specific limited/unknown flags are not generic transport failures.",
+    "unknownAndZero": "Null metric values stay null; explicit zero survives nullable checks; nil lists are normalized for iteration but absent report counts remain null. EntryDetail intentionally filters null parameter/CI entries rather than converting to zero.",
+    "prerequisite": "vehicleId == null returns governed NoVehicleSelected; selection hook does not expose fleet load/error status to this page.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx",
+        "line": 35,
+        "rule": "MDC-026 prerequisite versus unresolved source",
+        "detail": "With no URL/stored vehicle and vehicles undefined, useSelectedVehicle.ts:78-80 yields null, so this page presents setup guidance during unresolved fleet loading. Hook return omits loading/error state. Runtime flash/error path not exercised.",
+        "fix": "Coordinate with existing selection/prerequisite owner to distinguish pending or failed fleet reads from confirmed no vehicle, retaining existing setup action for genuine absence.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "citations": [
+      "web\\src\\features\\science\\components\\helpers.ts:15-17",
+      "web\\src\\features\\science\\components\\ScienceEvidenceOverview.tsx:32-40,107-143",
+      "web\\src\\features\\science\\components\\operationalbrief-all\\ScienceSummaryBrief.tsx:27-49",
+      "web\\src\\api\\dataState.ts:193-240",
+      "web\\src\\features\\science\\components\\EntryDetail.tsx:20,48-65"
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\science\\components\\helpers.ts",
+      "line": 3,
+      "rule": "MDC-010/MDC-011/MDC-034 canonical palette",
+      "detail": "SCIENCE_ACCENT is fixed cyan #0891b2 and supplies both area series; bypasses active chart palette/preferences. This is a source-confirmed fixed saturated accent, not evidence of rendered neon or failed contrast.",
+      "fix": "Use existing chart palette/semantic series owner without resetting saved chart choices; subdue decorative fill if actual visual QA finds excess, keeping voltage and IR series distinct from UI status.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\science\\components\\ScienceEvidenceOverview.tsx",
+      "line": 152,
+      "rule": "MDC-031/MDC-013/mission visual intensity",
+      "detail": "Evidence-at-a-glance title and subtitle appear in outer LayoutCard and inner ScienceSummaryBrief (lines 156-158). Similar duplicate titles/surfaces occur in electrochem, weather and tires. Repeated emphasis competes with evidence and provenance.",
+      "fix": "Deduplicate chrome through the existing owners; do not remove scientific context, sections, counts or review actions.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx",
+      "line": 28,
+      "rule": "MDC-032 one workspace range owner",
+      "detail": "Local useAnalysisWindow and 7/30-day controls own date scope. /science is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77), so header range is disabled while global vehicle scope remains available. This is a competing range contract, not a demonstrated duplicate simultaneously visible picker.",
+      "fix": "Coordinate route registration and useRangeState adaptation, preserving current 7/30-day behavior, bounded science window and existing days/start/end links. Resolve endpoint bounds/max-window semantics before supporting arbitrary workspace ranges; do not silently widen or discard current range.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\science\\components\\EntryDetail.tsx",
+      "line": 31,
+      "rule": "MDC-045 source-owned specialist units",
+      "detail": "Notebook parameters/CI are untyped Record<string, unknown> and displayed numerically with source keys. Physical dimensions cannot be inferred safely from this renderer; blindly adopting generic metric conversion would corrupt specialist evidence.",
+      "fix": "Keep source identities and unconverted generic values unless a source-backed typed metadata contract is established. Do not infer units or confidence grades.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Mobile access to uncertainty and workspace-range consistency are scientific integrity concerns; visual chrome cleanup is secondary.",
+    "order": [
+      "Resolve range integration and preserve deep links/bounds.",
+      "Keep full scientific diagnostics reachable on mobile.",
+      "Disambiguate unresolved vehicle prerequisite state.",
+      "Reduce nested chrome and fixed palette use without data changes."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Science workspace range integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Register /science only with coordinated existing useRangeState startInstant/endInstantExclusive mapping; retain legacy days/start/end read compatibility and supported 7/30-day defaults; resolve bounded-window and inclusive/exclusive semantics.",
+      "usedBy": ["ScienceLabPage", "existing header View settings"],
+      "dependsOn": ["web\\src\\hooks\\useAnalysisWindow.ts", "web\\src\\api\\hooks\\useScience.ts", "existing useRangeState owner", "science endpoint bound verification by integration owner"],
+      "evidence": "ScienceLabPage.tsx:28,52-66; useAnalysisWindow.ts:10-29; workspaceScope.ts:23-77,157-168.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Existing OperationalBrief embedded composition assessment",
+      "existingOwnerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "propsVariantsStates": "Prefer removing redundant outer shell at consumer if sufficient. If reusable extension is needed, an embedded/heading composition must retain compact metrics, status, scope, freshness, provenance, loading suppression and Review details drawer; no new wrapper library.",
+      "usedBy": ["ScienceEvidenceOverview", "ElectrochemPanel", "WeatherPanel", "TiresPanel"],
+      "dependsOn": ["web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "web\\src\\features\\science\\components\\operationalbrief-all\\ScienceSummaryBrief.tsx"],
+      "evidence": "ScienceEvidenceOverview.tsx:152-164; OperationalBrief.tsx:118-160.",
+      "owner": "shared",
+      "confidence": "high",
+      "limit": "Only one production page audited; multiple independent-page consumer evidence required by MDC-002 before extending a shared API."
+    },
+    {
+      "name": "Vehicle prerequisite trust exposure",
+      "existingOwnerFile": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "propsVariantsStates": "Expose or compose existing fleet pending/fatal/retained/confirmed-empty states without changing vehicle precedence or stored selection. NoVehicleSelected remains confirmed-prerequisite renderer with setup navigation.",
+      "usedBy": ["ScienceLabPage", "NoVehicleSelected"],
+      "dependsOn": ["existing useVehicles hook", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"],
+      "evidence": "ScienceLabPage.tsx:35-36; useSelectedVehicle.ts:34-41,50-52,78-80.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\hooks\\useAnalysisWindow.ts",
+      "line": 4,
+      "rule": "MDC-032",
+      "detail": "Analysis-window URL state competes with workspace range owner; science uses days/start/end, not from/to.",
+      "fix": "Integrate existing mechanisms with compatibility and endpoint evidence; no third store/picker.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\science\\components\\helpers.ts",
+      "line": 3,
+      "rule": "MDC-034",
+      "detail": "Fixed science accent competes with shared palette ownership. Other helpers perform local scientific sampling/list normalization, not a second global formatting engine.",
+      "fix": "Reuse shared palette; retain domain sampling and null normalization.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "10830e9c2e39486453aac296712391d24c24006cf305e2e317030736d1961a40",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 79,
+    "featureProductionLineCount": 1159,
+    "featureCountBasis": "Page plus eleven production component/helper/barrel files read; excludes 588-line ScienceLabPage.test.tsx. Count is current source, not historical baseline.",
+    "sections": [
+      {"name": "Evidence at a glance", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 70},
+      {"name": "Battery electrochemistry (pack-equivalent)", "anchor": "science-electrochem", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 71},
+      {"name": "Thermal science (τ, residual)", "anchor": "science-thermal", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 72},
+      {"name": "Weather coupling (correlation)", "anchor": "science-weather", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 73},
+      {"name": "Tire / contact mechanics", "anchor": "science-tires", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 74},
+      {"name": "Lab notebook (method)", "anchor": "science-notebook", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 75}
+    ],
+    "sectionCounts": {
+      "topLevelContentSections": 6,
+      "pageAnchorWrappers": 5,
+      "featureLayoutCards": 6,
+      "scienceSummaryBriefCallSites": 6,
+      "electrochemChartCallSites": 2,
+      "dataTableCallSites": 7,
+      "pageGlassPanelOrChartContainerCallSites": 0
+    },
+    "nestedContent": [
+      "Rest-voltage observations, SOC/temperature bins, rest dwell/direction and pack-voltage chart.",
+      "Pack resistance current steps, chart and separate charging pulse evidence.",
+      "Arrhenius activation energy, CI, temperature bins/span, honesty; OCV bins and hysteresis tables.",
+      "Aging throughput, rest exposure, proxy slope/sample count, capacity proxy, assumed reference capacity and holdout RMSE.",
+      "Thermal sample counts, tau/95% CI, R², residual temperature delta, ambient and solar-unknown diagnostics.",
+      "Weather matched drives, density/wind coefficients, rain/dry counts, joined observations and session/residual energy per distance.",
+      "Four tire corners, imbalance, underinflation, extra rolling model sensitivity band, distance and assumed placard.",
+      "Notebook records with hypothesis/domain, n, method/CI method, source keys, parameters, CI, holdout/residual, firmware, signals, generated ID and interval."
+    ],
+    "actions": [
+      {"name": "Copy page link", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 45, "limit": "Delegated PageLayout prop; clipboard runtime unverified."},
+      {"name": "Choose 7/30-day window", "file": "web\\src\\features\\science\\pages\\ScienceLabPage.tsx", "line": 53},
+      {"name": "Inspect evidence anchor for each of five domains", "file": "web\\src\\features\\science\\components\\ScienceEvidenceOverview.tsx", "line": 133},
+      {"name": "Retry fatal/empty source and retained refresh", "file": "web\\src\\features\\science\\components\\ThermalPanel.tsx", "line": 60, "limit": "Same wiring in all five panels; StaleRefreshWarning.tsx:111-126 retained retry."},
+      {"name": "Review details drawer for six brief call sites", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 153},
+      {"name": "Open linked drive", "file": "web\\src\\features\\science\\components\\WeatherPanel.tsx", "line": 79},
+      {"name": "Expand notebook entry", "file": "web\\src\\features\\science\\components\\NotebookPanel.tsx", "line": 46},
+      {"name": "Existing table sort, column layout, pagination/page size and loaded-row CSV/JSON exports", "file": "web\\src\\components\\ui\\DataTable.tsx", "line": 873, "limit": "No science exportAll provider; source reading only, actual controls/persistence unverified."},
+      {"name": "Setup prerequisite navigation", "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "line": 65}
+    ],
+    "dataBehavior": [
+      "Preserve independent source query keys, enabled vehicle guard, AbortSignal and inherited historical policy (5m stale, 30m gc, no ambient polling/focus/reconnect/mount refetch; retry remains ambient unless explicitly supplied).",
+      "Preserve null report versus successful empty arrays versus genuine measured zero. asList accepts Go null slices; do not turn unknown coefficients/energy/pressure/holdout into zero.",
+      "Keep raw Wh/m/kPa/Celsius/seconds/ohms data in source/cache. Current rest_hours, precipitation mm and specialist units are actual contracts, not permission to guess replacements.",
+      "Temperature spans and residuals are differences: use formatTemperatureDelta; absolute Celsius uses formatTemperature.",
+      "Preserve signed correlations and slopes; no health percentage, diagnostic certainty, invented confidence score or causality claim.",
+      "Keep honesty, firmware epoch, truncated/sample-cap notice, fit eligibility, confidence and holdout explanations, missing-signals disclosures and generated record identities.",
+      "A tire sensitivity band is not a confidence interval; assumed placard/reference capacity is not measured capacity.",
+      "Charts sample up to 400 supplied points without rewriting source arrays; tables retain supplied observations, stable identities and source scope.",
+      "Source envelope carries additional signals_used, pooled_epochs, interval and diagnostic fields not all rendered by current page. Their existence is not evidence of a visible action or authorization to delete payload fields.",
+      "Backend fit correctness, weather joins, end-bound inclusivity, maximum window acceptance and extra_model_low/high units require independent backend evidence."
+    ],
+    "testContext": "ScienceLabPage.test.tsx has 24 source-declared cases at lines 234-573 covering independent failures, 30-day scope, unknown/zero/null slices, SI display, notebook semantics, real charts/brief/drawer and retained trust. Only case names inspected; none executed and no historical pass borrowed."
+  },
+  "evidenceLimits": {
+    "auditMode": "Phase 0 read-only source inspection; only owned JSON and heartbeat written. No source/UI edits, Git, agents, lint, build, TypeScript or tests.",
+    "runtime": "unverified",
+    "backend": "Only relevant route declarations read; no handler/service/database analysis or HTTP request. Route existence does not establish backend calculations, source ownership correctness, authorization, actual range filtering or SI dimensions.",
+    "visual": "No screenshots/browser; neon, glow and pure-white appearance not inferred from names. Scoped pattern search found no explicit neon/glow/fixed-white classes in the assigned page or production science components; one fixed cyan constant found. Shared inherited theme behavior remains unverified.",
+    "accessibility": "No keyboard/screen reader/contrast/forced-color testing. Source ARIA and responsive utilities are evidence of implementation only.",
+    "validation": "Skill audit script inspected but not executed because it always invokes project TypeScript; assignment forbids full-repository gates. Bounded source searches and hash/count capture only.",
+    "sourceDrift": "SHA-256 identifies page bytes at audit; dependencies are a concurrent read snapshot, not an immutable integrated build.",
+    "scope": "No application-wide foundation audit; shared owners read only where needed by this page. Missing .tsx guesses resolved to actual SciencePanels.ts and helpers.ts.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\science\\pages\\ScienceLabPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "10830E9C2E39486453AAC296712391D24C24006CF305E2E317030736D1961A40"},
+      {"command": "(Get-Content web\\src\\features\\science\\pages\\ScienceLabPage.tsx).Count", "exitCode": 0, "output": "79"},
+      {"command": "Scoped rg neon/glow/text-white/bg-white/shadow/hex/style/raw controls/direct-library imports over ScienceLabPage.tsx and science components", "output": "helpers.ts:3: export const SCIENCE_ACCENT = '#0891b2';", "limit": "Pattern search, not rendered visual acceptance or complete engineering audit."},
+      {"command": "Python json.loads + required-key assertions + SHA-256/line-count assertions + scoped production JSX counts", "exitCode": 0, "output": "JSON schema keys: PASS (20/20)\nPage SHA-256/79 lines: PASS\nProduction feature lines: 1159\nSource call sites: {'LayoutCard': 6, 'ScienceSummaryBrief': 6, 'AreaChartWrapper': 2, 'DataTable': 7}\nTest case names: 24", "limit": "First attempt caught a mis-added feature total of 1259; corrected report to actual 1159 and reran successfully. No runtime/test execution."}
+    ],
+    "contractReferences": [
+      "docs\\frontend-worker-conventions.md:38-70 Phase 0 schema and evidence rules",
+      "docs\\frontend-design-contract.md MDC-002,010-013,020,023,026,031-034,040-046,070",
+      "docs\\frontend-mission.md:19-103 sections 0/1",
+      "docs\\frontend-mission.md:308-363 text/visual intensity",
+      "docs\\frontend-mission.md:529-597 responsive/mobile/tables",
+      "docs\\frontend-mission.md:703-780 loading/empty/error/offline",
+      "docs\\frontend-mission.md:921-962 accessibility/motion",
+      "docs\\frontend-mission.md:1416-1479 visual QA and definition of done",
+      "docs\\frontend-mission.md:1572-1593 restrained semantic palette"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\science\\pages\\ScienceLabPage.tsx",
+    "web\\src\\features\\science\\pages\\ScienceLabPage.test.tsx",
+    "web\\src\\features\\science\\components\\SciencePanels.ts",
+    "web\\src\\features\\science\\components\\ScienceEvidenceOverview.tsx",
+    "web\\src\\features\\science\\components\\ElectrochemPanel.tsx",
+    "web\\src\\features\\science\\components\\ThermalPanel.tsx",
+    "web\\src\\features\\science\\components\\WeatherPanel.tsx",
+    "web\\src\\features\\science\\components\\TiresPanel.tsx",
+    "web\\src\\features\\science\\components\\NotebookPanel.tsx",
+    "web\\src\\features\\science\\components\\EntryDetail.tsx",
+    "web\\src\\features\\science\\components\\MissingBadges.tsx",
+    "web\\src\\features\\science\\components\\helpers.ts",
+    "web\\src\\features\\science\\components\\operationalbrief-all\\ScienceSummaryBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\useScience.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useAnalysisWindow.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\AreaChartWrapper.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
