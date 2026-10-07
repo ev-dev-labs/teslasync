@@ -1,0 +1,275 @@
+{
+  "item": "audit-page-186",
+  "page": "web\\src\\features\\system\\pages\\DataRepairPage.tsx",
+  "routes": ["/data-repair"],
+  "purpose": "Review durable integrity cases, quarantine recovery records and evidence-based session-boundary diagnostics without automatically repairing data.",
+  "primaryGoal": "Inspect evidence, coordinate reviewed decisions and explicitly confirm reversible corrections in writable live mode.",
+  "dataSources": [
+    {
+      "hooks": ["useSelectedVehicle", "useOperationalMode"],
+      "owner": "workspace selection and operational-mode providers",
+      "file": "web\\src\\features\\system\\pages\\DataRepairPage.tsx",
+      "line": 22,
+      "detail": "Selected vehicle is forwarded to cases, statistics, quarantine and diagnostics. /data-repair intentionally disables the header vehicle picker (workspaceScope.ts:116), so the page-local VehicleSelect at line 32 is required, not a competing workspace selector."
+    },
+    {
+      "hooks": ["useRepairCases", "useRepairCase", "useRepairCaseStats", "useRepairQuarantines"],
+      "owner": "web\\src\\api\\hooks\\useDataRepair.ts; web\\src\\api\\hooks\\useRepairCaseStats.ts",
+      "endpoints": ["GET /data-repair/cases", "GET /data-repair/cases/{id}", "GET /data-repair/cases/stats", "GET /data-repair/quarantine"],
+      "routeEvidence": "internal\\api\\router.go:489-492",
+      "detail": "Cursor lists and stats retain previous query data; lists/stats poll every 30 seconds and have 15-second staleTime. Detail enables only positive selected IDs and has 10-second staleTime. Reads forward AbortSignal. Query identities include scope/filters."
+    },
+    {
+      "hooks": ["useRepairSuggestions", "useStaleSessions"],
+      "owner": "web\\src\\api\\hooks\\useDataRepair.ts",
+      "endpoints": ["GET /data-repair/suggestions", "GET /data-repair/stale-sessions"],
+      "routeEvidence": "internal\\api\\router.go:487-488",
+      "detail": "Suggestions are selected-vehicle scoped, explicitly refreshed and not polled. Stale sessions use a fleet query, poll every 30 seconds and are filtered by vehicle in RepairDiagnosticsWorkspace.tsx:43-52. Diagnostics mounts only on its active tab; lazy-module loading has a skeleton. Exact backend scan coverage, cutoff and result limits were not independently exercised."
+    },
+    {
+      "hooks": ["useRunRepairScan", "useBulkTransitionRepairCases", "useTransitionRepairCase", "useAssignRepairCase", "useAddRepairCaseComment", "useQuarantineRepairCase", "useRestoreQuarantine"],
+      "owner": "web\\src\\api\\hooks\\useDataRepair.ts",
+      "endpoints": ["POST /data-repair/cases/scan", "POST /data-repair/cases/bulk-transition", "POST /data-repair/cases/{id}/transition", "PUT /data-repair/cases/{id}/assignment", "POST /data-repair/cases/{id}/comments", "POST /data-repair/cases/{id}/quarantine", "POST /data-repair/quarantine/{id}/restore"],
+      "routeEvidence": "internal\\api\\router.go:493-499",
+      "detail": "Explicit operator-triggered mutations, live-mode flags, toast feedback and query invalidation/broadcast. Router applies sudo; scan has additional rate limiting. No mutation, scan or authentication prompt was invoked."
+    },
+    {
+      "hooks": ["useRepairImpactPreview", "useApplyDriveRepair", "useApplyChargingRepair", "useCloseDrive", "useCloseCharging", "useUpdateDrive", "useUpdateCharging", "useQuarantineDrive", "useQuarantineCharging"],
+      "owner": "web\\src\\api\\hooks\\useDataRepair.ts",
+      "endpoints": ["POST /data-repair/drive/{id}/preview", "POST /data-repair/charging/{id}/preview", "POST /data-repair/drive/{id}/close", "POST /data-repair/charging/{id}/close", "PUT /data-repair/drive/{id}", "PUT /data-repair/charging/{id}", "DELETE /data-repair/drive/{id}", "DELETE /data-repair/charging/{id}"],
+      "routeEvidence": "internal\\api\\router.go:500-511",
+      "detail": "Drive path remains singular. Boundary inputs retain expected_stored_ended_at and reviewed RFC3339 timestamps, not browser-generated closure times. PUT/DELETE router mounts use the nested root path; trailing-slash behavior was not runtime tested. Shared client asserts operational write allowance and never-queued-offline rules at client.ts:378,392."
+    },
+    {
+      "hooks": ["useAiStream"],
+      "owner": "web\\src\\components\\ai\\AIDataRepairSuggestions.tsx",
+      "endpoints": ["POST /ai/system/data-repair/draft"],
+      "routeEvidence": "internal\\api\\router.go:1823-1850 constructs the propose-only strategy/handler; exact AI route mount not traced in this bounded audit",
+      "detail": "Opt-in withAiFeature gate, selected-vehicle body and scopeKey, streaming output and duplicate-submit disabled state. AI proposes only and does not replace deterministic worklists. No AI request was started."
+    }
+  ],
+  "components": [
+    {"owner": "@/components/layout", "names": ["PageLayout"], "evidence": "DataRepairPage.tsx:26-33"},
+    {"owner": "@/components/forms", "names": ["VehicleSelect", "SearchInput"], "evidence": "DataRepairPage.tsx:32; RepairCaseFiltersBar.tsx:76-82"},
+    {"owner": "@/components/feedback", "names": ["OperationalWriteNotice", "ListSkeleton", "Skeleton", "QueryError", "StaleRefreshWarning", "InlineCallout", "EmptyState"], "evidence": "DataRepairPage.tsx:34-36,46-50; RepairDiagnosticsWorkspace.tsx:115-127"},
+    {"owner": "@/components/ui", "names": ["Tabs", "DataTable", "GlassPanel", "Badge", "StatusPill", "Button", "PanelTitle", "Text", "Input", "Select", "Textarea", "Drawer", "ConfirmDialog"], "evidence": "RepairCaseWorkspace.tsx:137-163; RepairCaseQueue.tsx:115-174; RepairCaseDrawer.tsx:66-213"},
+    {"owner": "@/components/data-display", "names": ["OperationalBrief", "KVList"], "evidence": "operationalbrief-all\\SystemSummaryBrief.tsx:37-61; RepairCaseEvidencePanel.tsx:38-75"},
+    {"owner": "web\\src\\features\\system\\components", "names": ["RepairCaseWorkspace", "RepairDiagnosticsWorkspace", "RepairCaseWorkspaceHeader", "RepairCaseQueue", "RepairQuarantinePanel", "RepairCaseDrawer", "RepairCaseEvidencePanel", "RepairCaseCollaboration", "RepairCaseControlledActions", "RepairSuggestionWorklists", "RepairManualWorklists", "RepairSuggestionCard", "DriveRepairForm", "ChargingRepairForm", "RepairFormActions", "SystemSummaryBrief"], "detail": "Existing domain decomposition should be retained rather than replaced by a monolithic page or new shared library."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\components\\RepairCaseQueue.tsx",
+      "line": 175,
+      "rule": "MDC-002 existing composition",
+      "detail": "Cases and quarantine repeat cursor pagination, refresh warning, skeleton/table/empty structure (RepairQuarantinePanel.tsx:129-186). Forms also repeat finite-number parsing and input scaffolding. Existing RepairRefreshWarning, StaleSessionRow and RepairFormActions already consolidate important patterns.",
+      "fix": "Prefer existing composites; consider a feature-local cursor footer only when preserving distinct cursor/selection behavior. No speculative shared abstraction is required by this audit.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; viewport behavior unverified",
+    "evidence": ["RepairCaseFiltersBar.tsx:44-45 stacks filters into 1/2/4 columns", "RepairCaseQueue.tsx:128 declares mobileColumns case/actions and maxHeight 620", "RepairQuarantinePanel.tsx:158 declares mobileColumns session/actions", "RepairDiagnosticsWorkspace.tsx:65 stacks header then sm row", "RepairManualWorklists.tsx:65 and RepairSuggestionWorklists.tsx:93 use one column until 2xl", "DriveRepairForm.tsx:123 and ChargingRepairForm.tsx:114 use responsive input grids"],
+    "issues": [],
+    "requiredChecks": ["320/375/390/430/768/1024/1280/1440/1920/2560 widths", "Actual allocated container widths, long localized labels, 200% text and RTL", "Drawer/dialog internal scrolling and footer reachability", "DataTable mobile detail access must retain status, owner, evidence and all desktop metadata; column priority alone is not parity proof"]
+  },
+  "accessibility": {
+    "status": "source inspected; keyboard, focus, screen reader, target size and contrast unverified",
+    "evidence": ["RepairCaseWorkspace.tsx:125 uses a labelled section and :158-162 links tabpanel to stable tab IDs", "RepairCaseQueue.tsx:122-128 provides localized row names and selection", "RepairCaseFiltersBar.tsx:47-81 names each control", "RepairSuggestionCard.tsx:91 names each article and :184 uses shared ConfirmDialog", "DriveRepairForm.tsx:119-122 and ChargingRepairForm.tsx:107-112 name repair regions", "Icon-bearing actions generally hide decorative icons; existing overlay components own focus"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.tsx",
+        "line": 143,
+        "rule": "MDC-040 disabled action explanations",
+        "detail": "Read-only state is folded into bulkPending at RepairCaseWorkspace.tsx:177. Queue bulk buttons explain invalid status but do not receive writeBlockReason; operators have only the global write notice to explain this disabled state.",
+        "fix": "Forward canWrite/writeBlockReason separately and expose localized contextual explanation without adding a new tooltip/focus engine. Verify keyboard and screen-reader discoverability.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Lazy diagnostics fallback and per-source list/card skeletons exist; metrics use loading-aware SystemSummaryBrief.",
+    "empty": "Queue/quarantine have localized filtered-empty messages. Suggestion and stale worklists have explicit EmptyState components.",
+    "fatalError": "Independent QueryError and refetch controls avoid blanking unrelated sources.",
+    "refreshError": "Diagnostics and drawer retain content through useDataState/StaleRefreshWarning. Queue/quarantine retain tables with RepairRefreshWarning.",
+    "partial": "Diagnostics suggestions and stale sessions remain independent; suggestion response truncated flag has scope/callout disclosure.",
+    "offline": "OperationalWriteNotice and canWrite protect writes, but list-specific paused state propagation is incomplete.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseWorkspaceHeader.tsx",
+        "line": 34,
+        "rule": "MDC-026/MDC-046 preserve source trust metadata",
+        "detail": "Header reconstructs a reduced query object from data/error/loading/busy/refetch, dropping dataUpdatedAt and fetchStatus from statisticsState already derived by its parent. Its StaleRefreshWarning cannot identify a paused offline refresh or last successful observation; the badge can still say Monitoring.",
+        "fix": "Pass the original typed statistics DataState or complete query metadata to the header; retain independent retry, last scan timestamp and source-specific freshness rather than treating last_scan_at as query observation time.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseWorkspace.tsx",
+        "line": 169,
+        "rule": "MDC-026 distinguish offline retained data from healthy data",
+        "detail": "Queue receives only fatalError/refreshError, not casesState.status/isRefreshBlocked/updatedAt. Quarantine derives full state but renders a refresh warning only for state.refreshError at RepairQuarantinePanel.tsx:138. Paused retained reads without an error therefore have no source-specific offline disclosure.",
+        "fix": "Reuse StaleRefreshWarning with the complete source state beside retained tables. Preserve rows, selections, retries and per-source loading/error behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairSuggestionWorklists.tsx",
+        "line": 103,
+        "rule": "MDC-026/MDC-045 empty scope is not universal certainty",
+        "detail": "Suggestion empty messages assert every session in the scanned window agrees with durable history, even though response coverage can be truncated. StaleDriveWorklist.tsx:75 and StaleChargingWorklist.tsx:75 say all sessions are complete when this stale inventory is empty; that does not prove every session is complete.",
+        "fix": "Use existing localized scope-limited no-findings/no-stale-items messages, retaining truncation and scan scope context. Do not invent backend coverage or replace meaningful empty states.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\components\\RepairCaseWorkspaceHeader.tsx",
+      "line": 46,
+      "rule": "MDC-010/MDC-012 restrained semantic palette",
+      "detail": "Decorative cyan gradient rule and cyan border/background/text icon tile at line 50 compete with semantic badges and the primary scan action. Generic diagnostic and suggestion icons also use fixed text-cyan-300. No text-neon, fixed-white/gray or glow patterns were found in the bounded scan.",
+      "fix": "Use existing neutral surface/border and theme-aware muted icon tokens for decoration, keeping warning/error/actionable evidence accents semantic. Do not reset saved theme or chart preferences. Effective light/dark contrast must be measured.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.tsx",
+      "line": 157,
+      "rule": "MDC-025 consistent domain meaning",
+      "detail": "High confidence is danger in the drawer but success in useRepairCaseColumns.tsx:80. Confidence strength and severity have different meanings, so the same source value produces opposing semantic colors.",
+      "fix": "Reuse a consistent existing domain confidence presentation with textual High/Medium labels; reserve danger for actual severity/destructive impact, not confidence alone.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useDataRepair.ts",
+      "line": 612,
+      "rule": "MDC-032/MDC-046 scope identity and retained payload",
+      "detail": "Cases/quarantine/statistics use keepPreviousData across vehicle-key changes. The page consumes payload as hasData and does not distinguish isPlaceholderData or old scope. Filters reset in an effect, so the first render after vehicle selection may still use prior filters. Statistics can temporarily retain the previous vehicle's count under the new selected scope.",
+      "fix": "Keep existing caching policy but explicitly label prior-scope placeholder data and gate actions until current-scope data is established; reset scope-specific review state atomically. Coordinate canonical placeholder/scope provenance with the shared trust owner.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\RepairCaseWorkspace.tsx",
+      "line": 54,
+      "rule": "MDC-032/MDC-046 review context survives only its source scope",
+      "detail": "Vehicle-change reset clears filters/history/selection/activeCaseId but not dismissIds or dismissReason; an open bulk-dismiss confirmation can therefore retain targets from the former scope. Quarantine scope reset at RepairQuarantinePanel.tsx:57 similarly leaves restoreTarget/restoreReason intact.",
+      "fix": "Clear or explicitly bind pending confirmations to original scope when vehicle changes; retain normal cancellation/reason behavior and prevent a dialog silently representing the new scope. Do not execute repair jobs to test this during audit.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\RepairBulkDismissDialog.tsx",
+      "line": 36,
+      "rule": "MDC-046 read-only interaction parity",
+      "detail": "Bulk-dismiss confirmation checks only reason, quarantine restore confirmation checks only reason (RepairQuarantinePanel.tsx:209), suggestion confirmation omits applyDisabled (RepairSuggestionCard.tsx:176-194), and manual confirmation omits disabled (RepairFormActions.tsx:203). An already open dialog can remain confirmable after operational mode becomes read-only. Client guards still reject forbidden writes; this is misleading UI parity, not evidence of an authorization bypass.",
+      "fix": "Propagate write/scope permission into every confirmation and handler guard, close stale review context where appropriate and retain block-reason explanation. Match the explicit canWrite guard already used in RepairCaseControlledActions.tsx:201.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Destructive/reversible operational workflow needs scope-safe review and accurate retained/offline trust before decorative modernization.",
+    "order": ["scope-bound confirmations and read-only consistency", "placeholder/paused/freshness trust propagation", "scope-limited empty assertions", "semantic confidence and restrained decoration", "centralized runtime/mobile/accessibility verification"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical placeholder/scope provenance support",
+      "owner": "web\\src\\api\\dataState.ts",
+      "relatedOwner": "web\\src\\hooks\\useDataState.ts",
+      "propsVariantsStates": ["DataStateSource optional isPlaceholderData and an explicit current/source scope annotation or existing equivalent", "Retained previous-scope payload remains renderable but is not current-scope evidence", "Forward placeholder metadata through useDataState memo dependencies", "Independent initial, retained, paused, refresh-error and retry semantics remain unchanged"],
+      "usedBy": ["useRepairCases", "useRepairQuarantines", "useRepairCaseStats"],
+      "dependsOn": ["Existing DataState contract at dataState.ts:82-95,187-205", "Existing keepPreviousData query policies; no new query-state store", "Focused shared contract acceptance before page adoption"],
+      "detail": "Current DataStateSource has no placeholder identity field. Coordinate an additive shared contract only if existing source-scope ownership cannot supply equivalent metadata; page-level scope guards are still necessary. No shared source was edited."
+    }
+  ],
+  "competingImplementations": [
+    {"detail": "No competing layout, query, formatting, overlay or table implementation was established by the inspected page graph. Feature-local RepairRefreshWarning wraps canonical InlineCallout; it is not a second global error engine."},
+    {"detail": "SystemSummaryBrief uses canonical OperationalBrief/useOperationalMetrics. Preserve the shared operational summary rather than rebuilding a KPI grid."},
+    {"detail": "Local VehicleSelect is deliberate because /data-repair is a vehicle-disabled header route; no duplicate date selector is present. Independent repair-boundary date input is business data, not workspace range selection."}
+  ],
+  "preservation": {
+    "sourceHash": "4ff64f349344b73bef08af3620dc74aaee944eff75d6a189c88841343c464708",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashTarget": "web\\src\\features\\system\\pages\\DataRepairPage.tsx",
+    "currentLineCount": 63,
+    "rootCounts": {"GlassPanel": 1, "ChartContainer": 0, "workspaceTabs": 3},
+    "scopedPatternCounts": {"files": 29, "lines": 4369, "GlassPanel": 13, "ChartContainer": 0, "inlineStyles": 0, "rawControls": 0, "directRechartsLeafletMotionImports": 0, "legacyApiImports": 0, "fixedWhiteGrayText": 0, "neonText": 0},
+    "countLimits": "These are static occurrences in explicitly scanned files, not mounted sections or an exhaustive dependency tree. One RepairSuggestionSection definition serves two worklists; repeating row/card instances are data-driven. Current source only; no historical original or implementation delta was compared.",
+    "sections": [
+      {"name": "Page heading, subtitle and required local vehicle selector", "count": 1},
+      {"name": "Operational read-only notice", "count": 1},
+      {"name": "Integrity workspace header, last scan and four repair metrics", "count": 1},
+      {"name": "Case queue tab, filters, selection and cursor pagination", "count": 1},
+      {"name": "Quarantine ledger tab, restored-state filter and cursor pagination", "count": 1},
+      {"name": "Lazy diagnostics tab and explicit refresh", "count": 1},
+      {"name": "Diagnosis four-count summary, durable-history warning and conditional truncation disclosure", "count": 1},
+      {"name": "Opt-in propose-only Helix repair suggestions", "count": 1},
+      {"name": "Drive and charging boundary suggestion worklists", "count": 2},
+      {"name": "Drive and charging incomplete-session manual worklists", "count": 2},
+      {"name": "Case drawer: finding details, evidence chain, ownership, review notes and controlled actions", "count": 1},
+      {"name": "Bulk-dismiss, restore, resolve, apply-preview and manual-action confirmations", "count": "conditional"}
+    ],
+    "actions": ["Select fleet/vehicle", "Switch cases/quarantine/diagnostics tabs", "Run explicit integrity scan", "Retry independent reads; refresh diagnostics", "Filter status/kind/confidence/owner; clear filters", "Previous/next cursor page", "Select multiple cases; begin review; dismiss with note", "Open case; begin review; reopen dismissed case; resolve with note", "Assign/unassign operator; add review note", "Inspect server-calculated impact; explicitly confirm suggested boundary", "Quarantine with reason; restore with reason", "Expand manual SI editor; save corrections; preview and confirm explicit RFC3339 closure; quarantine; cancel", "Opt-in draft AI plan; never auto-apply"],
+    "dataBehavior": ["Preserve every query key, retry policy, polling interval, lazy diagnostics mount and abort signal", "Retain usable payload on refresh failures and keep independent sources visible", "Preserve cursor history and stable table IDs data-repair:cases/data-repair:quarantine, mobile detail access, selection and inherited export/persistence behavior", "Unknown metrics remain null/undefined rather than zero", "SI wire/cache/editor values remain m, s, m/s, Wh, W; useUnits is display-only and SI input hints remain", "Maintain expected boundary/updated_at concurrency pins, evidence provenance, applicability/blocked reasons and server impact preview", "Keep manual closures operator-entered, reasons required, sudo/live/offline protections, toasts and cross-tab invalidation", "Keep AI feature gating, vehicle body/scope identity and propose-only separation", "Do not add date-range filtering unsupported by the existing operational inventory endpoints", "Preserve saved theme/unit/font/density/table preferences and all evidence/metadata/explanations"]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source audit",
+    "runtime": "UNVERIFIED; route was not mounted or exercised",
+    "visualKeyboardContrastViewport": "UNVERIFIED; no browser, screenshot, screen-reader, forced-color, reduced-motion or viewport tests",
+    "backend": "Exact deterministic route declarations inspected; handler/database validation and actual repair semantics not exercised. AI final route mount not traced.",
+    "validation": "Scoped read-only Python regex/line/hash scan exited 0 and printed raw counts. This is not AST, TypeScript, lint, build, test or runtime acceptance. The loaded audit skill script was inspected but not executed because it unconditionally runs project-wide TypeScript. npx tsc --noEmit, full lint/build and all mutations were NOTRUN under this audit-only assignment.",
+    "uninspectedDependencies": ["Shared DataTable mobile implementation and export internals", "Shared overlay focus/scroll internals", "RepairChangeDetails", "RepairEvidenceTimeline", "RepairImpactSummary", "StaleSessionRow", "repairPresentation", "repairCasePresentation", "useRepairQuarantineColumns", "AIFeatureCard", "withAiFeature", "useAiStream", "Full useUnits implementation", "Backend data-repair handlers/repositories"],
+    "sourceConcurrency": "Source snapshot can change under other writers; root hash must be rechecked before implementation.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-186.json", ".agent-status\\audit-page-186.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\DataRepairPage.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseWorkspace.tsx",
+    "web\\src\\features\\system\\components\\RepairDiagnosticsWorkspace.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseWorkspaceHeader.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseQueue.tsx",
+    "web\\src\\features\\system\\components\\RepairQuarantinePanel.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseDrawer.tsx",
+    "web\\src\\features\\system\\components\\RepairBulkDismissDialog.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseFiltersBar.tsx",
+    "web\\src\\features\\system\\components\\RepairManualWorklists.tsx",
+    "web\\src\\features\\system\\components\\RepairSuggestionWorklists.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseStats.tsx",
+    "web\\src\\features\\system\\components\\RepairDiagnosisOverview.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseControlledActions.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseCollaboration.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseEvidencePanel.tsx",
+    "web\\src\\features\\system\\components\\StaleDriveWorklist.tsx",
+    "web\\src\\features\\system\\components\\StaleChargingWorklist.tsx",
+    "web\\src\\features\\system\\components\\RepairSuggestionSection.tsx",
+    "web\\src\\features\\system\\components\\RepairSuggestionCard.tsx",
+    "web\\src\\features\\system\\components\\DriveRepairForm.tsx",
+    "web\\src\\features\\system\\components\\ChargingRepairForm.tsx",
+    "web\\src\\features\\system\\components\\RepairFormActions.tsx",
+    "web\\src\\features\\system\\components\\RepairRefreshWarning.tsx",
+    "web\\src\\features\\system\\components\\useRepairCaseColumns.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\components\\ai\\AIDataRepairSuggestions.tsx",
+    "web\\src\\api\\hooks\\useDataRepair.ts",
+    "web\\src\\api\\hooks\\useRepairCaseStats.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
