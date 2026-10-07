@@ -1,0 +1,363 @@
+{
+  "item": "audit-page-229",
+  "page": "web\\src\\features\\vehicles\\pages\\DayLogPage.tsx",
+  "routes": ["/day-log"],
+  "purpose": "Reconstruct the selected vehicle's recorded local calendar day, with session totals, chronological events and explicit source availability.",
+  "primaryGoal": "Understand what happened, when and from which recorded source; search/filter the complete day, inspect exact transitions and open related drive or charge records without inventing missing state.",
+  "dataSources": [
+    {
+      "hook": "useDayLog",
+      "file": "web\\src\\api\\hooks\\useDayLog.ts",
+      "line": 74,
+      "endpoint": "GET /api/v1/day-log",
+      "requestPath": "/day-log",
+      "routeEvidence": "internal\\api\\router.go:4235-4240",
+      "sourceOwner": "internal\\api\\daylog\\handler.go; internal\\api\\daylog\\events.go; internal\\database\\daylog repository (repository queries not inspected)",
+      "parameters": ["vehicle_id", "date", "timezone", "limit=2000", "offset", "optional layers"],
+      "behavior": "Disabled until a positive integer vehicle and nonempty date/timezone exist. Query key includes vehicle, calendar date, timezone and sorted layer identities. Forwards AbortSignal to every request. Operational query policy; no page polling configured. Sequentially accumulates pages against first.total_events; preserves first-page metadata.",
+      "actualSources": ["drives", "charging_sessions", "fsm_transitions", "security_events", "software_updates", "signal_log", "drive_telemetry when gear is enabled", "user_presence explicitly unavailable"],
+      "sourceEvidence": "internal\\api\\daylog\\handler.go:226-330; internal\\api\\daylog\\events.go:1091-1106",
+      "trust": "Backend read failures return fatal HTTP errors rather than independent successful source payloads. Source rows distinguish ok/empty/unavailable. Signal and gear input caps are separate from result pagination and set truncated. Signal transitions are not continuously reconstructed state.",
+      "units": "Summary and known payload fields are meters, seconds and watt-hours; SOC remains percent. SI is retained in the hook/cache and converted in presentation."
+    },
+    {
+      "hook": "useSelectedVehicle and useTimezone('vehicle')",
+      "file": "web\\src\\features\\vehicles\\pages\\DayLogPage.tsx",
+      "line": 35,
+      "sourceOwner": "web\\src\\hooks\\useSelectedVehicle.ts; web\\src\\store\\selectedVehicle; web\\src\\lib\\timezone.ts",
+      "endpoint": "Inherited useVehicles dependency, not independently endpoint-audited in this item",
+      "behavior": "Selected vehicle resolves URL, persisted workspace store and first known vehicle. Timezone resolves selected vehicle setting then user override/browser fallback; UTC vehicle timezone currently falls back to user timezone. Preserve existing resolution, not a new timezone preference engine."
+    },
+    {
+      "hook": "useDataState(dayLogQuery, { provenance: 'historical' })",
+      "file": "web\\src\\features\\vehicles\\pages\\DayLogPage.tsx",
+      "line": 46,
+      "sourceOwner": "web\\src\\hooks\\useDataState.ts; web\\src\\api\\dataState.ts",
+      "endpoint": null,
+      "behavior": "Fatal errors only replace sections when no retained payload exists. Background failure/offline retention flows to StaleRefreshWarning, keeping existing event/source/summary data."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "PageLayout.tsx:5-16; web\\src\\components\\layout\\PageContainer.tsx:215-263; DayLogPage.tsx:69-81",
+      "contract": "Category-barrel layout with scope-first PageActions, query freshness metadata, localized title/subtitle, timezone description, copy-link overflow and independent children; page does not pass shell loading/error/empty gates."
+    },
+    {
+      "name": "DayLogControls",
+      "owner": "web\\src\\features\\vehicles\\components\\daylog\\DayLogControls.tsx",
+      "evidence": "DayLogControls.tsx:19-67",
+      "contract": "date/timezone/onDateChange; shared Button/Input; previous/next/today and native date input; input describes daylog-timezone."
+    },
+    {
+      "name": "DayLogOperationalSummary / OperationalBrief",
+      "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-a-m\\DayLogOperationalSummary.tsx",
+      "evidence": "DayLogOperationalSummary.tsx:21-109",
+      "contract": "Six typed source metrics adapted by useOperationalMetrics; source-specific formatter callbacks preserve distance/duration/energy conventions. Compact brief exposes scope, exact exclusive UTC bounds, provenance, status and retained missing values. OperationalBrief internals not inspected."
+    },
+    {
+      "name": "DayLogTimeline",
+      "owner": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+      "evidence": "DayLogTimeline.tsx:47-267,297-366,451-712",
+      "contract": "GlassPanel, PanelTitle, Text, Code, Badge, Input, Button, EmptyState, QueryError, Skeleton; TanStack virtualizer for complete recorded event list. Domain-owned categorization, titles, transitions and structured payload rendering. Native Link retains deep-link semantics."
+    },
+    {
+      "name": "DayLogSources / Table",
+      "owner": "web\\src\\features\\vehicles\\components\\daylog\\DayLogSources.tsx",
+      "evidence": "DayLogSources.tsx:27-89; web\\src\\components\\ui\\Table.tsx:17-44",
+      "contract": "Always-mounted GlassPanel; semantic row headings; localized statuses/reasons; shared Table owns horizontal containment. Table supports embedded variant but this caller uses standalone."
+    },
+    {
+      "name": "StaleRefreshWarning / FadeIn",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx; web\\src\\components\\motion\\FadeIn.tsx",
+      "evidence": "StaleRefreshWarning.tsx:58-116; FadeIn.tsx:23-39; DayLogPage.tsx:83-110",
+      "contract": "Polite retained-data notice with offline-specific message and retry; reduced-motion-aware entrance honoring shared preference, not ambient animation."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+      "line": 377,
+      "rule": "MDC-002 reuse with domain ownership",
+      "detail": "Local DetailLine reuses Text/Code and represents event-specific payload semantics. Skeleton/error/empty branches repeat across Sources and Timeline but use existing feedback primitives; this is not evidence for a new competing state component.",
+      "fix": "Keep domain transformation local; only extract a broader composite after two independent production consumers demonstrate the same typed behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceBehavior": [
+      "DayLogControls.tsx:30-63 wraps and uses minmax(0,1fr), full-width below xl and 44px controls below sm; 36px controls at sm and above.",
+      "DayLogTimeline.tsx:170-205 wraps search/actions/category chips. Category badge is hidden below sm but expanded details retain the category.",
+      "DayLogTimeline.tsx:228 provides a 55vh list with min-h-80 and its own scroll container; large days are virtualized, not sliced away.",
+      "Table.tsx:24-28 contains source-table horizontal scroll rather than guaranteeing all columns fit.",
+      "PageLayout.tsx:11 uses full width, min-w-0 and allocated-container composition."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+        "line": 349,
+        "rule": "MDC-043 narrow-width information preservation",
+        "detail": "Expanded content keeps a fixed 4.75rem left indent inside a p-6 panel, while titles/details are truncated. At 320px this leaves little usable payload width; event/category content is recoverable only by expansion. Actual clipping is unverified.",
+        "fix": "Reflow expanded details to full width on narrow containers; retain every source/id/layer/timestamp/payload line and test long values at 320px and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Controls have localized names; date input references the timezone description.",
+      "Category filters have aria-pressed and a named group; expansion has aria-expanded and localized action names.",
+      "Loading sections use role=status; Sources uses a named semantic Table and scope=row.",
+      "Icons in colored event dots are aria-hidden; meaningful event type/state remains textual.",
+      "Shared FadeIn source honors reduced motion; no browser acceptance claimed."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+        "line": 228,
+        "rule": "MDC-040 complete keyboard and screen-reader reachability",
+        "detail": "Virtualized role=list exposes only mounted rows. No focusable list container, aria-setsize/aria-posinset, focus-retention policy or nonvirtualized accessible alternative is present in this feature source. Off-screen event keyboard reachability and focus when scrolling require runtime verification.",
+        "fix": "Add a source-order-preserving accessible traversal strategy and stable focus policy without dropping virtualization or event records; exercise Tab, scrolling, expansion and screen-reader list announcements on long days.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+        "line": 334,
+        "rule": "MDC-040 meaningful action names",
+        "detail": "Every collapsed row has the same 'Show details' accessible name and no aria-controls relationship; row context may be difficult to recover when many identical controls are encountered.",
+        "fix": "Include localized event/time context in the expansion name and associate a stable details id while retaining current labels, expanded state and actions.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Summary passes loading to OperationalBrief; Timeline/Sources render named Skeleton status regions independently (DayLogPage.tsx:65,85-110).",
+    "empty": "Summary distinguishes no sessions from missing measurements and points to drives; Timeline explains quiet/no telemetry and links live monitor; Sources empty points to charging. Filtered-empty restores all filters. Sections remain mounted.",
+    "fatalError": "state.fatalError is passed to three independently recoverable QueryError surfaces sharing refetch; PageLayout is not gated behind raw query error.",
+    "retainedRefreshFailure": "state.data survives; StaleRefreshWarning renders polite recovery with refresh disabled while refreshing; summary labels retained history when status is stale.",
+    "offline": "Shared retained-data warning describes refresh blocked/offline. With no retained data, page isPending uses skeletons and no explicit initial offline explanation is authored in the feature.",
+    "partial": "Unavailable source rows and summary status are explicit; truncated warning appears above timeline. No partial option is passed to useDataState for cap loss.",
+    "unknown": "Summary rawValue uses null rather than zero; unknown event types and scalar tokens survive. Sources do not fabricate user presence. Structured payload readers accept only finite numbers and valid scalar types.",
+    "issues": [
+      {
+        "file": "web\\src\\api\\hooks\\useDayLog.ts",
+        "line": 56,
+        "rule": "MDC-026 incomplete paging must not claim complete history",
+        "detail": "An empty later page or guard exit can return events shorter than first.total_events while retaining first.truncated=false. Timeline uses loaded array length as its total and says the complete day is still loaded. This is a source-level latent trust risk; no failing server response was exercised.",
+        "fix": "Make paging shortfall explicit through an existing data-trust contract or actionable failure retaining usable records; do not confuse paging incompleteness with backend signal-cap truncation or silently adjust total_events.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\operationalbrief-a-m\\DayLogOperationalSummary.tsx",
+        "line": 64,
+        "rule": "MDC-026 cap-loss provenance",
+        "detail": "Summary readiness checks unavailable sources but not data.truncated; the Timeline discloses cap loss while the summary may still say 'Recorded day summary'. Summary session totals are not thereby proven wrong, but event completeness is not reflected in screenshot-level context.",
+        "fix": "Retain valid session totals and their basis; surface recorded-history cap loss in contextual provenance/status without treating missing transitions as measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+      "line": 276,
+      "rule": "MDC-010/MDC-012 fixed-white decoration",
+      "detail": "Hour rules at 276/280, row border at 303 and expanded surface at 349 use white with fixed alpha. These are low-opacity decoration, not full-white body text, but bypass theme-aware border/surface ownership.",
+      "fix": "Reuse existing border-subtle and neutral surface tokens; keep timeline grouping and expanded hierarchy across light/dark/custom/forced-color modes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\lib\\daylog.ts",
+      "line": 348,
+      "rule": "MDC-010 semantic hue without saturation escalation",
+      "detail": "DAY_LOG_ACCENT defines a private hex palette; Timeline.tsx:310 repeats these bright hues on every circular icon with an alpha backdrop. This is semantic event coding, not confirmed neon or glow, but palette saturation/theme suitability is uncontrolled by shared tokens.",
+      "fix": "Map existing event semantics to restrained shared severity/neutral roles, retaining textual event labels and safety meaning; do not consume legacy neon/glow token variants as a modernization shortcut.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogSources.tsx",
+      "line": 58,
+      "rule": "MDC-015/MDC-023 nested framing",
+      "detail": "Standalone Table defaults to its own framed surface inside a p-6 GlassPanel; the existing primitive supports embedded. This adds avoidable nested surface/border emphasis.",
+      "fix": "Evaluate Table variant='embedded' while preserving every row, row heading, status/reason and horizontal containment.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+      "line": 77,
+      "rule": "Search affordance must match actual scope",
+      "detail": "Search placeholder advertises 'Search time' at 174, but matching uses localized generic title plus eventKeywords. Neither formatted timestamp nor event.ts is included; component-specific rendered titles may also differ from the generic search title.",
+      "fix": "Reuse the actual row description and timezone clock representation in client-side search while preserving raw source/state matching and unchanged server totals.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\lib\\daylog.ts",
+      "line": 235,
+      "rule": "MDC-044/MDC-032 chronology and timezone clarity",
+      "detail": "formatTimeSeconds and hourKeyInTz hardcode en-GB and hour-only separators. A fall-back DST day repeats a local hour; rows retain exact UTC timestamp only in expanded details, so adjacent repeated hours can appear indistinguishable. API computes 23/25-hour bounds correctly in handler.go:143-144.",
+      "fix": "Preserve seconds, 24-hour intent and server chronological order; provide timezone/offset disambiguation for repeated hours and use an existing locale policy if compatible rather than a competing formatter.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Resolve incomplete-fetch trust and virtualized keyboard reachability before cosmetic changes.",
+    "then": "Remove fixed-white/nested framing/private accent decoration and verify narrow-width detail access.",
+    "preserve": "Do not replace the independent local calendar day with global rolling range or merge this domain timeline with unrelated activity feeds."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing theme-aware neutral/severity contract adoption; no new shared component justified",
+      "existingOwnerFile": "web\\src\\lib\\tokens.ts",
+      "propsVariantsStates": {
+        "neutral": ["--border-subtle", "--surface-2", "--text-primary", "--text-secondary"],
+        "severity": ["existing severityTokens warning/error/success/info roles"],
+        "preserve": ["event text", "safety severity", "unknown state", "light/dark/custom/forced colors"],
+        "table": "Existing Table.variant='embedded'; not a new API"
+      },
+      "usedBy": ["DayLogTimeline hour separators/event markers/expanded details", "DayLogSources Table"],
+      "dependsOn": ["MDC-010/MDC-012/MDC-025 shared theme acceptance", "web\\src\\components\\ui\\Table.tsx current embedded variant"],
+      "changeNeeded": "Page adoption and shared-theme acceptance only; do not create a competing palette or edit shared files in a page item.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "name": "Complete-day fetch integrity and retained-data contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useDayLog.ts",
+      "propsVariantsStates": {
+        "input": ["vehicleId", "date", "timezone", "optional layers", "AbortSignal"],
+        "output": ["complete events", "total_events", "backend truncated preserved", "explicit paging shortfall recovery"],
+        "states": ["initial failure", "retained refresh failure", "offline", "partial"],
+        "constraints": ["unchanged SI", "unchanged query-key scope", "no fabricated totals"]
+      },
+      "usedBy": ["DayLogPage", "DayLogTimeline", "DayLogOperationalSummary"],
+      "dependsOn": ["existing useDataState/DataState", "backend limit/offset/total_events contract", "central focused hook acceptance"],
+      "changeNeeded": "Integration-owned hook hardening; not a new query-state implementation.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\vehicles\\lib\\daylog.ts",
+      "line": 235,
+      "rule": "MDC-002 one formatting/theme architecture",
+      "detail": "Domain clock/hour formatting and private accent palette overlap shared formatting/theme responsibilities, but contain specialist chronology requirements. Legacy DayLogSummary.tsx exists in the directory but is not imported by the audited page and was not semantically audited.",
+      "fix": "Retain specialist day/seconds/DST behavior while adopting existing compatible shared contracts. Do not transplant the unmounted summary or invent another timeline library.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "C44472A519D5D8F6A8AF811557FFD90A8AFC6A6412F6C2934E99CB8B8A5B5834",
+    "sourceHashAlgorithm": "SHA-256 of exact DayLogPage.tsx bytes at audit read and final verification",
+    "currentLineCount": 113,
+    "pageSpecificPresentationLineCount": 1094,
+    "lineCounts": {
+      "DayLogPage.tsx": 113,
+      "DayLogControls.tsx": 69,
+      "DayLogOperationalSummary.tsx": 110,
+      "DayLogTimeline.tsx": 712,
+      "DayLogSources.tsx": 90
+    },
+    "sections": ["Day summary", "Timeline", "Sources"],
+    "sectionCount": 3,
+    "sectionEvidence": "DayLogPage.tsx:85,98,110; two feature GlassPanel sections and one OperationalBrief summary; zero charts",
+    "metrics": ["Drives", "Charges", "Drive time", "Distance", "Energy added", "Energy used"],
+    "metricCount": 6,
+    "actions": ["Header vehicle selection", "Previous day", "Native date selection", "Next day", "Today", "Copy link", "Retry/refetch", "Search events", "Toggle present category chips", "Show all", "Clear all", "Expand/collapse each event", "Drive detail links", "Charging detail links", "Empty-summary Open drives", "Empty-timeline Open live telemetry with vehicle_id", "Empty-sources Open charging"],
+    "dataBehavior": [
+      "URL date remains YYYY-MM-DD; setDate preserves other query parameters. Invalid date falls back to today in resolved vehicle timezone.",
+      "Workspace scope at /day-log is range=false, vehicle=true (workspaceScope.ts:22-77,159-172). Local calendar day is independent business scope, not an accidental duplicate global range selector; preserve header vehicle ownership and do not introduce useRangeState or a second vehicle picker.",
+      "Native date input has max=today while Next day currently allows stepping beyond today; do not silently change this existing asymmetry without an explicit behavior decision.",
+      "Server resolves local midnight and exclusive next local midnight using AddDate; DST days are not assumed to be 86400 seconds.",
+      "Omitted layers means all optional layers enabled. Default search/category state shows every loaded event. Filtering never changes summary/source counts or fetch scope.",
+      "Server assembly owns chronological stable ordering (internal\\api\\daylog\\events.go:475-477); frontend appends pages and never independently resorts away source ties. Exact UTC timestamp, source, event id, layer and raw stored enum transitions remain available in details.",
+      "Unknown future event types map to Other rather than disappearing; original user place names remain verbatim.",
+      "Payload detail rows retain known scalar fields and unknown scalar fallback. Nested objects are currently skipped, not claimed displayed; backend payload guarantees beyond inspected source remain unverified.",
+      "Raw SI remains on wire/cache. Summary formatter callbacks and timeline useUnits convert only for display; no legacy unit helpers.",
+      "Retained data stays visible on refresh failure/offline; no blanket data gate may remove three sections.",
+      "Source statuses and signal-feed transition-only explanation survive; user presence cannot be synthesized. Session summaries and input-cap truncation remain distinct.",
+      "No export action is authored by this page; preserve copy link and valid referenced record navigation rather than inventing export capabilities."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only source audit of one assigned mounted page and immediate presentation/data owners. No source edits, Git operations, nested agents, browser actions, production requests, full-repository lint/build or TypeScript execution.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "backend": "Router, parameter handling, read fan-out and selected assembler evidence inspected; SQL repositories, live data and backend tests not exercised.",
+    "shared": "OperationalBrief, NoVehicleSelected, Input/Button and all transitive primitive internals not fully audited. Names/imports are not proof of mounted shared acceptance.",
+    "checks": [
+      {
+        "command": "PowerShell Get-FileHash web\\src\\features\\vehicles\\pages\\DayLogPage.tsx -Algorithm SHA256; Get-Content line counts for the five inspected presentation files",
+        "exitCode": 0,
+        "output": "DayLogPage=113; Controls=69; Timeline=712; Sources=90; OperationalSummary=110; SHA256=C44472A519D5D8F6A8AF811557FFD90A8AFC6A6412F6C2934E99CB8B8A5B5834"
+      },
+      {
+        "command": "PowerShell Select-String -CaseSensitive over the five inspected presentation files; patterns: <(button|input|textarea|select|table)\\b; neon|glow; (?:bg|border|text)-white; from .(recharts|react-leaflet|framer-motion).; from .(\\.\\./api|\\.\\./\\.\\./api).",
+        "exitCode": 0,
+        "output": "raw_html=0\nneon_glow=0\nfixed_white=4\ndirect_library=0\nold_api=0\nNo TypeScript, lint, build, runtime or skill script executed: bounded audit restriction.",
+        "interpretation": "Counts are matching source lines only, not whole-feature or rendered cleanliness. Private hex accents are separately flagged. Dynamic virtualizer styles are necessary computed geometry, not static-CSS violations."
+      },
+      {
+        "command": "Initial PowerShell direct-library pattern probe",
+        "exitCode": 1,
+        "output": "ParserError: Unexpected token ']' in expression or statement.",
+        "interpretation": "Retried successfully with case-sensitive simplified regex; no acceptance inferred from the failed probe."
+      }
+    ],
+    "skillLimit": "audit-violations skill loaded and script inspected; not run because it unconditionally invokes project TypeScript, outside this bounded read-only audit.",
+    "sharedAcceptanceDependencies": ["Central runtime/theme/forced-color validation", "Full ten-width and long-content/RTL/200%-text acceptance", "Keyboard/screen-reader virtualized history testing", "Source-backed paging/cap-loss/offline test cases"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\DayLogPage.tsx",
+    "web\\src\\features\\vehicles\\components\\daylog\\DayLogControls.tsx",
+    "web\\src\\features\\vehicles\\components\\daylog\\DayLogTimeline.tsx",
+    "web\\src\\features\\vehicles\\components\\daylog\\DayLogSources.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-a-m\\DayLogOperationalSummary.tsx",
+    "web\\src\\features\\vehicles\\lib\\daylog.ts",
+    "web\\src\\api\\hooks\\useDayLog.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\timezone.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\daylog\\handler.go",
+    "internal\\api\\daylog\\doc.go",
+    "internal\\api\\daylog\\events.go"
+  ]
+}
