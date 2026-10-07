@@ -1,0 +1,376 @@
+{
+  "item": "audit-page-177",
+  "page": "web\\src\\features\\sharing\\pages\\ShareCardPage.tsx",
+  "routes": [
+    {
+      "path": "/share-card",
+      "evidence": ["web\\src\\App.tsx:148", "web\\src\\App.tsx:850", "web\\src\\lib\\workspaceScope.ts:60"],
+      "mountStatus": "Source-declared lazy route inside SafeRoute; actual mounted reachability unverified."
+    }
+  ],
+  "purpose": "An authenticated share-card studio for inspecting selected-window drive evidence and composing a privacy-restricted, locally generated SVG.",
+  "primaryGoal": "Choose an existing card theme, inspect the exact six-line evidence payload and its limitations, and download an SVG without uploading or creating a public share.",
+  "dataSources": [
+    {
+      "name": "Selected-window drive rows",
+      "hook": "useDrives",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "endpoint": "GET /api/v1/drives",
+      "parameters": ["vehicle_id", "start", "end", "limit=1000"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\ShareCardPage.tsx:38-48", "web\\src\\api\\hooks\\useDriving.ts:104-128", "web\\src\\api\\client.ts:93", "internal\\api\\router.go:3463-3464"],
+      "behavior": "One capped request, enabled only for a selected vehicle; query key includes scope, signal is forwarded, safeArray selects rows, FAST stale time is retained. Endpoint registration is confirmed, not server filtering or response fidelity.",
+      "backendEvidenceLimit": "Handler, repository, database, authentication enforcement and runtime HTTP behavior were not inspected or exercised."
+    },
+    {
+      "name": "Workspace scope and display preferences",
+      "owners": ["web\\src\\hooks\\useRangeState.ts", "web\\src\\hooks\\useSelectedVehicle.ts", "web\\src\\lib\\timezone.ts", "web\\src\\hooks\\useUnits.ts", "web\\src\\hooks\\useNumberFormatting.ts"],
+      "evidence": ["web\\src\\features\\sharing\\pages\\ShareCardPage.tsx:35-44", "web\\src\\features\\sharing\\components\\share-card\\useShareCardDisplay.ts:18-136", "web\\src\\lib\\workspaceScope.ts:60"],
+      "behavior": "Consumes header-owned vehicle/range, vehicle timezone and persisted unit/locale/precision mechanisms. Range persistKey is share-card.range. No duplicate selector is rendered. Owner internals and any preference endpoints were not traced."
+    },
+    {
+      "name": "Pure client evidence analysis and local SVG",
+      "owner": "web\\src\\features\\sharing\\lib\\shareCard.ts",
+      "endpoint": null,
+      "evidence": ["web\\src\\features\\sharing\\lib\\shareCard.ts:520-843", "web\\src\\features\\sharing\\lib\\shareCard.ts:933-1033", "web\\src\\features\\sharing\\components\\share-card\\useShareCardComposition.ts:20-145"],
+      "behavior": "Derived from returned rows, never a new backend aggregate. SI values remain raw; conversion occurs in display/export. Fixed themes, XML escaping and local Blob/object-URL download; no upload/share mutation is present in inspected page-specific code."
+    }
+  ],
+  "components": [
+    {
+      "kind": "layout",
+      "names": ["PageLayout", "Grid", "LayoutCard", "ChartCard", "SourceContent"],
+      "owners": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx"],
+      "contract": "Reuse existing category exports. PageLayout forwards PageContainer props and maintains w-full/min-w-0 container. LayoutCard owns title/description/actions/footer/surface. ChartCard forwards canonical chart sizing, toolbar, accessible data columns and exports. SourceContent supports ready/loading/error/empty/retained with custom bodies and recovery.",
+      "evidence": ["web\\src\\features\\sharing\\pages\\ShareCardPage.tsx:6", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-13", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:8-64", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:7-46", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:10-78"]
+    },
+    {
+      "kind": "primitives",
+      "names": ["Button", "Select", "Label", "Text", "Badge", "Table", "HelpTooltip"],
+      "contract": "Keep localized names, disabled/pressed state, table semantics, typography roles and theme tokens. Table.variant=embedded is already available inside a host card.",
+      "evidence": ["web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx:3-76", "web\\src\\components\\ui\\Table.tsx:5-39"]
+    },
+    {
+      "kind": "composites",
+      "names": ["OperationalBrief", "DataTable", "OrderedStepList", "AlertBanner", "Skeleton", "EmptyState"],
+      "contract": "ShareCardBrief adapts raw metrics through useOperationalMetrics with explicit scope/provenance/status. DataTable owns directory behavior and stable tableId; existing mobilePresentation is opt-in, whereas mobileColumns alone hides cells. Keep source-specific empty and recovery copy.",
+      "evidence": ["web\\src\\features\\sharing\\components\\operationalbrief-all\\ShareCardBrief.tsx:13-51", "web\\src\\features\\sharing\\components\\share-card\\ShareCardRepresentativeDirectory.tsx:85-93", "web\\src\\components\\ui\\DataTable.tsx:235-248", "web\\src\\components\\ui\\DataTable.tsx:715-725", "web\\src\\components\\ui\\DataTable.tsx:1385-1408"]
+    },
+    {
+      "kind": "chart and motion",
+      "names": ["ResponsiveContainer", "BarChart", "ComposedChart", "ChartTooltip", "ChartLegend", "FadeIn"],
+      "contract": "Category imports are already used. Retain monthly/weekday legend identities, null gaps, accessible tables and raw-SI export rows. FadeIn delegates reduced-motion preference, ignores delay when reduced, and uses initial=false.",
+      "evidence": ["web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx:4-19", "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx:87-188", "web\\src\\components\\motion\\FadeIn.tsx:24-38"]
+    },
+    {
+      "kind": "domain",
+      "names": ["14 ShareCard sections", "ShareCardSectionBody", "ShareCardBrief", "shareCardQueryState", "useShareCardDisplay", "useShareCardComposition", "analyzeShareCard"],
+      "contract": "Keep feature-specific calculations, privacy and evidence scope outside generic presentation owners. Reuse the existing common state body and display bridge rather than establishing parallel engines.",
+      "evidence": ["web\\src\\features\\sharing\\components\\share-card\\index.ts:1-23", "web\\src\\features\\sharing\\components\\share-card\\types.ts:1-71"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardDistanceDistribution.tsx",
+      "line": 27,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Distance and duration distributions repeat band mapping, raw export rows, ChartCard, count axes, tooltip and empty-state structure; only thresholds, SI sums and labels differ.",
+      "fix": "Consider a typed feature-local distribution renderer only if both existing behaviors and export identities can be preserved; retain semantic distance/duration wrappers. No new shared chart system.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\components\\share-card\\ShareCardDurationDistribution.tsx:27-148"]
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardLineInventory.tsx",
+      "line": 15,
+      "rule": "MDC-002 / DRY",
+      "detail": "Six localized line labels are independently declared in the inventory and composition hook.",
+      "fix": "Reuse a feature-local label contract while retaining the six stable line keys, translations and order.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\components\\share-card\\useShareCardComposition.ts:28-38"]
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Two grids stack at default width and become 3/2 columns at xl; preview image is w-full and capped at 800px. Accounting items switch to two columns at lg. Tables have bounded internal horizontal overflow.",
+    "evidence": ["web\\src\\features\\sharing\\pages\\ShareCardPage.tsx:88-104", "web\\src\\features\\sharing\\components\\share-card\\ShareCardPreviewExport.tsx:67-70", "web\\src\\features\\sharing\\components\\share-card\\ShareCardAccountingIdentities.tsx:45", "web\\src\\components\\ui\\Table.tsx:17-23"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardRepresentativeDirectory.tsx",
+        "line": 94,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "mobileColumns keeps rank/day/distance only. Duration, energy, efficiency and route-withholding status receive hidden md:table-cell in the current DataTable path; this caller supplies neither mobilePresentation nor an expanded detail path.",
+        "fix": "Adopt the existing typed mobilePresentation/details contract or preserve all columns with reachable bounded overflow. Retain every metric and privacy indication, current tableId, ordering and row identity.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\sharing\\components\\share-card\\ShareCardRepresentativeDirectory.tsx:44-67", "web\\src\\components\\ui\\DataTable.tsx:715-725", "web\\src\\components\\ui\\DataTable.tsx:1385-1398"]
+      }
+    ],
+    "verification": "All ten contract widths, allocated-container widths, 200% text, long localized labels and RTL are unverified. Dual chart axes and fixed heights warrant viewport QA; clipping or zero-height charts are not asserted."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "All 14 section roots have localized aria-labels.",
+      "Theme Select has an accessible name; swatch buttons expose aria-pressed and h-11/w-11 targets.",
+      "Tables use row-header scopes; charts supply descriptions and dataColumns.",
+      "SVG has title/desc and image role; DOM preview has a localized alt and adjacent disclosure, and the separate line inventory exposes six values.",
+      "FadeIn has explicit reduced-motion handling in its shared implementation."
+    ],
+    "evidence": ["web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx:32-66", "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx:81-112", "web\\src\\features\\sharing\\lib\\shareCard.ts:980-982", "web\\src\\features\\sharing\\components\\share-card\\ShareCardPreviewExport.tsx:65-77", "web\\src\\components\\motion\\FadeIn.tsx:24-38"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\lib\\shareCard.ts",
+        "line": 981,
+        "rule": "MDC-040 / mission section 30",
+        "detail": "Standalone SVG accessible title/description contains title, subtitle and scope disclosure, but not the six metric labels/values. The application has a separate accessible inventory; the exported artifact cannot rely on that DOM.",
+        "fix": "Extend the escaped SVG description with all six label/value pairs and missing-value context without exposing private source fields or changing the visual metric payload.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard, focus order/restoration, screen reader behavior, effective contrast, forced colors, touch reachability and actual reduced-motion rendering were not exercised."
+  },
+  "states": {
+    "implemented": [
+      {"name": "No selected vehicle / unresolved prerequisite", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSectionBody.tsx:48-65", "behavior": "Passive explanatory body; source shells remain present."},
+      {"name": "Initial loading / network paused", "evidence": "web\\src\\features\\sharing\\components\\share-card\\queryState.ts:23-31", "behavior": "Skeleton/status during fetch; paused copy does not infer an empty API result."},
+      {"name": "Fatal initial failure", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSectionBody.tsx:66-80", "behavior": "Localized message and Retry evidence query action."},
+      {"name": "Resolved empty / returned but ineligible", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardEvidenceLedger.tsx:61-76", "behavior": "Distinct valid-empty and validation-rejection disclosures."},
+      {"name": "Missing individual measurements", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardLineInventory.tsx:30-68", "behavior": "Em dashes, missing badges and support counts; no measured-zero substitution."},
+      {"name": "Retained refresh failure / paused / refreshing", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSectionBody.tsx:100-122", "behavior": "Cached content remains; opt-in alerts in evidence/source ledgers. Brief communicates cached/paused/refreshing status."},
+      {"name": "Export unavailable", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardPreviewExport.tsx:31-61", "behavior": "Download disabled without svg; preview explains lack of eligible evidence and offers Browse drives."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSourceScopeLedger.tsx",
+        "line": 32,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "Endpoint badge is success/Resolved unless cachedRefreshError exists. Retained paused or actively refreshing evidence can therefore show a success badge beside the separate paused/refreshing alert.",
+        "fix": "Derive localized badge text/tone from the existing paused/refreshing/error state contract; retain resolved-data semantics and do not infer offline merely from historical timestamps.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "These are inspected source branches, not executed cases. No explicit source-age stale threshold or last-success timestamp is provided by ShareCardQueryState; historical drive timestamps are correctly not described as query freshness."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx",
+      "line": 22,
+      "rule": "MDC-010 / MDC-034 / mission sections 5-7",
+      "detail": "Four chart sections hardcode electric cyan, amber and purple constants instead of consuming the existing central chart palette/preference mechanism.",
+      "fix": "Use the existing palette owner for analytical charts with stable series assignments and adequate contrast; preserve deliberate saved neon choices rather than resetting them. No new color registry.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\components\\share-card\\ShareCardWeekdayProfile.tsx:21-22", "web\\src\\features\\sharing\\components\\share-card\\ShareCardDistanceDistribution.tsx:20", "web\\src\\features\\sharing\\components\\share-card\\ShareCardDurationDistribution.tsx:20", "web\\src\\lib\\colors.ts:31-68"]
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx",
+      "line": 59,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Selected swatch uses a fixed cyan border independent of the semantic selection token and chosen export theme.",
+      "fix": "Use existing semantic focus/selection styling while retaining theme IDs, pressed state and deliberate swatch colors.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\sharing\\lib\\shareCard.ts",
+      "line": 853,
+      "rule": "MDC-010 / MDC-011 / mission sections 5-8",
+      "detail": "Fixed export themes include bright cyan/green/orange accents, accent outline/rule and translucent decorative circles. This is a self-contained SVG palette, not theme-aware application styling. No glow filter, pure #ffffff text, or animated glow was found in this inspected renderer; title #f8fafc is soft off-white.",
+      "fix": "Review export visual intensity separately from app chrome. Preserve midnight/aurora/ember choices and deterministic 800x418 behavior; any approved restraint must keep all lines/disclosures and cannot silently reset selected theme behavior.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\lib\\shareCard.ts:983-1000"]
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardAccountingIdentities.tsx",
+      "line": 60,
+      "rule": "MDC-015 / MDC-023 / mission section 8",
+      "detail": "Six semantic Table callsites default to standalone framed chrome inside existing cards; accounting renders one framed Table per identity inside another bordered list tile. This adds repeated borders/surfaces rather than hierarchy.",
+      "fix": "Use the existing Table.variant=embedded where host cards/tiles already own surfaces, preserving row labels, all identity values and overflow behavior.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\components\\ui\\Table.tsx:5-35", "web\\src\\features\\sharing\\components\\share-card\\ShareCardSourceScopeLedger.tsx:20-22"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\sharing\\lib\\shareCard.ts",
+      "line": 560,
+      "rule": "MDC-045 / evidence-backed selected-window scope",
+      "detail": "Window rejection is conditional on validWindow; invalid instants disable both boundary checks, while readiness depends only on eligible row count. Analysis exposes window.valid/timezoneValid but composition does not gate or disclose those flags. This is a conditional source risk, not proof the mounted range hook supplies invalid input.",
+      "fix": "Resolve invalid-window/fallback-timezone handling with the existing range/data-trust owner; display a clear source limitation and prevent claiming validated selected-window exports when bounds are invalid. Preserve all valid-range calculations and distinguish a source failure from measured empty.",
+      "owner": "integration",
+      "confidence": "medium",
+      "relatedEvidence": ["web\\src\\features\\sharing\\lib\\shareCard.ts:531-532", "web\\src\\features\\sharing\\lib\\shareCard.ts:800-802", "web\\src\\features\\sharing\\lib\\shareCard.ts:834", "web\\src\\features\\sharing\\components\\share-card\\useShareCardComposition.ts:119-123"]
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardAccountingIdentities.tsx",
+      "line": 80,
+      "rule": "MDC-033 / specialist measurement preservation",
+      "detail": "Residual/tolerance use the general display.formatNumber default precision. At low saved precision, the explicit 0.000001 tolerance can render as zero, hiding the specialist audit threshold even though pass/fail uses the raw value.",
+      "fix": "Use explicit sufficient precision or a source-preserving specialist representation for residual/tolerance only, retaining locale and general saved precision elsewhere.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\sharing\\components\\share-card\\useShareCardDisplay.ts:32-41", "web\\src\\features\\sharing\\lib\\shareCard.ts:748-760"]
+    }
+  ],
+  "priority": {
+    "level": "P1 preservation and trust, then P2 visual consistency",
+    "order": ["Make mobile directory details reachable without losing columns", "Preserve standalone SVG accessible metric payload", "Resolve conditional invalid-window export trust", "Correct paused/refreshing badge semantics and specialist precision", "Adopt existing palette and embedded table contracts"],
+    "rationale": "The page already has substantial decomposition and source states. Modernization should not flatten its evidence, scope/privacy explanations, actions or specialized exports."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx",
+      "line": 22,
+      "rule": "MDC-002 / MDC-034",
+      "detail": "Local analytical chart palettes compete with web\\src\\lib\\colors.ts and its existing palette hooks.",
+      "fix": "Adopt existing shared palette contracts; no shared implementation change is established by this audit.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSectionBody.tsx",
+      "line": 66,
+      "rule": "MDC-026",
+      "detail": "Feature-specific fatal-error and cached-alert presentation sits alongside SourceContent's existing error/retained recovery APIs. Specialist no-vehicle/paused language is legitimate and must not be removed.",
+      "fix": "Consider composing existing errorRecovery/retainedMessage props only if source-specific wording, independent panels and retry behavior stay intact; no replacement state system.",
+      "owner": "page",
+      "confidence": "medium",
+      "relatedEvidence": ["web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:28-31", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:53-74"]
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "1987B4964943C1C1F231E0F605108D3ADCF1983C02D47E4E2CCD54A91C028DA8",
+    "sourceHashAlgorithm": "SHA-256 of raw page bytes",
+    "currentLineCount": 108,
+    "productionSectionTsxLineCount": 1672,
+    "briefTsxLineCount": 52,
+    "pagePlusPresentationTsxLineCount": 1832,
+    "shareCardProductionDependencyLineCount": 2068,
+    "countScope": "share-card dependency count includes production .ts/.tsx barrel/types/hooks but excludes test; presentation total is page + all production share-card TSX + ShareCardBrief. shareCard.ts is an additional 1033 lines.",
+    "sectionCount": 14,
+    "componentCounts": {"LayoutCard": 8, "ChartCard": 4, "ShareCardBrief": 2, "GlassPanel": 0, "ChartContainer": 0},
+    "sections": [
+      {"name": "KPI and evidence ledger", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardEvidenceLedger.tsx", "line": 49, "count": 1, "contents": "Six raw-source metrics, support counts and empty/rejection notices."},
+      {"name": "Source, query, and scope ledger", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSourceScopeLedger.tsx", "line": 16, "count": 1, "contents": "Endpoint, cap, range/timezone, half-open instants, validation totals and retained status."},
+      {"name": "Coverage and cap disclosure", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardCoverageDisclosure.tsx", "line": 19, "count": 1, "contents": "Capped/sub-cap limitations, earliest/latest timestamps, span and active/requested days."},
+      {"name": "SVG style controls", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx", "line": 16, "count": 1, "contents": "Three fixed themes, select/swatches, contextual help and display-boundary note."},
+      {"name": "Full preview and export", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardPreviewExport.tsx", "line": 23, "count": 1, "contents": "Exact SVG image, scope summary, disabled download, local export and Browse drives empty recovery."},
+      {"name": "Card content and line inventory", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardLineInventory.tsx", "line": 25, "count": 1, "contents": "Six ordered slots, measured/missing status, display values and support counts."},
+      {"name": "Monthly trend", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx", "line": 65, "count": 1, "contents": "Distance/energy/count, null gaps, cap-specific month semantics, legend keys, accessible table and raw-SI export."},
+      {"name": "Weekday activity profile", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardWeekdayProfile.tsx", "line": 67, "count": 1, "contents": "Timezone weekdays, distance/count axes, legend identities, accessible table and raw-SI export."},
+      {"name": "Distance distribution", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardDistanceDistribution.tsx", "line": 69, "count": 1, "contents": "Four fixed meter bands, count/support semantics, converted labels, accessible table and raw-SI totals export."},
+      {"name": "Duration distribution", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardDurationDistribution.tsx", "line": 69, "count": 1, "contents": "Four fixed second bands, count/support semantics, accessible table and raw-SI totals export."},
+      {"name": "Efficiency, regen, and field coverage", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardEfficiencyEvidence.tsx", "line": 55, "count": 1, "contents": "Four specialist metrics and all eight independent valid/missing field denominators."},
+      {"name": "Representative drive directory", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardRepresentativeDirectory.tsx", "line": 74, "count": 1, "contents": "Top 12 deterministic distance-ranked records, seven columns and explicit withholding; stable tableId."},
+      {"name": "Exact accounting identities", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardAccountingIdentities.tsx", "line": 34, "count": 1, "contents": "16 reconciliation identities, expected/actual/residual/tolerance and textual pass/fail."},
+      {"name": "Methodology, privacy, and export limits", "file": "web\\src\\features\\sharing\\components\\share-card\\ShareCardMethodology.tsx", "line": 43, "count": 1, "contents": "Six methods covering validation, measurement support, weighting, timezone, redaction and export; cap limitation."}
+    ],
+    "actions": [
+      {"name": "Header copyLink", "evidence": "web\\src\\features\\sharing\\pages\\ShareCardPage.tsx:84", "behavior": "Existing PageLayout forwarded capability; actual clipboard/link implementation not traced or invoked."},
+      {"name": "Select theme and three swatch buttons", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx:34-68", "behavior": "Keep midnight initial theme and midnight/aurora/ember keys; changes are component-local, not persisted."},
+      {"name": "Open SVG style help", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx:23-29", "behavior": "Keep local-render and fixed-file-color explanation."},
+      {"name": "Download safe SVG", "evidence": "web\\src\\features\\sharing\\components\\share-card\\useShareCardComposition.ts:125-130", "behavior": "Local Blob/download anchor with sanitized dated filename and 1500ms object-URL cleanup. Never upload."},
+      {"name": "Browse drives", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardPreviewExport.tsx:56-60", "behavior": "Empty-state navigation to /drives."},
+      {"name": "Retry evidence query", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardSectionBody.tsx:74-76", "behavior": "Refetch existing query, not a new data source."},
+      {"name": "Chart toolbar/data alternatives/export and series toggles", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx:71-113", "behavior": "Keep four canonical ChartCard toolbars and source export payloads; keep monthly/weekday hiddenSeries keys and chartKey preferences. Shared runtime controls were not exercised."},
+      {"name": "Directory table behavior", "evidence": "web\\src\\features\\sharing\\components\\share-card\\ShareCardRepresentativeDirectory.tsx:85-93", "behavior": "Keep existing DataTable pipeline, keyExtractor=id, tableId=share-card:representative-drives, compact density and pagination=false."}
+    ],
+    "dataBehavior": [
+      "One capped returned sample, never all-history/full-range/lifetime certification; reaching 1000 rows changes disclosures and monthly missing-month semantics.",
+      "Positive integer identity, first-seen duplicate handling, parseable timestamp and valid half-open [start,end) checks; keep all seven terminal dispositions.",
+      "Preserve finite nonnegative measured zero, nullable unknowns, independent field support and signed valid temperature handling.",
+      "Distance-weighted energy uses positive-distance paired rows; regen percentage uses energy+regen paired denominator. Do not replace with averages of ratios.",
+      "Calendar buckets use resolved vehicle timezone; invalid timezone currently falls back to UTC and exposes timezoneValid.",
+      "Representative ranking ties use duration, timestamp and ID; no exact address text, coordinates, geometry, VIN or location reaches the card/directory presentation. Raw API rows still arrive in the query: presentation redaction is not network redaction.",
+      "All six SVG slots survive, including missing em dashes and missing disclosure; deterministic escaped 800x418 SVG with title/subtitle/footer and cap caveats.",
+      "Display helpers retain saved units, number precision and locale; chart/table export fields remain meters/seconds/Wh rather than formatted display strings.",
+      "Retain cached data on refresh failure/paused fetching; no fabricated data or backend capability."
+    ],
+    "dataEvidence": ["web\\src\\features\\sharing\\lib\\shareCard.ts:437-512", "web\\src\\features\\sharing\\lib\\shareCard.ts:520-843", "web\\src\\features\\sharing\\lib\\shareCard.ts:933-1033", "web\\src\\features\\sharing\\components\\share-card\\useShareCardDisplay.ts:18-136"]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only source inspection; only owned report and heartbeat written.",
+    "runtime": "NOT EXERCISED",
+    "visual": "NOT EXERCISED; saturation/decorative issues are source findings, not screenshots or measured contrast.",
+    "keyboard": "NOT EXERCISED",
+    "contrast": "NOT MEASURED",
+    "viewport": "NOT EXERCISED",
+    "backend": "Only endpoint registration inspected; no handler/query/database correctness, HTTP payload, auth or server-bound filtering claims.",
+    "mutations": "No upload, actual share, message, download, clipboard or production mutation performed.",
+    "validation": "No Git, agents, TypeScript, lint, build, full test suite or browser used. The loaded audit skill script was read but not executed because it unconditionally performs project-wide TypeScript, outside this Phase 0 permission. Scoped case-sensitive Select-String checks and JSON validation only.",
+    "validationReceipts": [
+      {
+        "command": "Get-Content docs\\frontend-audits\\audit-page-177.json -Raw | ConvertFrom-Json; compare required property names; Get-FileHash web\\src\\features\\sharing\\pages\\ShareCardPage.tsx -Algorithm SHA256; compare report hash; Test-Path each filesRead path",
+        "exitCode": 0,
+        "output": "JSON parse: PASS\nRequired fields: 19/19\nSource hash unchanged: 1987B4964943C1C1F231E0F605108D3ADCF1983C02D47E4E2CCD54A91C028DA8\nSections: 14\nFilesRead all exist: 0 missing",
+        "limit": "Schema property presence and source integrity, not runtime acceptance."
+      },
+      {
+        "command": "Select-String -Path $targets -Pattern '<(button|input|textarea|select|table)\\b','style=','text-white|text-neon|shadow.*glow|drop-shadow' -CaseSensitive; scoped Get-Content line counts and Select-String tag counts",
+        "exitCode": 0,
+        "output": "<(button|input|textarea|select|table)\\b : 0 case-sensitive matches\nstyle= : 2 case-sensitive matches\ntext-white|text-neon|shadow.*glow|drop-shadow : 0 case-sensitive matches\nproductionSectionTsxLines=1672\nbriefLines=52\nsectionTags=14\nLayoutCardTags=8\nChartCardTags=4\nOperationalBriefCallsites=2",
+        "limit": "$targets is the page, production share-card files excluding tests, and ShareCardBrief; this receipt describes the actual scoped command operations, not a full violations scanner."
+      }
+    ],
+    "sourceScan": {
+      "scope": "Page + production share-card components/types/hooks/barrel + ShareCardBrief",
+      "caseSensitive": true,
+      "rawRestrictedHtmlMatches": 0,
+      "directChartMapMotionLibraryImports": 0,
+      "inlineStyleOccurrences": 2,
+      "inlineStyleInterpretation": "Both are computed fixed-theme swatch previews, not static CSS-variable style violations.",
+      "textWhiteNeonGlowClassMatches": 0,
+      "localChartHexDeclarationMatches": 7,
+      "caveat": "First PowerShell scan was case-insensitive and incorrectly matched capitalized shared component tags; final case-sensitive scan corrected count to zero. Pattern counts are not full semantic/runtime acceptance. SVG palette was inspected separately."
+    },
+    "sharedRequirementAssessment": "No required shared implementation extension is established. Existing palette, embedded Table, mobilePresentation and SourceContent recovery contracts can address scoped findings. Shared owner implementation/runtime quality remains outside this one-page audit.",
+    "partialReads": "App.tsx inspected via scoped route search; workspaceScope.ts lines 35-80; useDriving.ts relevant query ranges/search; client.ts API-base/transform search; router.go only drives registration; DataTable.tsx relevant mobile contract/selection/render ranges. Preference hook internals, EmbeddedChart, PageContainer, mobile adapter internals and catalogs were not read.",
+    "historicalEvidence": "No past receipt was treated as current acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\sharing\\pages\\ShareCardPage.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\index.ts",
+    "web\\src\\features\\sharing\\components\\share-card\\types.ts",
+    "web\\src\\features\\sharing\\components\\share-card\\queryState.ts",
+    "web\\src\\features\\sharing\\components\\share-card\\useShareCardDisplay.ts",
+    "web\\src\\features\\sharing\\components\\share-card\\useShareCardComposition.ts",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardSectionBody.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardEvidenceLedger.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardSourceScopeLedger.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardCoverageDisclosure.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardStyleControls.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardPreviewExport.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardLineInventory.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardMonthlyTrend.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardWeekdayProfile.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardDistanceDistribution.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardDurationDistribution.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardEfficiencyEvidence.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardRepresentativeDirectory.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardAccountingIdentities.tsx",
+    "web\\src\\features\\sharing\\components\\share-card\\ShareCardMethodology.tsx",
+    "web\\src\\features\\sharing\\components\\operationalbrief-all\\ShareCardBrief.tsx",
+    "web\\src\\features\\sharing\\lib\\shareCard.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\colors.ts"
+  ]
+}
