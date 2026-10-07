@@ -1,0 +1,365 @@
+{
+  "item": "audit-page-071",
+  "page": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+  "routes": ["/pack-capacity"],
+  "purpose": "Inspect charging-derived implied pack-capacity evidence, uncertainty, model assumptions, diagnostics, coverage and exact source-row accounting.",
+  "primaryGoal": "Understand the returned charging-history window without mistaking implied capacity or evidence support for battery health, degradation, safety or remaining life.",
+  "dataSources": [
+    {
+      "hook": "useChargingHistory",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "/charging?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "method": "GET",
+      "sourceOwner": "charging history hook and existing chargingHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3502-3503 mounts the /charging root GET; no HTTP request was exercised.",
+      "behavior": "Separate history cache key includes vehicle and bounded limit; enabled only for truthy vehicle ID; forwards AbortSignal; MODERATE stale time; safeArray selector. Backend ordering, actual cap enforcement and returned payload are not independently verified."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle') / useUnits / useTranslation",
+      "file": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "line": 44,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace selection, timezone, settings/units and localization mechanisms",
+      "behavior": "Selected vehicle filters history; locale and energy preference reach display components. Hook internals and their own setting endpoints were outside this bounded audit."
+    },
+    {
+      "hook": "useDataState and packCapacitySourceState",
+      "file": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "line": 56,
+      "endpoint": null,
+      "sourceOwner": "Existing historical DataState contract and feature trust adapter",
+      "behavior": "Single query supplies all analytical neighbors. Adapter distinguishes initial/fatal/retained refresh failures and paused initial work; source notice handles blocked refresh."
+    },
+    {
+      "hook": "analyzePackCapacity",
+      "file": "web\\src\\features\\battery\\lib\\packCapacity.ts",
+      "line": 1323,
+      "endpoint": null,
+      "sourceOwner": "Battery domain analysis library",
+      "behavior": "Pure derived analysis of returned sessions with mount-frozen nowMs, vehicle timezone and selected assumptions. Reads started_at, ended_at, start_soc_pct, end_soc_pct and total_energy_added_wh; does not impute missing completion, SoC or energy. Only selected algorithm ranges were inspected."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid / PackCapacityPlacement",
+      "owner": "Existing @/components/layout category and feature placement adapter",
+      "file": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "line": 101,
+      "props": ["title", "subtitle", "CardGrid.label", "CardGrid.items[id,size,content]", "children"],
+      "behavior": "One page frame, four paired grids, eight placement adapters; full-width/min-w-0 composition. Placement reads existing useCardPlacement rather than introducing another layout engine."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "Existing @/components/motion",
+      "file": "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+      "line": 108,
+      "props": ["className", "delay", "children"],
+      "behavior": "Ten entrance groups, delay 0 through 0.45; shared reduced-motion implementation not inspected or exercised."
+    },
+    {
+      "name": "PackCapacitySummary / BatteryEvidenceBrief / OperationalBrief",
+      "owner": "Battery domain summary adapter and existing shared OperationalBrief",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySummary.tsx",
+      "line": 137,
+      "props": ["result", "state", "locale", "formatEnergy", "minSocWindowPct", "processNoiseWhPerSqrtDay", "onMinSocWindowChange", "onProcessNoiseChange"],
+      "behavior": "Six numeric-source specialist readings, two labeled Select controls, status/retry; BatteryEvidenceBrief bridges metrics with useOperationalMetrics and keeps provenance beside the readings and review drawer."
+    },
+    {
+      "name": "ChartContainer / EmbeddedChart",
+      "owner": "Existing @/components/charts",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEstimateTimeline.tsx",
+      "line": 65,
+      "props": ["title", "subtitle", "ariaLabel", "size", "loading", "data", "dataColumns", "exportData", "exportable", "chartKey", "hiddenSeries"],
+      "behavior": "Seven ChartContainer specialist sections and one EmbeddedChart fit diagnostic. Preserve data-table alternatives, export inputs, legend identities, every axis/series and specialist formatters. Shared frame implementation was not inspected."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityMeasurementDirectory.tsx",
+      "line": 148,
+      "props": ["tableId", "variant=embedded", "columns", "data", "keyExtractor", "enableValueFilters", "mobileColumns", "mobilePresentation.roles", "mobilePresentation.displayValue", "emptyMessage"],
+      "behavior": "Canonical measurement and accounting pipelines; two stable table IDs. Measurement directory has nine columns; accounting has three. Shared mobile adapter and export persistence were not exercised."
+    },
+    {
+      "name": "GlassPanel / PanelTitle / Text / Heading / MetricCard / MetricBar / AlertBanner / QueryError / EmptyState / Skeleton / Button / Select",
+      "owner": "Existing UI, feedback and data-display categories",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityCoverage.tsx",
+      "line": 43,
+      "props": ["Existing domain labels, values, subtitles, color, state, retry, children"],
+      "behavior": "Five mounted GlassPanel domain sections; layout-card summary; domain state gate preserves headings while swapping unavailable bodies."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityMeasurementDirectory.tsx",
+      "line": 120,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Desktop cell renderers and mobile displayValue repeat nine presentation mappings, risking formatting drift. This is presentation duplication, not a second server-state pipeline.",
+      "fix": "Keep one typed per-column display formatter in the feature and reuse it in render and mobile displayValue; preserve filterValue, filter labels, raw SI and all columns.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PackCapacityPage.tsx:108-287 uses w-full/min-w-0 on all ten entrance groups and four half-size CardGrid pairs.",
+      "PackCapacityPlacement.tsx:14-18 forwards allocated placement className and full-width/min-w-0 without replacing specialist frames.",
+      "PackCapacitySummary.tsx:150-175 wraps controls and sets minimum widths and 44px minimum select height.",
+      "PackCapacityMeasurementDirectory.tsx:157-166 supplies all nine mobileColumns; four mobile summary roles are hidden, requiring shared detail reachability verification.",
+      "PackCapacityRowAccounting.tsx:168-175 retains category/count/share mobile columns and keyValue mapping.",
+      "PackCapacityCoverage.tsx:65 uses one/two/six-column breakpoints; PackCapacityMethodology.tsx:190 uses one/two/five-column reflow.",
+      "PackCapacityWindowSensitivity.tsx:114-129 uses two y axes; capacity plots reserve 72px energy-axis width, a narrow-container risk rather than proven overflow."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityCoverage.tsx",
+        "line": 65,
+        "rule": "MDC-043 / MDC-031",
+        "detail": "Six KPI columns switch at viewport xl inside a half-width grid placement. MetricCard defaults truncate labels and subtitles; long localized descriptions may become inaccessible in the allocated card width.",
+        "fix": "Use allocated-container-aware existing stat/layout presentation and keep full labels/subtitles reachable; test actual half-grid allocation and long translations rather than assuming viewport xl is sufficient.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "viewportValidation": "NOTRUN: 320,375,390,430,768,1024,1280,1440,1920,2560; tablet fallback, drawer details, 200% text and RTL unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "PackCapacitySummary.tsx:147-175 uses labeled shared Select controls with stable explicit IDs.",
+      "PackCapacityEstimateTimeline.tsx:74-104 provides localized ariaLabel and five data columns.",
+      "PackCapacityQueryStatus.tsx:44-64 supplies polite live loading status; refresh failure at 77-103 uses role=alert and Button retry.",
+      "PackCapacityMethodology.tsx:173-206 retains PanelTitle, article structure, Heading and decorative aria-hidden icons."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\MetricCard.tsx",
+        "line": 82,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "Default labels truncate at lines 82-85 and subtitles always truncate at line 105. Specialist fit-gate and scope explanations are meaningful, not expendable decoration; source confirms clipping rules, not actual visual clipping.",
+        "fix": "Extend the existing MetricCard to expose a non-lossy subtitle wrapping presentation and combine with existing wrapLabel/compact capabilities; do not introduce another metric card.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "validation": "NOTRUN: keyboard order, focus restoration, actual accessible names, screen reader, chart table navigation, effective contrast, forced colors, touch reachability and reduced motion."
+  },
+  "states": {
+    "initialLoading": "packCapacitySourceState.ts:19-24 enables active initial loading only without data/fatal error/block; PackCapacitySectionBody.tsx:69-80 retains section geometry with Skeleton.",
+    "noVehicle": "PackCapacityQueryStatus.tsx:30-42 and PackCapacitySectionBody.tsx:58-67 explain selecting the workspace vehicle; page suppresses sessions when no vehicle is selected at lines 66-69.",
+    "empty": "PackCapacityQueryStatus.tsx:121-132 distinguishes zero returned rows; section body distinguishes empty from no qualified observations at lines 106-125.",
+    "fatalError": "PackCapacityQueryStatus.tsx:69-74 has QueryError retry; section bodies retain headings and passive recovery explanations.",
+    "refreshError": "packCapacitySourceState.ts:25-28 retains resolved data; PackCapacityQueryStatus.tsx:77-103 shows retained-evidence warning and retry.",
+    "offlinePaused": "PackCapacitySourceNotice.tsx:17-42 separates blocked retained-data refresh from paused initial load, with optional retry.",
+    "partialOrInsufficient": "Qualified evidence gate and independent fit gate remain; thin support, capped source and omitted plot/directory rows have explicit explanations.",
+    "unknown": "Summary unresolved metrics are null at PackCapacitySummary.tsx:81; physical missing values retain an em dash, not an invented measurement.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\packCapacitySourceState.ts",
+        "line": 25,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "Feature query state forwards only resolution/errors/retry, not source success timestamp or stale status. Ordinary retained readings without a refresh error carry no visible retrieval freshness; observed recency is a frozen analysis measurement, not query freshness.",
+        "fix": "Preserve DataState trust fields through the feature adapter and show source freshness using the existing brief/source-notice contract. Do not reinterpret observation recency as fetch age or discard retained evidence.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtimeValidation": "NOTRUN; all state evidence is source inspection."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEvidenceSupport.tsx",
+      "line": 36,
+      "rule": "MDC-010 / mission 43",
+      "detail": "Five support ingredients assign five distinct chartTokens hues, and coverage assigns cyan/green/blue/purple/amber/red to independent KPI icons. This is decorative multi-hue noise to review; no rendered saturation or contrast measurement is claimed. No neon/glow/pure-white class occurs in the page itself. MetricCard consumes toned c.text, not neonColorMap.glow.",
+      "fix": "Use a restrained shared semantic/default color for ordinary coverage and support ingredients while keeping color/data identity for genuine analytical series and preserving explicit user chart preferences. Do not change global tokens in a page task.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySummary.tsx",
+      "line": 3,
+      "rule": "MDC-002 category-barrel imports",
+      "detail": "Feature imports StatMetric from data-display/stat-reference and LayoutCard from layout/layout-reference; RowAccounting repeats the stat-reference import and Placement imports layout-reference for useCardPlacement. This bypasses canonical category API ownership.",
+      "fix": "Use existing category exports for already exported StatMetric/LayoutCard. Check useCardPlacement category availability with its owner; export the existing implementation only if missing, never add a competing placement hook.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityProcessSensitivity.tsx",
+      "line": 109,
+      "rule": "MDC-045 / specialist unit meaning",
+      "detail": "Process-noise x axis displays unit ' Wh', whereas the control, methodology and export column describe Wh / square-root day. The raw numeric values remain canonical; axis annotation loses the process-rate meaning.",
+      "fix": "Preserve process-noise values and provide localized complete axis/unit context using the existing chart presentation, without converting it as an ordinary energy measurement.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "rationale": "Already composed with existing layouts, shared charts/tables and retained-data handling. Address specialist label preservation and misleading process-noise annotation before visual acceptance; no source-confirmed fatal page failure was established.",
+    "acceptance": "Source audit only; mission section 44 runtime definition of done remains unverified."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "MetricCard non-lossy specialist metadata",
+      "owner": "web\\src\\components\\data-display\\MetricCard.tsx",
+      "props": ["Retain value, kind, subtitle, icon, help, delta, color, wrapLabel and compact; provide existing-owner opt-in subtitle wrapping without changing defaults"],
+      "variants": ["Existing compact/default; no replacement card"],
+      "states": ["Long translated fit-gate and source-scope labels", "missing measurement", "retained evidence", "narrow allocated container"],
+      "usedBy": ["PackCapacityFitDiagnostics", "PackCapacityCoverage", "PackCapacityEvidenceSupport"],
+      "dependsOn": ["Existing Typography and Card", "Container-width and long-label validation"],
+      "evidence": "MetricCard.tsx:82-85,105; PackCapacityFitDiagnostics.tsx:115-200; PackCapacityCoverage.tsx:65-202"
+    },
+    {
+      "name": "Canonical category exposure of existing placement API",
+      "owner": "Existing @/components/layout category; useCardPlacement implementation consumed from layout-reference",
+      "props": ["Existing useCardPlacement return size/span/className; no new hook or altered grid semantics"],
+      "variants": ["Existing full/half placement"],
+      "states": ["Inside grid", "No placement context", "Responsive resolved span"],
+      "usedBy": ["PackCapacityPlacement"],
+      "dependsOn": ["Verify category export availability; not inspected in this audit"],
+      "evidence": "PackCapacityPlacement.tsx:3,12-18; requirement is conditional, not a claim that an export is missing"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Older domain exports versus mounted modernization components",
+      "file": "web\\src\\features\\battery\\components\\pack-capacity\\index.ts",
+      "line": 1,
+      "detail": "Barrel still exports PackCapacityAccounting, PackCapacityDirectory and PackCapacityKpiBand; current page mounts PackCapacityRowAccounting, PackCapacityMeasurementDirectory and PackCapacitySummary instead. Export presence alone does not prove another mounted consumer or authorize deleting these files.",
+      "owner": "integration",
+      "disposition": "Keep current mounted canonical shared table/brief pipeline; consumer inventory and cleanup are outside this page audit."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "6B9DE2D78C9C19F1F76988939ABDDD6A64B4378FCC926A0C67F1A38C05613C8E",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 292,
+    "sections": [
+      {"name": "Capacity evidence summary and assumption controls", "line": 109},
+      {"name": "Capacity estimate timeline", "line": 126},
+      {"name": "Vehicle-local monthly evidence", "line": 143},
+      {"name": "SoC-window quality profile", "line": 157},
+      {"name": "Minimum-window sensitivity", "line": 178},
+      {"name": "Process-noise sensitivity", "line": 191},
+      {"name": "Standardized innovation distribution", "line": 212},
+      {"name": "Influence and uncertainty timeline", "line": 221},
+      {"name": "Descriptive linear-fit diagnostics", "line": 235},
+      {"name": "Recent measurement directory", "line": 245},
+      {"name": "Coverage, cadence and recency", "line": 262},
+      {"name": "Evidence-support index", "line": 271},
+      {"name": "Source-row accounting", "line": 280},
+      {"name": "Methodology and interpretation limits", "line": 288}
+    ],
+    "sectionCount": 14,
+    "auxiliaryNotices": ["PackCapacitySourceNotice at page line 119", "Summary query status and per-section passive gates"],
+    "counts": {
+      "entranceGroups": 10,
+      "cardGrids": 4,
+      "placementAdapters": 8,
+      "mountedChartContainers": 7,
+      "mountedEmbeddedCharts": 1,
+      "mountedGlassPanels": 5,
+      "mountedDataTables": 2,
+      "summaryMetrics": 6,
+      "fitDiagnosticMetrics": 5,
+      "coverageMetrics": 6,
+      "supportIngredients": 5,
+      "accountingSummaryMetrics": 4,
+      "accountingCategories": 14,
+      "methodologyItems": 10
+    },
+    "actions": [
+      "Change minimum SoC window: 5/10/20/30/40 percentage points; default 10.",
+      "Change process noise: 10/30/60/120 Wh per square-root day; default 30.",
+      "Retry fatal/refresh failures and paused work via existing source retry.",
+      "Existing OperationalBrief review/details interaction with full metric context and provenance.",
+      "Existing chart toolbar, export and data alternatives; preserve supplied rows, labels, chartKey and supported hidden-series state.",
+      "Measurement directory value filters and canonical DataTable persistence/mobile/details/export behavior; accounting table category/count/share.",
+      "Consume shell-owned selected vehicle; do not add another page vehicle picker."
+    ],
+    "chartSeries": {
+      "estimateTimeline": ["raw", "filtered", "lower", "upper"],
+      "monthTrend": ["samples", "median", "latest"],
+      "socWindowProfile": ["samples", "median", "relativeSigma"],
+      "windowSensitivity": ["included", "current", "sigma"],
+      "processSensitivity": ["current", "sigma"],
+      "innovationProfile": ["samples", "share in exported/alternative data"],
+      "influenceTimeline": ["gain", "innovation", "sigma"],
+      "fitDiagnostics": ["filtered", "fit"]
+    },
+    "dataBehavior": [
+      "Returned-history analysis is bounded, not lifetime or calibrated health evidence; retain 1000-row cap disclosures.",
+      "Mount-frozen nowMs and vehicle-local calendar affect future classification, cadence, recency and months; preserve defaults and selected assumption state.",
+      "Validation reads raw Wh and SoC endpoints, rejects invalid/future/incomplete rows, then accounts for duplicate/overlap/cap reasons without imputing unknowns.",
+      "Retain posterior, sigma, gain, innovation, all summary and support calculations; fit gates are 12 observations, 180 days and six active months.",
+      "Display caps: 24 trend months, 200 timeline points, 25 directory measurements; omitted rows are disclosed and summaries retain included analysis rows.",
+      "Directory fields: completion, SoC gain, energy added, raw capacity, filtered capacity, posterior sigma, gain, standardized innovation, location.",
+      "Accounting retains fourteen mutually exclusive primary categories and returned = included + excluded invariant.",
+      "Energy conversion is display-only via formatEnergy and convertEnergyFromSI; no hook/cache mutation or fake data.",
+      "Keep all ten methodology explanations, explicit limits and all localized captions, uncertainty qualifications and non-claims."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Atomic Phase0 source audit of the assigned page and direct page-specific dependencies. No source changes, Git, tests, full-repository lint, build, TypeScript or runtime/browser commands.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewports": "UNVERIFIED",
+    "routing": "Assigned route retained verbatim; application mount graph not inspected.",
+    "backend": "Only matching router declaration inspected. Response ordering, cap enforcement, payload shape and charging handler behavior remain unverified.",
+    "sharedDependencies": "Only MetricCard source and relevant DataTable/token excerpts inspected. Shared layout/chart/brief/mobile-adapter internals not fully traced; no inferred runtime acceptance.",
+    "algorithm": "Selected default/classification/analysis/display-cap ranges inspected; full Kalman, support and sensitivity implementation not independently audited.",
+    "sourceChecks": {
+      "method": "Bounded PowerShell regex counts on exact page content; inspection-only, not an application lint gate.",
+      "command": "$p='web\\src\\features\\battery\\pages\\PackCapacityPage.tsx'; $s=Get-Content $p -Raw; foreach($x in @(@('static-inline-style','style=\\{\\{'),@('raw-controls','<(button|input|textarea|select|table)\\b'),@('direct-chart-map-motion-import',\"from ['`\"](recharts|react-leaflet|framer-motion)['`\"]\"),@('neon-glow-white','neon|glow|text-white|bg-white'),@('GlassPanel','<GlassPanel\\b'),@('ChartContainer','<ChartContainer\\b'),@('CardGrid','<CardGrid\\b'),@('FadeIn','<FadeIn\\b'))){$x[0]+': '+([regex]::Matches($s,$x[1]).Count)}",
+      "exitCode": 0,
+      "actualOutput": ["static-inline-style: 0", "raw-controls: 0", "direct-chart-map-motion-import: 0", "neon-glow-white: 0", "GlassPanel: 0", "ChartContainer: 0", "CardGrid: 4", "FadeIn: 10"],
+      "interpretation": "Zero direct page matches does not certify dependencies or composed styling. Page delegates panels/charts to domain components.",
+      "notRun": "Skill audit.sh was read but not executed because it unconditionally runs project TypeScript, outside this source-only assignment."
+    },
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-071.json", ".agent-status\\audit-page-071.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\PackCapacityPage.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\features\\battery\\lib\\packCapacity.ts",
+    "web\\src\\features\\battery\\components\\pack-capacity\\index.ts",
+    "web\\src\\features\\battery\\components\\pack-capacity\\labels.ts",
+    "web\\src\\features\\battery\\components\\pack-capacity\\types.ts",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEstimateTimeline.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityMonthTrend.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacitySocWindowProfile.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityWindowSensitivity.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityProcessSensitivity.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityInnovationProfile.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityInfluenceTimeline.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityFitDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityCoverage.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityEvidenceSupport.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityMethodology.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacityQueryStatus.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity\\PackCapacitySectionBody.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\index.ts",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySummary.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacitySourceNotice.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\packCapacitySourceState.ts",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityPlacement.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityMeasurementDirectory.tsx",
+    "web\\src\\features\\battery\\components\\pack-capacity-modernization\\PackCapacityRowAccounting.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\components\\data-display\\MetricCard.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\lib\\tokens.ts"
+  ]
+}
