@@ -1,0 +1,366 @@
+{
+  "item": "audit-page-103",
+  "phase": 0,
+  "page": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+  "routes": [
+    {
+      "path": "/arrival-reliability",
+      "file": "web\\src\\App.tsx",
+      "line": 868,
+      "detail": "Lazy page import at line 98; SafeRoute registration at line 868. Source registration verified, actual authenticated mount unverified."
+    }
+  ],
+  "purpose": "Describe observed timing consistency, timing bands, route-window comparisons and evidence coverage for repeated directional routes in returned vehicle drive history.",
+  "primaryGoal": "Understand which repeated routes and vehicle-local departure periods have consistent observed durations while distinguishing sample support from descriptive timing and avoiding future-arrival promises.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "sourceOwnership": "Existing driving hook owns query; internal\\api\\router.go:3463-3464 registers driveHandler.ListByVehicle. Handler implementation and actual response were not inspected.",
+      "contract": {
+        "queryKey": "['drives', vehicleId, 'history', boundedLimit]",
+        "enabled": "!!vehicleId",
+        "limit": "Integer clamped to 1..1000",
+        "cancellation": "queryFn forwards AbortSignal to request",
+        "staleTime": "STALE_TIMES.MODERATE",
+        "selection": "safeArray",
+        "scope": "Returned capped history, not guaranteed lifetime history; no start/end query parameters or pagination in this hook."
+      },
+      "citations": [
+        "web\\src\\api\\hooks\\useDriving.ts:47-48",
+        "web\\src\\api\\hooks\\useDriving.ts:131-153",
+        "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx:31-43",
+        "internal\\api\\router.go:3463-3464"
+      ],
+      "limits": "The hook comment describes a backend cap and latest history. Backend ordering, completeness, timezone response and cap enforcement were not independently verified."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle') / useUnits / useTranslation",
+      "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+      "line": 35,
+      "endpoint": null,
+      "sourceOwnership": "Existing workspace, timezone, unit and localization owners; this audit inspected callsites, not their provider implementations.",
+      "detail": "No competing vehicle selector. Selected vehicle string scopes history; vehicle timezone drives calendar grouping; formatDuration converts source seconds only at presentation; i18n.language scopes locale formatting."
+    },
+    {
+      "hook": "useDataState(drivesQuery, { provenance: 'historical' })",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "line": 31,
+      "endpoint": null,
+      "sourceOwnership": "Shared historical data-trust adapter; deriveDataState implementation not inspected.",
+      "detail": "Page separates fatalError and refreshError, keeps cached data, and supplies onRetry from query.refetch. Adapter memoizes query data/error/fetchStatus/dataUpdatedAt and options."
+    },
+    {
+      "hook": "analyzeArrivalReliability",
+      "file": "web\\src\\features\\driving\\lib\\arrivalReliability.ts",
+      "line": 634,
+      "endpoint": null,
+      "sourceOwnership": "Page-specific pure derived model; presentation consumes its typed result, not a dedicated arrival-reliability backend endpoint.",
+      "detail": "Filters incomplete, invalid-order, future, invalid/nonpositive-duration and unlocatable rows; groups directionally by normalized endpoints; uses drive.durationS in seconds; three-drive route/window gates; observed quantiles, scaled MAD and separate support indices.",
+      "citations": [
+        "web\\src\\features\\driving\\lib\\arrivalReliability.ts:215-225",
+        "web\\src\\features\\driving\\lib\\arrivalReliability.ts:476-549",
+        "web\\src\\features\\driving\\lib\\arrivalReliability.ts:634-720",
+        "web\\src\\features\\driving\\lib\\arrivalReliability.ts:919-990"
+      ],
+      "limits": "Only cited model ranges and targeted symbol matches inspected, not an exhaustive numerical correctness audit. No calibration, traffic/weather model or runtime prediction proof."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Grid / FadeIn / StaleRefreshWarning",
+      "kind": "Existing shared layout, motion and feedback",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "propsVariantsStates": "PageLayout title/subtitle/query; Grid cols={default:1,xl:2}, gap=4; FadeIn staggered delays; historical StaleRefreshWarning state/label.",
+      "usedBy": ["ArrivalReliabilityPage"],
+      "dependsOn": ["Existing query trust, shell workspace and motion policy"],
+      "citations": ["web\\src\\components\\layout\\index.ts:8", "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx:75-169"],
+      "limits": "Export mapping and page use verified; layout/motion/feedback implementation and actual rendered behavior not inspected."
+    },
+    {
+      "name": "OperationalBrief / useOperationalMetrics",
+      "kind": "Existing shared metric pipeline with driving-domain adapters",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "propsVariantsStates": "compact, metrics, title, eyebrow, description, scope, provenance, loading, statusLabel/statusTone; source-specific formatter and null rawValue preserved by adapters.",
+      "usedBy": ["ArrivalEvidenceBrief", "DrivingSummaryBrief", "NestedDrivingBrief", "ArrivalReliabilityEvidenceMetricGroup", "ArrivalReliabilityWindowComparisons"],
+      "dependsOn": ["Existing StatMetric and metric preferences", "useOperationalMetrics", "Locale-aware source formatters"],
+      "citations": ["web\\src\\components\\data-display\\index.ts:81-86", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:25-48", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:24-62"],
+      "limits": "Adapters inspected; shared renderer, hook and details drawer not exercised."
+    },
+    {
+      "name": "ChartContainer / EmbeddedChart",
+      "kind": "Existing canonical chart frame and embedded variant",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "propsVariantsStates": "title/subtitle/ariaLabel/ariaDescription, height=360, stable chartKey, data/dataColumns, exportable gated by resolved supported evidence; function-child hiddenSeries. EmbeddedChart defaults exportable/fullscreen false and fluid sizing when height absent.",
+      "usedBy": ["TimingConsistencyChart", "TimingBandsChart", "DepartureWindowProfile", "WeekdayProfile", "MonthTrend", "ArrivalReliabilityProfilePlot"],
+      "dependsOn": ["Existing chart hidden-series context/persistence", "ChartLegend", "ChartTooltip", "CHART_COLORS", "axisTick"],
+      "citations": ["web\\src\\components\\charts\\EmbeddedChart.tsx:1-42", "web\\src\\components\\charts\\ChartContainer.tsx:204-215", "web\\src\\components\\charts\\ChartContainer.tsx:723-729"],
+      "limits": "ChartContainer targeted matched ranges inspected; full control behavior and export formats unverified."
+    },
+    {
+      "name": "ArrivalReliabilitySectionBody / ArrivalReliabilityQueryStatus",
+      "kind": "Existing page-specific state owners",
+      "owner": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySectionBody.tsx",
+      "propsVariantsStates": "analysis/state/requirement none|included|routes|windows, optional geometry; passive per-section states with one domain query retry/status owner.",
+      "usedBy": ["All five chart sections", "WindowComparisons", "RouteDirectory", "EvidenceQuality", "ArrivalEvidenceBrief"],
+      "dependsOn": ["Historical query state", "Skeleton", "Text", "EmptyState", "QueryError", "AlertBanner", "Button"],
+      "citations": ["web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySectionBody.tsx:49-154", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx:20-95"]
+    },
+    {
+      "name": "GlassPanel / Heading / PanelTitle / Text / MetricLabel / MetricValue",
+      "kind": "Existing shared surface and typography primitives",
+      "owner": "web\\src\\components\\ui",
+      "propsVariantsStates": "Category-barrel imports; source panels use p-4 sm:p-5 and restrained surface/border variables. Local article wrappers remain page-specific.",
+      "usedBy": ["WindowComparisons", "RouteDirectory", "EvidenceQuality", "Methodology"],
+      "dependsOn": ["Canonical typography and neutral surface tokens"],
+      "citations": ["web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityRouteDirectory.tsx:4-11", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx:137-164"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWindowComparisons.tsx",
+      "line": 115,
+      "rule": "MDC-002 / reuse existing surfaces before introducing composites",
+      "detail": "Window, route directory and methodology cards repeat rounded-xl + neutral border/surface + padding. This is local domain composition, not evidence of a missing global card.",
+      "fix": "Consider existing LayoutCard/Card composition only if all source headings, quantities, captions and layout semantics remain intact. Do not add a new ModernCard or speculative shared abstraction.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityRouteDirectory.tsx:69-73", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx:151-164"]
+    }
+  ],
+  "responsive": {
+    "observed": [
+      "Two paired groups stack by default and become two columns at xl (page:32,96,121).",
+      "Route-directory quantities use 2/4/8 columns (RouteDirectory:100). Window cards use 1/2/3 columns and methodology 1/2/4 (WindowComparisons:111; Methodology:151).",
+      "All five outer chart frames request height=360; plot containers are responsive to allocated width."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingConsistencyChart.tsx",
+        "line": 135,
+        "rule": "MDC-043 / mission 15-16",
+        "detail": "Up to ten potentially long directional-route names have interval=0 on a narrow chart. TimingBands repeats this and the 12-bin departure profile also forces every label in ProfilePlot:100-105. Potential collision, not observed viewport failure.",
+        "fix": "Exercise long localized route names at the ten required widths and allocated column widths; if collisions occur, reuse canonical chart label/rotation or accessible table strategy without dropping route data or exports.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560, 200% text, RTL and long-content states."
+  },
+  "accessibility": {
+    "observed": [
+      "All outer chart frames declare localized ariaLabel and ariaDescription and dataColumns; top summary has a localized section label.",
+      "Domain loading status is aria-live=polite; refresh failure is role=alert; decorative section icons are aria-hidden.",
+      "Retry uses shared Button/QueryError; no raw button/input/select/table found in the assigned page.",
+      "ProfilePlot supplies EmbeddedChart a localized generic accessible label and data columns; three outer profile frames have specific category descriptions."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx",
+        "line": 83,
+        "rule": "MDC-040 / MDC-042",
+        "detail": "Small shared Retry button and animate-spin loading icon (line 50) depend on shared target sizing and reduced-motion policy. Actual touch reachability, focus and spin suppression were not checked.",
+        "fix": "Verify 44px target or documented spacing exception, keyboard retry/focus, live announcements and reduced-motion behavior using existing primitives; do not add a second focus/motion engine.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard, screen-reader, contrast 4.5:1 text/3:1 UI, forced colors, target size and reduced-motion acceptance remain unverified."
+  },
+  "states": {
+    "sourceCoverage": {
+      "initial": "Summary pending descriptions, one live loading status, per-section skeletons.",
+      "noVehicle": "Header-owned selection instruction; analysis receives [] rather than cached previous-vehicle rows.",
+      "unresolved": "Null raw summary metrics and passive waiting instructions.",
+      "empty": "No returned drives is distinct from returned rows with no qualified drive.",
+      "insufficientSupport": "Three-sample route/window gates and sole-supported-window warning; no fabricated claims.",
+      "fatalError": "QueryError retry in domain status; passive errors inside otherwise retained section frames.",
+      "refreshError": "Page retains query data and shows StaleRefreshWarning and domain retained-evidence retry.",
+      "capReached": "Explicit latest 1000-row warnings in summary/status/evidence quality.",
+      "offline": "Shared DataState fetchStatus input exists; actual offline rendering was not exercised and the page-specific state interface does not carry offline/age directly.",
+      "methodology": "Always rendered independently of query result."
+    },
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx",
+        "line": 47,
+        "rule": "MDC-026 / source-specific retained-data trust",
+        "detail": "EvidenceMetrics receives analysis/locale/timeZone but no retained flag. Its groups reach NestedDrivingBrief with retained=false default, so nested labels can say Returned evidence during a background refresh failure. WindowComparisons:130-153 likewise omits retained. The page/top brief correctly retain and warn.",
+        "fix": "Propagate state.refreshError != null through the existing domain metric/group props and pass NestedDrivingBrief.retained; preserve all quantities and source scope. Existing shared brief already supports the state.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": ["web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetricGroup.tsx:19-21", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:24-27", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:53-62"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx",
+      "line": 157,
+      "rule": "MDC-010 / MDC-012 / mission 5-7",
+      "detail": "All eight explanatory icon/heading containers and several panel icons use fixed text-cyan-300 regardless of theme or semantic meaning. This is repeated accent decoration, not neon/glow proof.",
+      "fix": "Use existing muted/secondary text and icon tokens for explanatory decoration; reserve semantic accent for meaningful evidence state. Retain eight methodology explanations and localized headings.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx:139,157", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityRouteDirectory.tsx:54", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx:30"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingBandsChart.tsx",
+      "line": 174,
+      "rule": "MDC-034 / mission 27 / restrained visual intensity",
+      "detail": "Three filled colored series plus additional multi-series charts make palette intensity a review concern. Imports resolve to static CB-safe blue/green/sky-blue, not the opt-in neon palette; grids already have opacity 0.4 and sample bars opacity 0.35. No literal glow or pure-white noise in assigned page source.",
+      "fix": "Review actual composed themes and chart density; subdue only decorative grid/reference weight using canonical chart tokens. Keep each series distinct, accessible and exported; retain explicit user palette preferences and do not invent a page palette.",
+      "owner": "integration",
+      "confidence": "medium",
+      "citations": ["web\\src\\components\\charts\\chartUtils.tsx:5", "web\\src\\lib\\colors.ts:31-40,62-68", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx:129-158"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx",
+      "line": 84,
+      "rule": "MDC-034 / MDC-046 / one existing chart controller",
+      "detail": "All three profile plots nest EmbeddedChart with the same arrival-reliability-profile chartKey inside distinct outer ChartContainers. The child prefers its own hidden-series context over the supplied parent state (line 91), so persistence/legend ownership differs from the outer chart keys. Two canonical frames/controllers are present; no runtime collision is claimed.",
+      "fix": "Choose one canonical controller per profile while preserving outer stable keys, existing persisted child state compatibility, data alternatives, legends, exports and fullscreen. Use the existing shared API; coordinate persistence migration with integration owner rather than silently changing IDs.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityDepartureWindowProfile.tsx:76-80,111-133", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWeekdayProfile.tsx:69-73", "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMonthTrend.tsx:69-73", "web\\src\\components\\charts\\EmbeddedChart.tsx:29-40", "web\\src\\components\\charts\\ChartContainer.tsx:723-729"]
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "rationale": "Preserve a complete descriptive-analysis page. First resolve chart controller ownership and nested retained-evidence labels, then reduce decorative fixed cyan and verify dense mobile charts.",
+    "blockingEvidence": "Runtime, contrast and mobile behavior are not established; no backend defect, missing endpoint or blanket engineering pass asserted."
+  },
+  "requiredSharedChanges": [],
+  "sharedChangeAssessment": "None demonstrated. Existing NestedDrivingBrief.retained and canonical chart frames can support page/domain corrections. Chart persistence compatibility requires integration review, not a speculative new shared component.",
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityKpiBand.tsx",
+      "line": 30,
+      "rule": "MDC-002 / one metric presentation pipeline",
+      "detail": "Legacy MetricCard KPI renderer remains barrel-exported, but the assigned page renders ArrivalEvidenceBrief. ArrivalEvidenceBrief imports its type only. This is source overlap, not evidence that both summaries are mounted or that the old component has no other consumers.",
+      "fix": "Retain the mounted OperationalBrief-based path. Do not reintroduce the old KPI grid. Any removal of the alternative requires a separately scoped reference check.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\ArrivalEvidenceBrief.tsx:4,9-11", "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx:29,87", "web\\src\\features\\driving\\components\\arrival-reliability\\index.ts:7"]
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "54b4264b7cdaedecd949eed33cf295a00211206f635b87c58d45b4b08a928529",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 171,
+    "sectionCount": 10,
+    "sections": [
+      {"name": "Observed timing evidence summary", "component": "ArrivalEvidenceBrief", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 87, "metrics": 6},
+      {"name": "Route timing consistency", "component": "ArrivalReliabilityTimingConsistencyChart", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 97},
+      {"name": "Observed route timing bands", "component": "ArrivalReliabilityTimingBandsChart", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 102},
+      {"name": "Supported route-window comparisons", "component": "ArrivalReliabilityWindowComparisons", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 111},
+      {"name": "Local two-hour departure-window profile", "component": "ArrivalReliabilityDepartureWindowProfile", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 122},
+      {"name": "Vehicle-timezone weekday profile", "component": "ArrivalReliabilityWeekdayProfile", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 127},
+      {"name": "Local-month timing trend", "component": "ArrivalReliabilityMonthTrend", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 137},
+      {"name": "Route evidence directory", "component": "ArrivalReliabilityRouteDirectory", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 146, "quantitiesPerRoute": 8},
+      {"name": "Evidence quality, accounting, and coverage", "component": "ArrivalReliabilityEvidenceQuality", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 155, "metricGroups": {"accounting": 9, "coverage": 17, "support": 6}},
+      {"name": "Methodology and limitations", "component": "ArrivalReliabilityMethodology", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 164, "explanations": 8}
+    ],
+    "sourceCounts": {
+      "pageGlassPanel": 0,
+      "pageChartContainer": 0,
+      "domainDirectoryGlassPanel": 5,
+      "domainDirectoryChartContainer": 5,
+      "domainDirectorySectionTags": 10,
+      "activeOuterGlassPanel": 4,
+      "activeOuterChartContainer": 5,
+      "profileEmbeddedChartInstances": 3,
+      "domainDirectoryLinesIncludingBarrelLabelsTypesAndLegacyKpi": 2584,
+      "note": "Directory regex totals include unmounted legacy KPI source. Active section count is nine domain sections plus mounted operational summary, not a rendered browser count."
+    },
+    "actions": [
+      {"name": "Retry initial history failure", "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx", "line": 64, "behavior": "QueryError invokes page callback -> drivesQuery.refetch."},
+      {"name": "Retry retained-data refresh failure", "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx", "line": 83, "behavior": "Shared ghost Button invokes the same refetch callback."},
+      {"name": "Chart export and accessible data columns", "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingConsistencyChart.tsx", "line": 79, "behavior": "Preserve five stable chartKeys/export filenames and ready gating; consistency rows include sample/support metadata, bands include spread/sample columns, profiles include count/index/share. Actual exports unverified."},
+      {"name": "Chart legend visibility", "file": "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx", "line": 129, "behavior": "Keep all series and hidden-state persistence; nested-controller compatibility is an explicit modernization risk."},
+      {"name": "Header vehicle/timezone/unit/locale settings", "file": "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx", "line": 38, "behavior": "Consume existing workspace/preferences, never introduce a duplicate selector. No local mutations, custom page date picker or page-authored exports outside chart capabilities found."}
+    ],
+    "dataBehavior": [
+      "Maintain selected-vehicle enablement, isolated history cache key, cancellation and limit=1000. Do not turn capped returned history into lifetime/all-range completeness.",
+      "The route is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77); current model intentionally consumes bounded history without useRangeState. Adding a range would alter derived behavior and requires a separate source/API decision; do not silently add filtering in a cosmetic modernization.",
+      "Keep the mount-captured nowMs, memoized model, vehicle timezone and locale inputs (page:40-58,71-72).",
+      "Keep SI seconds in model/cache/rows; formatDuration only at display. Ratio-to-percent presentation multipliers do not alter the source model.",
+      "Keep directional endpoint grouping, exclusions, minimum route/window samples, observed quantiles, 1.4826 scaled MAD, allowance=p50+max(300s,10% p50), timing index weights 0.65/0.35 and separate support formula.",
+      "Preserve all 12 departure bins, seven weekday bins, observed month groups, missing-null values and sample counts. Do not synthesize absent observations as zeros.",
+      "Preserve top-ten chart subsets, all supported-route directory rows and window comparison policy: all when <=6, otherwise top five plus lowest; sole window is not a highest-vs-lowest claim.",
+      "Preserve all eight directory quantities, three evidence metric groups, returned-vs-included date spans, cap warnings, recurrence/recency and transparent denominator/support ingredients.",
+      "Preserve all eight methodology explanations and no-promise/no-weather/no-traffic/no-target/no-calibration limitations.",
+      "Retain cached content during refresh failures; distinguish empty, invalid-only, unsupported-route, unsupported-window and unresolved evidence."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source inspection, targeted source searches, file hash and regex counts. Only report and heartbeat authored.",
+    "runtime": "Not run. Actual route mount, API responses, loading/error transitions, offline behavior, exports and chart persistence were not exercised.",
+    "visual": "Not run. No screenshots, effective theme contrast, glow appearance, text clipping, saturation acceptance or viewport evidence.",
+    "accessibility": "Not run. Source semantics are not keyboard, screen-reader, focus, target-size, forced-colors or reduced-motion proof.",
+    "backend": "Router endpoint registration inspected only. No handler/repository/data mutation or backend ordering/completeness/unit contract verification.",
+    "sourceCoverage": "Page and its presentation dependencies inspected. Model read in selected ranges; shared foundations read only as needed for referenced contracts. Large combined dependency output exceeded display limits, so specific dependencies were subsequently read directly; oversized output is not treated as full evidence.",
+    "validationNotRun": [
+      "Git, agents, full-repository lint/build, project TypeScript and all runtime/visual checks intentionally not run for Phase 0.",
+      "audit-violations audit.sh was inspected but not executed because it unconditionally runs project TypeScript; bounded source pattern counts were used instead."
+    ],
+    "boundedChecks": {
+      "command": "PowerShell Get-FileHash -Algorithm SHA256; Get-Content line counts; regex scan of assigned page for inline styles/raw controls/direct chart-map-motion imports/neon-glow-white; domain-only GlassPanel/ChartContainer/section counts.",
+      "exitCode": 0,
+      "rawOutput": "inline-style: 0\nraw-controls: 0\ndirect-chart-map-motion-import: 0\nneon-glow-white: 0\ndomain GlassPanel: 5\ndomain ChartContainer: 5\ndomain section tags: 10\narrival dependency total lines: 2584",
+      "interpretation": "Narrow source counts only, not an all-violations pass or shared-style visual acceptance."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\ArrivalReliabilityPage.tsx",
+    "web\\src\\features\\driving\\lib\\arrivalReliability.ts",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\index.ts",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\types.ts",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\labels.ts",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingConsistencyChart.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityTimingBandsChart.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWindowComparisons.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityDepartureWindowProfile.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityWeekdayProfile.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMonthTrend.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityProfilePlot.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityRouteDirectory.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceQuality.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityEvidenceMetricGroup.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityAccountingMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityCoverageMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySupportMetrics.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityMethodology.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilitySectionBody.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityQueryStatus.tsx",
+    "web\\src\\features\\driving\\components\\arrival-reliability\\ArrivalReliabilityKpiBand.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ArrivalEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-103.json",
+    ".agent-status\\audit-page-103.txt"
+  ]
+}
