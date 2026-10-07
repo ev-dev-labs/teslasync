@@ -1,0 +1,369 @@
+{
+  "item": "audit-page-078",
+  "page": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+  "routes": ["/charge-interruption"],
+  "purpose": "Estimate charging interruption risk from indirect session evidence, with an explicit non-diagnostic interpretation.",
+  "primaryGoal": "Compare charging sites by modeled risk, uncertainty, evidence volume and recent trend without mistaking suspected interruptions for confirmed hardware failures.",
+  "dataSources": [
+    {
+      "name": "Selected-vehicle charging history",
+      "hook": "useChargingHistory(vehicleIdStr)",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "endpoint": "GET /api/v1/charging?vehicle_id=<selected-id>&limit=1000",
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 61,
+      "citations": [
+        "web\\src\\api\\hooks\\useCharging.ts:46-54,66-84",
+        "internal\\api\\router.go:3502-3503",
+        "internal\\api\\charging\\handler.go:123-159",
+        "web\\src\\api\\client.ts:93,284-288"
+      ],
+      "behavior": "Vehicle-scoped, enabled only for a truthy ID; history cache key includes vehicle and clamped limit; MODERATE stale policy, safeArray selection and forwarded AbortSignal. Handler validates vehicle_id, parses pagination/date bounds, calls repository and guarantees [] rather than null. The page supplies neither date bounds nor an offset. No lifetime coverage claim is justified.",
+      "backendEvidenceLimits": "Repository ordering, actual returned coverage, timestamp boundary semantics and deployed response were not inspected or exercised. The hook documents a 1,000-row cap; the pagination implementation was not independently inspected."
+    },
+    {
+      "name": "Workspace vehicle",
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 57,
+      "behavior": "Consumes the existing header vehicle owner; null selection returns NoVehicleSelected. No duplicate local selector. The hook implementation itself was not read."
+    },
+    {
+      "name": "Client-derived interruption model",
+      "owner": "web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 63,
+      "citations": [
+        "web\\src\\features\\charging\\lib\\chargeInterruption.ts:135-169,263-275,287-356,421-509"
+      ],
+      "behavior": "Groups by trimmed case-insensitive place or rounded coordinates; excludes sessions without either. Uses circumstantial missing-field, stalled-gain, power-collapse and early-abort heuristics; suppresses missing-field flags for the overall latest session. Jeffreys Beta(0.5,0.5) prior, 95% credible bounds, pooled risk, chronological half-history trend, cause frequency and last suspected start time. Sites sort by posterior mean then evidence; highest-risk KPI selects the conservative lower bound. This is not a backend interruption verdict."
+    },
+    {
+      "name": "Formatting and chart persistence",
+      "owner": "Existing useNumberFormatting, TimeStamp and useHiddenSeries contracts",
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 53,
+      "citations": [
+        "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx:50-59,222-239",
+        "web\\src\\hooks\\useHiddenSeries.ts:41-89",
+        "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx:24,41-43"
+      ],
+      "behavior": "Percent display honors existing formatting preferences; metric counts use zero precision and locale. Last suspected timestamps delegate to TimeStamp. Chart hidden-series URL parameter retains hidden_charge-interruption-risk-by-site with stable risk/evidence identities. Formatting and timestamp hook internals were not audited."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "citations": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "web\\src\\components\\layout\\PageContainer.tsx:128-230"],
+      "contract": "Category-barrel composition, full width/min-width zero, container context, title/subtitle help, query freshness and busy state. Route-focus heading and operational-mode chrome stay shared."
+    },
+    {
+      "name": "ChargeInterruptionStats / ChargingSummaryBrief / OperationalBrief",
+      "kind": "domain adapter to shared composite",
+      "owner": "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+      "citations": ["web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx:9-16,44-170", "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx:14-78", "web\\src\\components\\data-display\\OperationalBrief.tsx:115-198,234-300"],
+      "contract": "Six metrics with stable occurrence IDs, raw numeric percentages/counts, scope, missing reasons, source retention, model caveats, help, retry footer and shared Review details drawer. Retain all six, not only the original four headline metrics."
+    },
+    {
+      "name": "ChartContainer / ChartLegend / ChartTooltip and chart barrel",
+      "kind": "shared chart",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "citations": ["web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx:126-184", "web\\src\\components\\charts\\ChartContainer.tsx:130-212,416-450", "web\\src\\components\\charts\\ChartLegend.tsx:101-132"],
+      "contract": "Risk bars plus evidence line with separate axes, persistent toggles, source-backed fallback table and five-column CSV data. Image/SVG/copy export menu is inherited when ready. No fullscreen or annotations prop is supplied by this page."
+    },
+    {
+      "name": "LayoutCard, Text, Badge, HelpTooltip, Button, TimeStamp",
+      "kind": "existing layout/primitives/data display",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "citations": ["web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:16-61", "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx:189-252"],
+      "contract": "Always-present Sites section; semantic ul/li detail grid with full site label, textual trend, formatted risk interval, suspect/evidence counts, last suspected timestamp and all cause badges."
+    },
+    {
+      "name": "StaleRefreshWarning, DataStateNotice, QueryError, Skeleton, EmptyState, NoVehicleSelected, FadeIn",
+      "kind": "shared state/motion and domain prerequisite",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "citations": ["web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx:79-123,200-209", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:56-122", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx:44-84", "web\\src\\components\\motion\\FadeIn.tsx:24-39"],
+      "contract": "No retained data is replaced by a refresh failure; initial paused load has explicit retry; prerequisite preserves onboarding CTA; FadeIn delegates reduced-motion behavior."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 110,
+      "rule": "MDC-026 source recovery",
+      "detail": "The same single history refetch is wired into the paused notice, KPI footer, chart error and Sites error. This is intentional section-level recovery, not evidence for a new query/state system.",
+      "fix": "Retain independent retry affordances; optionally use one local callback when touching the page. Do not extract a speculative shared recovery component.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 212,
+      "rule": "MDC-002 component reuse",
+      "detail": "Site item chrome is locally composed, but the existing shared LayoutCard owns the outer section. This one page alone does not establish a repeated cross-feature site-risk card requirement.",
+      "fix": "Keep the domain site item local or extract within the feature if complexity grows; reuse shared text/badges/surface tokens.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceBehavior": [
+      "PageLayout supplies @container and w-full/min-w-0 (PageLayout.tsx:12).",
+      "Sites reflow one/two/three columns at container @3xl/@6xl; details become three columns at @sm; labels and cause chips wrap (ChargeInterruptionPage.tsx:210-244).",
+      "Compact OperationalBrief reflows one/two/three/six columns by viewport breakpoints, not allocated container width (OperationalBrief.tsx:167-168)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "line": 158,
+        "rule": "MDC-043 / mission 15,37",
+        "detail": "Every evidence-bearing site is plotted without paging, sampling or a horizontal layout. Rotated 10px labels truncate at 20 characters while the chart also has two Y axes. Dense-site and 320px readability are source-backed risks, not observed viewport failures.",
+        "fix": "Exercise 320/375/390/430/768/1024/1280/1440/1920/2560 and long/many-site cases. Consider a horizontally scrollable chart region or equivalent comparison layout without dropping any site or CSV/table row; disclose any plot-only sampling.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "line": 168,
+        "rule": "MDC-031 / MDC-043 allocated width",
+        "detail": "Compact metrics use viewport md and min-[1920px] breakpoints although this page's detail cards use container queries. A narrow shell allocation can still request three or six metric columns; compact labels and values share one baseline row.",
+        "fix": "Shared owner should test narrow allocated containers with six metrics and long labels before deciding whether an opt-in container-responsive compact grid is needed. Preserve existing viewport behavior until compatibility is established.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": [
+      "Localized chart ariaLabel, full site strings in five-column fallback data, semantic site list, textual trends and explicit risk intervals (ChargeInterruptionPage.tsx:129-154,210-246).",
+      "Shared route-focus target, heading semantics and aria-busy (PageContainer.tsx:162-191).",
+      "Shared stale warning has role=status and aria-live=polite (StaleRefreshWarning.tsx:97-105).",
+      "Shared FadeIn skips initial animation when reduced motion is requested (FadeIn.tsx:24-36)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+        "line": 121,
+        "rule": "MDC-040 touch targets",
+        "detail": "Interactive legend Button overrides sizing with h-auto min-h-0 p-0. Keyboard/native-button and aria-pressed semantics are present, but source does not guarantee the contract's 44px target or spacing exception.",
+        "fix": "Shared legend owner should retain series identities and pressed state while providing adequate target padding/minimum height or a documented spacing strategy. Verify keyboard, focus and mobile geometry.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+        "line": 94,
+        "rule": "MDC-026 / MDC-040 load announcements",
+        "detail": "The page passes query and busy but not loading/error into PageLayout. PageContainer's useLoadAnnouncement reads only its loading/error props (PageContainer.tsx:138-144), so this page does not supply its initial loading-to-settled transition to that shared announcer.",
+        "fix": "Use an existing non-blocking announcement mechanism or extend the shared announcer input separately from full-page replacement states. Do not simply pass loading if that would hide the three independently rendered sections.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard navigation and restoration in Review details drawer", "Tooltip focus/touch reachability", "Screen-reader announcements", "Actual text/UI contrast in light/dark/custom/forced-colors themes", "RTL axes and long translated strings"]
+  },
+  "states": {
+    "runtimeVerified": false,
+    "matrix": [
+      {"state": "no vehicle", "behavior": "Early NoVehicleSelected return; history query disabled without ID; setup/onboarding action preserved.", "citations": ["ChargeInterruptionPage.tsx:57-81", "NoVehicleSelected.tsx:53-83"]},
+      {"state": "initial loading", "behavior": "KPI placeholders, ChartContainer loading state and 180-height Sites Skeleton; source section structure remains mounted.", "citations": ["ChargeInterruptionPage.tsx:83,113-123,134,202-203", "OperationalBrief.tsx:187-193"]},
+      {"state": "initial paused/offline", "behavior": "Explicit paused notice and retry; missing KPI reasons and paused chart/site messages. No fabricated history values.", "citations": ["ChargeInterruptionPage.tsx:86-111,119,138,207"]},
+      {"state": "fatal history failure", "behavior": "KPI retry footer, chart error/onRetry and Sites QueryError; no successful data is present.", "citations": ["ChargeInterruptionPage.tsx:84,118-120,135-136,200-201", "ChargeInterruptionStats.tsx:162-169"]},
+      {"state": "retained refresh error or pause", "behavior": "Historical payload remains analyzed and rendered; shared warning/retry, retained summary status; refreshing indicated through busy.", "citations": ["ChargeInterruptionPage.tsx:62-63,100-103,117", "dataState.ts:158-177,207-233", "StaleRefreshWarning.tsx:56-122"]},
+      {"state": "successful empty array", "behavior": "Chart and Sites empty states. KPI reports zero counts and prior-based 50% risk with explicit no-evidence caveat; highest-risk site missing, not a zero site estimate.", "citations": ["ChargeInterruptionPage.tsx:137-143,204-208", "chargeInterruption.ts:255-275,499-508", "ChargeInterruptionStats.tsx:29-32,48-64,81-88"]},
+      {"state": "loaded but no locatable sites", "behavior": "Loaded session total may be nonzero while evaluable/site counts are zero; chart/site empties and prior caveat remain. Locationless sessions are excluded by the model.", "citations": ["chargeInterruption.ts:438-449", "ChargeInterruptionStats.tsx:93-128"]},
+      {"state": "success", "behavior": "All six metrics, risk/evidence chart, intervals, site trend, cause chips and timestamp render; chart export and Review details available.", "citations": ["ChargeInterruptionPage.tsx:113-251", "OperationalBrief.tsx:150-160"]},
+      {"state": "age-only stale", "behavior": "No page maxAgeMs is supplied to deriveDataState; trust warning follows refresh error/pause rather than a defined historical age threshold. Page query freshness chrome is delegated.", "citations": ["ChargeInterruptionPage.tsx:62,100-103", "dataState.ts:185-191"]}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "line": 48,
+        "rule": "MDC-026 data provenance",
+        "detail": "The generic default description calls these 'Recorded measurements', while this page's percentages are model-derived from circumstantial evidence. Other scope/help text is accurate, but the primary composite description mixes measurements and estimates.",
+        "fix": "Pass this adapter's existing description prop from ChargeInterruptionStats with localized model-specific wording. Keep underlying raw observations and the non-diagnostic caveat.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+      "line": 168,
+      "rule": "MDC-010 / MDC-034 restrained chart palette",
+      "detail": "Risk uses chartTokens.series[3] and evidence series[5]: fixed #ef4444 red and #06b6d4 cyan (tokens.ts:401). These are saturated default series, with no page-level glow or fixed pure-white styling. Actual composed intensity/contrast is unmeasured; do not treat shared token use as visual acceptance.",
+      "fix": "Have the palette owner evaluate restrained theme-compatible defaults while retaining risk/evidence discrimination and explicit saved chart/theme choices. Do not invent a page-only palette.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 125,
+      "rule": "MDC-010 / mission 7 visual intensity",
+      "detail": "Shared brief adds a theme-primary border; PageContainer adds another theme-primary rail (PageContainer.tsx:177). Their saturation depends on saved theme. Neutral surfaces and semantic badges are otherwise used; repeated accent rails merit composed visual review, not an asserted neon/glow defect.",
+      "fix": "Shared design owner should review the combined hierarchy and subdue decorative accent emphasis only where necessary, preserving theme IDs/preferences.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+      "line": 289,
+      "rule": "MDC-026 / MDC-045 unknown is not zero",
+      "detail": "Missing energy is coerced to zero before the early-abort heuristic. Go TotalEnergyAddedWh is optional/omitempty (internal\\models\\charging\\charging.go:23), but the frontend domain type declares it required (types\\charging.ts:22). A short session with known >1000W peak and absent energy can therefore acquire an aborted_early flag rather than unknown energy.",
+      "fix": "Integration owner should reconcile actual nullable API shape and test missing energy versus measured zero; require known energy for the energy-based heuristic. This changes model behavior and must be explicitly reviewed, not bundled into cosmetic modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+      "line": 457,
+      "rule": "MDC-045 preserve documented business meaning",
+      "detail": "The documented minBaselineSessions option defaults to four but is not consulted. baselineRateOf uses the entire site's eligible raw rows, including the session being scored, contrary to the evaluator's OTHER-clean-sessions comment (chargeInterruption.ts:277-281). No clean-history exclusion or minimum count is enforced in the inspected implementation.",
+      "fix": "Raise a separate model-owner decision: align docs/options or implement approved independent/minimum baseline behavior with focused regressions. Preserve existing calculations during visual migration until that decision is accepted.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+      "line": 167,
+      "rule": "MDC-045 SI and shape contract",
+      "detail": "Timestamp-derived seconds are preferred, but fallback reads duration_min and multiplies by 60. The inspected Go charging model's session fields do not expose this activity alias, while the domain type requires it (types\\charging.ts:30-31). IDs are also typed as strings in the domain versus numeric Go IDs. Current absent values are guarded, but typing overstates response guarantees.",
+      "fix": "Integration owner should reconcile the history-specific type with actual response fields/nullability and preserve timestamp-derived seconds. Do not add a legacy duration wire field or assume a backend duration_s capability.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+      "line": 141,
+      "rule": "MDC-032 explicit analysis scope",
+      "detail": "The source honestly declares loaded-history scope with no workspace range. /charge-interruption is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77); the page does not call useRangeState. This is a documented bounded-history limitation, not evidence that a header date range is silently ignored.",
+      "fix": "Preserve the current honest cap/scope. If range-aware analysis is authorized separately, coordinate route registry, typed hook/cache key and both server bounds; do not add a local range picker or filter only the fetched 1,000 rows.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1 integration correctness, P2 presentation follow-up",
+    "rationale": "Unknown-energy scoring and the documented-versus-actual baseline deserve model-owner triage before claims about evidence quality. The page already uses shared architecture and retained-data states; dense-site charts, legend targets and model provenance wording are the focused modernization opportunities."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical chart legend target geometry",
+      "existingOwner": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "propsVariantsStates": "Existing state prop and ghost/sm Button; visible/hidden aria-pressed states, localized series names, focus ring, target minimum or documented spacing exception. No new chart or persistence system.",
+      "usedBy": ["web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx"],
+      "dependsOn": ["Existing Button sizing/focus contract", "Existing useHiddenSeries stable URL keys", "MDC-040 mobile target acceptance"],
+      "citations": ["ChartLegend.tsx:101-132", "ChargeInterruptionPage.tsx:163"],
+      "scopeNote": "Only this assigned consumer inspected; no claim of whole-app consumer enumeration."
+    },
+    {
+      "name": "Model-versus-wire data contract review",
+      "existingOwner": "web\\src\\api\\hooks\\useCharging.ts; web\\src\\types\\charging.ts; web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+      "propsVariantsStates": "Historical ChargingSession[] with nullable/omitted energy, SoC and timestamps; missing versus measured-zero energy; documented baseline option; known timestamp-derived seconds. Keep query enablement, cancellation, limit and SI payload unchanged.",
+      "usedBy": ["ChargeInterruptionPage", "ChargeInterruptionStats"],
+      "dependsOn": ["internal\\models\\charging\\charging.go:11-29", "internal\\api\\charging\\handler.go:123-159", "Existing chargeInterruption.test.ts (located, not read or run)"],
+      "citations": ["chargeInterruption.ts:167-169,289,457", "types\\charging.ts:15-31"],
+      "scopeNote": "Separate integration/model work, not permission for a page worker to change algorithms."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Two ChargingSession TypeScript interfaces",
+      "citations": ["web\\src\\api\\types.ts:159-162", "web\\src\\types\\charging.ts:15-30", "web\\src\\api\\hooks\\useCharging.ts:29,77"],
+      "detail": "API interface uses numeric IDs while the history hook imports the domain interface with string IDs and required activity aliases. Consolidate only with source-backed wire and caller compatibility evidence; camelCaseKeys does not itself repair nullability or ID typing."
+    },
+    {
+      "name": "Existing shared operational-brief pipeline",
+      "citations": ["ChargingSummaryBrief.tsx:1-4,19,37-71", "ChargeInterruptionStats.tsx:3,131-170"],
+      "detail": "The charging adapter already uses canonical OperationalBrief/useOperationalMetrics. No new KPI grid, modern-card wrapper, local formatter, local selector or query store is needed."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "C965BDE52381D6365A15327B61BAD9D186A89BBCB5A1FB0B23CDDF38048C80FA",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 257,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Charge interruption metrics", "count": 1, "metricCount": 6, "citations": ["ChargeInterruptionPage.tsx:112-123", "ChargeInterruptionStats.tsx:44-137"], "fields": ["Overall Risk", "Suspected Sessions", "Highest-Risk Site", "Sites Tracked", "Loaded sessions", "Evaluable sessions"]},
+      {"name": "Posterior Risk by Site", "count": 1, "seriesCount": 2, "citations": ["ChargeInterruptionPage.tsx:125-184"], "fields": ["Site", "Risk (%)", "Low bound (%)", "High bound (%)", "Evidence (sessions)"]},
+      {"name": "Sites", "count": 1, "citations": ["ChargeInterruptionPage.tsx:188-252"], "fields": ["Full site label", "Trend", "Posterior mean and 95% interval", "Suspect/evidence counts", "Last suspected timestamp", "All top-cause badges"]}
+    ],
+    "rootComponentCounts": {"ChartContainer": 1, "LayoutCard": 1, "ChargeInterruptionStats": 1, "FadeIn": 3, "GlassPanel": 0},
+    "actions": [
+      "Retry initial paused load and fatal section failures; refresh retained data through shared warning.",
+      "Toggle risk/evidence via persistent hidden_charge-interruption-risk-by-site URL state.",
+      "Shared chart export menu: image/SVG/copy and five-column CSV when ready; keep full export scope independent of hidden series.",
+      "Review details opens shared operational narrative/metrics/attention drawer; retain close/keyboard behavior.",
+      "Overall-risk, highest-risk and site credible-interval contextual help; page subtitle help.",
+      "No-vehicle prerequisite links into existing onboarding guidance."
+    ],
+    "dataBehavior": [
+      "Single selected vehicle and bounded loaded charging history, not lifetime totals or workspace date range.",
+      "Keep raw API/cache energy Wh, power W, odometer m and dimensionless SoC; durations used by the model are seconds from timestamps, with existing legacy activity fallback explicitly flagged for integration review.",
+      "Keep posterior model, latest-session exception, site grouping/exclusion, trend threshold, cause ordering, risk sorting and conservative highest-site selection unless separately approved as model fixes.",
+      "Preserve null-versus-zero distinction, retained historical data and explicit no-evidence prior caveat.",
+      "Preserve localization, number precision/locale, timestamp display delegation and saved theme/hidden-series preferences.",
+      "Retain credible bounds in site details, CSV and accessible table even though bounds are not plotted as separate chart marks.",
+      "Source hash covers the exact root page bytes only; extracted component/model hashes are not claimed."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 scoped read-only source audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "tests": "Not run. No TypeScript, lint, build, Git, browser, backend mutation or production action performed.",
+    "skillScript": "Read .github\\skills\\audit-violations\\audit.sh but did not execute it: its unconditional repository-wide TypeScript step conflicts with this assignment's bounded read-only inspection. Findings are source-evidenced, not a fabricated zero-violation or compilation result.",
+    "limitations": [
+      "No deployed endpoint response, full repository query behavior, backend ordering or coverage guarantees inferred.",
+      "Only relevant shared API excerpts inspected; nested tooltip/drawer/export/table/formatting implementations are not accepted as runtime verified.",
+      "No claim of all locales, full dependency graph, whole-app shared-consumer counts or historical receipts as current proof.",
+      "Model test file was located only, not read or executed.",
+      "Instructions consulted: worker Phase 0 contract; design contract foundation obligations; mission 0/1, 6-8, 15-16, 22-28 and 30-37.",
+      "No page-local neon/glow/pure-white styling was observed in the read source; saturated shared series and theme accents are flagged separately, with composed appearance unverified."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargeInterruptionPage.tsx",
+    "web\\src\\features\\charging\\lib\\chargeInterruption.ts",
+    "web\\src\\features\\charging\\components\\charge-interruption-modernization\\ChargeInterruptionStats.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\charging\\handler.go",
+    "internal\\api\\charging\\handler_test.go",
+    "internal\\api\\charging\\variance.go",
+    "internal\\models\\charging\\charging.go"
+  ]
+}
