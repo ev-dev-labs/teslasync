@@ -1,0 +1,259 @@
+{
+  "item": "audit-page-194",
+  "page": "web\\src\\features\\system\\pages\\SearchPage.tsx",
+  "routes": ["/search"],
+  "purpose": "App-wide typed entity search with URL-restored type facets, grouped navigable results and independently gated natural-language search.",
+  "primaryGoal": "Find and open a vehicle, drive, charging session, alert, notification, geofence, automation, location or trip without losing query/filter context.",
+  "dataSources": [
+    {
+      "name": "Typed global search",
+      "hook": "useGlobalSearch",
+      "owner": "web\\src\\api\\hooks\\useSearch.ts",
+      "file": "web\\src\\features\\system\\pages\\SearchPage.tsx",
+      "line": 100,
+      "endpoint": "GET /api/v1/search?q=<trimmed>&types=<comma-separated>&limit=25",
+      "routeEvidence": "internal\\api\\router.go:4021-4023",
+      "backendOwner": "internal\\api\\search\\handler.go:120-156",
+      "behavior": "Enabled at two JavaScript string code units; optional known-type filter; 25 hits per type; key includes trimmed query, ordered types and limit; FAST stale policy; AbortSignal forwarded; prior valid-query payload retained as placeholderData. Null hits normalize to []. Backend checks two Unicode runes, caps total hits at 225 and preserves server ranking.",
+      "limitations": "Backend sub-search failures are logged and skipped without completeness metadata (handler.go:159-196). Database matching and individual PGSearcher implementations not inspected; no live endpoint exercised."
+    },
+    {
+      "name": "Natural-language search",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AINLSearch.tsx",
+      "file": "web\\src\\components\\ai\\AINLSearch.tsx",
+      "line": 27,
+      "endpoint": "POST /api/v1/ai/search/query",
+      "routeEvidence": "internal\\api\\ai_routes.go:134,219-232; internal\\api\\router.go:5062",
+      "behavior": "Independent local prompt, maximum 4096 characters, whitespace-only prompt cannot start; explicit start streams accumulated prose/activity/usage through AIFeatureCard/AiOutputPanel. withAiFeature('nl-search') prevents mounting the inner source when disabled.",
+      "limitations": "Streaming/auth/provider behavior and real feature configuration unverified. This report does not invent structured result navigation or completeness guarantees for AI prose."
+    },
+    {
+      "name": "URL state and derived presentation",
+      "hook": "useUrlString('q'), useUrlArray('types'), useDataState, useOperationalMetrics",
+      "owner": "web\\src\\hooks\\useUrlState.ts",
+      "file": "web\\src\\features\\system\\pages\\SearchPage.tsx",
+      "line": 85,
+      "endpoint": null,
+      "behavior": "URL replacement preserves unrelated parameters; known types retain requested order; groups follow nine-type display order, within-group server order survives. Counts are bounded returned hits, occupied groups and selected filters. Largest group determines Top match; first display-order group wins ties. Operational metrics use existing preference-aware shared formatter."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 151, "role": "Shared full-width page/header, secondary refresh action and automatic query freshness; shell owns navigation/workspace.", "props": ["title", "subtitle", "query", "secondaryActions", "children"]},
+    {"name": "Input / Button / GlassPanel / Badge / typography", "owner": "web\\src\\components\\ui\\Button.tsx", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 22, "role": "Category-barrel primitives; search input, nine facet buttons, reset, grouped panels, counts, named row actions; PanelTitle/SectionTitle/Text roles.", "props": ["Input.type=search", "Input.size=lg", "Input.aria-label", "Button.aria-pressed", "Button.wrapLabel", "Badge.variant=neutral"]},
+    {"name": "SystemSummaryBrief / OperationalBrief", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 235, "role": "Existing domain adapter to canonical summary, metrics and details rather than a replacement KPI implementation.", "props": ["title", "description", "scope", "available", "loading", "retained", "metrics", "textMetrics", "freshness (currently omitted)"]},
+    {"name": "EmptyState / QueryError / Skeleton / StaleRefreshWarning", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 178, "role": "Idle, minimum-length, pending, fatal retry, no-results and retained-source warning surfaces; no blank whole-page data gate."},
+    {"name": "TimeStamp", "owner": "web\\src\\components\\data-display", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 362, "role": "Existing optional timestamp formatter; implementation not traced."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 182, "role": "Existing shared entrance motion; shared implementation disables initial transform/delay for reduced motion."},
+    {"name": "AINLSearch / AIFeatureCard / AiOutputPanel / withAiFeature", "owner": "web\\src\\components\\ai\\AINLSearch.tsx", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 179, "role": "Optional independent AI feature, prompt/action/output/error/completion/provenance; keep canonical typed baseline visible when AI is off."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\SearchPage.tsx",
+      "line": 389,
+      "rule": "MDC-002 / mission 0.5-0.6",
+      "detail": "Nine entity icon/translated-label switch cases are independently repeated in CommandPalette.tsx:198-225 despite its shared-helper comment. Search requests already share useGlobalSearch; whole search UIs are intentionally distinct.",
+      "fix": "Centralize only typed entity presentation metadata/helper contract; preserve page 25-per-type versus palette 5-per-type and their distinct navigation/interaction contexts.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "SearchPage.tsx:198-223 wraps facets and gives each min-h-11.",
+      "SearchPage.tsx:309 provides one column, md two, xl three, 3xl four; source breakpoints are viewport based even though PageLayout.tsx:13 establishes a container.",
+      "SearchPage.tsx:335-365 preserves titles/subtitles/timestamps; wrapLabel and break-words support row reflow but timestamp remains shrink-0.",
+      "AIFeatureCard.tsx uses min-w-0, wrapped header, inputSlot and below-button placement."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 203, "rule": "MDC-040 / MDC-043", "detail": "Facet buttons use fixed small-button height and do not opt into wrapLabel; long localized labels may exceed 320px allocation. Section labels are truncated at line 325 and a long shrink-0 timestamp competes with title at line 364. These are source risks, not measured overflow.", "fix": "Use existing wrapLabel for facets and allow existing labels/timestamp to reflow or stack without dropping metadata; test narrow allocated widths, RTL and 200% text.", "owner": "page", "confidence": "medium"}
+    ],
+    "viewports": {"320": "unverified", "375": "unverified", "390": "unverified", "430": "unverified", "768": "unverified", "1024": "unverified", "1280": "unverified", "1440": "unverified", "1920": "unverified", "2560": "unverified"}
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "SearchPage.tsx:191 names the searchbox; 195-208 names the filter group and exposes pressed state.",
+      "SearchPage.tsx:163 names icon-only refresh; 307 names the results region; 339 provides localized row open labels.",
+      "SearchPage.tsx:389-404 hides decorative icons; result lists use ul/li; labels use shared typography.",
+      "Button.tsx:26-33 supplies shared focus ring; FadeIn.tsx:24-33 uses reduced-motion handling."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 338, "rule": "MDC-020 / MDC-030", "detail": "Entity destinations render as Buttons calling navigate(hit.url), not links; this removes native open-in-new-tab/copy-link affordances despite being navigation.", "fix": "Compose native router Link navigation with existing shared button chrome, retaining accessible names, URL and all row metadata; do not add another button variant/system.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 157, "rule": "MDC-040 / MDC-026", "detail": "PageLayout receives query but no loading/busy/error announcement inputs. PageContainer.tsx:133-140 derives load announcements from those explicit props, not query. No page-owned live result-count region exists; initial transitions/count changes therefore lack a directly wired announcement mechanism here.", "fix": "Wire shared busy/status announcement without replacing search controls, or use the existing status announcer for concise count updates and suppress duplicate generic announcement. Keep retained results visible.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 160, "rule": "MDC-040", "detail": "Refresh omits size/target overrides; Button default md uses h-10 (Button.tsx:39). Unlike facets, it does not explicitly satisfy the stronger 44px mobile target default.", "fix": "Give existing refresh Button a 44px minimum touch target without changing global Button sizing; verify focus/spacing on mounted UI.", "owner": "page", "confidence": "high"}
+    ],
+    "verification": {"keyboard": "unverified", "focus": "unverified", "screenReader": "unverified", "contrast": "unverified", "forcedColors": "unverified", "reducedMotion": "source handling inspected; runtime unverified", "autofocus": "present at SearchPage.tsx:192; route-focus interaction unverified"}
+  },
+  "states": {
+    "inventory": [
+      {"name": "idle", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 260, "behavior": "Search/facets and optional AI remain; start-typing guidance; no summary or typed request."},
+      {"name": "too short", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 271, "behavior": "Minimum-length guidance; hook disabled; no old typed results or summary."},
+      {"name": "initial loading", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 286, "behavior": "Five row skeletons plus header skeleton; summary loading suppresses resolved values."},
+      {"name": "fatal error", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 282, "behavior": "QueryError with retry; controls/AI survive; summary and header refresh hidden."},
+      {"name": "resolved empty", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 295, "behavior": "No-results guidance including query; measured returned counts are zero."},
+      {"name": "success", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 307, "behavior": "Occupied type groups with counts and all title/subtitle/when/navigation rows; numeric summary and dominant category."},
+      {"name": "retained refresh failure/offline", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 178, "behavior": "useDataState distinguishes fatal from refresh error; shared warning keeps retained rows and offers retry. Paused retained data marks shared warning stale."},
+      {"name": "AI disabled/idle/streaming/error/done-empty", "file": "web\\src\\components\\ai\\AINLSearch.tsx", "line": 72, "behavior": "withAiFeature gate; independent local prompt; AIFeatureCard disabled/busy CTA; AiOutputPanel.tsx:80-121 handles pending, error, empty completion, prose and evidence."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 135, "rule": "MDC-026", "detail": "initialLoading depends on isFetching, not pending/paused state. For a valid query started offline with no cache, isFetching is false and no fatalError exists, so the page can enter No results even though no successful answer exists. StaleRefreshWarning.tsx:57 returns null without data.", "fix": "Distinguish unresolved/paused initial source from successful empty using existing DataStateNotice and source state; keep controls and retry reachable, never imply confirmed zero.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 238, "rule": "MDC-026 / MDC-033", "detail": "useSearch.ts:65 retains previous valid-query payload as placeholderData. Summary scope immediately uses the new trimmed query/types while counts/rows may describe the previous search; page does not inspect isPlaceholderData or data.query. Existing stale warning is not sufficient to identify this cross-query retention.", "fix": "Preserve no-flicker placeholder behavior but visibly distinguish pending requested query/filter scope from retained result scope and avoid attributing old counts/top category to new criteria.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 239, "rule": "MDC-026 / MDC-033", "detail": "Summary retained flag only checks isError, so paused retained data can still say Source available while the adjacent shared warning says offline/stale. Freshness prop is omitted and wrapper falls back to observation time not supplied, despite state.updatedAt being available as a client receipt time.", "fix": "Pass actual trust state and explicitly labeled last successful receipt metadata to existing summary; never present client receipt as entity observation time.", "owner": "page", "confidence": "high"}
+    ],
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 311, "rule": "MDC-010 / MDC-012 / mission 43", "detail": "Result categories use neonColorMap with cyan/blue/green/red/amber/purple chip backgrounds/rings and fixed 300-level glyph colors. tokens.ts:21-26 confirms neon classes; these encode entity identity rather than status and repeat per group and row. Page does not use glow, but rainbow decoration and fixed colors remain source-confirmed reduced-noise gaps.", "fix": "Reuse neutral theme-aware icon/surface tokens and restrained accents where meaningful; preserve icons, entity labels/counts and user theme preferences. Do not replace tokens globally in a page task.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AiOutputPanel.tsx", "line": 88, "rule": "MDC-012 / MDC-013 / MDC-015", "detail": "Shared output frame uses fixed bg-white/[0.02], fixed text-red-300 error text and raw typography classes at lines 92-119 rather than canonical semantic surface/error/typography roles. Visible on this page only when AI output exists.", "fix": "Shared AI owner should use existing surface/error tokens and typography wrappers while retaining alert semantics, prose whitespace, all output states, activity and usage.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "internal\\api\\search\\handler.go", "line": 175, "rule": "MDC-026 / mission 33", "detail": "Sub-search errors are omitted from the response; SearchResponse carries only hits/query. Page cannot distinguish successful complete empty search from empty/partial results caused by failed entity sources. This is an observed contract limitation, not permission for frontend to invent partial status.", "fix": "Integration owner should expose backwards-compatible source completeness/failure metadata and type it in the shared hook; presentation can then show actual partial/unavailable trust without discarding successful groups.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\api\\hooks\\useSearch.ts", "line": 37, "rule": "MDC-002 / mission 0.2", "detail": "Frontend minimum length counts UTF-16 code units while handler.go:126 counts Unicode runes. A single astral character meets frontend floor but not backend floor, yielding an apparent no-match response rather than minimum-length guidance.", "fix": "Shared search owner should align the minimum-length predicate with backend Unicode semantics and use it in page/palette; preserve two-character default and query/cache behavior.", "owner": "shared", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Correct offline initial-empty and cross-query retained-scope trust", "Resolve backend completeness metadata and shared Unicode guard", "Restore native navigation and reliable announcements/targets", "Reduce category/AI decoration and validate responsive localized content"],
+    "reason": "Trust gaps can imply zero or assign previous-query results to current criteria. Layout is already full-width and uses existing architecture; no source rewrite or feature removal is justified."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Typed entity search presentation metadata",
+      "owner": "missing centralized search entity presentation owner; existing implementations in web\\src\\components\\ui\\CommandPalette.tsx:198-225 and SearchPage.tsx:389-417",
+      "props": {"type": "SearchHitType", "translation": "Existing search.section.* keys", "icon": "Existing decorative icon with size/accessibility options", "order": "Retain page's nine-type order"},
+      "variants": ["page grouping/facets", "palette preview"],
+      "states": ["known type", "fallback type"],
+      "usedBy": ["web\\src\\features\\system\\pages\\SearchPage.tsx", "web\\src\\components\\ui\\CommandPalette.tsx"],
+      "dependsOn": ["web\\src\\api\\types.ts:2928-2947", "existing icon and localization owners"],
+      "acceptance": "Both current consumers retain labels/icons/routes and different per-type limits; no new search renderer/query owner."
+    },
+    {
+      "name": "Shared Unicode query enablement",
+      "owner": "web\\src\\api\\hooks\\useSearch.ts",
+      "props": {"query": "Trimmed string", "minimum": 2, "disabled": "Existing option"},
+      "variants": ["typed search page", "palette preview"],
+      "states": ["empty", "one Unicode rune", "two or more Unicode runes"],
+      "usedBy": ["web\\src\\features\\system\\pages\\SearchPage.tsx", "web\\src\\components\\ui\\CommandPalette.tsx"],
+      "dependsOn": ["internal\\api\\search\\handler.go:126", "existing search keys and enablement"],
+      "acceptance": "ASCII and astral inputs agree with backend; no unnecessary request below floor; retain clear/disabled placeholder policy."
+    },
+    {
+      "name": "Search completeness contract",
+      "owner": "internal\\api\\search\\handler.go; web\\src\\api\\types.ts; web\\src\\api\\hooks\\useSearch.ts (integration owner)",
+      "props": {"sourceOutcomes": "Proposed typed per-entity success/failure/completeness metadata; currently absent", "hits": "Existing unchanged SearchHit[]", "query": "Existing unchanged string"},
+      "variants": ["complete", "partial", "no successful sources"],
+      "states": ["empty success", "mixed failures", "timeout", "complete success"],
+      "usedBy": ["web\\src\\features\\system\\pages\\SearchPage.tsx", "web\\src\\components\\ui\\CommandPalette.tsx"],
+      "dependsOn": ["Backend fan-out error reporting", "shared DataState partial/unavailable policy"],
+      "acceptance": "Failed sources never masquerade as confirmed empty; successful rows/ranking/caps remain intact. Proposed API extension is not an existing capability."
+    },
+    {
+      "name": "Theme-aware AI output presentation",
+      "owner": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "props": ["text", "state", "error", "activity", "usage", "pendingChild"],
+      "variants": ["Existing shared frame; no new card family"],
+      "states": ["idle hidden", "streaming pending", "streaming text", "error alert", "done empty", "done prose/evidence"],
+      "usedBy": ["web\\src\\components\\ai\\AINLSearch.tsx via AIFeatureCard"],
+      "dependsOn": ["existing typography/error/surface tokens", "HelixEvidenceTrail", "AIThinkingIndicator"],
+      "acceptance": "Retain all existing props and output/privacy semantics; validate theme contrast and streaming behavior. Wider shared consumer census belongs to shared owner."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\components\\ui\\CommandPalette.tsx", "line": 198, "rule": "MDC-002", "detail": "Duplicate entity icon/label maps, not a competing whole query engine. Palette uses shared hook with limit=5 and debounced input at lines 845-872; page uses limit=25 and immediate URL input.", "fix": "Consolidate metadata only; retain both purposeful search entry points and their limits/interaction contracts.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 179, "rule": "MDC-002 / MDC-046", "detail": "AI prompt is independent, explicitly gated and additive rather than a replacement typed-search implementation. Workspace search intentionally hides global vehicle picker (workspaceScope.ts:110-127) and owns no duplicate vehicle/date selector.", "fix": "Preserve these separations; do not introduce another workspace scope, AI gate, stats renderer or layout wrapper.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "0389edf4b5fca8ba097446c06eb8c8acadc56ab111a8a3456301d9304b17323f",
+    "hashAlgorithm": "SHA-256 of current page file bytes",
+    "currentLineCount": 418,
+    "sections": [
+      {"name": "Page chrome and refresh/freshness", "line": 151, "count": 1},
+      {"name": "Independent optional natural-language search", "line": 179, "count": 1},
+      {"name": "Typed query and nine-type facet toolbar", "line": 183, "count": 1},
+      {"name": "Search summary with three numeric metrics and top-match text metric", "line": 235, "count": 1},
+      {"name": "Results state region", "line": 259, "count": 1},
+      {"name": "Grouped result panels", "line": 313, "count": "0-9 populated types; preserve every returned row"}
+    ],
+    "sectionCount": 5,
+    "sectionCountMeaning": "Five logical top-level surfaces; dynamic grouped panels are nested inside results. Trust warning is an additional conditional notice.",
+    "stateBranchCount": 6,
+    "glassPanelOpeningCount": 7,
+    "glassPanelOpeningCountMeaning": "Seven source JSX openings: toolbar, five state panels and repeated group panel; not simultaneous mounted count. Raw name occurrences including closing tags/import total 15.",
+    "chartContainerCount": 0,
+    "entityTypes": ["vehicle", "drive", "charging", "alert", "notification", "geofence", "automation", "location", "trip"],
+    "metrics": ["Returned-hit count with bounded-scope explanation", "Occupied category count out of nine", "Selected filter count/all-types context", "Largest-group label and hit count"],
+    "actions": [
+      {"name": "Type/clear search query", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 188, "effect": "Updates URL q using shared replace-state mechanism; hook trims, keys and cancels obsolete queries."},
+      {"name": "Toggle any of nine type facets", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 209, "effect": "Updates ordered URL types and pressed state; no filters means all types."},
+      {"name": "Clear all type filters", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 222, "effect": "Removes type restriction but preserves query."},
+      {"name": "Refresh active results", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 162, "effect": "Explicit refetch from header."},
+      {"name": "Retry fatal typed search", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 284, "effect": "QueryError refetch."},
+      {"name": "Retry retained failed/blocked refresh", "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "line": 99, "effect": "Shared state retry while retaining data."},
+      {"name": "Open each entity", "file": "web\\src\\features\\system\\pages\\SearchPage.tsx", "line": 338, "effect": "Navigate to exact backend-provided hit.url; preserve all titles/subtitles/optional timestamps."},
+      {"name": "Enter natural-language prompt and start search", "file": "web\\src\\components\\ai\\AINLSearch.tsx", "line": 41, "effect": "Independent prompt, 4096-char cap, explicit stream action; optional feature only."},
+      {"name": "Inspect summary source details", "file": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "line": 36, "effect": "Existing OperationalBrief inherited detail behavior; exact drawer implementation not inspected/runtime unverified."},
+      {"name": "Inspect AI evidence/usage", "file": "web\\src\\components\\ai\\AiOutputPanel.tsx", "line": 122, "effect": "Existing HelixEvidenceTrail output; nested controls not inspected/runtime unverified."}
+    ],
+    "dataBehavior": [
+      "Keep exact route /search and restore q/types from shared URLs.",
+      "Keep current search type ordering, server within-group ranking, titles, optional subtitle/when and backend destinations.",
+      "Keep 25-per-type page limit, raw query key identities, inherited retry/staleness/cancellation and null normalization.",
+      "Keep measured zero distinct from unresolved/missing values and bounded returned totals distinct from unbounded server totals.",
+      "Keep initial, empty, fatal-retry, retained-error and independent AI states; fix trust gaps without removing sources.",
+      "Keep optional AI off gate and typed baseline, stream prose, source provenance/activity/usage and prompt validation.",
+      "No physical-unit fields are calculated by this page; maintain raw API/cache values and current date/locale/format preferences.",
+      "No tables, charts, exports or destructive mutations are implemented by this page; do not invent them."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Read-only assigned mounted page plus bounded presentation/data dependencies. Only owned report and heartbeat were written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "endpointExecution": "unverified; routes matched in source only",
+    "tests": "SearchPage.test.tsx:1-250 inspected as authored context; not executed, not borrowed acceptance.",
+    "notRun": ["Git commands", "full build", "full lint", "project TypeScript", "tests", "browser/runtime exercise"],
+    "auditScript": "audit.sh inspected but not executed because it unconditionally invokes project TypeScript and the assignment is source-only; bounded read-only pattern counts used instead.",
+    "sourceChecks": {
+      "command": "PowerShell Get-FileHash web\\src\\features\\system\\pages\\SearchPage.tsx -Algorithm SHA256; Get-Content line count; regex counts on this page only",
+      "exitCode": 0,
+      "output": ["SHA256 0389EDF4B5FCA8BA097446C06EB8C8ACADC56AB111A8A3456301D9304B17323F", "418 lines", "style=: 0", "<(button|input|textarea|select|table)\\b: 0", "direct recharts/react-leaflet/framer-motion import: 0", "GlassPanel name occurrences: 15", "ChartContainer name occurrences: 0"],
+      "meaning": "Narrow syntax-pattern evidence only; not zero overall violations, not typechecking or runtime acceptance."
+    },
+    "unknowns": ["Database search matching/unit-bearing subtitle formatting beyond handler contract", "AI provider behavior and actual feature flags", "Actual all-nine-category mounted content and endpoint availability", "Inherited summary drawer/AI evidence interactions", "Live settings/localization/theme/forced-color/native/browser behavior"],
+    "concurrency": "Source snapshot SHA-256 pinned; release verification checks current page bytes match without altering source."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\SearchPage.tsx",
+    "web\\src\\features\\system\\pages\\SearchPage.test.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\features\\system\\components\\CommandSearch.tsx",
+    "web\\src\\api\\hooks\\useSearch.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUrlState.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\ai\\AINLSearch.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CommandPalette.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\search\\handler.go"
+  ]
+}
