@@ -1,5 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { motion } from '../tokens';
+import { motion, neonColorMap, semanticToNeon, severityTokens, gaugeTone, glassCardClasses, chartTokens, typography } from '../tokens';
+
+describe('restrained foundation presentation', () => {
+  it('keeps unknown/neutral distinct from information', () => {
+    expect(semanticToNeon.neutral).not.toBe(semanticToNeon.info);
+    expect(neonColorMap[semanticToNeon.neutral].text).toBe('text-[var(--text-secondary)]');
+  });
+
+  it('retains status meanings without colored shadows', () => {
+    for (const variant of Object.values(neonColorMap)) {
+      expect(variant.glow).toBe('shadow-none');
+    }
+    expect(severityTokens.critical.fg).toBe(neonColorMap.red.text);
+    expect(severityTokens.success.fg).toBe(neonColorMap.green.text);
+    expect(gaugeTone.warning).toBe('var(--semantic-warning)');
+    expect(typography.role.error).toContain('--semantic-danger');
+  });
+
+  it('uses adaptive convenience surfaces and neutral chart chrome', () => {
+    for (const surface of Object.values(glassCardClasses)) {
+      expect(surface).toContain('var(--panel-bg)');
+      expect(surface).not.toContain('white');
+    }
+    expect(chartTokens.brush.stroke).toBe('var(--text-secondary)');
+    expect(chartTokens.cursor.stroke).toBe('var(--text-secondary)');
+    expect(chartTokens.brush.travellerWidth).toBe(8);
+    expect(chartTokens.brush.height).toBe(28);
+  });
+});
 
 describe('motion tokens (Phase-45 / Prompt 21)', () => {
   describe('motion.duration', () => {

@@ -429,9 +429,11 @@ describe('LinearGauge — semantic tones', () => {
     }
   });
 
-  it('keeps the status tones fixed so danger reads as danger on every preset', () => {
+  it('keeps status meanings independent of brand accents while adapting contrast to the mode', () => {
     for (const tone of ['success', 'warning', 'danger', 'info', 'purple'] as const) {
-      expect(gaugeTone[tone]).toMatch(/^#[0-9a-f]{6}$/i);
+      expect(gaugeTone[tone]).toBe(`var(--semantic-${tone})`);
+      expect(gaugeTone[tone]).not.toBe(gaugeTone.primary);
+      expect(gaugeTone[tone]).not.toBe(gaugeTone.accent);
     }
   });
 
