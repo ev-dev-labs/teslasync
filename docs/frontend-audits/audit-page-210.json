@@ -1,0 +1,372 @@
+{
+  "item": "audit-page-210",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+  "routes": ["/signal-mutual-information"],
+  "purpose": "Compare two selected vehicle telemetry histories using quantile-state mutual information rather than linear correlation.",
+  "primaryGoal": "Choose two signals, understand aligned-sample coverage and nonlinear dependence, review permutation significance, and inspect joint-state contributions without changing source measurements.",
+  "dataSources": [
+    {
+      "name": "Signal catalog",
+      "hook": "useSignals(id)",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "/signals/{vehicleID}/available",
+      "routeEvidence": "internal\\api\\router.go:4886,4911,4929",
+      "pageEvidence": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:47,85-88",
+      "behavior": "Enabled for a positive vehicle ID; normalizes names from bare arrays or signals envelopes, discards malformed entries, uses the existing catalog query key and STANDARD stale time, and forwards cancellation."
+    },
+    {
+      "name": "Two independent selected signal histories",
+      "hook": "useSignalHistory(id, signalA, 24) and useSignalHistory(id, signalB, 24)",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 176,
+      "endpoint": "/signals/{vehicleID}/{signalName}/history?hours=24",
+      "routeEvidence": "internal\\api\\router.go:4886,4914,4932",
+      "pageEvidence": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:26,48-49,214-218",
+      "behavior": "Positive vehicle and nonempty signal enable each query independently; vehicle/name/hours participate in cache keys; STANDARD polling and AbortSignal forwarding remain. Returned data/from/to are retained. No explicit limit, from/to range or server-completeness guarantee is supplied by this page.",
+      "unknowns": "Handler internals, actual response coverage, ordering/limits, production units and deployed availability were not exercised or inferred."
+    },
+    {
+      "name": "Local mutual-information derivation",
+      "owner": "web\\src\\features\\telemetry\\lib\\signalMutualInformation.ts",
+      "line": 244,
+      "endpoint": null,
+      "behavior": "Pure analysis of raw history samples: valid numeric kinds and boolean 0/1 promotion; invalid timestamps/nonfinite values and other kinds excluded; last valid duplicate timestamp wins; larger median positive cadence, overlap-only nearest alignment within 1.5 cadences; minimum 20 aligned points, four quantile bins, 200 deterministic permutations, 95% null quantile; returns 16 cells plus aligned samples and specialist statistics.",
+      "dependencies": ["web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts:14-49"],
+      "pageEvidence": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:89-105"
+    },
+    {
+      "name": "Existing workspace and formatting preferences",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": null,
+      "behavior": "Shared selected vehicle owner uses URL/store/fleet fallback; page does not introduce a second vehicle picker. Numeric output subscribes to existing locale/precision preferences through useNumberFormatting. The selected-vehicle hook depends on useVehicles; that hook's endpoint was not inspected.",
+      "dependencies": ["web\\src\\hooks\\useNumberFormatting.ts:18-47"],
+      "pageEvidence": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:40-44,124-143"
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "layout",
+      "props": ["title", "subtitle", "query", "dataSources", "children"],
+      "evidence": "PageLayout.tsx:9-16; web\\src\\components\\layout\\PageContainer.tsx:91-112,151-163,253",
+      "behavior": "Full-width min-w-0 adapter; shared header/help, worst-query freshness, source notices and page error boundary, not a new shell."
+    },
+    {
+      "name": "TelemetrySummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+      "kind": "domain composite",
+      "props": ["title", "description", "metrics", "scope", "provenance", "testId", "loading", "unavailable", "unknown", "sourceStatus", "retained", "sourceBounds"],
+      "evidence": "TelemetrySummaryBrief.tsx:7-52; web\\src\\components\\data-display\\OperationalBrief.tsx:152-159,234-262",
+      "behavior": "Existing operational metric adapter, trust labels, bounds disclosure and Review details drawer. Keep the shared renderer and all four specialist metrics."
+    },
+    {
+      "name": "ChartContainer and chart category exports",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "kind": "chart composite",
+      "props": ["title", "subtitle", "ariaLabel", "loading", "empty", "height", "data", "dataColumns", "children"],
+      "evidence": "SignalMutualInformationPage.tsx:233-268; ChartContainer.tsx:422-454",
+      "behavior": "One contribution bar series; accessible fallback data table; default image export eligibility when populated. No CSV exportData, fullscreen, chartKey, annotation configuration or legend-toggle capability is supplied by this page."
+    },
+    {
+      "name": "Select",
+      "owner": "web\\src\\components\\ui\\Select.tsx",
+      "kind": "primitive",
+      "props": ["label", "value", "options", "onChange", "placeholder"],
+      "evidence": "SignalMutualInformationPage.tsx:178-191; Select.tsx:32-36,58-66,81-105",
+      "behavior": "Native labeled selection with existing focus styles and shared option rendering."
+    },
+    {
+      "name": "GlassPanel, PanelTitle, Text, Badge",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing category primitives",
+      "evidence": "SignalMutualInformationPage.tsx:16,159-163,192,272-276,311-326",
+      "inspectionLimit": "Call sites inspected; these primitive implementations were not individually inspected."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "kind": "motion owner",
+      "props": ["delay", "children"],
+      "evidence": "FadeIn.tsx:23-34; SignalMutualInformationPage.tsx:158,202,224,271",
+      "behavior": "Existing reduced-motion hook controls entrance initial state, delay and duration. Runtime OS/low-bandwidth behavior unverified."
+    },
+    {
+      "name": "NoVehicleSelected and feedback owners",
+      "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "kind": "domain fallback",
+      "evidence": "SignalMutualInformationPage.tsx:145-146; NoVehicleSelected.tsx:43-74",
+      "behavior": "Shared setup navigation and governed prerequisite guidance. QueryError, Skeleton and EmptyState call sites remain shared feedback, not local substitutes."
+    },
+    {
+      "name": "DataSourceNotice / useDataState",
+      "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "kind": "shared data-trust owners",
+      "props": ["sources", "query", "enabled"],
+      "evidence": "DataSourceNotice.tsx:72-126,143-150,207-214; web\\src\\hooks\\useDataState.ts:32-53; web\\src\\api\\dataState.ts:158-177",
+      "behavior": "Existing source-level pending/failure/refresh/offline notices and retry; useDataState separates fatal failures from retained refresh errors."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "line": 220,
+      "rule": "MDC-002/MDC-026: reuse recovery ownership",
+      "detail": "The same history fatal failure is shown after the summary, in the chart replacement, and inside the heatmap, in addition to the shared source notice. Retry scopes differ: the summary refreshes catalog and both histories, while the other two retry only failed histories.",
+      "fix": "Consolidate the page-level failure explanation and affected-source recovery using the existing shared source notice/QueryError owners; keep identifiable chart and heatmap sections and retain intentional retry scopes.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [225, 227, 279, 280]
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Selection grid stacks below sm and uses two columns at sm: page lines 177-199.",
+      "Heatmap uses two columns below sm and four at sm: page line 292; all cells remain present.",
+      "Shared PageLayout provides @container, w-full and min-w-0: PageLayout.tsx:12.",
+      "Chart is responsive width/height inside a fixed 320px requested frame: page lines 246,254."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+        "line": 257,
+        "rule": "MDC-013/MDC-043: readable chart labels",
+        "detail": "Up to 12 pair labels are rendered with a fixed 10px X-axis font; Y-axis uses 11px. Small allocated widths and larger text preferences require review; actual crowding is not proved.",
+        "fix": "Use existing chart typography/axis formatting and frame sizing rather than ad-hoc axis font sizes; verify every contribution remains accessible through the existing table at all required widths.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportValidation": "NOTRUN: 320,375,390,430,768,1024,1280,1440,1920,2560; allocated-container, RTL and 200%-text checks unverified."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Decorative heading icons are aria-hidden: page lines 161,274.",
+      "Both Select controls have localized visible labels; native control association exists in Select.tsx:69-85.",
+      "Chart has ariaLabel and three-column same-plotted-data fallback: page lines 239-252.",
+      "Heatmap retains textual pair/count/bits, accessible cell descriptions and nonzero probability badges: page lines 300-327.",
+      "Shared FadeIn honors reduced-motion input in source; shared summary owns its details drawer."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\Select.tsx",
+        "line": 59,
+        "rule": "MDC-021: stable field identity",
+        "detail": "Page supplies labels but no explicit IDs at lines 178-191; Select derives identity from translated label before falling back to useId. Locale changes can change the control identity; a collision on this page is not established.",
+        "fix": "Existing Select owner should use stable implicit useId while preserving explicit id precedence and feedback associations; alternatively the page can pass stable distinct explicit IDs without changing values.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Select.tsx",
+        "line": 34,
+        "rule": "MDC-040: mobile target reachability",
+        "detail": "Page uses default md sizing, whose source minimum is 40px rather than the contract's stronger 44px mobile default. Rendered size and WCAG target-spacing exceptions are unmeasured.",
+        "fix": "Reuse existing Select size prop, e.g. lg where appropriate, or have the shared owner review the established mobile sizing contract. Do not introduce another select.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "validation": "Keyboard, focus order/restoration, screen-reader output, composed contrast, touch targets, forced colors and actual reduced-motion behavior NOTRUN."
+  },
+  "states": {
+    "loading": "Catalog Skeleton(96); history analysis loading preserves retained data and drives summary/chart/heatmap skeletons. Source notice tracks enabled histories independently: page lines 50-54,108-112,166-167,204,244,277-278.",
+    "empty": "Catalog empty guidance; no selection produces unknown metrics and selection prompt; insufficient aligned samples produces minimum-20 explanation; chart emptiness derives from top-contribution rows: page lines 168-175,245,283-290.",
+    "error": "Fatal errors only replace dependent results. Catalog failure is separate. Summary retry refreshes all three source queries; chart/heatmap retry failed histories: page lines 164-165,113-119,220-231,279-283.",
+    "retained": "Retained histories survive refresh errors; summary marks retained for refreshing/stale/refreshError and exposes requested/returned bounds: page lines 206-219. Shared source notice supplies nonfatal warnings.",
+    "offline": "Existing data-state adapter maps retained paused queries to stale; shared source notice marks initial paused loads and offers retry. Actual browser offline behavior NOTRUN.",
+    "unknown": "Null result and missing selection keep KPI values null, never fabricated zero. Returned bounds not supplied are explicitly described as unknown by the summary owner.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+        "line": 51,
+        "rule": "MDC-026: empty/partial source trust",
+        "detail": "Both history states pass provenance only. Empty successful arrays therefore are not marked unavailable, and partial source coverage is not derived here. The summary's partial/unavailable branches at lines 206-207 cannot represent sample-level exclusions from these options alone.",
+        "fix": "Derive unavailable from a resolved empty history using existing useDataState options; qualify supported partial coverage from real response/sample evidence only. Keep unknown result distinct from zero, failure and empty, and preserve independent retries.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+        "line": 150,
+        "rule": "MDC-026/MDC-040: announce asynchronous analysis",
+        "detail": "PageLayout receives query/dataSources but no loading/busy/error props. PageContainer's announcement at lines 134-140 and aria-busy at line 163 are driven by those props, not by the supplied queries. Shared source notice/chart may communicate their own states; complete announcement behavior is untested.",
+        "fix": "Consider passing busy for active enabled source work without using global loading to hide independent sections. Verify live-region behavior before adding competing announcements.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "line": 29,
+      "rule": "MDC-010/MDC-012/MDC-034: restrained semantic heat colors",
+      "detail": "Local sign-based bg-rose-500/bg-cyan-500 with four opacity bands establishes a saturated heat palette independent of shared chart tokens. Two decorative icons also use fixed text-cyan-300 at lines 161 and 274. No neon/glow/pure-white/shadow literal was found in the assigned page; composed appearance and effective contrast are unverified.",
+      "fix": "Map heat intensity/sign to existing restrained semantic/chart tokens while retaining all cells, sign/intensity distinctions and numeric text; make decorative icons token-neutral. Preserve saved palette preferences rather than resetting them.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "line": 292,
+      "rule": "MDC-034/MDC-040: explain heatmap encoding",
+      "detail": "Cell colors encode sign and relative absolute contribution, but the heatmap has no visible key explaining hue/intensity. Signed bit values provide a non-color representation, so this is an explanation gap rather than proof of color-only content.",
+      "fix": "Add localized concise sign/intensity guidance within the existing panel; retain per-cell count, signed bits, pair identity and probability.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 184,
+      "rule": "MDC-002/MDC-046: safe signal identity transport",
+      "detail": "Shared useSignalHistory interpolates the signal name without encodeURIComponent. Current catalog names and whether they ever contain reserved characters were not verified; this is a source-level transport risk, not a observed 404.",
+      "fix": "Existing hook owner can encode the path segment without changing cache identity, cancellation, polling or payloads; validate against actual catalog/router behavior.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "line": 217,
+      "rule": "MDC-026/MDC-045: specialist evidence wording",
+      "detail": "Provenance says aligned numeric samples only, but signalMutualInformation.ts:94 calls the extractor with boolean promotion enabled, and signalHistorySamples.ts:34-36 maps booleans to 0/1.",
+      "fix": "Keep the existing analysis behavior and clarify localized provenance that numeric and supported boolean measurements participate; do not remove boolean evidence or alter quantile/permutation calculations as a cosmetic fix.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "The page already reuses shared layout, metrics, chart, feedback and formatting owners. Prioritize honest empty/source trust, consolidated recovery, stable field identity and restrained/explained heat encoding; browser acceptance remains pending."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Stable implicit Select field identity",
+      "owner": "web\\src\\components\\ui\\Select.tsx",
+      "props": ["id", "label", "aria-describedby", "hint", "error", "help.for"],
+      "variants": ["Existing sm/md/lg/auto; no new variant proposed"],
+      "states": ["localized label changes", "explicit IDs", "implicit IDs", "hint/error associations"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:178", "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:185"],
+      "dependsOn": ["MDC-021", "existing React useId and explicit-ID behavior"],
+      "detail": "Extend only the existing primitive owner; no new component/library. This audit confirms two controls on one page, not two independent production-page consumers. Cross-page adoption/acceptance belongs to the shared owner."
+    },
+    {
+      "name": "Signal-history path-segment encoding review",
+      "owner": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "props": ["vehicleId", "signal", "hours"],
+      "variants": ["existing useSignalHistory"],
+      "states": ["nonempty reserved-character signal names", "cancellation", "cached refresh", "disabled missing selection"],
+      "usedBy": ["web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx:48-49"],
+      "dependsOn": ["actual catalog identity constraints", "internal\\api\\router.go:4914,4932"],
+      "detail": "Integration review, not a proved runtime failure. Preserve existing query keys/polling and raw payloads."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Local heat-color classification",
+      "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "line": 27,
+      "detail": "heatClass is a local presentation mapping while the bar already uses chartTokens.series[0]. Align colors with the existing token owner, not a new global heatmap engine.",
+      "existingOwner": "web\\src\\lib\\tokens.ts (import/call site inspected only)"
+    },
+    {
+      "name": "Repeated fatal-history recovery",
+      "file": "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "line": 220,
+      "detail": "Three page recovery sites plus the existing shared source notice; reuse established owners and preserve section visibility.",
+      "existingOwner": "web\\src\\components\\feedback\\DataSourceNotice.tsx"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "5E13F8CD636702AB46898BE212F3DFF4E7967B153E9C2CE34611128B54CA673D",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 336,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Signals to compare", "line": 159, "contents": ["catalog states", "Signal A selector", "Signal B selector", "canonical SI quantile explanation"]},
+      {"name": "Mutual information metrics", "line": 203, "contents": ["aligned samples and cadence", "MI bits", "normalized MI", "permutation status and 95% null threshold", "requested/returned bounds", "provenance", "coverage caveat", "Review details drawer"]},
+      {"name": "Top joint-state contributions", "line": 233, "contents": ["explanation", "absolute-contribution-descending top 12", "single bar series", "signed contribution axis/tooltip", "pair/count/bits accessible table", "shared image exports", "fatal error recovery"]},
+      {"name": "Contribution heatmap", "line": 272, "contents": ["all 16 default quantile-pair cells", "pair identity", "aligned count", "signed bits", "nonzero probability badge", "cell aria descriptions", "loading/error/no-selection/insufficient-overlap states"]}
+    ],
+    "sourceCounts": {"GlassPanelOpeningTags": 3, "ChartContainerOpeningTags": 1, "TelemetrySummaryBriefOpeningTags": 1, "FadeInOpeningTags": 4, "SelectOpeningTags": 2, "metricCount": 4},
+    "countNote": "Three GlassPanel JSX sites include the alternative fatal chart panel; four logical content sections, not four simultaneously mounted GlassPanels. Shared summary internals and no-vehicle fallback are additional inherited surfaces.",
+    "actions": [
+      "Choose/clear Signal A and Signal B using existing shared Select controls, including selecting the same signal if desired.",
+      "Catalog retry refreshes catalog.",
+      "Summary fatal-error retry refreshes catalog and both histories.",
+      "Chart and heatmap fatal retries target only failed histories.",
+      "Shared DataSourceNotice retry targets its retryable sources.",
+      "Review details opens existing OperationalBrief drawer; shared close behavior remains.",
+      "Populated chart exposes default shared image export menu; no CSV/fullscreen/annotation capability is configured here.",
+      "No-vehicle setup action links through existing guidance to onboarding.",
+      "Shared compact page-header subtitle/help action remains available."
+    ],
+    "dataBehavior": [
+      "Preserve supplied route, shared vehicle scope, empty initial signal choices, and fixed 24-hour analysis request; resolve any future workspace-range policy with its existing integration owner, not a second local range picker.",
+      "Preserve raw SI wire/cache values, history query keys, enablement, polling, cancellation, independent sources and retained histories.",
+      "Preserve valid numeric and boolean promotion behavior, last-valid timestamp deduplication, cadence alignment/tolerance, minimum samples, bins, deterministic permutation threshold and rounding.",
+      "Preserve all derived cells/aligned sample metadata even where only some fields currently display; do not change scientific calculations during presentation modernization.",
+      "Preserve locale/precision-aware scientific/count/percent/cadence formatting and null-as-unknown metric values.",
+      "Preserve top-12 ordering, signed contributions, same-data fallback table, all heat cells and count-positive probability badge condition.",
+      "Retain localized explanations, requested 24h/selected-pair scope, aligned-overlap caveat, supplied bounds and honest unknown bounds."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "Atomic Phase0 source audit of the assigned page and direct page-specific owners only. Route array is supplied by assignment; mounted route reachability was not tested.",
+    "runtime": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "contrast": "NOTRUN",
+    "viewport": "NOTRUN",
+    "typescript": "NOTRUN by assignment: no full-project validation during source audit.",
+    "lintBuildTests": "NOTRUN by assignment; no Git commands or source edits.",
+    "skillScript": "audit.sh was read but not executed because it unconditionally runs full frontend TypeScript, contrary to this bounded source-only assignment. Its categories were counted directly on the assigned file instead.",
+    "sourceChecks": {
+      "successfulCommand": "Python pathlib/re source-only counts on web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+      "exitCode": 0,
+      "output": ["lineCount=336", "inlineStyles=0", "rawControls=0", "directLibraryImports=0", "neonGlowWhite=0", "saturatedColors=4", "GlassPanel=3", "ChartContainer=1"],
+      "interpretation": "Counts are syntactic indicators, not visual acceptance or a zero-violation certificate. Saturated count is two background literals plus two icon literals.",
+      "failedAttempt": "Initial PowerShell regex-count command exited 1 with ParserError before counting; successful Python retry supplies the evidence."
+    },
+    "unknowns": [
+      "Actual backend response completeness, limits, deployed wire shape and runtime catalog name constraints.",
+      "Live query/error/offline behavior and inherited drawer/export browser behavior.",
+      "Whole-app range/header ownership on this supplied route; no mounted shell inspection or route enumeration was performed.",
+      "useOperationalMetrics implementation was not read: attempted .ts path does not exist; only actual summary/OperationalBrief contracts are cited.",
+      "Imported primitive/category implementations not individually inspected are listed as call-site evidence only.",
+      "No historical acceptance, screenshots or fixtures are used as current proof."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-210.json", ".agent-status\\audit-page-210.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalMutualInformationPage.tsx",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\features\\telemetry\\lib\\signalMutualInformation.ts",
+    "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\types\\telemetry.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\lib\\workspaceScope.ts"
+  ]
+}
