@@ -1,0 +1,245 @@
+{
+  "item": "audit-page-198",
+  "page": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx",
+  "routes": ["/tesla-account"],
+  "purpose": "Display the cached Tesla account profile, source identity, synchronization timestamps and three profile lifecycle events.",
+  "primaryGoal": "Review account identity and source freshness, fetch the latest Tesla profile and recover failed reads without losing retained profile details.",
+  "dataSources": [
+    {
+      "name": "Cached Tesla profile",
+      "hook": "useTeslaUserProfile",
+      "owner": "web\\src\\api\\hooks\\useUser.ts",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 205,
+      "requestPath": "/tesla/user/profile",
+      "endpoint": "GET /api/v1/tesla/user/profile",
+      "routeEvidence": "internal\\api\\router.go:3599,3606",
+      "sourceOwnership": "teslaUserProfileHandler.Profile, as registered by the router; handler, repository and upstream implementation not inspected.",
+      "payload": "Envelope {profile: TeslaUserProfile|null, fetched_at: string|null}; profile fields id, email, full_name, profile_image_url, fetched_at, created_at, updated_at.",
+      "typeEvidence": "web\\src\\api\\hooks\\useUser.ts:190-203",
+      "queryBehavior": "Key ['tesla-user-profile'] (useUser.ts:16); STALE_TIMES.SLOW; query forwards AbortSignal to request. No local fetch/useEffect, scope selector, pagination or second data source.",
+      "derivations": "Page takes profile.fetched_at before envelope.fetched_at; null profile stays null; account ID is prefixed with # without rounding; finite parsed created/updated/fetch times determine accessible timeline bounds.",
+      "derivationEvidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:39-51",
+      "unknowns": "The backend meaning of profile.id and created_at is not independently verified. Preserve current labels and source values; do not infer whether they are upstream identity/account creation or local record metadata."
+    },
+    {
+      "name": "Explicit fetch from Tesla",
+      "hook": "useRefreshTeslaProfile",
+      "owner": "web\\src\\api\\hooks\\useUser.ts",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 213,
+      "requestPath": "/tesla/user/profile/refresh",
+      "endpoint": "POST /api/v1/tesla/user/profile/refresh",
+      "routeEvidence": "internal\\api\\router.go:3607",
+      "sourceOwnership": "teslaUserProfileHandler.RefreshProfile; router applies an IP limit of 5 requests per minute.",
+      "queryBehavior": "Mutation success invalidates only userKeys.teslaProfile and calls localized success toast; failure calls localized error toast. No optimistic replacement or page-local profile cache.",
+      "actions": "Header, Sync panel and empty Profile CTA call the same mutate function. Query-error and stale-warning retries refetch the cached GET instead; these are not interchangeable operations.",
+      "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:53-66,136-141,160-169; web\\src\\api\\hooks\\useUser.ts:217-223",
+      "runtime": "Not invoked during this audit."
+    },
+    {
+      "name": "Shared trust and display adapters",
+      "owner": "web\\src\\hooks\\useDataState.ts",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "line": 31,
+      "dependencies": ["web\\src\\api\\dataState.ts:184-253", "web\\src\\lib\\dateFormat.ts:54-73", "web\\src\\features\\system\\components\\statstrip-tesla-account\\TeslaAccountStatStrip.tsx:18-67"],
+      "behavior": "Envelope presence and profile presence remain distinct. Only fatalError replaces the three profile-dependent panels. Shared warning preserves cached data after refresh failure or paused/offline fetch. Date formatting keeps source strings unchanged and displays missing/invalid dates as an em dash. Metrics use useOperationalMetrics and OperationalBrief; no physical-unit fields or new unit conversions."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "category": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "props": ["title", "subtitle", "secondaryActions", "query", "children"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:69-76; web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15", "role": "Existing PageContainer adapter with full-width min-w-0 container; shell/navigation remain separate owners."},
+    {"name": "GlassPanel / Heading / Text / Label / Caption / HelperText / Badge / Button", "category": "ui", "owner": "web\\src\\components\\ui", "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:8,87-174,181-260", "role": "Four existing surfaces, localized hierarchy, native shared controls and themed text. Button owns focus, disabled and aria-busy behavior."},
+    {"name": "StatusPill", "category": "ui", "owner": "web\\src\\components\\ui\\StatusPill.tsx", "props": ["color", "children"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:127-131; web\\src\\components\\ui\\StatusPill.tsx:12-30", "role": "Themed pill with small decorative dot and explicit synced/not-synced text; no pulse requested."},
+    {"name": "TeslaAccountStatStrip / OperationalBrief", "category": "domain-to-shared data-display", "owner": "web\\src\\features\\system\\components\\statstrip-tesla-account\\TeslaAccountStatStrip.tsx", "props": ["profile", "fetchedAt", "hasData", "loading", "error", "onRetry", "retained"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:79-81; web\\src\\features\\system\\components\\statstrip-tesla-account\\TeslaAccountStatStrip.tsx:18-67", "role": "Existing four-metric shared operational summary, source descriptions, provenance, full date/relative context and trust labels. OperationalBrief internals and useOperationalMetrics internals were not inspected."},
+    {"name": "Avatar", "category": "data-display", "owner": "web\\src\\components\\data-display\\Avatar.tsx", "props": ["src", "name", "userId", "size", "className"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:105-111; web\\src\\components\\data-display\\Avatar.tsx:154-232", "role": "Image with error fallback, deterministic initials/glyph and existing attributed palette. Do not introduce page-owned avatar renderer."},
+    {"name": "KVList", "category": "data-display", "owner": "web\\src\\components\\data-display\\KVList.tsx", "props": ["items", "layout", "wrap"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:191-207; web\\src\\components\\data-display\\KVList.tsx:17-30,41-51,65-126", "role": "Semantic dt/dd owner with already-existing responsive/stacked and wrap options; page currently leaves defaults."},
+    {"name": "Timeline", "category": "data-display", "owner": "web\\src\\components\\data-display\\Timeline.tsx", "props": ["label", "chronology", "summaryBounds", "items"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:226-254; web\\src\\components\\data-display\\Timeline.tsx:80-97,129-146", "role": "Named ordered list with hidden accessible summary, explicit finite bounds and three caller-formatted lifecycle rows. Caller order is preserved."},
+    {"name": "QueryError / EmptyState / Skeleton / StaleRefreshWarning", "category": "feedback", "owner": "web\\src\\components\\feedback", "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:76,92-103,136-141,186-212,221-258", "role": "Per-panel initial/error/empty recovery and shared retained-data warning. EmptyState action currently has no pending/disabled properties."},
+    {"name": "FadeIn", "category": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "props": ["delay", "children"], "evidence": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:78,85,179; web\\src\\components\\motion\\FadeIn.tsx:24-34", "role": "Three entrance bands; shared preference suppresses initial animation and delay. Actual OS/low-bandwidth/reduced-motion acceptance unverified."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 58, "rule": "Mission 0.5 / MDC-002", "detail": "Header, Sync panel and empty Profile CTA intentionally offer the same refresh operation at different recovery points. Profile/details/activity share loading/error/empty branch shapes, but each preserves different content.", "fix": "Keep all action placements and sections. Reuse shared controls/feedback and the one mutation hook; no new universal account-card/state engine justified.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 79, "rule": "MDC-033", "detail": "Summary, identity, Sync and details intentionally repeat account identity and source timestamps with different context. This is preservation-critical redundancy, not evidence that sections can be removed.", "fix": "Keep four summary metrics, hero identity, exact Sync timestamp and all five detail rows. Existing OperationalBrief is the summary owner.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Profile/Sync stack below xl, then use three columns with Profile spanning two (page:86-87).",
+      "Details/Activity stack below lg and use two columns at lg (page:180).",
+      "Panel padding grows at sm; Profile avatar/name change from column to row at sm (page:87,104-118).",
+      "Sync refresh spans its panel and has min-h-11 (page:160-169).",
+      "Timeline uses min-w-0 and wrapping title/time; KVList supports allocated-container responsive layout but caller does not opt in."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 191, "rule": "MDC-043 / MDC-023 complete-details reachability", "detail": "KVList defaults to inline, wrap=false. Names, long email addresses and localized labels have no caller-provided wrapping, though the existing owner already supports responsive layout.", "fix": "Use the existing layout=\"responsive\" or stacked/wrap contract and test 320px, allocated columns, long names/email and 200% text without dropping any of five rows.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 113, "rule": "MDC-043 / MDC-070 preservation", "detail": "Hero name and email truncate with no full-content affordance at this placement. Full values remain in details, so source does not prove data loss, but those details currently lack safe wrapping.", "fix": "Preserve the complete values through wrapping or an accessible full-text treatment; ensure the unchanged details remain reachable.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 160, "rule": "MDC-040 / MDC-043 long-label controls", "detail": "Refresh buttons do not opt into existing Button.wrapLabel. Shared default md uses fixed h-10; header target is 40px and Sync overrides minimum height only. Translated long labels/200% text may exceed allocated control width.", "fix": "Use existing wrapLabel and appropriate reachable target sizing; test header placement and Sync panel without introducing another control owner.", "owner": "page", "confidence": "medium"}
+    ],
+    "unverifiedWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "status": "Runtime unverified; no mounted viewport, clipping or horizontal-scroll testing."
+  },
+  "accessibility": {
+    "sourceBehavior": [
+      "Profile, Sync, Account details and Activity use explicit h2 headings; decorative page icons have aria-hidden.",
+      "Refresh header has localized aria-label; shared Button supplies disabled/loading/aria-busy and focus-ring classes (Button.tsx:62-90).",
+      "Account summary section has a localized aria-label (TeslaAccountStatStrip.tsx:48).",
+      "Timeline is a named ordered list with hidden summary and explicitly supplied bounds (Timeline.tsx:80-97); source event order is not silently sorted.",
+      "KVList uses dl/dt/dd, and profile image receives name or localized unknown-user alt.",
+      "Shared stale notice uses role=status/aria-live=polite and keeps retry beside retained data."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 141, "rule": "MDC-020 / MDC-026 pending interaction", "detail": "Empty Profile refresh action accepts only label/onClick. Unlike header and Sync buttons, it is not disabled or busy while refreshMutation.isPending; shared EmptyState renders its Button without pending props (EmptyState.tsx:13,77-80). Repeated clicks can submit multiple refresh mutations.", "fix": "Preserve the empty recovery action while forwarding mutation pending state through an approved shared optional action contract, or compose a feature-local shared Button with loading. Do not create a new button or remove the CTA.", "owner": "shared", "confidence": "high"}
+    ],
+    "unverified": ["Keyboard order/reachability", "Focus visibility/restoration", "Screen-reader announcements", "Effective text/UI contrast", "Forced colors", "44px target reachability and spacing exceptions", "RTL", "200% text", "Actual reduced motion"]
+  },
+  "states": {
+    "initialLoading": "Summary and Profile/details/activity show loading only with no retained envelope; Sync remains visible with refresh/helper text.",
+    "empty": "Successful envelope.profile=null keeps all four panels and summary. Profile has localized title/message/refresh; details and activity have localized placeholders.",
+    "fatalError": "Summary plus three profile-dependent panels expose QueryError using fatalError and cached-GET refetch. Sync remains visible.",
+    "retainedRefresh": "DataState fatalError remains null, so existing profile is retained; summary marks retained on refreshing/stale and warning exposes independent GET retry.",
+    "offline": "Paused fetch with retained envelope maps to stale and StaleRefreshWarning announces offline. No-data paused fetch has no dedicated page offline notice; actual render remains unverified.",
+    "mutation": "Header and Sync buttons expose pending through Button.loading. Success invalidates profile query and toasts; failure toasts without deleting old profile. Empty CTA pending mismatch is recorded above.",
+    "missingValues": "Missing name/email/ID become existing fallback labels/em dash; invalid dates format as em dash; profile-image availability stays distinct from image-load fallback.",
+    "issues": [
+      {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 156, "rule": "MDC-026 unknown is not empty / MDC-025", "detail": "Sync panel displays 'Not synced yet' whenever fetchedAt is absent, including initial loading and fatal read failure. In those states no source has established that the account was never synced. Summary correctly distinguishes loading/unavailable/unknown.", "fix": "Drive Sync timestamp presentation from profileState: loading placeholder, unavailable/unknown on no-data failure, retained timestamp with warning, and not-synced only after a successful source response establishes absence. Preserve exact/relative timestamps, helper and refresh.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 127, "rule": "MDC-025 / MDC-026 source-valid status", "detail": "Hero and summary infer Synced from timestamp truthiness, whereas summary freshness checks Date.parse. A truthy invalid source timestamp yields Synced with an em-dash date and unknown freshness. Backend validity is not established by this audit.", "fix": "Align display status validity with the existing finite timestamp check, retain the raw timestamp in source/cache and present invalid input as unknown rather than invented freshness.", "owner": "page", "confidence": "medium"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 151, "rule": "MDC-010 / MDC-015", "detail": "Nested Sync timestamp surface uses fixed-white bg-white/[0.02] rather than a canonical neutral surface token. Most other text/borders already use theme variables and shared typography; no glow/gradient/neon body text is present.", "fix": "Use an existing neutral surface token or remove redundant fill while preserving timestamp hierarchy and border. Do not add a new surface wrapper or palette.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 21, "rule": "MDC-010 / MDC-034 restrained semantic accents", "detail": "Three page-owned hex activity colors bypass canonical palette/token ownership; multi-hue dots and four differently colored heading icons add decoration to an otherwise simple account view. Small semantic status dots are not equivalent to neon body text.", "fix": "Reuse canonical muted/semantic tokens for lifecycle cues, subordinate decorative heading colors and retain each event's icon/title/time meaning. Do not erase saved chart palette preferences or create an activity color registry.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\components\\data-display\\Avatar.tsx", "line": 210, "rule": "MDC-010 / MDC-012 contrast and shared ownership", "detail": "Attributed fallback avatar uses the shared CB-safe palette as a saturated fill with literal white foreground. TeslaAccount passes size=lg but enlarges to 64/80px, increasing the visible accent area. Effective contrast is unmeasured, not a proven failure.", "fix": "Have the existing Avatar owner review theme/forced-color-compatible restrained fallback and foreground pairing while retaining identity hashing, image error fallback, name/initials and existing defaults. Do not fork Avatar in this page.", "owner": "shared", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 31, "rule": "Mission 33 / MDC-002 / MDC-046", "detail": "Existing architecture is already page -> typed TanStack hook -> request, with shared trust and domain-to-OperationalBrief metric adapter. GET cancellation and mutation invalidation are present; both inspected paths match router registrations.", "fix": "Retain these owners, query key, stale-time constant, source envelope, snake_case fields and separate read-versus-fetch operations. No competing query/cache/scope implementation is needed.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 86, "rule": "MDC-031 / MDC-032", "detail": "PageLayout already supplies shared full-width container. This account-level snapshot has no dated range/vehicle query or local workspace pickers; introducing one during modernization would invent scope semantics.", "fix": "Keep current mounted route and shell ownership; preserve account-level scope without adding a date/vehicle selector or changing route/configuration.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Existing shared architecture and retained-data rendering are strong. Prioritize misleading no-data Sync status and repeatable empty-state mutation; then use existing responsive/wrapping contracts and reduce decorative palette noise.",
+    "implementationOrder": ["Resolve Sync unknown/loading/error semantics", "Preserve pending behavior on all three refresh placements", "Opt into existing KVList/Button responsive APIs", "Subdue page-owned neutral/hex decoration", "Request shared Avatar owner review", "Parent-owned runtime/theme/accessibility validation"],
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EmptyState imperative action pending-state support",
+      "existingOwner": "web\\src\\components\\feedback\\EmptyState.tsx",
+      "file": "web\\src\\components\\feedback\\EmptyState.tsx",
+      "line": 13,
+      "rule": "MDC-020 / MDC-026",
+      "detail": "Existing action contract cannot forward the page's mutation pending state to its shared Button.",
+      "fix": "Prefer an optional backward-compatible action.loading/action.disabled contract forwarded to the existing CtaButton, if corroborated by the shared inventory; otherwise compose the current feature recovery with a shared Button rather than inventing another EmptyState.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": ["Preserve label/onClick and navigation action precedence", "Optional loading/disabled only for imperative actions", "Button aria-busy and disabled propagation", "Keep secondary actions and default behavior unchanged"],
+      "usedBy": ["web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:136-141"],
+      "dependsOn": ["Existing Button.loading/disabled contract", "Shared inventory confirmation of another independent production consumer before extending shared API", "Focused regression coverage and parent-owned integration acceptance"],
+      "scopeLimit": "One assigned production consumer inspected; no speculative universal component authorized."
+    },
+    {
+      "name": "Avatar fallback palette/foreground review",
+      "existingOwner": "web\\src\\components\\data-display\\Avatar.tsx",
+      "file": "web\\src\\components\\data-display\\Avatar.tsx",
+      "line": 210,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Attributed palette fill and literal white initials are shared presentation choices, not page-owned styling.",
+      "fix": "Review actual composed contrast and restrained presentation in the existing owner; only change after consumer/preservation evidence, without changing identity seed or defaults to hide problems.",
+      "owner": "shared",
+      "confidence": "medium",
+      "propsVariantsStates": ["src/name/userId identity", "Image loaded/error/absent", "Initials/glyph fallback", "Existing size and shape variants", "Dark/light/custom theme and forced colors"],
+      "usedBy": ["web\\src\\features\\system\\pages\\TeslaAccountPage.tsx:105-111"],
+      "dependsOn": ["Canonical palette ownership", "Measured contrast", "Shared consumer evidence before changed defaults"],
+      "scopeLimit": "Review request, not a proven contrast failure or permission to introduce an alternate avatar."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 21, "rule": "MDC-002 / MDC-010", "detail": "Local lifecycle hex palette is the only directly observed parallel presentation policy; reusable Timeline and StatusPill already exist.", "fix": "Adopt existing token/palette ownership, keep existing renderers and event semantics.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx", "line": 7, "rule": "MDC-002", "detail": "No replacement card/stat/table/layout/query/date/vehicle/overlay library observed in the inspected page and direct presentation dependencies.", "fix": "Reuse existing PageLayout, OperationalBrief, KVList, Timeline, Avatar and feedback owners; do not interpret this scoped finding as a whole-app inventory.", "owner": "page", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "47246E23D9F0C11DC6C693B90A32792F1F92B3CC21F7BA0D2B7D588DC311E8CA",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 265,
+    "relatedComponentLineCount": 67,
+    "pagePlusInspectedFeatureComponentsLineCount": 332,
+    "sections": [
+      {"name": "Account summary", "count": 1, "evidence": "page:78-81; TeslaAccountStatStrip.tsx:21-45", "content": ["Sync status with relative/full fetched context", "Account ID with # prefix and Fleet API identity context", "Member since with full date and relative context", "Last updated with relative/date/full date context", "All four source descriptions", "Snapshot scope/freshness/provenance and retained/loading/unavailable/unknown labels"]},
+      {"name": "Profile", "count": 1, "evidence": "page:87-143", "content": ["Image with initials/glyph fallback", "Full name or Tesla driver fallback", "Email or em dash", "Unrounded #account ID", "Synced/never-synced textual pill", "Loading geometry, error retry and empty refresh recovery"]},
+      {"name": "Sync", "count": 1, "evidence": "page:145-174", "content": ["Last synced label", "Relative timestamp or not-yet-synced text", "Exact timestamp caption", "Full-width pending-aware refresh action", "Fleet API helper explanation"]},
+      {"name": "Account details", "count": 1, "evidence": "page:181-214", "content": ["Name", "Email", "Account ID", "Profile image availability/not set", "Profile-level fetched_at", "Loading/error/empty feedback"]},
+      {"name": "Activity", "count": 1, "evidence": "page:216-260", "content": ["Account linked: created_at and connection explanation", "Profile updated: updated_at and record-change explanation", "Last synced from Tesla: effective fetchedAt and Fleet API explanation", "Localized timeline label, oldest-first contract and finite min/max accessible bounds", "Loading/error/empty feedback"]}
+    ],
+    "sectionCount": 5,
+    "bandCount": 3,
+    "pageSectionElementCount": 2,
+    "summarySectionElementCount": 1,
+    "glassPanelCount": 4,
+    "chartContainerCount": 0,
+    "metricCount": 4,
+    "detailRowCount": 5,
+    "timelineEventCount": 3,
+    "actions": [
+      {"name": "Refresh from Tesla in header", "evidence": "page:58-66", "behavior": "POST mutation with loading state"},
+      {"name": "Refresh from Tesla in Sync", "evidence": "page:160-169", "behavior": "Same POST mutation with loading state"},
+      {"name": "Refresh from Tesla in empty Profile", "evidence": "page:136-141", "behavior": "Same POST mutation; pending-state gap recorded, action must survive"},
+      {"name": "Retry initial GET", "evidence": "page:56,102,189,224; TeslaAccountStatStrip.tsx:64-66", "behavior": "Four error placements refetch the read query"},
+      {"name": "Retry retained/stale GET", "evidence": "page:76; StaleRefreshWarning.tsx:98-110", "behavior": "Warning retries cached source without replacing retained data"}
+    ],
+    "dataBehavior": [
+      "Keep envelope and null-profile distinction, profile-level fetched_at preference over envelope timestamp, and details' original profile.fetched_at value.",
+      "Keep query key, STALE_TIMES.SLOW, AbortSignal, mutation success invalidation and toast success/error behavior.",
+      "Preserve every original profile field, source string and account identifier; no SI/physical measurements are present or converted.",
+      "Keep all sections visible in loading/error/empty states, and retained profile on failed/paused refresh.",
+      "Keep timeline three-row causal source order and finite bounds rather than inventing event history or reordering values.",
+      "Keep localized source descriptions, title/subtitle/page title, helper and date/relative context; do not replace missing values with zero.",
+      "No exports, account editing, unlinking, OAuth action, filters or persistent page settings are implemented in this inspected page; do not invent them."
+    ],
+    "routeEvidence": "web\\src\\App.tsx:308,903; lazy TeslaAccount page mounted under SafeRoute name=TeslaAccount.",
+    "sourceOnly": true
+  },
+  "evidenceLimits": {
+    "phase": "Phase0 source-only audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "scope": "Only assigned page, direct presentation/data owners and bounded route evidence inspected. No application-wide audit, dependency graph reconstruction or source edits.",
+    "notRun": ["TypeScript", "Lint", "Tests", "Build", "Browser/screenshots", "Backend requests/mutations", "Git"],
+    "auditScript": "Read .github\\skills\\audit-violations\\audit.sh but did not execute it because it invokes full frontend TypeScript, outside this source-only audit authorization.",
+    "targetedSourceCheck": {
+      "command": "$text=Get-Content web\\src\\features\\system\\pages\\TeslaAccountPage.tsx -Raw; $patterns=@{inlineStyle='style=\\{\\{';rawControls='<(button|input|textarea|select|table)\\b';directLibraries='from .(recharts|react-leaflet|framer-motion).';oldApiImports='from .\\.\\./(\\.\\./)?api.';GlassPanel='<GlassPanel\\b';ChartContainer='<ChartContainer\\b';section='<section\\b'}; foreach($k in $patterns.Keys){'{0}: {1}' -f $k,([regex]::Matches($text,$patterns[$k])).Count}",
+      "exitCode": 0,
+      "output": "oldApiImports: 0\nChartContainer: 0\nrawControls: 0\nsection: 2\ninlineStyle: 0\nGlassPanel: 4\ndirectLibraries: 0",
+      "limits": "Literal-pattern page-only counts, not semantic compliance or runtime proof. First attempted PowerShell version failed with ParserError exit 1; corrected command above succeeded."
+    },
+    "backend": "Endpoint registration and rate limit inspected only. Cache ownership internals, upstream validity, account ID semantics and timestamps are unknown.",
+    "locale": "Date helpers default to browser locale/timezone when options omitted. This page supplies no override; saved-user preference equivalence is not established.",
+    "sharedComponents": "OperationalBrief/useOperationalMetrics, PageContainer, QueryError/Skeleton and mutation-toast internals not semantically reviewed. No borrowed historical test/runtime claims.",
+    "restrainedNoise": "No page glow, gradient or neon-body classes observed. Local hex event colors, fixed-white nested surface and shared saturated attributed-avatar fallback are explicit review targets, not justification to remove content.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-198.json", ".agent-status\\audit-page-198.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\TeslaAccountPage.tsx",
+    "web\\src\\features\\system\\components\\statstrip-tesla-account\\TeslaAccountStatStrip.tsx",
+    "web\\src\\api\\hooks\\useUser.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\data-display\\Avatar.tsx",
+    "web\\src\\components\\data-display\\KVList.tsx",
+    "web\\src\\components\\data-display\\Timeline.tsx",
+    "web\\src\\components\\ui\\StatusPill.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\feedback\\EmptyState.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "docs\\frontend-audits\\audit-page-190.json"
+  ]
+}
