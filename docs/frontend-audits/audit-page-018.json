@@ -1,0 +1,410 @@
+{
+  "item": "audit-page-018",
+  "page": "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+  "routes": ["/admin/live-signals"],
+  "purpose": "Inspect a selected vehicle's current layered live-signal snapshot, source distribution, value kinds and individual raw values.",
+  "primaryGoal": "Diagnose missing, stale or noisy signals using a one-second foreground snapshot poll, provenance, value ages and searchable details without confusing transport health with measurement freshness.",
+  "dataSources": [
+    {
+      "hook": "useVehicleLiveSignals",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 147,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/live",
+      "hookPath": "/signals/${vehicleId}/live",
+      "routeEvidence": "internal\\api\\router.go:4886-4908",
+      "sourceOwner": "signalinspect.Handler.LiveState; router wires existing RedisSignalCache and live signal store",
+      "behavior": "Query key ['live-signals', vehicleId]; enabled only for a truthy vehicle ID and page enablement. AbortSignal is forwarded. Page requests refetchInterval=1000; hook sets matching staleTime through queryPolicy('live'), whose background polling is false. Retry remains QueryClient-owned. No historical window or new endpoint is needed.",
+      "payload": "VehicleLiveSignalsResponse contains optional vehicle_id, count, at and signals; each signal may be an envelope with value/kind/source/age_ms/timestamp/ts or a bare value. The page derives counts from actual entries rather than response.count.",
+      "payloadEvidence": "web\\src\\api\\hooks\\useTelemetry.ts:31-48,71-78,127-164",
+      "runtime": "unverified",
+      "backendLimits": "Route registration and injected owners inspected only. Handler execution, actual availability, response freshness, cache topology and per-signal physical units were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "GET /api/v1/vehicles",
+      "hookPath": "/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "sourceOwner": "useVehicles and selectedVehicle store; vehicleHandler.List",
+      "behavior": "Selection precedence is path ID, vehicle_id query parameter, persisted selection, first known vehicle. Selection writes URL/store and clears a competing VIN override only on deliberate selection. Vehicles are null-safe arrays; resolved stale IDs are repaired. Fleet query loading/error metadata is not returned by useSelectedVehicle.",
+      "payloadEvidence": "web\\src\\api\\hooks\\useVehicles.ts:74-81; web\\src\\hooks\\useSelectedVehicle.ts:48-81,116-160,177-183",
+      "runtime": "unverified"
+    },
+    {
+      "hook": "LiveIndicator -> useLiveConnection",
+      "file": "web\\src\\hooks\\useLiveConnection.ts",
+      "line": 50,
+      "endpoint": null,
+      "sourceOwner": "Existing singleton sseManager connection state and heartbeat; not the live snapshot polling query",
+      "behavior": "Global SSE connected/reconnecting/disconnected/unknown status; reconnect grace is 10 seconds. This is a separate wire-health source and not proof of selected-vehicle snapshot freshness.",
+      "payloadEvidence": "web\\src\\hooks\\useLiveConnection.ts:34-46,76-85,111-139",
+      "runtime": "unverified",
+      "backendLimits": "SSE manager endpoint was not traced; no endpoint guessed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "contextActions", "query", "children"],
+      "evidence": "PageLayout.tsx:5-16; web\\src\\components\\layout\\PageContainer.tsx:94-105,130-180",
+      "role": "Existing full-width min-w-0 layout, shell integration and query freshness; no new layout engine."
+    },
+    {
+      "name": "LiveSignalToolbar",
+      "owner": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalToolbar.tsx",
+      "props": ["vehicles?", "vehicleId", "onChange"],
+      "evidence": "LiveSignalToolbar.tsx:14-17,31-46,59-67",
+      "role": "Shared Select primitive; required local admin-route selector backed by canonical global selection, not a duplicate header selector."
+    },
+    {
+      "name": "LiveSignalsOperationalBrief / OperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx",
+      "props": ["stats", "status", "hasSnapshot", "vehicleId", "observedAt?"],
+      "evidence": "LiveSignalsOperationalBrief.tsx:10-16,29-87; liveSignalMetrics.ts:6-36",
+      "role": "Six source-backed metrics, scope, assembled time, trust status, limitations and evidence narrative. Reuses useOperationalMetrics and existing data-display composite."
+    },
+    {
+      "name": "LiveSignalSourceBreakdown",
+      "owner": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx",
+      "props": ["stats", "status", "error", "onRetry", "noVehicleIcon?"],
+      "evidence": "LiveSignalSourceBreakdown.tsx:25-31,85-151",
+      "role": "GlassPanel, four-layer proportion bar, four count/percentage tiles and canonical SourceLayerBadge."
+    },
+    {
+      "name": "LiveSignalKindBreakdown",
+      "owner": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx",
+      "props": ["stats", "status", "error", "onRetry", "noVehicleIcon?"],
+      "evidence": "LiveSignalKindBreakdown.tsx:35-41,96-143",
+      "role": "GlassPanel and EmbeddedChart; categorized counts, axis labels, tooltip and supplied data-table alternative. Uses chart category barrel and chartTokens."
+    },
+    {
+      "name": "LiveSignalsTable / DataTable",
+      "owner": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx",
+      "props": ["rows"],
+      "evidence": "LiveSignalsTable.tsx:87-219",
+      "role": "Name search, name/timestamp sorting, value filters, five columns and local pagination. DataTable owns persistence, column controls and any export capability enabled by its current defaults; do not replace it."
+    },
+    {
+      "name": "LiveSectionState / SourceContent",
+      "owner": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx",
+      "props": ["status", "label?", "error", "onRetry", "skeletonHeight?", "noVehicleIcon?", "noVehicleMessage", "emptyIcon?", "emptyMessage", "children"],
+      "evidence": "LiveSectionState.tsx:17-29,44-76; web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:10-31,60-73",
+      "role": "Existing prerequisite/loading/empty/fatal/retained adapter. QueryError preserves specialist recovery; SourceContent preserves retained content."
+    },
+    {
+      "name": "Existing primitives and support",
+      "owner": "Existing category barrels",
+      "props": ["Button variant=ghost size=sm disabled aria-label", "LiveIndicator variant=compact", "SourceLayerBadge source ageMs showLabel", "TimeStamp value format=relative", "FadeIn delay", "SectionErrorBoundary name"],
+      "evidence": "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx:18-27,75-95,109-171",
+      "role": "Typography, feedback, motion, icons and provenance reuse existing owners."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx",
+      "line": 85,
+      "rule": "MDC-015/MDC-031",
+      "detail": "Source and kind panels repeat GlassPanel padding, icon/title and LiveSectionState composition. Table is also nested inside GlassPanel with the DataTable standalone default.",
+      "fix": "Reuse current Section/LayoutCard/ChartCard where exact composition preserves contents; use DataTable variant='embedded' inside its existing host panel. Do not introduce a new LivePanel abstraction solely for two siblings.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts",
+      "line": 230,
+      "rule": "MDC-033/MDC-044",
+      "detail": "Compact age formatting exists here and separately in SourceLayerBadge.tsx:75-82. The table subscribes to useNumberFormatting without using its returned formatter; the brief intentionally retains this specialist age formatter.",
+      "fix": "Reuse established locale-aware duration/number owners where equivalent. Retain raw ms and exact specialist notation until equivalence is demonstrated; do not invent another converter.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Page actions wrap; toolbar is w-full sm:w-56 (page:75-81; LiveSignalToolbar.tsx:59).",
+      "Breakdowns stack below xl and become three columns at xl, with source panel spanning two (page:124-128; LiveSignalSourceBreakdown.tsx:85).",
+      "Four source tiles use two columns then four at sm (LiveSignalSourceBreakdown.tsx:127).",
+      "Table retains min-w-0 and max-w-md search. Only name/value are allowed on mobile (LiveSignalsTable.tsx:76,114,126,217)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx",
+        "line": 217,
+        "rule": "MDC-023/MDC-043/no-information-loss",
+        "detail": "mobileColumns=['name','value'] hides kind/source/last-update below md. DataTable implements this as hidden md:table-cell at lines 715-725. Caller provides neither mobilePresentation nor a detail/expand contract, so the source code supplies no mobile path to per-row provenance and timestamp.",
+        "fix": "Adopt DataTable's existing typed mobilePresentation/detail capability and expose all five fields on mobile while keeping compact name/value summaries, stable row keys, sort/filter/pagination and tableId. Do not merely remove metadata or add a competing mobile table.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx",
+        "line": 116,
+        "rule": "MDC-043/extreme-labels",
+        "detail": "All localized category ticks are forced at interval=0 with fontSize=11 in a narrow chart; long labels and compound-value table cells need clipping/overflow verification.",
+        "fix": "Exercise long labels and full raw values at all required widths; use existing chart sizing/axis policies and readable wrap/detail affordances without dropping categories.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "testedWidths": [],
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "runtime": "unverified"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Refresh, vehicle selection and search have localized aria-labels; icons are decorative (page:88-93; LiveSignalToolbar.tsx:64; LiveSignalsTable.tsx:181-195).",
+      "Summary and breakdowns are named sections; source bar has role=img and textual counts (page:110,124; LiveSignalSourceBreakdown.tsx:74-83,109-110).",
+      "Chart receives localized ariaLabel and dataColumns; fatal errors and retained warnings use existing feedback owners.",
+      "PageContainer has route-focus infrastructure and a central load-announcement hook, but page supplies query without loading/error flags (PageContainer.tsx:139-147; page:100-108). Actual announcement behavior needs integration review."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+        "line": 91,
+        "rule": "MDC-042/reduced-motion",
+        "detail": "Refresh icon uses animate-spin while fetching; LiveIndicator also spins on reconnect. No page-level motion preference branch is supplied. Shared/global reduced-motion behavior was not exercised.",
+        "fix": "Verify existing motion suppression for FadeIn and CSS spins under OS reduced motion and low-bandwidth preferences; use current owners if an actual gap is confirmed.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "touchTargets": "unverified; refresh uses size=sm; effective size not measured",
+    "forcedColors": "unverified",
+    "reducedMotion": "unverified"
+  },
+  "states": {
+    "sourceEvidence": "page:54-68; LiveSectionState.tsx:44-76; LiveSignalsOperationalBrief.tsx:18-27,38-58",
+    "initialLoading": "Selected vehicle plus pending live query gives loading skeletons; brief masks missing measurements.",
+    "noVehicle": "All sections remain present with selection guidance; refresh disabled. Fleet resolving/error can also appear as no vehicle because fleet trust metadata is not exposed.",
+    "empty": "Resolved no-row snapshot gives empty panels and retry; a supplied empty signals object produces measured zero count metrics, absent signals produces unknown metrics.",
+    "fatalError": "Only first-load fatal error replaces each dependent panel via QueryError.",
+    "retained": "Rows survive failed/paused refresh and render retained notices/retry. Retained empty snapshots retain their empty body and retry.",
+    "ready": "Snapshot rows, six metrics, source counts, kind chart and detail table.",
+    "offline": "Query trust and global SSE status are independent. LiveIndicator can show Offline while REST still succeeds.",
+    "partial": "Malformed/legacy entries degrade through row flattening and classification; there is no server completeness guarantee or independently fetched breakdown.",
+    "stale": "Source-layer stale classification and query-refresh staleness are different; brief explicitly notes age independence.",
+    "runtime": "All state branches inspected only, not exercised."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx",
+      "line": 106,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Source track and count tiles use fixed white alpha backgrounds/borders at lines 106 and 132; source bars use emerald/amber/blue/slate-500 at lines 42-45. These are not theme-adaptive neutral surface/border tokens.",
+      "fix": "Use existing neutral surface/border tokens and restrained semantic source colors. Preserve all proportions, labels and counts; computed inline width is valid and must remain.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx",
+      "line": 61,
+      "rule": "MDC-010/MDC-012",
+      "detail": "Raw values use fixed cyan-300/purple-300/amber-300 syntax colors and seven categorical badge mappings. These are toned down rather than neon, but numeric/boolean/string type is not inherently a warning/danger status; theme contrast is unmeasured.",
+      "fix": "Prefer theme-aware neutral raw-value typography and restrained type cues. Keep the kind text and diagnostic raw values; do not conflate types with operational severity.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx",
+      "line": 139,
+      "rule": "MDC-010/MDC-034/mission-43",
+      "detail": "Each categorical bar cycles the chartTokens.series palette, yielding up to seven hues without a severity distinction; chart cursor uses fixed white rgba at line 128 and panel icons are fixed cyan.",
+      "fix": "Prefer one restrained theme-aware count-series accent with retained category labels and values. Keep saved chart palette choices where the shared chart supports them; avoid changing global palettes from a page audit.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+      "line": 103,
+      "rule": "MDC-045/source-truth",
+      "detail": "Subtitle and no-data copy describe the endpoint exclusively as Redis cache, while injected owner and provenance metadata describe layered L1/L2/stale state. The empty message recommends vehicle publishing but an absent payload is not proof of an offline vehicle.",
+      "fix": "Describe the returned layered live snapshot accurately, distinguish absent snapshot from online status and retain troubleshooting as guidance, not asserted diagnosis.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+      "line": 82,
+      "rule": "MDC-026/trust-provenance",
+      "detail": "Compact LiveIndicator is global SSE health while this page's source is foreground REST polling. With only Live/Offline labels it can be mistaken for selected vehicle or polling health.",
+      "fix": "Retain global connection visibility but label its SSE scope separately from query freshness and returned signal ages using existing metadata/typography. Do not replace the global hook or use SSE status to discard retained REST rows.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "rule": "MDC-026/independent-source-recovery",
+      "detail": "Fleet list is a prerequisite query, but hook returns only vehicles and selection. Its failure or pending state cannot be distinguished from an empty fleet by the local selector and no-vehicle panels.",
+      "fix": "Shared hook owner should provide additive prerequisite DataState/query metadata without changing selection precedence; page can then expose loading, retained fleet and retry instead of telling a failed-list user merely to select a vehicle.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": "Preserve mobile per-row provenance/time reachability and independent prerequisite trust.",
+    "next": "Correct layered/SSE copy and reduce fixed-white, rainbow and type-severity presentation.",
+    "reason": "Existing architecture already preserves main sections and retained snapshot states. No runtime failure is claimed; source-confirmed mobile hiding and prerequisite recovery gaps merit implementation before visual acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Selected vehicle prerequisite trust",
+      "existingOwner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "props": {
+        "additiveResult": ["vehiclesQuery or fleet DataState", "source-specific retry"],
+        "states": ["pending", "fatal error", "retained refresh failure", "resolved empty", "ready"],
+        "preserve": ["vehicleId", "vehicle", "vehicles array", "setVehicleId", "URL/store precedence and reconciliation"]
+      },
+      "usedBy": ["LiveSignalInspectorPage -> LiveSignalToolbar", "Other consumers require owner-side reference review before shared rollout"],
+      "dependsOn": ["useVehicles", "existing DataState/useDataState contract", "parent-assigned shared-hook scope"],
+      "evidence": "web\\src\\hooks\\useSelectedVehicle.ts:32-40,48-50,177-183"
+    },
+    {
+      "name": "Reuse existing mobile table and embedded surface contracts; no new shared component",
+      "existingOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "props": {
+        "reuse": ["mobilePresentation", "variant='embedded'", "columns", "keyExtractor", "pagination", "tableId"],
+        "requiredDetails": ["name", "value", "kind", "source", "timestamp or age"],
+        "states": ["ready", "filtered empty", "retained snapshot", "column visibility", "pagination"]
+      },
+      "usedBy": ["LiveSignalsTable"],
+      "dependsOn": ["page-owned typed mobile presentation adapter", "existing mobile table detail contract", "parent centralized responsive/keyboard acceptance"],
+      "evidence": "DataTable.tsx:186-190,715-725; LiveSignalsTable.tsx:199-217",
+      "changeNeeded": "Page adoption first; shared extension only if actual current API cannot retain all details."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Old KPI band vs current OperationalBrief",
+      "file": "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKpiBand.tsx",
+      "line": 21,
+      "detail": "Barrel still exports LiveSignalKpiBand; its six MetricCards coerce missing counts to zero. Mounted page instead imports LiveSignalsOperationalBrief and correctly uses hasSnapshot. This is an alternate implementation, not an additional mounted section.",
+      "fix": "Do not re-adopt the zero-default KPI path. Owner may check other callers before consolidating exports; no dead-code claim made.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "name": "Local admin picker vs workspace vehicle owner",
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 103,
+      "detail": "VEHICLE_DISABLED_PREFIXES includes /admin and RANGE_ENABLED_PATHS excludes /admin/live-signals. The page consumes canonical selection but legitimately renders its required local selector. This is not competing scope or an unauthorized second date picker.",
+      "fix": "Preserve local vehicle selection and current live-only scope; do not add range controls or remove selector merely to standardize the page.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "EE0D250CD82F55A6A504F34774CFC72B06BBA1909A51D94D9E7CDD4DB4CD96D7",
+    "hashAlgorithm": "SHA-256 of current page bytes",
+    "currentLineCount": 175,
+    "sectionCount": 4,
+    "bandCount": 3,
+    "sections": [
+      {"name": "Snapshot summary OperationalBrief", "line": 109, "count": 1, "metrics": ["Total signals", "Live L1", "Stale", "Legacy L2", "Numeric fields", "Freshest age"], "metricCount": 6},
+      {"name": "Source layers", "line": 129, "count": 1, "details": ["L1", "stale", "L2", "unknown", "proportion bar", "count", "percentage"]},
+      {"name": "Signal kinds", "line": 137, "count": 1, "details": ["numeric", "boolean", "text", "enum", "time", "compound", "other", "tooltip", "chart data alternative"]},
+      {"name": "Live snapshot", "line": 152, "count": 1, "columns": ["Signal", "Value", "Kind", "Source", "Last update"]}
+    ],
+    "sourceComposition": {
+      "pageGlassPanelCount": 1,
+      "pageChartContainerCount": 0,
+      "extractedGlassPanelCount": 2,
+      "extractedEmbeddedChartCount": 1,
+      "mountedPresentationLineCountIncludingStatsAndMetrics": 1203,
+      "nonMountedKpiBandLineCount": 72,
+      "barrelLineCount": 13,
+      "note": "1203 counts the 175-line page plus currently used toolbar, state, source/kind/table, stats, brief and metric helper. No source changes; therefore no reduction/parity claim against an earlier historical version."
+    },
+    "actions": [
+      "Choose vehicle via Select; preserve labels display_name -> VIN -> localized ID fallback, URL/store write-through and no-clear rule once selected.",
+      "Refresh snapshot manually; disabled without vehicle; fetching spin and localized accessible name.",
+      "Retry fatal, empty and retained source states; no prerequisite retry without a selected vehicle.",
+      "Filter signal names case-insensitively after trim.",
+      "Sort signal name and timestamp in either direction; invalid/missing timestamp sort uses stable numeric fallback.",
+      "Filter DataTable values using all loaded row candidates.",
+      "Paginate local rows, default 50, options 25/50/100; preserve tableId='admin:live-signals', name='live-signals' and row-name identity.",
+      "Preserve shared DataTable column visibility/width persistence and any currently available CSV/JSON controls; caller does not explicitly opt into export and shared defaults are conditional, so mounted export availability is unverified.",
+      "Inspect source/age tooltips, relative timestamps, kind chart tooltips and supplied chart data alternative.",
+      "Preserve OperationalBrief evidence/limitations and any existing shared details interaction; actual open behavior unverified."
+    ],
+    "dataBehavior": [
+      "One-second foreground REST poll, hidden-tab pause, matching query staleTime, cancellation and QueryClient retry ownership.",
+      "All sections stay mounted as shells in no-vehicle/loading/empty/fatal/retained states; refresh failure must never erase usable rows.",
+      "Flatten envelopes and bare scalars; preserve name, raw value including null/boolean/compound data, kind, source, finite age_ms and timestamp/ts fallback.",
+      "Classify known kinds before JS fallback; normalize only source bucket identity, preserve raw row source; count zero buckets for sources and omit zero kind bars.",
+      "Raw diagnostic values are not silently converted, rounded or interpreted as unspecified physical units. Display-only freshest age maps ms to shared latency seconds and specialist notation.",
+      "Distinguish absent signals from supplied empty object; unknown age remains null/em dash; counts refer to returned snapshot before table filtering.",
+      "Keep server at assembly timestamp, independent signal age/source freshness, six metric descriptions, layered provenance and no-historical-completeness limitation.",
+      "Do not add historical API filtering, fake signals, browser token storage or production mutations."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only read-only audit; only report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "Not run; assignment authorizes source audit only, not TypeScript/full build/lint. Existing test filenames are not acceptance evidence.",
+    "auditScript": "Read audit.sh but not executed because it unconditionally invokes project-wide npx tsc --noEmit, conflicting with the Phase0 validation restriction.",
+    "scopedPatternEvidence": {
+      "method": "PowerShell regex inspection of page, non-test live-signal-inspector files and operational brief/metrics files",
+      "exitCode": 0,
+      "output": ["rawControls=0", "directChartMotionImports=0", "staticInlineCSSVariables=0", "neonText=0"],
+      "limits": "Lexical counts only, not comprehensive design compliance, runtime coverage or a full violations clean bill. Includes exported non-mounted KPI band."
+    },
+    "commandFailure": "An initial scoped counting PowerShell invocation failed to parse a quote escape (exit 1); corrected invocation executed with exit 0. No source changes resulted.",
+    "reportValidation": {
+      "command": "Get-Content docs\\frontend-audits\\audit-page-018.json -Raw | ConvertFrom-Json; compare required field names, page string and routes array types; compare (Get-FileHash $r.page -Algorithm SHA256).Hash with preservation.sourceHash; sum Get-Content line counts for nine mounted page/dependency files",
+      "exitCode": 0,
+      "output": "JSON required fields PASS; page string PASS; routes array PASS; sourceHash PASS; mounted source total=1203",
+      "scope": "Report syntax/schema presence and source preservation only, not application validation."
+    },
+    "routeEvidence": "App.tsx:711 mounts admin/live-signals inside SafeRoute. Route guards/auth/runtime reachability were not exercised.",
+    "readCoverage": "Only assigned page and immediate presentation/data owners plus required docs and bounded shared-source excerpts. Not an application-wide inventory or backend semantic audit.",
+    "historicalEvidence": "None borrowed as current acceptance.",
+    "ownership": ["docs\\frontend-audits\\audit-page-018.json", ".agent-status\\audit-page-018.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\LiveSignalInspectorPage.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\index.ts",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalToolbar.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKpiBand.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalSourceBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalKindBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSignalsTable.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\LiveSectionState.tsx",
+    "web\\src\\features\\admin\\components\\live-signal-inspector\\liveSignalStats.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-h-q\\LiveSignalsOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-h-q\\liveSignalMetrics.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useLiveConnection.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\data-display\\LiveIndicator.tsx",
+    "web\\src\\components\\data-display\\SourceLayerBadge.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}
