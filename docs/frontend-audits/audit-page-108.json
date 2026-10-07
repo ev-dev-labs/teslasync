@@ -1,0 +1,339 @@
+{
+  "item": "audit-page-108",
+  "page": "web\\src\\features\\driving\\pages\\DriveDetailPage.tsx",
+  "routes": ["/drives/:id"],
+  "purpose": "Historical or ongoing single-drive report combining recorded journey facts, telemetry, energy/cost estimates, supervised-driving evidence, physics ledger and diagnostics.",
+  "primaryGoal": "Understand what happened on this specific drive, inspect source limitations, and navigate, replay, print or share without losing specialist evidence.",
+  "dataSources": [
+    {
+      "hook": "useDriveDetailData -> useDrive",
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\useDriveDetailData.ts",
+      "line": 20,
+      "endpoints": ["GET /drives/{driveID}"],
+      "sourceOwner": "web\\src\\api\\hooks\\useDriving.ts:194-203; internal\\api\\router.go:3471-3472",
+      "behavior": "Record-keyed query; AbortSignal forwarded; live=true alone enables fast polling. Telemetry preferred over position fallback; SI wire/cache values remain unchanged by presentation derivation."
+    },
+    {
+      "hook": "useVehicle",
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\useDriveDetailData.ts",
+      "line": 22,
+      "endpoints": ["GET /vehicles/{vehicleID}"],
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts:86-89",
+      "behavior": "Vehicle follows the loaded drive, not an independent page selector. Backend registration was not inspected for this endpoint."
+    },
+    {
+      "hook": "useFsdInsightsForDrive",
+      "file": "web\\src\\features\\driving\\pages\\DriveDetailPage.tsx",
+      "line": 42,
+      "endpoints": ["GET /analytics/fsd"],
+      "sourceOwner": "web\\src\\api\\hooks\\useAnalytics.ts:616-651; internal\\api\\router.go:3887",
+      "behavior": "Vehicle, drive_id, timezone and include_evidence scope; historical query policy; record contribution selected by drive_id. Both fatal and retained-refresh errors are distinguished."
+    },
+    {
+      "hook": "useDrivingStats",
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\HeroGauges.tsx",
+      "line": 38,
+      "endpoints": ["GET /drives/stats?vehicle_id={vehicleID}"],
+      "sourceOwner": "web\\src\\api\\hooks\\useDriving.ts:218-229; internal\\api\\router.go:3465",
+      "behavior": "Vehicle-history baselines; missing baselines must not suppress recorded drive measurements."
+    },
+    {
+      "hook": "useDriveLedger",
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\DriveLedgerCompactPanel.tsx",
+      "line": 14,
+      "endpoints": ["GET /physics/drives/{driveID}/ledger"],
+      "sourceOwner": "web\\src\\api\\hooks\\usePhysicsLedger.ts:55-59; internal\\api\\router.go:3528",
+      "behavior": "Historical independent source with loading, fatal-error retry, retained-refresh warning, empty state and explicit unknown terms."
+    },
+    {
+      "hook": "useGearTheater / useSilentCounter",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 42,
+      "endpoints": ["GET /physics/drives/{driveID}/theater", "GET /physics/drives/{driveID}/silent"],
+      "sourceOwner": "internal\\api\\router.go:3524-3525",
+      "behavior": "Separate historical queries with cancellation and source-specific honesty text; nullable transitions and unknown FSD reporting remain distinct from negative findings."
+    },
+    {
+      "hook": "useDriveRoadAnomalies / useDriveWhyEnded",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 74,
+      "endpoints": ["GET /drives/{driveID}/road-anomalies", "GET /drives/{driveID}/why-ended?window={window}"],
+      "sourceOwner": "internal\\api\\router.go:3473,3490",
+      "behavior": "Expanded-panel enablement and independent diagnostic window. Road findings are inferred candidates, not confirmed potholes."
+    },
+    {
+      "hook": "useShareLinks / useCreateShareLink / useRevokeShareLink",
+      "file": "web\\src\\features\\driving\\components\\ShareDriveDialog.tsx",
+      "line": 18,
+      "endpoints": ["GET /drives/{driveID}/shares", "POST /drives/{driveID}/share", "DELETE /shares/{token}"],
+      "sourceOwner": "web\\src\\api\\hooks\\useSharing.ts:22-43,95-100; internal\\api\\router.go:3477-3478,3495",
+      "behavior": "Public-token generation, copy/open and revocation; optional title, speed/detail consent and expiry choices. No mutations exercised."
+    },
+    {
+      "hook": "useAiStream via AIDriveCoaching / AISpeedProfileInsights",
+      "file": "web\\src\\components\\ai\\AIDriveCoaching.tsx",
+      "line": 79,
+      "endpoints": ["POST /ai/drives/{driveID}/coach", "POST /ai/drives/{driveID}/speed-profile/insights"],
+      "sourceOwner": "web\\src\\components\\ai\\AIDriveCoaching.tsx; web\\src\\components\\ai\\AISpeedProfileInsights.tsx",
+      "behavior": "Opt-in ADR-015 feature gates, explicit Generate actions and scope-key cancellation. Endpoint strings inspected in consumers; router registration not established by this bounded audit."
+    },
+    {
+      "hook": "useUnits / useFormatting / useSettings / useDateFormat / useNumberFormatting",
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\HeroGauges.tsx",
+      "line": 36,
+      "endpoints": [],
+      "sourceOwner": "Existing application formatting/settings owners; their internal endpoint graph is outside this bounded review.",
+      "behavior": "Preserve saved units, locale, currency, pricing availability, timezone and estimated-not-invoice explanations. No new converter or workspace owner."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "usage": "Compact record header, breadcrumb, provenance and existing actions; page line 73."},
+    {"name": "DriveReportContent", "owner": "web\\src\\features\\driving\\components\\layout-modernization\\DriveReportContent.tsx", "usage": "Eight jump-link groups and 21 preserved section wrappers."},
+    {"name": "DriveDetailSection", "owner": "web\\src\\features\\driving\\components\\drive-detail\\DriveDetailSection.tsx", "usage": "Stable anchor/accessible section label, independent error boundary and unavailable placeholder."},
+    {"name": "PreservedPanelGrid", "owner": "web\\src\\features\\driving\\components\\layout-modernization\\PreservedPanelGrid.tsx", "usage": "Placement-only CardGrid adapter; retains existing surfaces and chart controls."},
+    {"name": "HeroGauges / NestedDrivingBrief", "owner": "web\\src\\features\\driving\\components\\drive-detail\\HeroGauges.tsx", "usage": "Canonical StatMetric adapters, raw SI source values, period, recorded score, source context and optional comparisons. NestedDrivingBrief implementation not inspected."},
+    {"name": "GlassPanel / PanelTitle / Text / Button / Modal / Table / DataTable / CopyButton", "owner": "@/components/ui", "usage": "Existing primitives; preserve table IDs, embedded variants, semantic matrices, row pagination and full detail."},
+    {"name": "QueryError / EmptyState / StaleRefreshWarning / SectionErrorBoundary / Skeleton", "owner": "@/components/feedback", "usage": "Distinct source states and isolated section failures."},
+    {"name": "ChartTimeRangeProvider / chart owners", "owner": "@/components/charts and drive-detail feature panels", "usage": "Sample-index synchronization; summary deliberately outside provider. Preserve chart actions, series and missing samples; individual chart descendants not fully inspected."},
+    {"name": "MapContainer / MapLayerSwitcher / MapTileLayer / MapInvalidator / MarkerCluster", "owner": "@/components/maps", "usage": "Route and road-candidate maps using existing category exports; map implementations not inspected."},
+    {"name": "ShareDriveDialog / AIDriveCoaching / AISpeedProfileInsights", "owner": "Existing feature dialog and @/components/ai", "usage": "No replacement overlay, sharing pipeline or AI gate."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\components\\ai\\AISpeedProfileInsights.tsx",
+      "line": 37,
+      "rule": "MDC-002 / mission 4",
+      "detail": "The identical normalizeDriveId predicate and associated drive-stream URL setup also appear in AIDriveCoaching.tsx:41. Presentation already reuses AIFeatureCard; no need for another AI card.",
+      "fix": "If these shared AI owners are assigned together, reuse one existing-domain ID normalizer while preserving zero/blank rejection and independent scope keys. Do not expand this page writer's ownership.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source-only",
+    "observations": [
+      "DriveReportContent.tsx:49-56 uses a horizontally scrollable jump strip; PreservedPanelGrid forwards placement to CardGrid without adding nested surfaces.",
+      "RouteMapSection.tsx:148 gives the map h-64/sm:h-80/lg:h-96; legend reflows at lines 212-222.",
+      "DriveLedgerCompactPanel.tsx:65-92 retains both full semantic tables; long method and missing-signal content must remain reachable at 320px.",
+      "ShareDriveDialog.tsx:170-196 lays out title, view/expiry metadata and actions in a single flex row; small widths and long localized strings require current mounted review."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\ShareDriveDialog.tsx",
+        "line": 176,
+        "rule": "MDC-043 / MDC-044",
+        "detail": "View/expiry metadata uses a non-wrapping flex row while neighboring copy/revoke actions occupy fixed space. Potential squeezing with long localized dates; actual overflow is unverified.",
+        "fix": "Review 320px and 200% text; allow metadata wrapping and action-row reflow locally if reproduced, retaining all title, expiry, count and controls.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtime": "unverified at every specified viewport"
+  },
+  "accessibility": {
+    "verified": "source-only",
+    "observations": [
+      "Page line 87 localizes the icon-only back action and marks its icon decorative.",
+      "DriveDetailSection.tsx:18 labels each semantic section; jump links have visible-focus classes.",
+      "Ledger terms have column/row scopes and separate accessible table labels; unknown values are textual.",
+      "WhyEndedPanel.tsx:161-162 and RoadAnomalyPanel.tsx:60-61 expose expanded/control relationships."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\DriveDetailPage.tsx",
+        "line": 86,
+        "rule": "MDC-040",
+        "detail": "Back and Replay compose Link around Button (Replay at lines 91-95). This is a potential nested-interactive composition; the Button renderer was not inspected, so invalid DOM and duplicate focus targets are not claimed as verified.",
+        "fix": "Inspect shared Button output and exercise keyboard/navigation; if it renders a native button, use the established navigation/button-chrome composition rather than nested interactive elements.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\drive-detail\\RouteMapSection.tsx",
+        "line": 145,
+        "rule": "MDC-016 / MDC-040",
+        "detail": "Decorative MapPin next to the visible Route label lacks explicit aria-hidden in caller source; actual SVG accessibility output was not exercised.",
+        "fix": "Explicitly hide decorative map/title glyphs and verify the route map's keyboard/text alternative without removing route or FSD evidence.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotion": "unverified"
+  },
+  "states": {
+    "loading": "Page.tsx:113 retains skeleton alongside the complete outline; independent FSD, ledger, gear and silent sources own loading placeholders.",
+    "empty": "Page.tsx:117-120 has record-not-found context; section owner retains labeled unavailable panels; telemetry gap is additional context, not a report deletion.",
+    "error": "Page.tsx:114-115 provides fatal-record retry; independent SectionErrorBoundary contains presentation failures.",
+    "retainedRefresh": "Page.tsx:122-123 preserves historical drive/FSD data and warnings; ledger, gear, silent, road and baselines use useDataState.",
+    "offline": "No page-specific offline indicator verified; inherited useDataState/feedback implementations were not inspected.",
+    "unknown": "Ledger term unknown flags, missing_signals, nullable energy and unexplained_known remain explicit. Position-derived chart gaps stay null.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\drive-detail\\WhyEndedPanel.tsx",
+        "line": 195,
+        "rule": "MDC-026",
+        "detail": "The branch uses why.error directly to replace diagnostic timeline/signals even if TanStack Query retains why.data on a refresh failure. Unlike adjacent panels it has no useDataState fatal-versus-refresh distinction.",
+        "fix": "Reuse useDataState, replace only on fatalError with no retained payload, and show StaleRefreshWarning plus retry while preserving retained timeline and signal table.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\ShareDriveDialog.tsx",
+        "line": 160,
+        "rule": "MDC-026",
+        "detail": "sharesError replaces the existing-share list even when existingShares is retained. Error banner offers no direct refetch action in this component.",
+        "fix": "Use existing data-state/refresh-warning contracts and actionable retry without dropping retained links, copy controls or revoke actions.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\useDriveDetailData.ts",
+      "line": 95,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Speed segments use feature-owned #10b981/#ef4444/#f59e0b/#00f0ff; the cyan band is overtly neon. RouteMapSection.tsx:163-182 additionally owns fixed FSD/endpoint colors and lines 215-218 duplicate the palette in legend utilities.",
+      "fix": "Reuse current semantic/chart palette via its existing shared owner; keep all SI thresholds, route segments, start/end identity, dashed approximate FSD overlay and legend labels. Do not reset saved chart/theme choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\RouteMapSection.tsx",
+      "line": 143,
+      "rule": "MDC-013",
+      "detail": "Route heading and popup/legend copy retain raw text-sm/text-xs/font-semibold/font-bold styling despite existing PanelTitle/Text owners.",
+      "fix": "Use current role typography while preserving h3/span semantics and readable map overlay density; no independent scale.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\ShareDriveDialog.tsx",
+      "line": 119,
+      "rule": "MDC-010 / MDC-012 / MDC-013",
+      "detail": "Success text uses fixed text-green-400; headings/copy use ad-hoc raw typography and revoke glyph uses text-red-400 at line 204.",
+      "fix": "Use existing semantic success/danger and typography tokens while retaining status text and destructive-action name; measure contrast on actual modal surfaces.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\layout-modernization\\PreservedPanelGrid.tsx",
+      "line": 1,
+      "rule": "MDC-002 / component-first category imports",
+      "detail": "Feature presentation imports CardGrid/useCardPlacement/type CardGridItem from the internal layout-reference owner rather than the category barrel specified by the design contract. Existing placement adapter is useful and should not be replaced.",
+      "fix": "Use the established layout category export for supported APIs; if placement APIs are not exposed, have the exclusive layout owner assess the barrel rather than add another grid or edit shared code in the page task.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\useDriveDetailData.ts",
+      "line": 58,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Nullable route speed is collapsed to zero (position fallback also at line 67), then every route segment receives a speed-band color. Missing speed is consequently indistinguishable from measured low speed on the map, despite null-preserving chart derivation.",
+      "fix": "Preserve nullable speed through the route presentation type and render missing-speed segments with an explicit neutral/unknown legend state; keep coordinates, all segments and SI thresholds. Treat as a separately verified data-trust fix, not a cosmetic calculation rewrite.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Most root-page modernization is already present. Prioritize retained diagnostic/share refresh data and missing-speed trust; then local palette/typography and verified interaction issues. Avoid wholesale report rewrites."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\useDriveDetailData.ts",
+      "line": 95,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Local map segment colors plus separately hardcoded legend classes compete with the existing shared palette contract.",
+      "fix": "Adopt the current palette owner in this feature; no new global palette or map component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "8219b669a8e6f8c74c705968ec82ca8272b79c53b0af6303c2451535337772a7",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact raw bytes of web\\src\\features\\driving\\pages\\DriveDetailPage.tsx",
+    "currentLineCount": 146,
+    "sectionCount": 21,
+    "navigationGroupCount": 8,
+    "sectionNames": ["overview", "journey", "route", "energy-evidence", "cost-estimate", "fsd-evidence", "silent-counter", "telemetry", "battery-trace", "speed-distribution", "power-trace", "elevation-trace", "temperature-trace", "tire-trace", "speed-insights", "physics-debrief", "physics-ledger", "coaching", "gear-theater", "road-analysis", "why-ended"],
+    "sectionEvidence": "DriveReportContent.tsx:58-176; measured 21 <DriveDetailSection JSX instances. Root has zero direct GlassPanel/ChartContainer instances because presentation is decomposed; not evidence of missing sections.",
+    "actions": ["Back to /drives", "Replay /drives/{id}/replay", "Share dialog keyed to id", "Print", "Eight section jump links", "Record/source retry", "Map layer selection and route navigation", "Diagnostic expand/collapse and diagnostic window", "Road candidate selection", "Gear/silent table pagination", "Ledger link /tesla-physics/ledger", "FSD link /fsd", "Share title/speed/telemetry/expiry choices", "Generate/copy/open/create-another/revoke share", "Opt-in Generate coaching", "Opt-in Generate speed insights"],
+    "ledger": {
+      "file": "web\\src\\features\\driving\\components\\drive-detail\\DriveLedgerCompactPanel.tsx",
+      "line": 19,
+      "terms": ["Measured pack energy", "Aero", "Rolling", "Grade", "Inertial", "Accessory / HVAC", "Drivetrain loss (model)"],
+      "termFields": ["unknown", "value_wh", "method", "missing_signals"],
+      "reconciliation": ["Predicted known terms", "Session", "Reconcile", "Unexplained residual gated by unexplained_known"],
+      "additionalEvidence": ["Regen Wh", "Friction-brake Wh", "truncated sample-cap warning", "drive or ledger honesty", "missing mass configuration explanation", "unknown grade/elevation explanation", "unknown HVAC-power and residual explanation"],
+      "nullableInvariant": "Missing terms/values/signals do not become zero. Retain term method and missing-signal detail, nullable dynamics, unknown flags and both tables in all viewport layouts."
+    },
+    "dataBehavior": [
+      "Specific routed record owns scope; do not add a second workspace date/vehicle selector or replace drive evidence with selected workspace history.",
+      "Keep vehicle-scoped baseline history distinct from per-drive aggregates; date/vehicle timezone remains existing-owner behavior.",
+      "SI source fields remain m, s, m/s, Wh and W; pressure samples explicitly pass Pa/1000 to the existing kPa formatter. Display preference conversion only; do not persist presentation values.",
+      "Telemetry samples retain null speed, battery, temperatures, range, odometer, pressure, power and climate evidence; sparse endpoint scans and typed historical-position aliases remain.",
+      "Preserve persisted aggregate versus estimated-energy attribution, configured-rate-not-invoice costs and gas-equivalence settings.",
+      "Keep eight navigation groups, all 21 section wrappers, independent queries, errors and specialist honesty/uncertainty text.",
+      "Do not change energy integration or derived-stat formulas during a visual migration; zero fallbacks in internal stats need consumer-specific proof before any broader nullability change.",
+      "AI sections remain opt-in, off-mode hidden and independently record-scoped; baseline deterministic sections never depend on AI enablement."
+    ],
+    "lineCountComparison": "No implementation or historical baseline comparison performed. Root snapshot is 146 lines; extracted component total was not measured.",
+    "sourceChanged": false
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 bounded read-only source audit",
+    "runtime": "unverified; no route mounted, browser used or endpoint requested",
+    "visual": "unverified; no screenshots or measured contrast",
+    "keyboardViewportMotion": "unverified; no interaction, viewport, forced-color, RTL or reduced-motion exercise",
+    "backend": "Endpoint registration inspected where cited, not handler payload correctness, unit lineage, authorization or server filtering.",
+    "descendants": "Not an exhaustive implementation review of every chart, physics-debrief calculation, global feedback/layout primitive, catalog, settings owner or AI stream owner. Composition proves references, not mounted behavior.",
+    "checks": [
+      {"command": "Get-FileHash -Algorithm SHA256 -LiteralPath web\\src\\features\\driving\\pages\\DriveDetailPage.tsx; (Get-Content -LiteralPath ...).Count", "exitCode": 0, "output": "SHA256 8219B669A8E6F8C74C705968EC82CA8272B79C53B0AF6303C2451535337772A7; 146 lines"},
+      {"command": "PowerShell page-only regex counts and DriveReportContent section count", "exitCode": 0, "output": "inline-style: 0; raw-controls: 0; direct-library: 0; legacy-api: 0; fixed-white-gray-neon: 0; DriveDetailSection JSX instances: 21; Page direct GlassPanel/ChartContainer instances: 0"}
+    ],
+    "notRun": ["audit.sh: inspected but not run because it invokes package-wide TypeScript", "TypeScript", "build", "lint", "tests", "Git", "mutations"],
+    "searchLimits": "Two guessed hook paths did not exist (useDiagnostics/usePhysics/useAI); no reads claimed. Broad drive-detail regex inspection included test/unmounted files; only confirmed mounted dependency evidence is reported.",
+    "sharedChangeAssessment": "No shared API extension is justified by this single-page source evidence. Existing palette, layout, typography, data-state and feedback owners should be reused; category-export availability and Table mobile behavior require their owners' integration validation."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DriveDetailPage.tsx",
+    "web\\src\\features\\driving\\components\\ShareDriveDialog.tsx",
+    "web\\src\\features\\driving\\components\\layout-modernization\\DriveReportContent.tsx",
+    "web\\src\\features\\driving\\components\\layout-modernization\\PreservedPanelGrid.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\useDriveDetailData.ts",
+    "web\\src\\features\\driving\\components\\drive-detail\\DriveDetailSection.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\HeroGauges.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\RouteMapSection.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\DriveLedgerCompactPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\SilentCounterPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\GearTheaterPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\RoadAnomalyPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\WhyEndedPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\CostSavingsPanel.tsx",
+    "web\\src\\features\\driving\\components\\drive-detail\\energyEvidence.ts",
+    "web\\src\\components\\ai\\AIDriveCoaching.tsx",
+    "web\\src\\components\\ai\\AISpeedProfileInsights.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\usePhysicsLedger.ts",
+    "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+    "web\\src\\api\\hooks\\useSharing.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-108.json", ".agent-status\\audit-page-108.txt"]
+}
