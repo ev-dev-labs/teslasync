@@ -1,0 +1,206 @@
+{
+  "item": "audit-page-203",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+  "routes": ["/signal-correlation"],
+  "purpose": "Compare two vehicle telemetry histories using lagged cross-correlation and a normalized overlay.",
+  "primaryGoal": "Select two signals, optionally difference them, and inspect correlation strength, significance, sample evidence and which signal leads.",
+  "dataSources": [
+    {
+      "hook": "useSignals",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 98,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/available",
+      "routeEvidence": "internal\\api\\router.go:4886,4911",
+      "ownership": "Telemetry hook/catalog adapter; backend signalinspect handler",
+      "behavior": "AbortSignal forwarded; catalog reduced to signal names; page retains successful catalog on refresh failure. Rich kind/unit metadata is not available through this adapter."
+    },
+    {
+      "hook": "useSignalHistory (two independent queries)",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 176,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/{signalName}/history?hours=24",
+      "routeEvidence": "internal\\api\\router.go:4886,4914",
+      "ownership": "Telemetry hook; internal\\api\\signalinspect\\handler.go:250-325 queries signal_log",
+      "behavior": "Enabled only for positive vehicle ID and nonempty signal; AbortSignal forwarded; existing standard polling retained. Query key includes vehicle, signal and hours. Server returns typed raw measurements, expected_kind, from, to and count. Without limit, earliest 1000 rows in the requested interval are returned; hard cap is 10000."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "Indirect useVehicles dependency; endpoint implementation not inspected",
+      "ownership": "Existing workspace vehicle owner",
+      "behavior": "URL/store/fleet fallback selection. Page has no competing vehicle picker. A null selection renders existing NoVehicleSelected."
+    },
+    {
+      "hook": "useOperationalMetrics / useHiddenSeries",
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "line": 12,
+      "endpoint": "Indirect settings dependencies; no additional telemetry endpoint",
+      "ownership": "Existing stats/preferences bridge and URL legend-state owner",
+      "behavior": "Numeric correlation/duration/sample inputs remain numeric; display preferences applied by shared formatter. Hidden a/b series persist under hidden_signal-correlation-overlay."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9", "contract": "Existing PageContainer props; full-width min-w-0 container; forwards query and enabled dataSources to existing freshness/source notice pipeline."},
+    {"name": "GlassPanel / PanelTitle / Text / Badge / Select / Toggle / HelpTooltip", "owner": "@/components/ui", "contract": "Reuse current surfaces, semantic text, native select labels, switch semantics, localized help and status variants. No new control/surface library."},
+    {"name": "CorrelationStatStrip", "owner": "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.tsx:19", "contract": "result, leadLabel, loading, retained, per-source errors and per-source retries; four metrics rendered with OperationalBrief/useOperationalMetrics."},
+    {"name": "ChartContainer", "owner": "web\\src\\components\\charts\\ChartContainer.tsx:79", "contract": "Localized title/ariaLabel, loading/error/empty/retry, data plus dataColumns; current image exports and forced-colors/screen-reader table pipeline. CSV requires exportData and is not enabled by this page."},
+    {"name": "ChartLegend / useHiddenSeries", "owner": "web\\src\\hooks\\useHiddenSeries.ts:60", "contract": "Keep chart key signal-correlation-overlay and a/b visibility identities; do not migrate to competing localStorage legend state."},
+    {"name": "DataSourceNotice / useDataState", "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx:126", "contract": "Source descriptors with enabled flags and individual query outcomes; retained refresh errors remain nonfatal. Existing source notice is already adopted."},
+    {"name": "Skeleton / EmptyState / QueryError / FadeIn / NoVehicleSelected", "owner": "Existing category/domain owners imported at page lines 9-11", "contract": "Preserve loading, empty, retry, motion preference and vehicle-selection branches; motion and onboarding implementation were not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 261, "rule": "MDC-002", "detail": "Same two-history fatal-error retry branch also appears at lines 331 and 393.", "fix": "Use a page-local retryBothFailed callback, retaining independent source retry buttons in the summary.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 406, "rule": "MDC-015", "detail": "Two local interpretation boxes repeat surface/border/padding markup. This is not evidence for a new shared composite.", "fix": "Reuse existing surface primitives when adopting layout; keep both interpretation bodies and all badges/context.", "owner": "page", "confidence": "medium"}
+  ],
+  "responsive": {
+    "sourceEvidence": "Page:190 uses single-column controls below sm, two at sm, three at lg; page:406 interpretation grid reflows to two columns at sm. Shared PageLayout supplies full-width min-w-0. Charts use ResponsiveContainer with fixed 340/300 heights.",
+    "findings": [
+      {"file": "web\\src\\components\\ui\\Toggle.tsx", "line": 15, "rule": "MDC-040", "detail": "Default switch button is 44x24px; the clickable wrapper is not itself keyboard focusable. Select defaults to min-h-10 (40px) at Select.tsx:34. These are below the stronger 44px design-contract target; this is not a measured WCAG target-spacing failure.", "fix": "Shared controls owner should provide/verify a 44px minimum hit area without enlarging the visual track, and retain focus, label activation, density settings and disabled behavior.", "owner": "shared", "confidence": "high"}
+    ],
+    "verification": "All specified viewport/container widths, long signal names, 200% text and RTL unverified; no browser opened."
+  },
+  "accessibility": {
+    "sourceEvidence": "Decorative title icons have aria-hidden; signal selects use labels; switch is named and exposes aria-checked; both charts provide localized ariaLabel and data/dataColumns; significance and lead include text, not color alone.",
+    "findings": [
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 206, "rule": "MDC-021/MDC-040", "detail": "Detrending explanatory Text at lines 211-217 is not associated with the switch via aria-describedby, although Toggle supports forwarding that attribute to its button.", "fix": "Give the hint a stable page-local ID and pass aria-describedby to Toggle; preserve label, explanation and checked semantics.", "owner": "page", "confidence": "high"}
+    ],
+    "verification": "Keyboard, actual focus visibility, screen reader, effective contrast, forced-colors and reduced-motion behavior unverified."
+  },
+  "states": {
+    "preserved": [
+      "No vehicle: NoVehicleSelected.",
+      "Catalog initial error/loading/empty: QueryError with retry, Skeleton, telemetry-specific EmptyState.",
+      "Unchosen histories omitted from source notice using enabled flags.",
+      "Both histories required for joint result; initial fatal errors may replace joint charts/reading only.",
+      "Retained histories remain in calculation during refresh/error; summary exposes independent A/B retries and retained label.",
+      "Charts have loading/error/retry/empty contracts; reading and selection panels remain available.",
+      "Page-level DataSourceNotice already handles partial/refresh-failed/paused source evidence; do not introduce duplicate generic banners."
+    ],
+    "findings": [
+      {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 240, "rule": "MDC-026", "detail": "Every null correlation result after choosing signals is described as no overlapping history. crossCorrelate also returns null for fewer than two valid measurements, nonnumeric histories, too short a grid or no lag satisfying minimum 10 samples (signalCorrelation.ts:236-258). Reading empty text at page:400 asks to pick two even when both are selected.", "fix": "Expose a feature-owned diagnostic reason alongside the unchanged calculation; distinguish choose-signals, empty history, unsupported measurement kinds and insufficient overlap/sample evidence. Do not fabricate zero or imply backend failure from an empty response.", "owner": "page", "confidence": "high"}
+    ],
+    "limits": "Offline branches source-inspected through dataState/source notice only. No failed/paused/retained/empty case exercised. Handler returns successful empty data if DB pool is absent (handler.go:272-282); page cannot distinguish that condition from genuinely empty history."
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 279, "rule": "MDC-013/MDC-034", "detail": "Axis ticks set page-local fontSize 10/11 at lines 279-280,349-350 rather than shared chart typography. Saved font scale behavior and mobile readability are unverified.", "fix": "Adopt the existing chart typography/token owner, retaining axes, domains, units, sample tables and all reference lines. Subdue reference decoration without changing explicit saved chart palette choices.", "owner": "page", "confidence": "medium"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 166, "rule": "MDC-010/MDC-016", "detail": "Both title icons use fixed cyan-300 at lines 166 and 386 despite carrying no distinct semantic status. Other inspected local surfaces already use neutral CSS variables; no glow/neon/body-white violation found by bounded pattern scan.", "fix": "Use existing muted/secondary icon token for structural headings. Do not create a palette or reset theme/chart preferences.", "owner": "page", "confidence": "medium"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 27, "rule": "MDC-032", "detail": "Hardcoded 24-hour history requests at lines 42-43; no useRangeState. /signal-correlation is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77), so global range control is not available for this historical analysis page.", "fix": "Integration owner should register this exact route only together with page useRangeState and a typed history hook accepting both startInstant/endInstantExclusive. Preserve last-24-hour default and current vehicle selection; do not add a local picker. Verify backend inclusive BETWEEN versus exclusive end semantics rather than assuming equality.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\api\\hooks\\useTelemetry.ts", "line": 184, "rule": "MDC-026/MDC-045", "detail": "History hook omits limit. Server default is 1000 (handler.go:110), querying ORDER BY ts ASC LIMIT (handler.go:309-319). High-rate signals may represent only the earliest part of the claimed 24-hour interval, with different actual coverage for A and B. Summary correctly says requested/overlapping samples, but gives no row-cap evidence.", "fix": "Explicitly expose requested versus observed bounds/count and possible cap reach per source. Coordinate an analysis-history contract with the existing hook owner; increasing to 10000 is still capped and is not proof of full-range coverage. Preserve raw SI and existing query policy; do not fabricate truncation flags or invent aggregation endpoints.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 118, "rule": "MDC-044/MDC-045", "detail": "Overlay stores only browser-local HH:mm strings; it bypasses saved locale/timezone and drops date/instant identity. Cross-midnight/DST repeated times become indistinguishable in tooltip and fallback table.", "fix": "Retain epoch instants in chart rows and use existing useDateFormat for ticks and full date/time table/tooltip labels. Keep 0-1 normalization, null gaps and source ordering unchanged.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\telemetry\\lib\\signalCorrelation.ts", "line": 294, "rule": "MDC-026", "detail": "zeroLagR defaults to 0 when the zero-lag point was excluded for insufficient samples, while a nonzero lag may still produce a valid result. The summary prints that fallback as a measured zero at CorrelationStatStrip.tsx:27-28.", "fix": "Feature owner must distinguish unavailable zero-lag coefficient from measured zero and show the existing unknown presentation. Treat this as a separately tested correctness change, not an aesthetic rewrite; preserve all other correlation math.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Explicit unknown zero-lag and truthful null-result reasons", "Workspace bound integration and row-cap trust evidence", "Saved timezone/instant-preserving overlay labels", "Touch target/hint association", "Restrained structural icons/shared chart typography"],
+    "scope": "Read-only Phase 0; no implementation or runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Bounded analysis history and source-coverage contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "propsVariantsStates": "Extend/reuse typed history query with explicit from/to and limit, query key reflecting bounds, forwarded AbortSignal, current enablement/polling/retry behavior and unchanged raw payload. Consumer distinguishes requested bounds from first/last observed samples and cap-reached uncertainty; retain fatal/refresh/paused/empty states.",
+      "usedBy": ["/signal-correlation (signal A)", "/signal-correlation (signal B)"],
+      "dependsOn": ["internal\\api\\signalinspect\\handler.go:263-319,404-433 bound/cap semantics", "web\\src\\lib\\workspaceScope.ts RANGE_ENABLED_PATHS integration", "Existing useRangeState startInstant/endInstantExclusive contract"],
+      "note": "No new generic composite justified; coordinate existing hook/workspace owners, not page-owned shared edits."
+    },
+    {
+      "name": "Existing control touch-target extension",
+      "existingOwnerFile": "web\\src\\components\\ui\\Toggle.tsx",
+      "relatedOwnerFile": "web\\src\\components\\ui\\Select.tsx",
+      "propsVariantsStates": "Preserve sm/md visual track, checked/onChange/disabled and forwarded ARIA; provide at least 44px reachable hit box without competing event/focus wrapper. Select may already satisfy page needs using existing lg sizing, subject to density policy.",
+      "usedBy": ["/signal-correlation detrend toggle", "/signal-correlation signal A/B controls"],
+      "dependsOn": ["Shared controls owner density decision", "Keyboard/focus and touch-spacing tests at narrow widths"],
+      "note": "Source target-size gap, not an exercised accessibility failure; no new control API should be invented solely for this page."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 118, "detail": "Browser-local time formatting competes with existing saved locale/timezone formatter.", "existingOwner": "web\\src\\hooks\\useDateFormat.ts:55-85", "decision": "reuse"},
+    {"file": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx", "line": 27, "detail": "Fixed page window bypasses workspace analysis window.", "existingOwner": "web\\src\\lib\\workspaceScope.ts:23-77", "decision": "integration, not a second picker"},
+    {"detail": "No competing chart library, table renderer, query store, stats formatter or overlay system found in inspected page/component source. Cross-feature duplication was not surveyed."}
+  ],
+  "preservation": {
+    "sourceHash": "3552c86477e45ce8420d6451bfca51f1cbd59a0a1fafeeaf0f6c87f4f553b4f4",
+    "hashAlgorithm": "SHA-256",
+    "source": "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+    "currentLineCount": 455,
+    "sections": [
+      {"name": "Choose two signals", "count": 1, "line": 162},
+      {"name": "Correlation metrics", "count": 1, "line": 223, "metrics": ["Peak correlation plus zero-lag context", "Signed best lag plus lead", "Significance plus coefficient threshold", "Effective samples plus raw sample count"]},
+      {"name": "Lagged correlogram", "count": 1, "line": 252},
+      {"name": "Normalised overlay", "count": 1, "line": 317},
+      {"name": "Reading the result", "count": 1, "line": 384}
+    ],
+    "sectionCount": 5,
+    "sourceElementCounts": {"GlassPanelOpeningTags": 3, "ChartContainerOpeningTags": 2, "CorrelationStatStripOpeningTags": 1, "FadeInWrappers": 5},
+    "actions": [
+      "Select signal A and signal B independently; clear via placeholder",
+      "Toggle correlate-changes detrending",
+      "Retry catalog and independent A/B history sources",
+      "Retry both failed joint-result histories",
+      "Toggle overlay a/b legend visibility with existing URL persistence",
+      "Existing ChartContainer default image-export controls when content exists; CSV not configured",
+      "Existing shell vehicle selection; NoVehicleSelected branch"
+    ],
+    "data": [
+      "Typed numeric and boolean measurements; invalid timestamps/nonfinite values/enums/text discarded; ascending order and last-valid duplicate timestamp retained.",
+      "Raw SI remains unchanged in wire/cache/hooks; correlation and normalized overlay are dimensionless; signed lag is seconds.",
+      "Current algorithm: 60-second grid, 600-second last-known-value staleness, +/-1800-second lag sweep, minimum 10 paired samples.",
+      "Optional first differencing changes correlation calculation only; normalized overlay remains original resampled levels.",
+      "Absolute-peak lag selection with shortest-delay tie break; autocorrelation-adjusted effective sample size and existing significance/lead classification.",
+      "Preserve every correlogram point, n, +/-threshold lines, zero line, best-lag line and [-1,1] axis.",
+      "Preserve both normalized overlay series, [0,1] axis, constant-series midpoint 0.5 and genuine null gaps with connectNulls=false.",
+      "Preserve four summary measurements, descriptions/context, interpretation badges, filled/gap evidence and causation warning.",
+      "Preserve query ownership, enablement, cancellation, polling and retained-data behavior. Proposed correctness fixes require focused tests; no math altered during audit."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Source-only; no Git, application mutation, build, lint, TypeScript, tests or browser execution.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified beyond source semantics",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "backend": "Inspected exact history handler/query and router registrations only; actual data, deployed service availability, request success and full-range coverage unverified.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx).Count", "exitCode": 0, "output": "SHA256 3552C86477E45CE8420D6451BFCA51F1CBD59A0A1FAFEEAF0F6C87F4F553B4F4; 455"},
+      {"command": "Bounded PowerShell regex counts over assigned page and CorrelationStatStrip; page opening-tag counts", "exitCode": 0, "output": "static-inline-style: 0\nraw-controls: 0\ndirect-library-import: 0\nneon-body-text: 0\nfixed-white-gray: 0\npage GlassPanel opening tags: 3\npage ChartContainer opening tags: 2", "interpretation": "Pattern matches only, not a clean semantic/global audit."}
+    ],
+    "notRun": "Skill audit.sh was read but not executed because it unconditionally runs project TypeScript. Full compilation/validation is disallowed by this read-only assignment.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-203.json", ".agent-status\\audit-page-203.txt"],
+    "sourceChanges": "none"
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+    "web\\src\\features\\telemetry\\components\\statstrip-correlation\\CorrelationStatStrip.tsx",
+    "web\\src\\features\\telemetry\\lib\\signalCorrelation.ts",
+    "web\\src\\features\\telemetry\\lib\\signalHistorySamples.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\types.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\signalinspect\\handler.go"
+  ]
+}
