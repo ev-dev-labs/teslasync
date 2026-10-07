@@ -1,0 +1,258 @@
+{
+  "item": "audit-page-145",
+  "page": "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx",
+  "routes": ["/notifications/archived"],
+  "purpose": "Inspect archived notification evidence and restore or permanently delete selected archived records.",
+  "primaryGoal": "Find archived notifications through shareable server-side filters, inspect complete delivery/alert context, and intentionally restore or delete records.",
+  "dataSources": [
+    {
+      "hook": "useNotificationLogs",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 834,
+      "endpoints": [{"method": "GET", "path": "/notifications/logs", "router": "internal\\api\\router.go:4026-4029"}],
+      "ownership": "Notification log API. ArchivedPage:38-39 requests archived=true without date, vehicle, limit or offset for the explicitly bounded all-time summary. InboxBody:187-200 independently requests archived=true with URL filters, workspace from/to_exclusive, page size and offset. Hook forwards AbortSignal, preserves query keys and normalizes arrays via safeArray. Backend default sample size and filtering semantics were not inspected."
+    },
+    {
+      "hook": "useNotificationLogCount",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 850,
+      "endpoints": [{"method": "GET", "path": "/notifications/logs?count_only=true", "router": "internal\\api\\router.go:4029"}],
+      "ownership": "Independent matching-count source; removes limit/offset while retaining filters. Count unavailable is not zero. No count-only handler execution performed."
+    },
+    {
+      "hook": "useVehicles / useAlertRules",
+      "file": "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx",
+      "line": 33,
+      "endpoints": [{"method": "GET", "path": "/vehicles", "source": "web\\src\\api\\hooks\\useVehicles.ts:73-80"}, {"method": "GET", "path": "/alerts/rules", "source": "web\\src\\api\\hooks\\useNotifications.ts:507-513", "router": "internal\\api\\router.go:3769"}],
+      "ownership": "Fleet and rule catalogs supply local business filters and metadata maps, not a global vehicle scope. Only data arrays are passed to InboxBody; source loading/error/trust is discarded. Vehicles router registration not read in this bounded audit."
+    },
+    {
+      "hook": "useMarkNotificationsRead / useMarkNotificationsUnread / useUnarchiveNotifications / useDeleteNotifications",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 1019,
+      "endpoints": [
+        {"method": "POST", "path": "/notifications/mark-read", "router": "internal\\api\\router.go:4033"},
+        {"method": "POST", "path": "/notifications/mark-unread", "router": "internal\\api\\router.go:4034"},
+        {"method": "POST", "path": "/notifications/unarchive", "router": "internal\\api\\router.go:4036"},
+        {"method": "DELETE", "path": "/notifications/logs", "router": "internal\\api\\router.go:4037"}
+      ],
+      "ownership": "Existing mutation hooks own optimistic read state, invalidation/broadcast and localized success/error toasts. Archived bulk actions are Restore and confirmed Delete only. Opening an unread row can mark it read depending on the existing local preference. No mutation was executed."
+    },
+    {
+      "hook": "useAlertDetail / useAcknowledgeAlert / useReopenAlert",
+      "file": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 370,
+      "endpoints": [
+        {"method": "GET", "path": "/alerts/{alertID}", "router": "internal\\api\\router.go:3797"},
+        {"method": "POST", "path": "/alerts/{alertID}/acknowledge", "router": "internal\\api\\router.go:3798"},
+        {"method": "POST", "path": "/alerts/{alertID}/reopen", "router": "internal\\api\\router.go:3800"}
+      ],
+      "ownership": "Rule-linked notification inspection uses log.id for alert detail and a synthetic fallback summary. Drawer preserves cached detail on refresh error and exposes retry. Equivalence of notification-log IDs and alert IDs is unverified; do not invent a replacement mapping."
+    },
+    {
+      "hook": "AIInboxAutoCategorization / useAiStream",
+      "file": "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx",
+      "line": 172,
+      "endpoints": [{"method": "POST", "path": "/ai/alerts/inbox/categorize", "router": "not traced in this bounded audit"}],
+      "ownership": "Existing gated advisory stream, with validated category proposals and explicit Apply-to-rule-filter callback. Frontend body supports vehicle_id/window_days/severities/rule_ids, not archived or exact workspace bounds. Backend scope behavior unknown; stream was not exercised."
+    },
+    {
+      "hook": "useRangeState / useUrlArray / useUrlEnum / useUrlString / useUrlNumber / useUrlBatch",
+      "file": "web\\src\\features\\notifications\\components\\InboxBody.tsx",
+      "line": 144,
+      "endpoints": [],
+      "ownership": "Existing URL/workspace state owners; archived route registered in RANGE_ENABLED_PATHS at workspaceScope.ts:52. /notifications disables global vehicle picker at workspaceScope.ts:104; preserve required local vehicle filter. Rolling/custom/timezone behavior delegated to existing range hook, not exercised."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing full-width page composition and header actions; query prop supplies freshness metadata rather than a fatal page gate."},
+    {"name": "InboxSummary", "owner": "web\\src\\features\\notifications\\components\\InboxSummary.tsx", "line": 45, "role": "Domain summary reused with archived timestamps and bounded-sample provenance; six metrics through OperationalBrief/useOperationalMetrics."},
+    {"name": "InboxBody", "owner": "web\\src\\features\\notifications\\components\\InboxBody.tsx", "line": 141, "role": "Shared inbox controller; archive forces flat view and preserves filters, selection, exports, recovery and inspection."},
+    {"name": "NotificationInboxTable / NotificationInboxDetails / NotificationInboxDelivery", "owner": "web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx", "line": 238, "role": "Canonical DataTable integration with persistent notifications:archive identity, title-only mobile columns, inline expansion and complete details."},
+    {"name": "NotificationFilterBar", "owner": "web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx", "line": 50, "role": "Reused severity/source/search/read controls in desktop header popovers and combined mobile filter surface."},
+    {"name": "AlertDetailDrawer", "owner": "web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx", "line": 59, "role": "Existing EntityPreviewDrawer composition for rule-linked records; lifecycle actions, remediation, related navigation and audit timeline."},
+    {"name": "Button / Badge / Select / DataTable / Modal / ConfirmDialog / GlassPanel / Text / PanelTitle", "owner": "web\\src\\components\\ui", "role": "Existing category-barrel primitives; no new table, overlay or typography pipeline needed. Individual primitive implementations not audited."},
+    {"name": "OperationalBrief / DataProvenanceBadge / BulkActionsToolbar / DateTime / SeverityBadge / EntityPreviewDrawer", "owner": "web\\src\\components\\data-display", "role": "Existing composites and localized display contracts; do not build parallel archive-specific versions."},
+    {"name": "StaleRefreshWarning / QueryError / EmptyState / Skeleton / PullToRefresh / FadeIn", "owner": "web\\src\\components\\feedback; web\\src\\components\\mobile; web\\src\\components\\motion", "role": "Existing recovery, mobile refresh and motion owners. Actual offline, focus and reduced-motion behavior unverified."},
+    {"name": "AIInboxAutoCategorization", "owner": "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx", "role": "Shared gated propose-only assistant, not an archive mutation."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx", "line": 46, "rule": "MDC-013", "detail": "Details dt/dd and table metadata both independently compose text-xs/text-sm roles despite existing typography wrappers.", "fix": "Reuse Caption/Text with as=dt/dd/span while preserving semantic description list and full metadata; no new formatter or metadata component needed without additional consumer evidence.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "status": "unverified",
+    "sourceEvidence": [
+      "ArchivedPage.tsx:55 has min-h-9 navigation target and header-supplied action layout.",
+      "NotificationInboxTable.tsx:50 uses max-width:767px; :253 prioritizes title on mobile and :263-268 keeps complete details through expansion.",
+      "NotificationInboxTable.tsx:89 caps mobile title content at max-w-56; :94-96 overrides shared Button sizing to min-h-9.",
+      "NotificationFilterBar.tsx:195-196 wraps severity controls; :219,231,241 source controls are full width then sm:w-40; :257 search becomes sm:w-72.",
+      "NotificationInboxDetails.tsx:42 uses 1/2/3-column metadata grid with break-words; action group wraps.",
+      "InboxBody.tsx:716-719 preserves full-width min-w-0 list and PullToRefresh."
+    ],
+    "findings": [
+      {"file": "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx", "line": 55, "rule": "MDC-040/MDC-043", "detail": "Back-link minimum height is 36px, and table title/message controls also force min-h-9 at NotificationInboxTable:96,131. Source does not demonstrate the stronger 44px mobile default or a valid spacing exception.", "fix": "Reuse canonical link/Button density treatment and validate effective target spacing at narrow widths without removing navigation, details or actions.", "owner": "page", "confidence": "medium"}
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "additionalAcceptance": ["Allocated narrow container", "RTL and long translated labels", "200% text", "Mobile filter popover", "Expanded rows", "Drawer/modal and delete confirmation", "Selection/export toolbar and pagination"]
+  },
+  "accessibility": {
+    "status": "source inspection only; keyboard, focus, contrast and screen reader unverified",
+    "sourceEvidence": [
+      "ArchivedPage.tsx:52-62 uses a native Link with localized visible name and aria-hidden icon.",
+      "NotificationInboxTable.tsx:98,133,232 supplies named inspection Buttons; :242 caption and :248 rowLabel preserve table context.",
+      "NotificationFilterBar.tsx:215 severity state exposes aria-pressed and :225/237/249 gives Select names.",
+      "NotificationInboxDetails.tsx:42-50 preserves dl/dt/dd semantics.",
+      "InboxBody.tsx:402-408 announces restored selection; :463-475 and :293-306 confirm irreversible deletes."
+    ],
+    "findings": []
+  },
+  "states": {
+    "initialLoading": "InboxSummary:74 suppresses initial values through OperationalBrief loading; InboxBody:258 and :794-800 display list skeletons. Vehicle/rule catalog loading is not surfaced by the root.",
+    "empty": "InboxSummary:112-128 offers Go to inbox. InboxBody:814-830 shows archived-empty text but does not distinguish filtered no-match or offer filter reset.",
+    "fatalError": "Summary QueryError has retry; list fatal error has independent Retry EmptyState. Count fatal error is plain text without count-specific retry.",
+    "refreshError": "InboxSummary and InboxBody consume useDataState and StaleRefreshWarning, keeping usable rows. AlertDetailDrawer:241-254 retains cached audit detail with refresh warning.",
+    "offline": "Existing trust warning components are consumed; actual offline connectivity behavior not exercised.",
+    "mutations": "Bulk Restore and confirmed Delete, row read/unread/restore/delete, and alert acknowledgement/reopen are retained; shared hooks supply feedback. No mutation executed.",
+    "findings": [
+      {"file": "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx", "line": 33, "rule": "MDC-026/mission sections 22,24,25", "detail": "Vehicles and rules are reduced to data=[]; loading, fatal errors, refresh errors and retries never reach filter/metadata consumers. NotificationFilterBar:102-115 consequently exposes only All options when catalogs are unresolved/unavailable, without explaining incomplete choices.", "fix": "Pass existing query trust into the shared domain surface and show source-local loading/unavailable/retry notices while retaining loaded catalogs, unknown IDs and usable notification rows. Do not hide the evidence table on catalog failure.", "owner": "integration", "confidence": "high"},
+      {"file": "web\\src\\features\\notifications\\components\\InboxBody.tsx", "line": 869, "rule": "MDC-026/mission section 24", "detail": "Fatal matching-count failure is text-only; table pagination at :784-791 is supplied only when countData exists. Pull-to-refresh at :716 refetches the list, not countQuery, leaving no explicit count recovery affordance.", "fix": "Add source-local count Retry with existing QueryError/InlineCallout pattern and retain rows/loaded counts; do not fabricate a total or silently change page size.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\notifications\\components\\InboxBody.tsx", "line": 821, "rule": "mission section 23/MDC-026", "detail": "Filtered zero-result archive displays the same 'Archived notifications will appear here' text as a truly empty archive and has no reset-filter action.", "fix": "Use localized filter-aware no-match explanation and an existing EmptyState action to clear page-specific filters, keeping header workspace range ownership separate.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx", "line": 55, "rule": "MDC-010/MDC-020", "detail": "Back link hand-builds hover:bg-white/[0.04] and a fixed cyan focus ring rather than canonical theme-aware link control chrome.", "fix": "Compose existing shared link-button tokens with native Link semantics and restrained surface/focus tokens. Preserve its destination, localization and keyboard affordance; do not replace it with a click-only div.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx", "line": 46, "rule": "MDC-013", "detail": "Metadata dt/dd roles use local text-xs/text-sm classes; table metadata also repeats raw text-xs at NotificationInboxTable:74,104,107,110,163,194,201,223.", "fix": "Use current Caption/Text semantic render overrides and retain tabular/date/error distinctions; subdued existing CSS text tokens are appropriate and need no new palette.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\notifications\\components\\InboxBody.tsx", "line": 876, "rule": "MDC-032/MDC-026/MDC-046", "detail": "Archived route renders the inbox categorization assistant with vehicle/severity/rule IDs only. It receives neither archived=true nor from/to_exclusive, source/read/search, and its supported windowDays prop is omitted. AIInboxAutoCategorization:172-180 stream identity similarly cannot invalidate output when archive/workspace dates change. This proves missing frontend scope propagation, not backend filtering behavior.", "fix": "Integration owner must explicitly label the assistant's real independent scope or extend the existing typed AI scope contract after backend verification. Preserve advisory feature and user-applied rule filtering; never silently claim archive-period analysis or add autonomous mutations.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\InboxSummary.tsx", "line": 59, "rule": "MDC-025/MDC-026", "detail": "Archived summary normalizes case/whitespace but counts only severity='warn'; NotificationInboxTable:178-179 explicitly recognizes both warn and warning. A warning row is therefore counted as unknown severity in the summary's attention calculation at :144-147 while the evidence table calls it Warn.", "fix": "Agree the existing notification severity alias normalization in the domain owner and apply consistently to sample counts, table badges and drawer tone. Preserve genuine unknown values and raw wire/cache severity; do not rewrite source payloads.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx", "line": 115, "rule": "MDC-025", "detail": "Drawer statusTone checks 'warning' only, while archive filter/summary use 'warn' and table accepts both; a warn alert receives info tone despite its warning label.", "fix": "Reuse the agreed domain severity normalization for tone selection without changing lifecycle state, original severity text, rule semantics or persisted data.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Source-local catalog trust, count recovery and assistant scope accuracy precede cosmetic cleanup. Existing archive actions, bounded provenance and shared DataTable composition must survive.",
+    "order": ["Catalog loading/error/retained-data treatment", "Count-specific retry and filter-aware empty recovery", "Explicit advisory scope and cancellation contract", "Consistent severity alias presentation", "Canonical restrained navigation/typography", "Mounted responsive/accessibility/trust validation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Inbox domain catalog trust contract",
+      "existingOwnerFile": "web\\src\\features\\notifications\\components\\InboxBody.tsx; web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx",
+      "propsVariantsStates": "Keep archived, vehicles, rules, all filters and callbacks; add existing DataState/query descriptors for catalog loading, unavailable, retained refresh failure and retry, with unknown IDs retained. This is a domain-shared change, not a new primitive.",
+      "usedBy": ["ArchivedPage", "InboxBody's documented InboxPage consumer"],
+      "dependsOn": ["Existing useDataState", "StaleRefreshWarning/QueryError", "URL filter ownership", "Exclusive domain-component writer assignment"],
+      "evidence": "ArchivedPage.tsx:33-34,69; NotificationFilterBar.tsx:102-115",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Assistant explicit independent archive/workspace scope",
+      "existingOwnerFile": "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx",
+      "propsVariantsStates": "Preserve existing vehicleId, severities, ruleIds, windowDays and onApplyCategories plus gated loading/error/stream/cancel states. Accurately disclose independent scope now; exact archive/date props and scopeKey require verified backend support before extension.",
+      "usedBy": ["ArchivedPage through InboxBody", "InboxBody's documented InboxPage consumer"],
+      "dependsOn": ["Verified /ai/alerts/inbox/categorize request contract", "useAiStream existing cancellation", "MDC-032", "Propose-only Apply-to-filter boundary"],
+      "evidence": "InboxBody.tsx:876-881; AIInboxAutoCategorization.tsx:87-103,172-180",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Notification severity alias presentation",
+      "existingOwnerFile": "web\\src\\features\\notifications\\components\\InboxSummary.tsx; web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx; web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx",
+      "propsVariantsStates": "Presentation-only normalization of accepted warn/warning values for sample warning counts, badge text and drawer statusTone; preserve unknown raw values, original data and lifecycle semantics.",
+      "usedBy": ["ArchivedPage summary/table/drawer", "InboxBody's documented InboxPage consumer"],
+      "dependsOn": ["Existing SeverityBadge semantic contract", "Domain owner agreement", "No wire/cache rewrite"],
+      "evidence": "InboxSummary.tsx:57-60,144-147; NotificationInboxTable.tsx:178-179; AlertDetailDrawer.tsx:115",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": {
+    "found": ["Page-specific Link chrome duplicates canonical control treatment.", "Notification warning alias handling differs among summary, table and drawer."],
+    "reuse": ["PageLayout, InboxSummary, InboxBody, DataTable, OperationalBrief, existing trust helpers and overlays already cover this workflow. No new archive table, stats engine, date picker or vehicle selector owner is warranted."],
+    "notEstablished": "No whole-app duplicate inventory or shared primitive audit performed."
+  },
+  "preservation": {
+    "sourceHash": "ae82ca9797f637690cd57c72f401f4c5c7ca562eaf0dab814b9577ccba48181c",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashTarget": "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx",
+    "currentLineCount": 73,
+    "counts": {"rootGlassPanel": 0, "rootChartContainer": 0, "rootInboxSummary": 1, "rootInboxBody": 1, "rootFadeIn": 2, "summaryMetrics": 6, "tableColumns": 9, "detailMetadataFields": 12},
+    "sectionNames": ["Archived page header and copy link", "Back to inbox navigation", "All-time bounded archive summary", "Workspace-filtered notification evidence", "Selection Restore/Delete toolbar", "Table filters/export/pagination and expanded details", "Notification inspection modal", "Rule-linked alert drawer and audit timeline", "Propose-only inbox categorization", "Delete confirmation"],
+    "sectionCount": 10,
+    "sectionCountMeaning": "Source-backed functional surfaces including conditional overlays, not ten simultaneously rendered panels.",
+    "dependencyCounts": [
+      {"file": "web\\src\\features\\notifications\\components\\InboxBody.tsx", "lines": 889, "GlassPanelOpenings": 1, "ChartContainerOpenings": 0},
+      {"file": "web\\src\\features\\notifications\\components\\InboxSummary.tsx", "lines": 153, "GlassPanelOpenings": 2, "ChartContainerOpenings": 0},
+      {"file": "web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx", "lines": 272},
+      {"file": "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx", "lines": 64},
+      {"file": "web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx", "lines": 283}
+    ],
+    "actions": [
+      "Copy current URL with filters; Back to inbox and summary empty Go to inbox",
+      "URL-backed severity, vehicle, rule, source, search and read-state filtering",
+      "Workspace range through shared header; page sizes 25/50/100 and server pagination",
+      "Loaded-row selection, clear selection, bulk Restore and confirmed Delete",
+      "Row inspect, read/unread, restore/delete and available rule context navigation",
+      "Preference-controlled mark-read on click; archive never auto-marks on opening the page",
+      "Selected/loaded CSV and JSON exports with existing fields and filename prefix",
+      "Persistent notifications:archive table visibility/reorder/resize/density and expanded details",
+      "Pull-to-refresh and source-local list/summary/audit retries",
+      "Alert acknowledge/reopen, investigate signal and related vehicle/history destinations",
+      "Feature-gated advisory categories and explicit Apply categories as rule filter"
+    ],
+    "dataBehavior": [
+      "Archive is always flat: view=grouped does not enable groups for archived=true; no grouped toggle or Mark all read bulk action on archive.",
+      "Preserve all-time summary versus workspace-filtered list distinction and explicit bounded-sample provenance; do not promote latest sample to server total.",
+      "Summary counts total/unread/critical/warn/info and latest archived timestamp; unknown severity remains visible.",
+      "Both list date bounds, filter serialization, offsets, query cancellation, stable query keys and existing cache/toast/broadcast policies survive.",
+      "Rule/vehicle fallback identifiers, complete message/error, original timestamps/status/severity and delivery metadata survive.",
+      "Missing timestamps and latency remain unknown; count failure never becomes measured zero.",
+      "Root does not perform unit conversion. Details currently displays source latency_ms in milliseconds; backend units were not audited, so preserve raw wire/cache fields and do not silently rename/scale them.",
+      "No synthetic measurement, new backend capability, fixture, preference reset or additional workspace picker."
+    ],
+    "sourceModified": false
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit",
+    "runtime": "unverified; route not mounted or exercised",
+    "visual": "unverified; no screenshots, theme or viewport review",
+    "keyboard": "unverified; no focus/Tab/overlay exercise",
+    "contrast": "unverified; composed colors not measured",
+    "responsive": "unverified; source breakpoints are not browser proof",
+    "backend": "Known notification/alert routes traced; vehicles route and AI delegated mount not traced. Handler filtering, count behavior, default sample cap, alert/log identity and SI metadata unknown.",
+    "checks": [
+      {"command": "Get-FileHash -Algorithm SHA256 and Get-Content line counts for root and five named domain dependencies", "exitCode": 0, "result": "Root SHA256 ae82ca9797f637690cd57c72f401f4c5c7ca562eaf0dab814b9577ccba48181c; root 73 lines; dependency counts recorded."},
+      {"command": "Select-String root: style=\\{\\{; raw button/input/textarea/select/table; direct recharts/react-leaflet/framer-motion; old relative API import", "exitCode": 0, "result": "0 / 0 / 0 / 0 matched source lines respectively; these counts are root-only, not whole-domain cleanliness."},
+      {"command": "ConvertFrom-Json report; Get-FileHash root comparison; Select-String table column keys", "exitCode": 0, "result": "JSON_PARSE_OK item=audit-page-145 page=web\\src\\features\\notifications\\pages\\ArchivedPage.tsx route=/notifications/archived; ROOT_HASH_MATCH=True; TABLE_COLUMN_KEYS=9. Report count corrected before release."},
+      {"command": "First combined PowerShell hash/count probe", "exitCode": 1, "result": "Quoting failure; replaced by successful simpler read-only probe. No source or report changed by failed probe."},
+      {"command": "rg limit|50|count_only internal\\api\\notifications.go", "result": "Path does not exist; no default-limit evidence obtained and no alternative reconstruction attempted."}
+    ],
+    "notRun": ["Full audit.sh because it invokes project-wide TypeScript", "npx tsc --noEmit", "Lint", "Build", "Tests", "Browser/production requests", "Git commands", "Any mutation"],
+    "notRunReason": "Assignment is bounded read-only audit; design contract centralizes project-wide validation. Skill script read but intentionally not executed because it includes prohibited broad validation.",
+    "scopeLimits": "Shared components were inspected only where directly needed to explain this page's composition and assistant contract. No other page was audited. Existing neighboring report read for schema shape only, not adopted as evidence.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-145.json", ".agent-status\\audit-page-145.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\ArchivedPage.tsx",
+    "web\\src\\features\\notifications\\components\\InboxBody.tsx",
+    "web\\src\\features\\notifications\\components\\InboxSummary.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationInboxDelivery.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx",
+    "web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx",
+    "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "docs\\frontend-audits\\audit-page-144.json"
+  ]
+}
