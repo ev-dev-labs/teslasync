@@ -5,7 +5,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
 
 /**
  * `<DataFreshness>` — query-result-driven freshness indicator.
@@ -53,10 +53,10 @@ export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
  * language stays consistent across the app.
  */
 export const FRESHNESS_COLORS = {
-  fresh: { dot: 'bg-emerald-400', text: 'text-[var(--text-secondary)]' },
-  fetching: { dot: 'bg-sky-400', text: 'text-sky-300' },
-  stale: { dot: 'bg-amber-400', text: 'text-amber-300' },
-  error: { dot: 'bg-red-400', text: 'text-rose-300' },
+  fresh: { dot: 'bg-[var(--semantic-success)]', text: 'text-[var(--text-secondary)]' },
+  fetching: { dot: 'bg-[var(--semantic-info)]', text: 'text-[var(--semantic-info)]' },
+  stale: { dot: 'bg-[var(--semantic-warning)]', text: 'text-[var(--semantic-warning)]' },
+  error: { dot: 'bg-[var(--semantic-danger)]', text: 'text-[var(--semantic-danger)]' },
 } as const;
 
 const STATUS_CONFIG = {
@@ -158,12 +158,8 @@ export function DataFreshness({
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
 
-  // Distinguish background refetch (data on screen,
-  // refetching in flight) from initial load (no data yet). The dot pulses
-  // gently during background refetch so users notice an update is coming
-  // without yanking the eye to the chip the way the existing ping ring does.
+  // Retain the background-refetch identity without decorative dot loops.
   const isBackgroundRefetch = isFetching && updatedAt != null;
-  const showPulse = isBackgroundRefetch && !reduce;
 
   const ageLabel = updatedAt ? formatRelativeTime(updatedAt, t) : '';
   const relativeTime =
@@ -181,10 +177,7 @@ export function DataFreshness({
     if (onRefresh && !isFetching) onRefresh();
   }, [onRefresh, isFetching]);
 
-  // When the user has reduced-motion enabled we
-  // suppress the dot pulse but still need to communicate the in-flight
-  // refetch. Surface the state via the tooltip so screen-readers + hover
-  // users see "Updating…" while the data lands.
+  // Reduced motion keeps the in-flight state explicit without the spinner.
   const updateTitle = isFetching && reduce
     ? t('freshness.updatingTooltip', 'Updating…')
     : updatedAt
@@ -210,9 +203,9 @@ export function DataFreshness({
     ? t('freshness.refreshState', 'Refresh data · {{state}}', { state: accessibleState })
     : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: accessibleState });
   const rootClassName = cn(
-    'inline-flex items-center border-0 bg-transparent leading-none transition-colors',
+    'inline-flex min-w-0 items-center border-0 bg-transparent leading-normal transition-colors duration-fast ease-standard motion-reduce:transition-none',
     compact
-      ? 'gap-0.5 text-2xs'
+      ? 'gap-1 text-xs'
       : 'gap-1.5 py-1.5 text-xs',
     cfg.color,
     onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
@@ -220,28 +213,14 @@ export function DataFreshness({
 
   const content = (
     <>
-      {/* Status dot with pulse */}
-      <span className="relative flex h-1.5 w-1.5 shrink-0">
-        {status === 'fetching' && !reduce && (
-          <span
-            className={cn(
-              'absolute inset-0 rounded-full animate-ping opacity-40',
-              cfg.dotColor,
-            )}
-          />
-        )}
-        <span
-          className={cn(
-            'relative rounded-full h-1.5 w-1.5',
-            cfg.dotColor,
-            showPulse && 'animate-pulse',
-          )}
-        />
-      </span>
+      <span
+        className={cn('rounded-full h-1.5 w-1.5 shrink-0', cfg.dotColor)}
+        aria-hidden="true"
+      />
 
       <Icon
         className={cn(
-          compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
+          'h-3 w-3 shrink-0',
           status === 'fetching' && !reduce && 'animate-spin',
         )}
         aria-hidden="true"
@@ -249,7 +228,7 @@ export function DataFreshness({
       {/* Reserve a stable width so the label changing (e.g. "just now" →
           "updating…" → "5m ago") never reflows neighbouring header items. */}
       {!compact && (
-        <span className="inline-block min-w-[4.5rem] text-left tabular-nums">
+        <span className="inline-block min-w-freshness-age break-words text-start tabular-nums">
           {relativeTime}
         </span>
       )}
