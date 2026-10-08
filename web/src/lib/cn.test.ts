@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { cn } from './cn'
+import { typography } from './tokens'
 
 // `cn` is the app-wide className composer (clsx for conditional composition +
 // tailwind-merge for last-wins conflict resolution). It is used in hundreds of
@@ -141,6 +142,53 @@ describe('cn — tailwind-merge conflict resolution (last wins)', () => {
       ]
       expect(tokens(cn(classes))).toEqual(new Set(classes))
       expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+    })
+
+    describe('font-size inheritance resolves independently of foreground colors', () => {
+      const inherited = typography.size.inherit
+
+      for (const alternative of [
+        'text-sm', 'text-base', 'text-2xl',
+        'text-[length:inherit]', 'text-[18px]', 'text-[length:var(--custom-size)]',
+        'text-sm/6',
+      ]) {
+        it.each(['', 'sm:', 'md:', 'xl:', 'forced-colors:'])(
+          `${alternative} and inheritance honor both orders with variant %s`,
+          (variant) => {
+            expect(cn(`${variant}${alternative}`, `${variant}${inherited}`)).toBe(`${variant}${inherited}`)
+            expect(cn(`${variant}${inherited}`, `${variant}${alternative}`)).toBe(`${variant}${alternative}`)
+          },
+        )
+      }
+
+      it.each([
+        'text-inherit', 'text-red-500', typography.color.primary,
+        'text-[color:var(--text-secondary)]', 'forced-colors:text-[ButtonText]',
+        'forced-colors:hover:text-[HighlightText]',
+      ])('preserves foreground %s in either order', (foreground) => {
+        expect(tokens(cn(inherited, foreground))).toEqual(new Set([inherited, foreground]))
+        expect(tokens(cn(foreground, inherited))).toEqual(new Set([inherited, foreground]))
+        expect(tokens(cn('text-sm', foreground, inherited))).toEqual(new Set([foreground, inherited]))
+        expect(tokens(cn(inherited, foreground, 'text-sm'))).toEqual(new Set([foreground, 'text-sm']))
+      })
+
+      it('keeps matching forced-colors foreground independent of font-size overrides', () => {
+        expect(cn('forced-colors:text-sm', 'forced-colors:text-[ButtonText]', `forced-colors:${inherited}`))
+          .toBe(`forced-colors:text-[ButtonText] forced-colors:${inherited}`)
+        expect(cn(`forced-colors:${inherited}`, 'forced-colors:text-[ButtonText]', 'forced-colors:text-sm'))
+          .toBe('forced-colors:text-[ButtonText] forced-colors:text-sm')
+      })
+
+      it('preserves distinct variants, other typography properties and caller composition', () => {
+        const classes = [
+          inherited, 'sm:text-sm', 'md:text-[18px]', `xl:${inherited}`,
+          'font-medium', 'font-sans', 'tracking-wide',
+          typography.color.primary, 'forced-colors:text-[ButtonText]',
+        ]
+        expect(tokens(cn(classes))).toEqual(new Set(classes))
+        expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+        expect(cn(['text-sm', { [inherited]: true }], false, 'text-lg')).toBe('text-lg')
+      })
     })
   })
 })

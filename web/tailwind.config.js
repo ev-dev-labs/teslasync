@@ -171,7 +171,8 @@ export default {
         bold: 'var(--font-weight-bold)',
       },
       fontSize: {
-        // Every size multiplies by --font-scale so text scales but layout
+        'size-inherit': 'inherit',
+        // Explicit sizes multiply by --font-scale so text scales but layout
         // spacing does not. Body sizes derive their line-height from
         // --leading (`calc(var(--leading) * 1em)`) so the line-height
         // control is real and scales with the text; larger display sizes

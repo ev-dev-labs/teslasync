@@ -169,6 +169,7 @@ export type MotionEasing = keyof typeof motion.easing
 export const typography = {
   /** Type scale — mirrors Tailwind. Pick by intent, not by px. */
   size: {
+    inherit: 'text-size-inherit',
     '2xs': 'text-2xs',     // 10px — micro labels, table footers
     xs: 'text-xs',         // 12px — chip text, dense table cells
     sm: 'text-sm',         // 14px — default body in dense UIs

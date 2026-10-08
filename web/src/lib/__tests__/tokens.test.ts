@@ -29,6 +29,10 @@ describe('restrained foundation presentation', () => {
         `${variant}max-w-side-panel-viewport`, `${variant}max-w-[40vw]`,
         `${variant}min-h-side-panel-header`, `${variant}min-h-[4.5rem]`,
       ]),
+      ...['', 'sm:', 'md:', 'xl:', 'forced-colors:'].flatMap((variant) => [
+        `${variant}text-size-inherit`, `${variant}text-[length:inherit]`,
+        `${variant}text-inherit`,
+      ]),
     ];
     let css: Root;
 
@@ -74,6 +78,7 @@ describe('restrained foundation presentation', () => {
           maxHeight: { ...resolved.theme.maxHeight },
           width: { ...resolved.theme.width },
           minHeight: { ...resolved.theme.minHeight },
+          fontSize: { ...resolved.theme.fontSize },
         },
       };
       Reflect.deleteProperty(previous.theme.zIndex, 'overlay');
@@ -84,6 +89,7 @@ describe('restrained foundation presentation', () => {
       delete previous.theme.width['side-panel'];
       delete previous.theme.maxWidth['side-panel-viewport'];
       delete previous.theme.minHeight['side-panel-header'];
+      Reflect.deleteProperty(previous.theme.fontSize, 'size-inherit');
 
       // Captured before this additive change: includes plugins, screens and all tokens.
       const canonical = JSON.stringify(previous, (_, value: unknown) => {
@@ -108,12 +114,14 @@ describe('restrained foundation presentation', () => {
             width: { ...config.theme?.extend?.width },
             maxWidth: { ...config.theme?.extend?.maxWidth },
             minHeight: { ...config.theme?.extend?.minHeight },
+            fontSize: { ...config.theme?.extend?.fontSize },
           },
         },
       };
       Reflect.deleteProperty(priorConfig.theme.extend.width, 'side-panel');
       Reflect.deleteProperty(priorConfig.theme.extend.maxWidth, 'side-panel-viewport');
       Reflect.deleteProperty(priorConfig.theme.extend.minHeight, 'side-panel-header');
+      Reflect.deleteProperty(priorConfig.theme.extend.fontSize, 'size-inherit');
       const prior = resolveConfig(priorConfig);
       expect(prior.theme.width).not.toHaveProperty('side-panel');
       expect(prior.theme.maxWidth).not.toHaveProperty('side-panel-viewport');
@@ -125,6 +133,7 @@ describe('restrained foundation presentation', () => {
           width: { ...prior.theme.width, 'side-panel': '420px' },
           maxWidth: { ...prior.theme.maxWidth, 'side-panel-viewport': '40vw' },
           minHeight: { ...prior.theme.minHeight, 'side-panel-header': '4.5rem' },
+          fontSize: { ...prior.theme.fontSize, 'size-inherit': 'inherit' },
         },
       });
       const canonical = JSON.stringify(prior, (_, value: unknown) => {
@@ -139,6 +148,71 @@ describe('restrained foundation presentation', () => {
       expect(createHash('sha256').update(canonical).digest('hex'))
         .toBe('9da0b97a5e67e5717e4c1767411cad4b7d682bd8048016e0a4447c2164e016ba');
     });
+
+    it('adds only font-size inheritance to the full accepted dispatch config', () => {
+      const priorConfig = {
+        ...config,
+        theme: {
+          ...config.theme,
+          extend: {
+            ...config.theme?.extend,
+            fontSize: { ...config.theme?.extend?.fontSize },
+          },
+        },
+      };
+      Reflect.deleteProperty(priorConfig.theme.extend.fontSize, 'size-inherit');
+      const prior = resolveConfig(priorConfig);
+      expect(prior.theme.fontSize).not.toHaveProperty('size-inherit');
+      expect(resolved).toEqual({
+        ...prior,
+        theme: {
+          ...prior.theme,
+          fontSize: { ...prior.theme.fontSize, 'size-inherit': 'inherit' },
+        },
+      });
+      const canonical = JSON.stringify(prior, (_, value: unknown) => {
+        if (typeof value === 'function') return value.toString();
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const entries = value as Record<string, unknown>;
+          return Object.fromEntries(Object.keys(entries).sort().map((key) => [key, entries[key]]));
+        }
+        return value;
+      });
+      expect(createHash('sha256').update(canonical).digest('hex'))
+        .toBe('14fb24118b45d5c77912cb0e86a20e10572577a76f8a9453027e6dc6f797caf4');
+      expect(typography.size.inherit).toBe('text-size-inherit');
+    });
+
+    it.each([
+      ['', null], ['sm:', resolved.theme.screens.sm],
+      ['md:', resolved.theme.screens.md], ['xl:', resolved.theme.screens.xl],
+      ['forced-colors:', '(forced-colors: active)'],
+    ])(
+      'generates only source-equivalent font-size inheritance for variant %s',
+      (variant, breakpoint) => {
+        const named = ruleFor(`${variant}${typography.size.inherit}`);
+        const arbitrary = ruleFor(`${variant}text-[length:inherit]`);
+        expect(declarations(named)).toEqual({ 'font-size': 'inherit' });
+        expect(declarations(arbitrary)).toEqual(declarations(named));
+        const signature = (rule: Rule) => rule.nodes.map((node) => {
+          expect(node.type).toBe('decl');
+          if (node.type !== 'decl') throw new Error('Expected a CSS declaration');
+          return { property: node.prop, value: node.value, important: node.important ?? false };
+        });
+        expect(signature(named)).toEqual(signature(arbitrary));
+        expect(named.parent?.type).toBe(arbitrary.parent?.type);
+        if (variant) {
+          const params = variant === 'forced-colors:'
+            ? breakpoint
+            : `(min-width: ${breakpoint})`;
+          expect(named.parent).toMatchObject({ name: 'media', params });
+          expect(arbitrary.parent).toMatchObject({ name: 'media', params });
+        } else {
+          expect(named.parent?.type).toBe('root');
+        }
+        expect(declarations(ruleFor(`${variant}text-inherit`))).toEqual({ color: 'inherit' });
+      },
+    );
 
     it.each([
       ['', null], ['sm:', resolved.theme.screens.sm],
