@@ -2087,3 +2087,16 @@ figure[data-print-card]:fullscreen p {
     app-region: no-drag;
   }
 }
+
+/* Two mobile status rows share the shell's existing bottom-offset authority.
+   The html data-status-bar off selector retains higher specificity. */
+@media (width < 768px) {
+  :root {
+    --shell-status-bar-height: 7rem;
+  }
+
+  [data-role='status-bar'] {
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  }
+}
