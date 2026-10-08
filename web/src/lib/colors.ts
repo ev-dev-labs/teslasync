@@ -23,6 +23,56 @@ import { useMemo } from 'react'
 import { useTheme, type ColorTheme, type ModeTheme } from '@/components/ui/ThemeProvider'
 
 /**
+ * Resolve map paint in a connected theme context. Null means the caller must
+ * defer paint or apply its own declared fallback; this never chooses a palette.
+ * Browser probes are transient and no DOM is accessed at module initialization.
+ */
+export function resolveMapRendererColor(input: string, context: HTMLElement): string | null {
+  if (typeof document === 'undefined' || !input.trim() || !context.isConnected) return null
+  const doc = context.ownerDocument
+  const view = doc.defaultView
+  if (!view || typeof view.getComputedStyle !== 'function') return null
+
+  const parent = doc.createElement('span')
+  const probe = doc.createElement('span')
+  try {
+    // Different inherited paints expose invalid-at-computed-value declarations,
+    // including missing/cyclic vars, without mistaking browser black for success.
+    parent.style.setProperty('all', 'initial', 'important')
+    parent.style.setProperty('display', 'none', 'important')
+    // Forced text substitution must not collapse the two validation sentinels.
+    // System-color inputs still resolve through the browser's active palette.
+    parent.style.setProperty('forced-color-adjust', 'none', 'important')
+    parent.style.setProperty('color-scheme', view.getComputedStyle(context).colorScheme, 'important')
+    probe.style.setProperty('all', 'unset', 'important')
+    probe.style.setProperty('color', 'inherit', 'important')
+    probe.style.setProperty('color', input, 'important')
+    probe.style.setProperty('background-color', input, 'important')
+    if (!probe.style.color || probe.style.color === 'inherit') return null
+    parent.appendChild(probe)
+    context.appendChild(parent)
+    parent.style.setProperty('color', 'rgb(1, 2, 3)', 'important')
+    const computed = view.getComputedStyle(probe)
+    const first = computed.color
+    // CSS-wide defaults differ between these properties; a real color does
+    // not. This also permits valid vars whose unused fallback is "initial".
+    if (first !== computed.backgroundColor) return null
+    parent.style.setProperty('color', 'rgb(4, 5, 6)', 'important')
+    const second = view.getComputedStyle(probe).color
+    if (!first || first !== second || /(?:var|light-dark)\s*\(|\b(?:currentcolor|initial|inherit|unset|revert)\b/i.test(first)) return null
+    // A fresh assignment validates the computed serialization, not a retained
+    // prior Canvas fillStyle. Unsupported/non-color computed output is unresolved.
+    const validation = doc.createElement('span')
+    validation.style.color = first
+    return validation.style.color ? first : null
+  } catch {
+    return null
+  } finally {
+    parent.remove()
+  }
+}
+
+/**
  * Restrained dark presentation in the saved Okabe-Ito hue order.
  * Labels/markers remain necessary; derived colors require separate CVD QA.
  */
