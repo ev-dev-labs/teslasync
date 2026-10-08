@@ -45,7 +45,7 @@ interface InboxStats {
 export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
   const { t } = useTranslation();
   const state = useDataState(query);
-  const rows = query.data ?? [];
+  const rows = useMemo(() => query.data ?? [], [query.data]);
 
   const stats = useMemo<InboxStats>(() => {
     let unread = 0;
@@ -54,7 +54,10 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
     let info = 0;
     let lastTs = 0;
     for (const row of rows) {
-      const severity = archived ? (row.severity ?? '').trim().toLowerCase() : row.severity ?? '';
+      const rawSeverity = row.severity ?? '';
+      const normalizedSeverity = rawSeverity.trim().toLowerCase();
+      const severity = normalizedSeverity === 'warn' || normalizedSeverity === 'warning'
+        ? 'warn' : archived ? normalizedSeverity : rawSeverity;
       if (severity === 'critical') critical += 1;
       else if (severity === 'warn') warn += 1;
       else if (severity === 'info') info += 1;
