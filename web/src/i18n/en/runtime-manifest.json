@@ -2600,6 +2600,7 @@
       "savedViews",
       "shortcuts",
       "sourceLayer",
+      "tco",
       "toast",
       "tour"
     ],
@@ -2656,6 +2657,7 @@
       "replay",
       "requiresAuth",
       "savedViews",
+      "shareCard",
       "shortcuts",
       "sourceLayer",
       "toast",

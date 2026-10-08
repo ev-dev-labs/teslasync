@@ -1031,6 +1031,12 @@
       "desc": "Source layer unknown."
     }
   },
+  "tco": {
+    "query": {
+      "refreshFailed": "The refresh failed; the most recently loaded evidence remains visible.",
+      "refreshPaused": "Cached evidence remains visible while its refresh is paused."
+    }
+  },
   "toast": {
     "admin": {
       "apiKey": {
