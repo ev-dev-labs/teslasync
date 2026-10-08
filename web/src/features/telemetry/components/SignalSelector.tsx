@@ -25,6 +25,8 @@ export interface SignalSelectorProps {
   showLayerHelp?: boolean;
   /** Override the label (defaults to "Signals (N / max)"). */
   labelOverride?: string;
+  /** Caller-owned source loading; retained options and selection remain intact. */
+  loading?: boolean;
   className?: string;
 }
 
@@ -35,6 +37,7 @@ export function SignalSelector({
   max = 5,
   showLayerHelp = true,
   labelOverride,
+  loading = false,
   className,
 }: SignalSelectorProps) {
   const { t } = useTranslation();
@@ -81,9 +84,10 @@ export function SignalSelector({
         value={safeValue}
         onChange={handleChange}
         options={safeOptions}
+        loading={loading}
         getOptionLabel={(s) => s}
         getOptionKey={(s) => s}
-        maxItems={Number.isFinite(cap) ? (cap as number) : undefined}
+        maxItems={Number.isFinite(cap) ? cap : undefined}
         renderOption={(s) => <Code className="break-words [overflow-wrap:anywhere]">{s}</Code>}
       />
     </div>

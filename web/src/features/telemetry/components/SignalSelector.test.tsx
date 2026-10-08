@@ -227,6 +227,41 @@ describe('SignalSelector — combobox wiring', () => {
     expect(onChangeSpy).toHaveBeenLastCalledWith([]);
     expect(screen.getByText('Signals (0)')).toBeInTheDocument();
   });
+
+  it('filters by exact signal text and selects through the native keyboard contract', () => {
+    const onChangeSpy = vi.fn();
+    render(<ControlledSelector onChangeSpy={onChangeSpy} showLayerHelp={false} />);
+    const combo = screen.getByRole('combobox', { name: /signals/i });
+    fireEvent.focus(combo);
+    fireEvent.change(combo, { target: { value: 'vehicle' } });
+    expect(screen.queryByRole('option', { name: 'battery_level' })).not.toBeInTheDocument();
+    fireEvent.keyDown(combo, { key: 'Home' });
+    const option = screen.getByRole('option', { name: 'vehicle_speed' });
+    expect(combo).toHaveAttribute('aria-activedescendant', option.id);
+    fireEvent.keyDown(combo, { key: 'Enter' });
+    expect(onChangeSpy).toHaveBeenLastCalledWith(['vehicle_speed']);
+    fireEvent.keyDown(combo, { key: 'Escape' });
+    expect(combo).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  it('forwards source loading without dropping retained selection or inventing availability', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <SignalSelector options={[]} value={['battery_level']} onChange={onChange} loading showLayerHelp={false} />,
+    );
+    fireEvent.focus(screen.getByRole('combobox'));
+    expect(screen.getByRole('button', { name: 'Remove battery_level' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Loading' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.queryByText('No results')).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    rerender(
+      <SignalSelector options={[]} value={['battery_level']} onChange={onChange} loading={false} showLayerHelp={false} />,
+    );
+    expect(screen.getByText('No results')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove battery_level' })).toBeInTheDocument();
+    expect(screen.getByText('Signals (1 / 5)')).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });
 
 describe('SignalSelector — cap enforcement', () => {
