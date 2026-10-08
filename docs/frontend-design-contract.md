@@ -165,6 +165,52 @@ pixel overrides that bypass user scaling. Preserve full rich captions and units.
 Owners: `web\src\lib\tokens.ts:169–234`, `web\tailwind.config.js:145–185`,
 `web\src\index.css:18–26`, `web\src\components\ui\FontProvider.tsx`.
 
+### Font-size inheritance adoption — MDC-013 / MDC-020
+
+**Additive decision for `phase3-font-inheritance-contract`:** Accordion's
+`text-[length:inherit]` is one genuine unresolved arbitrary-font candidate in
+`.agent-status\receipts\phase3-accordion-checks.log` (scanner exit **1**).
+Accepted source is not a clean shared gate. Preserve its size inheritance against
+Button's default `text-sm`; no fixed-size replacement or scanner waiver.
+
+Approve `theme.extend.fontSize['size-inherit'] = 'inherit'` at
+`web\tailwind.config.js`, exposed as `typography.size.inherit =
+'text-size-inherit'` at `web\src\lib\tokens.ts`. Generated CSS must be exactly
+`.text-size-inherit { font-size: inherit; }`, with no added line-height, weight,
+family, color or scale multiplication. This is a granular inheritance role,
+not a new body/heading variant. Existing resolved sizes, including `d-base`,
+choose scaled sizes rather than inherit the parent's computed size; none is
+equivalent. Built-in `text-inherit` means **color: inherit**, not font size.
+The proposed size key is absent in the inspected resolved config.
+
+Register `{ text: ['size-inherit'] }` in the existing `font-size` class group of
+`extendTailwindMerge` at `web\src\lib\cn.ts`. Without that registration the
+inspected merger retains `text-sm` and drops the ordinary text-color class.
+Require last-size-wins in both directions while retaining ordinary and
+forced-colors text colors; do not rely on stylesheet order or `!important`.
+Accordion substitutes only this named role for its arbitrary size class.
+Its later `headerClassName` retains caller override precedence; root sizing,
+saved font scale/leading/family/weight, and descendant Text roles remain intact.
+Inherit the parent's already computed size, never apply `--font-scale` twice.
+Do not remove descendants' intentional body/secondary role sizes.
+
+Keep system-color/focus/border rules and forced-color adjustment unchanged;
+the size role is mode-independent, not a forced-colors override. Preserve
+Button defaults elsewhere, native button/type/attributes/events/loading/disabled
+semantics and forwarded ref; Accordion has no public ref to add or remove.
+Keep disclosure IDs/ARIA, controlled/uncontrolled state, slots, mounting,
+wrapping, focus, motion and reachable content unchanged.
+
+Required downstream owners: `phase3-font-inheritance-tokens` owns the existing
+Tailwind config, typography token and cn merge registrations with matching
+token/merge tests and generated-CSS equivalence checks;
+`phase3-accordion-font-adoption` owns Accordion and its matching tests after
+those registrations, then reruns strict scoped checks and the unchanged scanner.
+These are followup assignments, not token/UI/scanner implementations here.
+OS forced-colors, 200% text/caller scaling, wrapping, keyboard, native-host/ref
+and composed visual acceptance remain implementation/QA obligations under
+MDC-040–043/060–070; this documentation decision clears no runtime gate.
+
 ### Spacing, shape and elevation — MDC-014 / MDC-015
 
 Use existing Tailwind 4px rhythm: 4/8/12/16/24/32/48px; 4–8px within controls,
