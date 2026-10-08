@@ -160,8 +160,6 @@ export default function RootCauseIntelligencePage() {
       <EvidenceSourceNotice
         state={evidenceState}
         sources={workspace.evidenceBundle.sources}
-        summary={focalAvailable ? analysis.summary : null}
-        limitations={analysis.limitations}
         label={t('rootCauseIntelligence.kpis.sectionLabel', 'Root-cause evidence metrics')}
         hasChosenSignal={workspace.hasChosenSignal}
       />
