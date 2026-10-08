@@ -134,12 +134,12 @@ export function NotificationLatencyPanel() {
               eyebrow={t('notificationLatency.title', 'Notification latency')}
               title={t('notificationLatency.brief.title', 'Delivery speed, tail latency, and Apdex')}
               description={latencyProvenance}
-              statusLabel={isLoading ? t('common.loading', 'Loading…') : source.status === 'stale'
-                ? t('dataState.stale.title', 'Data may be stale')
-                : source.status === 'offline' ? t('dataState.offline.title', 'Offline')
+              statusLabel={isLoading ? t('common.loading', 'Loading…') : source.isRefreshBlocked
+                ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                : source.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
                   : summary.count === 0 ? t('notificationLatency.brief.empty', 'No usable latency measurements')
                     : t('notificationLatency.brief.available', 'Latency measurements recorded')}
-              statusTone={source.status === 'stale' || source.status === 'offline' ? 'warning' : 'neutral'}
+              statusTone={source.isRefreshBlocked || source.status === 'stale' ? 'warning' : 'neutral'}
               metrics={operationalMetrics}
               scope={t('notificationLatency.brief.scope', 'Recorded delivery attempts · usable latency sample')}
               freshness={<DataProvenanceBadge provenance={source.provenance} status={source.status} updatedAt={source.updatedAt} />}
