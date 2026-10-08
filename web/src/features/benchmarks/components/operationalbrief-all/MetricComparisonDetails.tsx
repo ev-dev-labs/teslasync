@@ -37,8 +37,10 @@ export function MetricComparisonDetails({ metric }: { metric: BenchmarkMetric })
       </div>
       <div>
         {t('benchmarks.brief.uncertainty', 'Noisy cohort size: {{count}}; noise scale: {{scale}}. These are private estimates, not confidence scores.', {
-          count: metric.noisy_cohort_size == null ? '—' : fmtNumber(metric.noisy_cohort_size),
-          scale: metric.noise_scale == null ? '—' : fmtNumber(metric.noise_scale),
+          replace: {
+            count: metric.noisy_cohort_size == null ? '—' : fmtNumber(metric.noisy_cohort_size),
+            scale: metric.noise_scale == null ? '—' : fmtNumber(metric.noise_scale),
+          },
         })}
       </div>
     </div>
