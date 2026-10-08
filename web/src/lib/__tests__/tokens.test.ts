@@ -14,7 +14,38 @@ describe('restrained foundation presentation', () => {
   });
 
   describe('additive overlay geometry (MDC-024 / MDC-022)', () => {
-    const config = loadConfig(resolve('tailwind.config.js'));
+    const currentConfig = loadConfig(resolve('tailwind.config.js'));
+    const shellGeometry = [
+      ['zIndex', 'shell-panel', '80'],
+      ['zIndex', 'map-control', '1000'],
+      ['width', 'theme-switcher', '22rem'],
+      ['width', 'connection-diagnostics', 'min(92vw, 320px)'],
+      ['width', 'presentation-menu', 'min(92vw, 340px)'],
+      ['width', 'workspace-context', 'min(92vw, 27rem)'],
+      ['maxWidth', 'shell-panel-viewport', 'calc(100vw - 1rem)'],
+      ['maxWidth', 'breadcrumb-label', '200px'],
+      ['maxHeight', 'notification-panel', 'calc(100vh - 6rem)'],
+      ['maxHeight', 'workspace-context', 'min(80vh, 38rem)'],
+    ] as const;
+    const historicalExtensions = {
+      ...currentConfig.theme?.extend,
+      zIndex: { ...currentConfig.theme?.extend?.zIndex },
+      width: { ...currentConfig.theme?.extend?.width },
+      maxWidth: { ...currentConfig.theme?.extend?.maxWidth },
+      maxHeight: { ...currentConfig.theme?.extend?.maxHeight },
+    };
+    const config: typeof currentConfig = {
+      ...currentConfig,
+      theme: {
+        ...currentConfig.theme,
+        extend: historicalExtensions,
+      },
+    };
+    // Historical fingerprints exclude only these separately verified MDC-043 additions.
+    for (const [group, name, value] of shellGeometry) {
+      expect(currentConfig.theme?.extend?.[group]).toHaveProperty(name, value);
+      Reflect.deleteProperty(historicalExtensions[group], name);
+    }
     const resolved = resolveConfig(config);
     const classes = [
       'z-overlay', 'z-[60]',
@@ -62,6 +93,37 @@ describe('restrained foundation presentation', () => {
       rule.walkDecls((declaration) => { values[declaration.prop] = declaration.value; });
       return values;
     }
+
+    it('adds only the ten approved shell geometry roles to the full accepted config', () => {
+      const current = resolveConfig(currentConfig);
+      const expected = {
+        ...resolved,
+        theme: {
+          ...resolved.theme,
+          zIndex: { ...resolved.theme.zIndex },
+          width: { ...resolved.theme.width },
+          maxWidth: { ...resolved.theme.maxWidth },
+          maxHeight: { ...resolved.theme.maxHeight },
+        },
+      };
+      expect(shellGeometry).toHaveLength(10);
+      for (const [group, name, value] of shellGeometry) {
+        expect(resolved.theme[group]).not.toHaveProperty(name);
+        expect(current.theme[group]).toHaveProperty(name, value);
+        Reflect.set(expected.theme[group], name, value);
+      }
+      expect(current).toEqual(expected);
+      const canonical = JSON.stringify(resolved, (_, value: unknown) => {
+        if (typeof value === 'function') return value.toString();
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const entries = value as Record<string, unknown>;
+          return Object.fromEntries(Object.keys(entries).sort().map((key) => [key, entries[key]]));
+        }
+        return value;
+      });
+      expect(createHash('sha256').update(canonical).digest('hex'))
+        .toBe('6429653abd11b06c328e4abe19051203bf9727eaf153ecbfc13a700508408d85');
+    });
 
     it('adds only the approved resolved roles and preserves every prior config entry', () => {
       expect(resolved.theme.zIndex).toHaveProperty('overlay', '60');
