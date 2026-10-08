@@ -4,6 +4,7 @@ import { Button, Tooltip } from '@/components/ui/runtime';
 import { TIME_MACHINE_OPEN_PICKER_EVENT } from '../../feedback/TimeMachineBanner';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 interface OperationalModeSegmentProps {
   iconOnly?: boolean;
@@ -17,18 +18,18 @@ export function OperationalModeSegment({
   const config = {
     live: {
       Icon: Clock3,
-      tone: 'text-emerald-300',
-      dot: 'bg-emerald-400',
+      tone: 'text-[var(--semantic-success)]',
+      dot: 'bg-[var(--semantic-success)]',
     },
     cached: {
       Icon: Database,
-      tone: 'text-amber-300',
-      dot: 'bg-amber-400',
+      tone: 'text-[var(--semantic-warning)]',
+      dot: 'bg-[var(--semantic-warning)]',
     },
     as_of: {
       Icon: History,
-      tone: 'text-sky-300',
-      dot: 'bg-sky-400',
+      tone: 'text-[var(--semantic-info)]',
+      dot: 'bg-[var(--semantic-info)]',
     },
   }[operationalMode.mode];
   const Icon = config.Icon;
@@ -46,7 +47,8 @@ export function OperationalModeSegment({
           )
         }
         className={cn(
-          'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
+          'h-5 min-h-0 min-w-0 gap-1.5 rounded-shape-sm px-1.5 py-0 leading-none',
+          typography.size.xs,
           config.tone,
         )}
       >
@@ -56,7 +58,7 @@ export function OperationalModeSegment({
         />
         <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
         {!iconOnly && (
-          <span className="max-w-32 truncate font-medium">
+          <span className={cn('min-w-0 max-w-32 truncate', typography.weight.medium)}>
             {operationalMode.mode === 'live'
               ? t('statusBar.mode.now', 'Now')
               : operationalMode.label}
