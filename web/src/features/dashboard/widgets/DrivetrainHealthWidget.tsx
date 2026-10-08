@@ -181,7 +181,7 @@ export default function DrivetrainHealthWidget({ vehicleId, size }: WidgetProps)
         </SourceContent>
         <StaleRefreshWarning state={motorTrust} />
         {motorTrust.fatalError && <QueryError error={motorTrust.fatalError} onRetry={motorTrust.retry ?? undefined} />}
-        <DashboardSourceBrief metrics={stats} state={combined}
+        <DashboardSourceBrief metrics={stats} state={shellProps.dataState}
           eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
           title={t('widget.drivetrainHealth.summaryTitle', 'Returned drivetrain readings')}
           description={t('widget.drivetrainHealth.summaryDescription', 'Inferred health and motor telemetry are independent sources. Original temperature fallbacks remain explicit; the categorical assessment, source errors and mechanical-inspection caveat are retained.')}
