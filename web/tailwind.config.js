@@ -11,6 +11,10 @@ export default {
         overlay: '60',
         'shell-panel': '80',
         'map-control': '1000',
+        'presentation-controls': '9999',
+        'presentation-dimmer': '9998',
+        'presentation-cursor': '9997',
+        'map-tile-control': '800',
       },
       width: {
         'side-panel': '420px',
@@ -18,6 +22,8 @@ export default {
         'connection-diagnostics': 'min(92vw, 320px)',
         'presentation-menu': 'min(92vw, 340px)',
         'workspace-context': 'min(92vw, 27rem)',
+        'alerts-preview': 'min(92vw, 380px)',
+        'recent-pages': 'min(92vw, 360px)',
       },
       maxWidth: {
         'modal-full': 'min(96vw,1100px)',
@@ -25,11 +31,28 @@ export default {
         'side-panel-viewport': '40vw',
         'shell-panel-viewport': 'calc(100vw - 1rem)',
         'breadcrumb-label': '200px',
+        'background-summary': '180px',
+        'active-vehicle-label': '160px',
+        'active-vehicle-compact-label': '140px',
       },
       maxHeight: {
         modal: '90vh',
         'notification-panel': 'calc(100vh - 6rem)',
         'workspace-context': 'min(80vh, 38rem)',
+        'alerts-preview': '320px',
+        'status-options': '280px',
+        'table-filter-viewport': 'calc(100dvh - 2rem)',
+      },
+      minWidth: {
+        'background-work': '260px',
+        'vehicle-options': '220px',
+      },
+      gridTemplateColumns: {
+        'replay-shortcuts': 'auto 1fr',
+        'page-actions-scope': 'minmax(0,1fr) auto',
+      },
+      flex: {
+        'replay-scrubber': '1 1 12rem',
       },
       screens: {
         // Ultra-wide breakpoint for the modern-ui full-width redesign.
@@ -219,12 +242,14 @@ export default {
       },
       minHeight: {
         'side-panel-header': '4.5rem',
+        'vehicle-grid': '28rem',
         // Density-aware row height.
         // Use `min-h-d-row` on table rows / list items so the height
         // adapts to the user's density preference.
         'd-row': 'var(--density-row-h)',
       },
       height: {
+        'vehicle-grid': 'min(72vh, 56rem)',
         // Same density-aware row height as a fixed-height utility.
         'd-row': 'var(--density-row-h)',
       },

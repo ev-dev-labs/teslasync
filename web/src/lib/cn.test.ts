@@ -20,6 +20,189 @@ function tokens(value: string): Set<string> {
   return new Set(value.split(/\s+/).filter(Boolean))
 }
 
+const remainingGeometry = [
+  ['zIndex', 'presentation-controls', 'z', '9999', 'z-[9999]', 'z-50', 'z-[9000]'],
+  ['zIndex', 'presentation-dimmer', 'z', '9998', 'z-[9998]', 'z-50', 'z-[9000]'],
+  ['zIndex', 'presentation-cursor', 'z', '9997', 'z-[9997]', 'z-50', 'z-[9000]'],
+  ['zIndex', 'map-tile-control', 'z', '800', 'z-[800]', 'z-50', 'z-[9000]'],
+  ['width', 'alerts-preview', 'w', 'min(92vw, 380px)', 'w-[min(92vw,380px)]', 'w-80', 'w-[400px]'],
+  ['width', 'recent-pages', 'w', 'min(92vw, 360px)', 'w-[min(92vw,360px)]', 'w-full', 'w-[400px]'],
+  ['maxWidth', 'background-summary', 'max-w', '180px', 'max-w-[180px]', 'max-w-sm', 'max-w-[300px]'],
+  ['maxWidth', 'active-vehicle-label', 'max-w', '160px', 'max-w-[160px]', 'max-w-none', 'max-w-[300px]'],
+  ['maxWidth', 'active-vehicle-compact-label', 'max-w', '140px', 'max-w-[140px]', 'max-w-sm', 'max-w-[300px]'],
+  ['maxHeight', 'alerts-preview', 'max-h', '320px', 'max-h-[320px]', 'max-h-full', 'max-h-[500px]'],
+  ['maxHeight', 'status-options', 'max-h', '280px', 'max-h-[280px]', 'max-h-80', 'max-h-[500px]'],
+  ['maxHeight', 'table-filter-viewport', 'max-h', 'calc(100dvh - 2rem)', 'max-h-[calc(100dvh-2rem)]', 'max-h-full', 'max-h-[500px]'],
+  ['minWidth', 'background-work', 'min-w', '260px', 'min-w-[260px]', 'min-w-0', 'min-w-[300px]'],
+  ['minWidth', 'vehicle-options', 'min-w', '220px', 'min-w-[220px]', 'min-w-full', 'min-w-[300px]'],
+  ['height', 'vehicle-grid', 'h', 'min(72vh, 56rem)', 'h-[min(72vh,56rem)]', 'h-full', 'h-[500px]'],
+  ['minHeight', 'vehicle-grid', 'min-h', '28rem', 'min-h-[28rem]', 'min-h-0', 'min-h-[500px]'],
+  ['gridTemplateColumns', 'replay-shortcuts', 'grid-cols', 'auto 1fr', 'grid-cols-[auto_1fr]', 'grid-cols-2', 'grid-cols-[1fr_2fr]'],
+  ['gridTemplateColumns', 'page-actions-scope', 'grid-cols', 'minmax(0,1fr) auto', 'grid-cols-[minmax(0,1fr)_auto]', 'grid-cols-1', 'grid-cols-[1fr_2fr]'],
+  ['flex', 'replay-scrubber', 'flex', '1 1 12rem', 'flex-[1_1_12rem]', 'flex-auto', 'flex-[2_2_10rem]'],
+] as const
+
+describe('cn — remaining nineteen geometry roles (MDC-043)', () => {
+  const variants = ['', 'sm:', 'md:', 'xl:'] as const
+
+  it('adds only nineteen collision-free entries to the complete accepted first-ten config', () => {
+    const config = loadConfig(resolve('tailwind.config.js'))
+    const prior = {
+      ...config,
+      theme: {
+        ...config.theme,
+        extend: {
+          ...config.theme?.extend,
+          zIndex: { ...config.theme?.extend?.zIndex },
+          width: { ...config.theme?.extend?.width },
+          maxWidth: { ...config.theme?.extend?.maxWidth },
+          maxHeight: { ...config.theme?.extend?.maxHeight },
+          minWidth: { ...config.theme?.extend?.minWidth },
+          height: { ...config.theme?.extend?.height },
+          minHeight: { ...config.theme?.extend?.minHeight },
+          gridTemplateColumns: { ...config.theme?.extend?.gridTemplateColumns },
+          flex: { ...config.theme?.extend?.flex },
+        },
+      },
+    }
+    for (const [group, name] of remainingGeometry) Reflect.deleteProperty(prior.theme.extend[group], name)
+    const previous = resolveConfig(prior)
+    const current = resolveConfig(config)
+    const canonical = JSON.stringify(previous, (_, value: unknown) => {
+      if (typeof value === 'function') return value.toString()
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const entries = value as Record<string, unknown>
+        return Object.fromEntries(Object.keys(entries).sort().map(key => [key, entries[key]]))
+      }
+      return value
+    })
+    expect(createHash('sha256').update(canonical).digest('hex'))
+      .toBe('d0b5729843e62f070d56280b9e89f3df0e128c463ac1c38057945676aa14d1ad')
+    const expected = {
+      ...previous,
+      theme: {
+        ...previous.theme,
+        zIndex: { ...previous.theme.zIndex },
+        width: { ...previous.theme.width },
+        maxWidth: { ...previous.theme.maxWidth },
+        maxHeight: { ...previous.theme.maxHeight },
+        minWidth: { ...previous.theme.minWidth },
+        height: { ...previous.theme.height },
+        minHeight: { ...previous.theme.minHeight },
+        gridTemplateColumns: { ...previous.theme.gridTemplateColumns },
+        flex: { ...previous.theme.flex },
+      },
+    }
+    for (const [group, name, , value] of remainingGeometry) {
+      expect(previous.theme[group]).not.toHaveProperty(name)
+      expect(current.theme[group]).toHaveProperty(name, value)
+      Reflect.set(expected.theme[group], name, value)
+    }
+    expect(current).toEqual(expected)
+  })
+
+  for (const [, name, prefix, , arbitrary, ordinary, alternate] of remainingGeometry) {
+    const named = `${prefix}-${name}`
+    for (const alternative of [arbitrary, ordinary, alternate]) {
+      it.each(variants)(`${named} and ${alternative} resolve both caller orders for %s`, (variant) => {
+        expect(cn(`${variant}${named}`, `${variant}${alternative}`)).toBe(`${variant}${alternative}`)
+        expect(cn(`${variant}${alternative}`, `${variant}${named}`)).toBe(`${variant}${named}`)
+        expect(cn([`${variant}${named}`, false], { [`${variant}${alternative}`]: true }))
+          .toBe(`${variant}${alternative}`)
+      })
+    }
+  }
+
+  it('keeps different properties, variants, accepted tokens and outline semantics independent', () => {
+    const independent = [
+      'z-presentation-controls', 'sm:z-presentation-dimmer', 'md:z-presentation-cursor', 'xl:z-map-tile-control',
+      'w-alerts-preview', 'max-w-background-summary', 'min-w-background-work',
+      'h-vehicle-grid', 'max-h-status-options', 'min-h-vehicle-grid',
+      'grid-cols-replay-shortcuts', 'sm:grid-cols-page-actions-scope', 'flex-replay-scrubber',
+      'xl:w-theme-switcher', 'sm:max-w-shell-panel-viewport', 'md:max-h-workspace-context',
+      'outline', 'outline-2', 'outline-offset-2', 'outline-[var(--focus-ring)]',
+      'rounded-panel', 'shadow-e1', 'duration-fast', 'text-size-inherit', 'text-inherit',
+    ]
+    expect(tokens(cn(independent))).toEqual(new Set(independent))
+    expect(tokens(cn([...independent].reverse()))).toEqual(new Set(independent))
+    for (const left of remainingGeometry) {
+      for (const right of remainingGeometry) {
+        if (left === right || left[2] !== right[2]) continue
+        const a = `${left[2]}-${left[1]}`
+        const b = `${right[2]}-${right[1]}`
+        expect(cn(a, b)).toBe(b)
+        expect(cn(b, a)).toBe(a)
+      }
+    }
+  })
+
+  it('generates identical CSS for all 24 source assignments and matching responsive contexts', async () => {
+    const contexts = [
+      ...remainingGeometry,
+      remainingGeometry[0], remainingGeometry[0], remainingGeometry[0],
+      remainingGeometry[10],
+      ['maxWidth', 'shell-panel-viewport', 'max-w', 'calc(100vw - 1rem)', 'max-w-[calc(100vw-1rem)]'],
+    ] as const
+    expect(remainingGeometry).toHaveLength(19)
+    expect(contexts).toHaveLength(24)
+    const config = loadConfig(resolve('tailwind.config.js'))
+    const classes = variants.flatMap((variant) => [
+      ...contexts.flatMap(([, name, prefix, , arbitrary]) =>
+        [`${variant}${prefix}-${name}`, `${variant}${arbitrary}`]),
+      ...remainingGeometry.flatMap(([, , , , , ordinary, alternate]) =>
+        [`${variant}${ordinary}`, `${variant}${alternate}`]),
+    ])
+    const css = (await postcss([tailwindcss({
+      ...config, content: [{ raw: classes.join(' '), extension: 'html' }],
+    })]).process('@tailwind utilities;', { from: undefined })).root
+    console.log('RAW GENERATED CSS: remaining19 + reused cap; 24 assignments x base/sm/md/xl\n' + css.toString())
+    function signature(className: string) {
+      const matches: { declarations: [string, string, boolean][]; media: string[] }[] = []
+      css.walkRules((rule) => {
+        const selector = rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls((decl) => { declarations.push([decl.prop, decl.value, Boolean(decl.important)]) })
+        const media: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') media.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        matches.push({ declarations, media })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    const properties = {
+      z: 'z-index', w: 'width', 'max-w': 'max-width', 'min-w': 'min-width',
+      h: 'height', 'max-h': 'max-height', 'min-h': 'min-height',
+      'grid-cols': 'grid-template-columns', flex: 'flex',
+    }
+    const screens = { '': [], 'sm:': ['@media (min-width: 640px)'], 'md:': ['@media (min-width: 768px)'], 'xl:': ['@media (min-width: 1280px)'] }
+    for (const variant of variants) {
+      for (const [, name, prefix, value, arbitrary] of contexts) {
+        const named = signature(`${variant}${prefix}-${name}`)
+        expect(named).toEqual(signature(`${variant}${arbitrary}`))
+        expect(named).toEqual({ declarations: [[properties[prefix], value, false]], media: screens[variant] })
+      }
+      for (const [, name, prefix, , arbitrary, ordinary, alternate] of remainingGeometry) {
+        const named = `${variant}${prefix}-${name}`
+        for (const alternative of [arbitrary, ordinary, alternate]) {
+          const caller = `${variant}${alternative}`
+          expect(signature(cn(named, caller))).toEqual(signature(caller))
+          expect(signature(cn(caller, named))).toEqual(signature(named))
+        }
+      }
+    }
+    expect(signature('sm:grid-cols-page-actions-scope').media).toEqual(screens['sm:'])
+    expect(signature('h-vehicle-grid').declarations).toEqual([['height', 'min(72vh, 56rem)', false]])
+    expect(signature('min-h-vehicle-grid').declarations).toEqual([['min-height', '28rem', false]])
+  })
+})
+
 describe('cn — approved shell overlay geometry (MDC-043)', () => {
   const roles = [
     ['zIndex', 'shell-panel', 'z', '80', 'z-[80]', ['z-10', 'z-[90]', 'z-map-control']],
@@ -47,10 +230,15 @@ describe('cn — approved shell overlay geometry (MDC-043)', () => {
           width: { ...config.theme?.extend?.width },
           maxWidth: { ...config.theme?.extend?.maxWidth },
           maxHeight: { ...config.theme?.extend?.maxHeight },
+          minWidth: { ...config.theme?.extend?.minWidth },
+          height: { ...config.theme?.extend?.height },
+          minHeight: { ...config.theme?.extend?.minHeight },
+          gridTemplateColumns: { ...config.theme?.extend?.gridTemplateColumns },
+          flex: { ...config.theme?.extend?.flex },
         },
       },
     }
-    for (const [group, name] of roles) {
+    for (const [group, name] of [...roles, ...remainingGeometry]) {
       Reflect.deleteProperty(prior.theme?.extend?.[group] ?? {}, name)
     }
     const previous = resolveConfig(prior)
@@ -73,9 +261,14 @@ describe('cn — approved shell overlay geometry (MDC-043)', () => {
         width: { ...previous.theme.width },
         maxWidth: { ...previous.theme.maxWidth },
         maxHeight: { ...previous.theme.maxHeight },
+        minWidth: { ...previous.theme.minWidth },
+        height: { ...previous.theme.height },
+        minHeight: { ...previous.theme.minHeight },
+        gridTemplateColumns: { ...previous.theme.gridTemplateColumns },
+        flex: { ...previous.theme.flex },
       },
     }
-    for (const [group, name, , value] of roles) {
+    for (const [group, name, , value] of [...roles, ...remainingGeometry]) {
       expect(previous.theme[group]).not.toHaveProperty(name)
       expect(current.theme[group]).toHaveProperty(name, value)
       Reflect.set(expected.theme[group], name, value)

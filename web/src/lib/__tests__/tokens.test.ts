@@ -15,6 +15,27 @@ describe('restrained foundation presentation', () => {
 
   describe('additive overlay geometry (MDC-024 / MDC-022)', () => {
     const currentConfig = loadConfig(resolve('tailwind.config.js'));
+    const remainingGeometry = [
+      ['zIndex', 'presentation-controls', '9999'],
+      ['zIndex', 'presentation-dimmer', '9998'],
+      ['zIndex', 'presentation-cursor', '9997'],
+      ['zIndex', 'map-tile-control', '800'],
+      ['width', 'alerts-preview', 'min(92vw, 380px)'],
+      ['width', 'recent-pages', 'min(92vw, 360px)'],
+      ['maxWidth', 'background-summary', '180px'],
+      ['maxWidth', 'active-vehicle-label', '160px'],
+      ['maxWidth', 'active-vehicle-compact-label', '140px'],
+      ['maxHeight', 'alerts-preview', '320px'],
+      ['maxHeight', 'status-options', '280px'],
+      ['maxHeight', 'table-filter-viewport', 'calc(100dvh - 2rem)'],
+      ['minWidth', 'background-work', '260px'],
+      ['minWidth', 'vehicle-options', '220px'],
+      ['height', 'vehicle-grid', 'min(72vh, 56rem)'],
+      ['minHeight', 'vehicle-grid', '28rem'],
+      ['gridTemplateColumns', 'replay-shortcuts', 'auto 1fr'],
+      ['gridTemplateColumns', 'page-actions-scope', 'minmax(0,1fr) auto'],
+      ['flex', 'replay-scrubber', '1 1 12rem'],
+    ] as const;
     const shellGeometry = [
       ['zIndex', 'shell-panel', '80'],
       ['zIndex', 'map-control', '1000'],
@@ -33,6 +54,11 @@ describe('restrained foundation presentation', () => {
       width: { ...currentConfig.theme?.extend?.width },
       maxWidth: { ...currentConfig.theme?.extend?.maxWidth },
       maxHeight: { ...currentConfig.theme?.extend?.maxHeight },
+      minWidth: { ...currentConfig.theme?.extend?.minWidth },
+      height: { ...currentConfig.theme?.extend?.height },
+      minHeight: { ...currentConfig.theme?.extend?.minHeight },
+      gridTemplateColumns: { ...currentConfig.theme?.extend?.gridTemplateColumns },
+      flex: { ...currentConfig.theme?.extend?.flex },
     };
     const config: typeof currentConfig = {
       ...currentConfig,
@@ -41,8 +67,8 @@ describe('restrained foundation presentation', () => {
         extend: historicalExtensions,
       },
     };
-    // Historical fingerprints exclude only these separately verified MDC-043 additions.
-    for (const [group, name, value] of shellGeometry) {
+    // Exclude only explicitly verified additive roles from the frozen fingerprints.
+    for (const [group, name, value] of [...shellGeometry, ...remainingGeometry]) {
       expect(currentConfig.theme?.extend?.[group]).toHaveProperty(name, value);
       Reflect.deleteProperty(historicalExtensions[group], name);
     }
@@ -94,7 +120,7 @@ describe('restrained foundation presentation', () => {
       return values;
     }
 
-    it('adds only the ten approved shell geometry roles to the full accepted config', () => {
+    it('adds only the ten shell and nineteen remaining approved geometry roles to the full accepted config', () => {
       const current = resolveConfig(currentConfig);
       const expected = {
         ...resolved,
@@ -104,10 +130,16 @@ describe('restrained foundation presentation', () => {
           width: { ...resolved.theme.width },
           maxWidth: { ...resolved.theme.maxWidth },
           maxHeight: { ...resolved.theme.maxHeight },
+          minWidth: { ...resolved.theme.minWidth },
+          height: { ...resolved.theme.height },
+          minHeight: { ...resolved.theme.minHeight },
+          gridTemplateColumns: { ...resolved.theme.gridTemplateColumns },
+          flex: { ...resolved.theme.flex },
         },
       };
       expect(shellGeometry).toHaveLength(10);
-      for (const [group, name, value] of shellGeometry) {
+      expect(remainingGeometry).toHaveLength(19);
+      for (const [group, name, value] of [...shellGeometry, ...remainingGeometry]) {
         expect(resolved.theme[group]).not.toHaveProperty(name);
         expect(current.theme[group]).toHaveProperty(name, value);
         Reflect.set(expected.theme[group], name, value);
