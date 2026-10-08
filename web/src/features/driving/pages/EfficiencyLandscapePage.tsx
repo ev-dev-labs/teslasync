@@ -6,7 +6,7 @@ import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
 import { Text, HelpTooltip } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import type { StatMetric } from '@/components/data-display/stat-reference';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
