@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import type { CorrelationResult } from '../../lib/signalCorrelation';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { CorrelationStatStrip } from './CorrelationStatStrip';
@@ -37,7 +38,7 @@ afterEach(() => {
 function setup(overrides: Partial<Parameters<typeof CorrelationStatStrip>[0]> = {}) {
   return render(<CorrelationStatStrip result={result} leadLabel="Cabin temperature leads"
     loading={false} retained={false} errorA={null} errorB={null}
-    onRetryA={vi.fn()} onRetryB={vi.fn()} {...overrides} />);
+    onRetryA={vi.fn()} onRetryB={vi.fn()} {...overrides} />, { wrapper: MemoryRouter });
 }
 
 describe('Correlation canonical summary preservation', () => {
