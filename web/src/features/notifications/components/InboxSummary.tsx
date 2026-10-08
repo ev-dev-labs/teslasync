@@ -133,11 +133,11 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
         eyebrow={sectionLabel}
         title={t('notifications.inbox.summary.brief.title', 'Backlog severity and read status')}
         description={provenance}
-        statusLabel={firstLoad ? t('common.loading', 'Loading…') : state.status === 'stale'
-          ? t('dataState.stale.title', 'Data may be stale')
-          : state.status === 'offline' ? t('dataState.offline.title', 'Offline')
+        statusLabel={firstLoad ? t('common.loading', 'Loading…') : state.isRefreshBlocked
+          ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+          : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
             : t('notifications.inbox.summary.brief.available', 'Sample loaded')}
-        statusTone={state.status === 'stale' || state.status === 'offline' ? 'warning' : 'neutral'}
+        statusTone={!firstLoad && (state.isRefreshBlocked || state.status === 'stale') ? 'warning' : 'neutral'}
         metrics={operationalMetrics} scope={scope}
         freshness={<DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />}
         provenance={`${scope}. ${provenance}`}
