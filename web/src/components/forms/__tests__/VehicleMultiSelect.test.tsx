@@ -70,7 +70,7 @@ describe('VehicleMultiSelect', () => {
     render(<Harness />);
     const trigger = screen.getByRole('button', { name: /all vehicles/i });
     fireEvent.click(trigger);
-    const listbox = screen.getByRole('listbox');
+    const listbox = screen.getByRole('group');
     const checkboxes = within(listbox).getAllByRole('checkbox');
     // 1 sentinel + 3 vehicles
     expect(checkboxes).toHaveLength(4);
@@ -158,6 +158,66 @@ describe('VehicleMultiSelect', () => {
   it('summary shows None message when specific + zero selected', () => {
     render(<Harness initial={{ kind: 'specific', vehicle_ids: [] }} />);
     expect(screen.getByText('No vehicles selected')).toBeInTheDocument();
+  });
+
+  it('opens by keyboard, navigates options, and restores focus on Escape', () => {
+    render(<Harness initial={{ kind: 'specific', vehicle_ids: [99] }} />);
+    const trigger = screen.getByRole('button');
+    trigger.focus();
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    const options = screen.getAllByRole('checkbox');
+    expect(options[0]).toHaveFocus();
+    fireEvent.keyDown(options[0], { key: 'ArrowDown' });
+    expect(options[1]).toHaveFocus();
+    fireEvent.keyDown(options[1], { key: 'End' });
+    expect(options[options.length - 1]).toHaveFocus();
+    fireEvent.keyDown(options[options.length - 1], { key: 'Home' });
+    expect(options[0]).toHaveFocus();
+    fireEvent.keyDown(options[0], { key: 'ArrowUp' });
+    expect(options[options.length - 1]).toHaveFocus();
+    fireEvent.keyDown(options[options.length - 1], { key: 'Escape' });
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('preserves explicit ID, error association and disabled state', () => {
+    const onChange = vi.fn();
+    render(<VehicleMultiSelect id="recipient-scope" className="recipient-picker"
+      value={{ kind: 'specific', vehicle_ids: [99] }} vehicles={VEHICLES}
+      onChange={onChange} disabled errorKey="notifications.alertStudio.editor.vehiclesSummaryNone" />);
+    const trigger = screen.getByRole('button');
+    expect(trigger).toHaveAttribute('id', 'recipient-scope');
+    expect(trigger).toHaveAttribute('aria-describedby', 'recipient-scope-error');
+    expect(trigger).toBeDisabled();
+    expect(trigger.parentElement).toHaveClass('recipient-picker');
+    expect(screen.getByRole('alert')).toHaveAttribute('id', 'recipient-scope-error');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('retains unknown IDs through sticky-all restoration', () => {
+    const onChange = vi.fn();
+    render(<Harness initial={{ kind: 'specific', vehicle_ids: [1, 99] }} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button'));
+    const all = screen.getByTestId('vehicle-multiselect-option-all_sticky_sentinel');
+    fireEvent.click(all);
+    fireEvent.click(all);
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'specific', vehicle_ids: [1, 99] });
+  });
+
+  it('keeps long labels reachable and closes on an outside click without changing scope', () => {
+    const name = 'Long vehicle name '.repeat(20);
+    const onChange = vi.fn();
+    render(<Harness vehicles={[makeVehicle(1, name)]}
+      initial={{ kind: 'specific', vehicle_ids: [1] }} onChange={onChange} />);
+    expect(screen.getByText(name.trim())).toHaveClass('break-words');
+    fireEvent.click(screen.getByRole('button'));
+    const option = screen.getByTestId('vehicle-multiselect-option-1');
+    expect(option).toHaveAttribute('type', 'button');
+    expect(option).toHaveAccessibleName(/Long vehicle name/);
+    expect(within(option).getByText(/VIN/)).not.toHaveClass('truncate');
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 

@@ -12,10 +12,9 @@
  * subsequent toggle OFF restores it.
  *
  * Implementation notes:
- * - Option items render as `<button role="checkbox" aria-checked>`,
- *   NOT raw `<input type="checkbox">` — no `Checkbox` primitive
- *   exists in `@/components/ui`.
- * - The trigger is a custom button + popover (Tailwind only), NOT
+ * - Options use Button with checkbox roles inside a labelled group,
+ *   not listbox options, so native Enter/Space toggling remains available.
+ * - The trigger is a Button + popover (Tailwind only), NOT
  *   the native `<select>` primitive.
  * - All visible strings flow through `t()` from i18next.
  *
@@ -39,6 +38,8 @@ import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import type { Vehicle } from '@/types/vehicle';
 import { Badge } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
+import { HelperText, ErrorText, Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
 
 export type VehicleSelection =
@@ -105,6 +106,15 @@ export function VehicleMultiSelect({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (disabled || vehicles.length === 0) {
+      setOpen(false);
+      return;
+    }
+    if (open) popoverRef.current?.querySelector<HTMLButtonElement>('[role="checkbox"]')?.focus();
+  }, [open, disabled, vehicles.length]);
 
   const previousSpecificRef = useRef<number[]>(
     value.kind === 'specific' ? value.vehicle_ids : [],
@@ -217,87 +227,95 @@ export function VehicleMultiSelect({
     [],
   );
 
+  const handleOptionKey = (e: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const options = Array.from(popoverRef.current?.querySelectorAll<HTMLButtonElement>('[role="checkbox"]') ?? []);
+    const index = options.findIndex((option) => option === document.activeElement);
+    let next: number;
+    if (e.key === 'ArrowDown') next = (index + 1) % options.length;
+    else if (e.key === 'ArrowUp') next = (index - 1 + options.length) % options.length;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = options.length - 1;
+    else return;
+    e.preventDefault();
+    options[next]?.focus();
+  };
+
   const errorText = errorKey ? t(errorKey) : null;
   const hasError = Boolean(errorText);
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>
-      <button
+      <Button
+        variant="secondary"
         ref={triggerRef}
         id={triggerId}
         type="button"
         disabled={disabled || isFleetEmpty}
-        aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={popoverId}
         aria-describedby={hasError ? errorId : undefined}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={handleTriggerKey}
         className={cn(
-          'flex w-full items-center justify-between gap-2 rounded-md border bg-[var(--surface-1)] px-3 py-2 text-sm text-[var(--text-primary)] transition-colors',
-          hasError
-            ? 'border-[var(--danger)] focus-visible:ring-[var(--danger)]'
-            : 'border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus-visible:ring-[var(--accent)]',
-          'focus-visible:outline-none focus-visible:ring-2',
-          (disabled || isFleetEmpty) && 'cursor-not-allowed opacity-60',
+          'h-auto min-h-11 w-full justify-between px-3 py-2 text-start',
+          hasError && 'border-[var(--semantic-danger)]',
         )}
       >
-        <span className="flex items-center gap-2 truncate">
-          <Badge variant="neutral" size="sm">
+        <Text variant="body" className="min-w-0 break-words">
             {triggerSummary}
-          </Badge>
-        </span>
+        </Text>
         <ChevronDown
           className={cn(
-            'h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform',
+            'h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform motion-reduce:transition-none',
             open && 'rotate-180',
           )}
           aria-hidden
         />
-      </button>
+      </Button>
 
       {isFleetEmpty && (
-        <p className="mt-1 text-xs text-[var(--text-muted)]">
+        <HelperText className="mt-1">
           {t(
             'notifications.alertStudio.editor.vehiclesEmptyFleetHelp',
             'Add a vehicle in Settings → Vehicles to use this rule.',
           )}
-        </p>
+        </HelperText>
       )}
 
       {hasError && (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-[var(--danger)]">
+        <ErrorText id={errorId} className="mt-1">
           {errorText}
-        </p>
+        </ErrorText>
       )}
 
-      {open && !isFleetEmpty && (
+      {open && !isFleetEmpty && !disabled && (
         <div
           id={popoverId}
-          role="listbox"
-          aria-multiselectable="true"
+          ref={popoverRef}
+          role="group"
           aria-labelledby={triggerId}
-          className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-1 shadow-lg"
+          className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-1 shadow-e2"
         >
-          <button
+          <Button variant="ghost"
             type="button"
             role="checkbox"
             aria-checked={value.kind === 'all_sticky'}
+            onKeyDown={handleOptionKey}
             onClick={handleToggleAll}
             className={cn(
-              'flex w-full items-center justify-between gap-2 rounded px-2 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-3)]',
+              'h-auto min-h-11 w-full justify-between px-2 py-2 text-start',
               value.kind === 'all_sticky' &&
                 'bg-[var(--surface-3)] text-[var(--text-primary)]',
             )}
             data-testid={`vehicle-multiselect-option-${SENTINEL_ID}`}
           >
-            <span className="flex items-center gap-2">
+            <span className="flex min-w-0 items-center gap-2">
               <span
                 aria-hidden
                 className={cn(
-                  'flex h-4 w-4 items-center justify-center rounded border',
+                  'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
                   value.kind === 'all_sticky'
-                    ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--text-on-accent)]'
+                    ? 'border-[var(--focus-ring)] bg-[var(--surface-3)] text-[var(--text-primary)]'
                     : 'border-[var(--border-strong)]',
                 )}
               >
@@ -307,14 +325,14 @@ export function VehicleMultiSelect({
                   </svg>
                 )}
               </span>
-              <span className="font-medium">
+              <Text variant="body" className="min-w-0 break-words">
                 {t(
                   'notifications.alertStudio.editor.vehiclesAllOption',
                   'All vehicles (current + future)',
                 )}
-              </span>
+              </Text>
             </span>
-          </button>
+          </Button>
 
           <div className="my-1 h-px bg-[var(--border-subtle)]" aria-hidden />
 
@@ -322,25 +340,26 @@ export function VehicleMultiSelect({
             const checked =
               value.kind === 'specific' && value.vehicle_ids.includes(v.id);
             return (
-              <button
+              <Button variant="ghost"
                 key={v.id}
                 type="button"
                 role="checkbox"
                 aria-checked={checked}
+                onKeyDown={handleOptionKey}
                 onClick={() => handleToggleVehicle(v.id)}
                 className={cn(
-                  'flex w-full items-center justify-between gap-2 rounded px-2 py-2 text-left text-sm transition-colors hover:bg-[var(--surface-3)]',
+                  'h-auto min-h-11 w-full justify-between px-2 py-2 text-start',
                   checked && 'bg-[var(--surface-3)]',
                 )}
                 data-testid={`vehicle-multiselect-option-${v.id}`}
               >
-                <span className="flex items-center gap-2 truncate">
+                <span className="flex min-w-0 items-center gap-2">
                   <span
                     aria-hidden
                     className={cn(
-                      'flex h-4 w-4 items-center justify-center rounded border',
+                      'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
                       checked
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--text-on-accent)]'
+                        ? 'border-[var(--focus-ring)] bg-[var(--surface-3)] text-[var(--text-primary)]'
                         : 'border-[var(--border-strong)]',
                     )}
                   >
@@ -356,9 +375,9 @@ export function VehicleMultiSelect({
                       </svg>
                     )}
                   </span>
-                  <span className="truncate">{vehicleLabel(v)}</span>
+                  <Text variant="body" className="min-w-0 break-words">{vehicleLabel(v)}</Text>
                 </span>
-              </button>
+              </Button>
             );
           })}
 
@@ -366,19 +385,20 @@ export function VehicleMultiSelect({
             <>
               <div className="my-1 h-px bg-[var(--border-subtle)]" aria-hidden />
               {unknownIds.map((id) => (
-                <button
+                <Button variant="ghost"
                   key={`unknown-${id}`}
                   type="button"
                   role="checkbox"
                   aria-checked={true}
+                  onKeyDown={handleOptionKey}
                   onClick={() => handleToggleVehicle(id)}
-                  className="flex w-full items-center justify-between gap-2 rounded px-2 py-2 text-left text-sm hover:bg-[var(--surface-3)]"
+                  className="h-auto min-h-11 w-full justify-between px-2 py-2 text-start"
                   data-testid={`vehicle-multiselect-option-unknown-${id}`}
                 >
-                  <span className="flex items-center gap-2 truncate">
+                  <span className="flex min-w-0 items-center gap-2">
                     <span
                       aria-hidden
-                      className="flex h-4 w-4 items-center justify-center rounded border border-[var(--accent)] bg-[var(--accent)] text-[var(--text-on-accent)]"
+                      className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-[var(--focus-ring)] bg-[var(--surface-3)] text-[var(--text-primary)]"
                     >
                       <svg
                         viewBox="0 0 16 16"
@@ -390,13 +410,13 @@ export function VehicleMultiSelect({
                         <path d="M3 8l3 3 7-7" />
                       </svg>
                     </span>
-                    <span className="truncate text-[var(--text-muted)]">
+                    <Text variant="bodySm" className="min-w-0 break-words">
                       {t(
                         'notifications.alertStudio.editor.vehiclesUnknownLabel',
                         'Vehicle #{{id}}',
                         { id },
                       )}
-                    </span>
+                    </Text>
                   </span>
                   <Badge variant="warning" size="sm">
                     {t(
@@ -404,7 +424,7 @@ export function VehicleMultiSelect({
                       'Unknown',
                     )}
                   </Badge>
-                </button>
+                </Button>
               ))}
             </>
           )}
