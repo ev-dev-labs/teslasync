@@ -14,7 +14,6 @@ export function LifetimeContextBrief({ mode, stats, loading, error, onRetry }: {
 }) {
   const { t } = useTranslation();
   const { fmtInt, fmtNumber, precision } = useNumberFormatting();
-  const numberDisplay = { formatter: (raw: number) => ({ value: fmtNumber(raw), unit: '' }) };
   const countDisplay = { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) };
   const help = t('help.lifetime.avgEfficiency', 'Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers.');
   const title = mode === 'funfacts' ? t('lifetime.funFacts', 'Fun facts')
