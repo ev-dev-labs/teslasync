@@ -176,8 +176,10 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
     description: t('widget.vampireDrain.averageSource', 'Observed battery percentage-point loss per day; a positive event population is required before the average is treated as measured.'),
     display: { formatter: raw => ({ value: `${fmtNumber(raw)}%/day`, unit: '' }) },
     context: t('widget.vampireDrain.averagePopulation', 'Aggregate event count: {{count}} · observed hours: {{hours}}. The separately loaded event feed is limited to 30 rows.', {
-      count: knownNumber(stats?.event_count) == null ? '—' : fmtInt(stats?.event_count),
-      hours: knownNumber(stats?.total_observed_hours) == null ? '—' : fmtNumber(stats?.total_observed_hours),
+      replace: {
+        count: knownNumber(stats?.event_count) == null ? '—' : fmtInt(stats?.event_count),
+        hours: knownNumber(stats?.total_observed_hours) == null ? '—' : fmtNumber(stats?.total_observed_hours),
+      },
     }),
   }];
 
