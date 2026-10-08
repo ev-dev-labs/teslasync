@@ -51,9 +51,14 @@ vi.mock('@/components/charts', async (importActual) => {
 });
 
 const points = Array.from({ length: 48 }, (_, index) => ({
-  timestamp: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
-  valueNum: index < 24 ? 20 : 80,
-}));
+  ts: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+  kind: 'ValueKindDouble',
+  value: index < 24 ? 20 : 80,
+  ingest_origin: null,
+  source_emitted_at: null,
+  received_at: null,
+  normalization_version: null,
+})) satisfies SignalHistoryResponse['data'];
 const analysis = analyzeRootCause({
   focalSignal: 'Soc',
   catalog: ['Soc'],
@@ -64,8 +69,17 @@ const analysis = analyzeRootCause({
 function query<T>(data: T, error: Error | null = null) {
   return {
     data, error, isError: error != null, isLoading: false, isFetching: false,
+    isSuccess: error == null && data !== undefined, isPending: false, fetchStatus: 'idle' as const,
     dataUpdatedAt: Date.now(), refetch: vi.fn(),
   };
+}
+
+function getByDirectText(container: HTMLElement, text: string) {
+  return within(container).getByText((_, element) =>
+    Array.from(element?.childNodes ?? []).some(node =>
+      node.nodeType === Node.TEXT_NODE && node.textContent === text,
+    ),
+  );
 }
 
 function workspace(evidenceError: Error | null = null, catalogError: Error | null = null) {
@@ -110,10 +124,12 @@ describe('diagnostic evidence source preservation', () => {
     expect(brief).toHaveAttribute('data-operational-brief');
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(page === 'analysis' ? 5 : 4);
     expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
-    expect(within(brief).getByText('Soc · 72h requested history window')).toBeInTheDocument();
-    expect(within(brief).getByText('Per-signal freshness unavailable')).toBeInTheDocument();
+    expect(getByDirectText(brief, 'Soc · 72h requested history window')).toBeInTheDocument();
+    expect(getByDirectText(brief, 'Per-signal freshness unavailable')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
+    expect(getByDirectText(drawer, 'Soc · 72h requested history window')).toBeInTheDocument();
+    expect(getByDirectText(drawer, 'Per-signal freshness unavailable')).toBeInTheDocument();
     expect(drawer).toHaveTextContent('not a diagnosis or proof of causation');
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(drawer).toHaveTextContent('Evidence-ranked analysis of retrieved signal histories');
@@ -137,9 +153,9 @@ describe('diagnostic evidence source preservation', () => {
   it.each(['analysis', 'pack'] as const)('preserves a measured-zero report narrative and limitations in the real %s details', (page) => {
     const input = workspace();
     const history: SignalHistoryResponse = {
-      vehicleId: 7, signal: 'Soc', from: points[0]!.timestamp,
-      to: points[points.length - 1]!.timestamp, count: points.length,
-      data: points.map((point) => ({ ...point, valueNum: 0 })),
+      vehicleId: 7, signal: 'Soc', from: points[0]!.ts,
+      to: points[points.length - 1]!.ts, count: points.length,
+      data: points.map((point) => ({ ...point, value: 0 })),
     };
     const report: RootCauseAnalysisResult = analyzeRootCause({
       focalSignal: history.signal, catalog: ['Soc'],
@@ -222,7 +238,7 @@ describe('diagnostic evidence source preservation', () => {
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
     expect(within(brief).getByText('Choose a focal signal')).toBeInTheDocument();
-    expect(within(brief).getByText('No focal signal · 72h requested history window')).toBeInTheDocument();
+    expect(getByDirectText(brief, 'No focal signal · 72h requested history window')).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     const narrative = within(drawer).getByTestId('operational-narrative');
@@ -243,7 +259,7 @@ describe('diagnostic evidence source preservation', () => {
 
     const history: SignalHistoryResponse = {
       vehicleId: 7, signal: 'Soc', from: '', to: '', count: points.length,
-      data: points.map((point) => ({ ...point, valueNum: 20 })),
+      data: points.map((point) => ({ ...point, value: 20 })),
     };
     const published: RootCauseAnalysisResult = analyzeRootCause({
       focalSignal: history.signal, catalog: ['Soc'],
@@ -330,7 +346,7 @@ describe('diagnostic evidence source preservation', () => {
     renderPage(page);
     const brief = screen.getByTestId(page === 'analysis' ? 'root-cause-summary' : 'service-evidence-summary');
     expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
-    expect(within(brief).getByText('Per-signal source states shown above')).toBeInTheDocument();
+    expect(getByDirectText(brief, 'Per-signal source states shown above')).toBeInTheDocument();
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(page === 'analysis' ? 5 : 4);
     expect(screen.getByLabelText('Focal signal')).toHaveValue('Soc');
     expect(screen.getByLabelText('Analysis window')).toHaveValue('72');
