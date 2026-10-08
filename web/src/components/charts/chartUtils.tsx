@@ -1,6 +1,6 @@
 import { CartesianGrid } from 'recharts'
 import { fmtNumber } from '../../lib/numberFormat'
-import { chartTokens } from '../../lib/tokens'
+import { chartTokens, motion } from '../../lib/tokens'
 
 export { CHART_COLORS, CHART_COLORS_NEON as NEON_COLORS } from '../../lib/colors'
 
@@ -20,7 +20,7 @@ export const fmt = (v: unknown, decimals?: number): string =>
   fmtNumber(v, decimals == null ? undefined : Math.max(0, Math.min(20, decimals)))
 
 export const chartAnimation = {
-  animationDuration: 800,
+  animationDuration: parseFloat(motion.duration.normal),
   animationEasing: 'ease-out' as const,
 }
 

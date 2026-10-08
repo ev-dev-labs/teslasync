@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { isValidElement, type ReactElement } from 'react'
+import { isValidElement, type ComponentProps, type ReactElement } from 'react'
 import { CartesianGrid } from 'recharts'
 import {
   safe,
@@ -14,7 +14,7 @@ import {
   NEON_COLORS,
 } from './chartUtils'
 import { CHART_COLORS as SRC_CHART_COLORS, CHART_COLORS_NEON } from '../../lib/colors'
-import { chartTokens } from '../../lib/tokens'
+import { chartTokens, motion } from '../../lib/tokens'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 
 const HEX6 = /^#[0-9a-fA-F]{6}$/
@@ -88,6 +88,14 @@ describe('fmt', () => {
     expect(() => fmt(5, 999)).not.toThrow()
     expect(fmt(1.5, 999)).toContain('1.5')
   })
+
+  it('preserves zero, signed SI magnitudes and the active locale without conversion', () => {
+    expect(fmt(0)).toBe('0.00')
+    expect(fmt(-1500, 0)).toBe('-1,500')
+    setGlobalLocale('de-DE')
+    expect(fmt(1500.5, 1)).toBe('1.500,5')
+    expect(fmt(undefined, 1)).toBe('0,0')
+  })
 })
 
 describe('axisTick / axisTickSm', () => {
@@ -110,7 +118,8 @@ describe('chartGrid', () => {
   })
 
   it('is dashed, theme-aware, and semi-transparent', () => {
-    const props = (chartGrid as ReactElement<Record<string, unknown>>).props
+    const grid: ReactElement<ComponentProps<typeof CartesianGrid>> = chartGrid
+    const props = grid.props
     expect(props.strokeDasharray).toBe('3 3')
     expect(props.stroke).toBe(chartTokens.gridStroke)
     expect(props.stroke).toBe('var(--border-subtle)')
@@ -119,8 +128,9 @@ describe('chartGrid', () => {
 })
 
 describe('chartAnimation', () => {
-  it('animates over 800ms with ease-out easing', () => {
-    expect(chartAnimation.animationDuration).toBe(800)
+  it('uses the restrained normal motion duration with ease-out easing', () => {
+    expect(chartAnimation.animationDuration).toBe(parseFloat(motion.duration.normal))
+    expect(chartAnimation.animationDuration).toBe(250)
     expect(chartAnimation.animationEasing).toBe('ease-out')
   })
 })
