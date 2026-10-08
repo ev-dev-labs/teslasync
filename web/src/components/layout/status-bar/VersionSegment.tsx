@@ -90,7 +90,7 @@ export function VersionSegment({
           aria-expanded={open}
           onClick={openAbout}
           className={cn(
-            'h-auto min-h-9 w-full min-w-0 justify-start px-3 py-2',
+            'h-auto min-h-11 min-w-11 w-full justify-start px-3 py-2 md:min-h-9 md:min-w-0',
             typography.color.secondary,
           )}
           data-testid="status-bar-about-trigger"

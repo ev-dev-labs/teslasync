@@ -205,7 +205,34 @@ describe('VersionSegment — trigger chip', () => {
       BUILD_SHA !== 'dev' ? ` (${BUILD_SHA})` : ''
     }`);
     expect(within(trigger).getByText(`v${version}`)).toHaveClass('ms-auto', 'break-words');
-    expect(trigger).toHaveClass('min-w-0');
+    expect(trigger).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(trigger).not.toHaveClass('min-w-0');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
+  it('allocates mobile menu minimums while explicitly restoring md density without fixed height', async () => {
+    renderSegment(<VersionSegment variant="menu" />);
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent('v2.3.4'));
+    expect(trigger).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'w-full', 'justify-start',
+      'px-3', 'py-2', 'md:min-h-9', 'md:min-w-0',
+    );
+    expect(trigger).not.toHaveClass('h-9', 'h-11', 'min-h-9', 'min-w-0', 'truncate');
+    expect(trigger).toHaveAttribute('type', 'button');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveTextContent('About TeslaSync');
+    expect(within(trigger).getByText('v2.3.4')).toHaveClass('ms-auto', 'min-w-0', 'break-words');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
+  it('retains the separate status variant density without mobile menu sizing', async () => {
+    const trigger = await findResolvedTrigger();
+    expect(trigger).toHaveClass('h-5', 'min-h-0', 'gap-1.5', 'rounded', 'px-1.5', 'py-0', 'text-xs');
+    expect(trigger).not.toHaveClass('leading-none', 'text-sm');
+    expect(trigger).not.toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'w-full');
+    expect(trigger).toHaveTextContent('v2.3.4');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
     expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
   });
 
