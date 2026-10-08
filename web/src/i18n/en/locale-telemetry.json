@@ -1074,7 +1074,7 @@
     },
     "aiExplanation": {
       "badge": "Helix",
-      "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
+      "description": "Generate independent, inferred narration for the selected vehicle over 30 days, not an explanation of the detector’s 7-day results or the baseline’s 14-day training data.",
       "emptyHint": "Select a vehicle above to explain its anomalies.",
       "generateButton": "Generate explanation",
       "title": "Helix explanation"
