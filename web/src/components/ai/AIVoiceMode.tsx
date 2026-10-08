@@ -20,7 +20,9 @@ import { Mic, MicOff, Square, Volume2, VolumeX } from 'lucide-react'
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { Icon } from '@/components/ui/Icon'
+import { ErrorText, HelperText, Text } from '@/components/ui/Typography'
 
 // SpeechRecognition is vendor-prefixed and absent from lib.dom.d.ts;
 // declare only the narrow surface this component uses.
@@ -435,9 +437,11 @@ function InnerSection(): JSX.Element {
   }, [canStart, stream])
 
   const inputSlot = (
-    <div className="space-y-3">
-      <div
-        className="rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3 text-sm text-[var(--text-secondary)] min-h-[3.5rem] whitespace-pre-wrap"
+    <div className="min-w-0 space-y-3">
+      <Text
+        as="div"
+        variant="bodySm"
+        className="rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-3 min-h-14 whitespace-pre-wrap break-words"
         aria-live="polite"
         aria-label={t('voiceMode.transcriptLabel', 'Voice transcript')}
         data-testid="ai-feature-voice-mode-transcript"
@@ -446,14 +450,14 @@ function InnerSection(): JSX.Element {
           <>
             {transcript}
             {interimTranscript && (
-              <span className="text-[var(--text-muted)]">
+              <Text as="span" size="sm" color="muted">
                 {transcript ? ' ' : ''}
                 {interimTranscript}
-              </span>
+              </Text>
             )}
           </>
         ) : (
-          <span className="text-[var(--text-muted)]">
+          <HelperText as="span">
             {listening
               ? t(
                   'voiceMode.listeningHint',
@@ -463,15 +467,17 @@ function InnerSection(): JSX.Element {
                   'voiceMode.idleHint',
                   'Tap the mic and ask Helix anything about your Tesla.',
                 )}
-          </span>
+          </HelperText>
         )}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
+      </Text>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         {listening ? (
           <Button
             variant="secondary"
             size="sm"
-            icon={<MicOff className="h-4 w-4" />}
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
+            icon={<Icon icon={MicOff} aria-hidden />}
             onClick={stopListening}
             aria-label={t('voiceMode.actions.stopListening', 'Stop listening')}
             data-testid="ai-feature-voice-mode-mic-stop"
@@ -482,7 +488,9 @@ function InnerSection(): JSX.Element {
           <Button
             variant="secondary"
             size="sm"
-            icon={<Mic className="h-4 w-4" />}
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
+            icon={<Icon icon={Mic} aria-hidden />}
             onClick={startListening}
             aria-label={t('voiceMode.actions.startListening', 'Start listening')}
             disabled={!sttSupported || isBusy}
@@ -495,11 +503,13 @@ function InnerSection(): JSX.Element {
         <Button
           variant="ghost"
           size="sm"
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-9"
           icon={
             ttsEnabled ? (
-              <Volume2 className="h-4 w-4" />
+              <Icon icon={Volume2} aria-hidden />
             ) : (
-              <VolumeX className="h-4 w-4" />
+              <Icon icon={VolumeX} aria-hidden />
             )
           }
           onClick={toggleTts}
@@ -519,7 +529,9 @@ function InnerSection(): JSX.Element {
           <Button
             variant="ghost"
             size="sm"
-            icon={<Square className="h-4 w-4" />}
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9"
+            icon={<Icon icon={Square} aria-hidden />}
             onClick={handleStopAll}
             aria-label={t('voiceMode.actions.stopAll', 'Stop Helix')}
             data-testid="ai-feature-voice-mode-stop"
@@ -529,21 +541,20 @@ function InnerSection(): JSX.Element {
         )}
       </div>
       {sttError && (
-        <p
-          className="text-xs text-rose-300"
+        <ErrorText
           role="status"
           data-testid="ai-feature-voice-mode-stt-error"
         >
           {sttError}
-        </p>
+        </ErrorText>
       )}
       {!sttSupported && !sttError && (
-        <p className="text-xs text-[var(--text-muted)]">
+        <HelperText>
           {t(
             'voiceMode.unsupportedHint',
             'Voice input is not available in this browser. You can still type your question into the chatbot below.',
           )}
-        </p>
+        </HelperText>
       )}
     </div>
   )
