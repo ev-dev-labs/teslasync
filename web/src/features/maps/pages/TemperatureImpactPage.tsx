@@ -2,7 +2,7 @@ import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Thermometer, Snowflake, Sun, Lightbulb,
-  BarChart3, CalendarRange, Car,
+  BarChart3, CalendarRange, Car, TrendingUp,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
