@@ -3,20 +3,22 @@ import { useTranslation } from 'react-i18next'
 import { Gauge } from 'lucide-react'
 
 import { Tooltip } from '@/components/ui/runtime'
+import { Icon } from '@/components/ui/Icon'
 import { useLiveConnection } from '@/hooks/useLiveConnection'
 import { describeFleetState, useVehicles, useFleetStates } from '@/api/hooks/useVehicles'
 import { honestyFromLiveConnection, tallyHonesty, type HonestyKind } from '@/lib/fleetHonesty'
 import { cn } from '@/lib/cn'
+import { neonColorMap, typography } from '@/lib/tokens'
 import { PrefetchLink } from '../PrefetchLink'
 import { useStatusBarAnnouncer } from './StatusBarContext'
 
 const STALE_AFTER_MS = 2 * 60_000
 
 const TONE: Record<HonestyKind, string> = {
-  live: 'text-emerald-300',
-  stale: 'text-amber-300',
-  guessed: 'text-cyan-300',
-  missing: 'text-[var(--text-muted)]',
+  live: neonColorMap.green.text,
+  stale: neonColorMap.amber.text,
+  guessed: neonColorMap.cyan.text,
+  missing: typography.color.secondary,
 }
 
 export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }) {
@@ -73,19 +75,20 @@ export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }
         to="/"
         aria-label={t('honesty.aria', 'Telemetry honesty meter')}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
-          'hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+          'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+          typography.size.xs,
+          'hover:bg-[var(--surface-3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
           TONE[headline],
         )}
       >
-        <Gauge className="h-3 w-3 shrink-0" aria-hidden />
+        <Icon icon={Gauge} size="xs" />
         {!iconOnly && (
-          <span className="font-medium">
+          <span className={cn('min-w-0 whitespace-normal break-words', typography.weight.medium)}>
             {headline === 'live'
               ? t('statusBar.fleet.label', 'Fleet')
               : t(`honesty.${headline}`, headline)}
             {vehicles.length > 0 && (
-              <span className="text-[var(--text-muted)]">
+              <span className={typography.color.muted}>
                 {' '}· {counts.live}/{vehicles.length}
               </span>
             )}
