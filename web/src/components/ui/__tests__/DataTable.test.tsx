@@ -273,6 +273,48 @@ describe('DataTable — expansion', () => {
     fireEvent.click(expandButtons[0])
     expect(onChange).toHaveBeenCalledWith([1])
   })
+
+  it('keeps contextual expansion and sorting on shared native buttons with visible focus', () => {
+    const onExpand = vi.fn()
+    const onSort = vi.fn()
+    const view = render(
+      <DataTable
+        variant="embedded"
+        columns={[{ ...COLS[1], sortable: true }]}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        expandable
+        expandedKeys={[]}
+        onExpandedChange={onExpand}
+        renderExpanded={r => <span>{r.detail}</span>}
+        onSort={onSort}
+      />,
+    )
+    const expand = screen.getAllByRole('button', { name: 'Expand row' })[0]
+    expect(expand).toHaveAttribute('type', 'button')
+    expect(expand).toHaveAccessibleDescription('Alpha')
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    expect(expand).toHaveClass('h-11', 'w-11', 'md:h-6', 'md:w-6',
+      'focus-visible:outline-2', 'focus-visible:outline-offset-2')
+    expand.focus()
+    expect(expand).toHaveFocus()
+    fireEvent.click(expand)
+    expect(onExpand).toHaveBeenCalledExactlyOnceWith([1])
+    const sort = screen.getByRole('button', { name: 'Name' })
+    expect(sort).toHaveClass('min-h-11', 'md:min-h-6', 'focus-visible:outline-2')
+    sort.focus()
+    expect(sort).toHaveFocus()
+    fireEvent.click(sort)
+    expect(onSort).toHaveBeenCalledExactlyOnceWith('name')
+    view.rerender(
+      <DataTable columns={COLS.slice(0, 3)} data={ROWS} keyExtractor={r => r.id}
+        expandable expandedKeys={[1]} onExpandedChange={onExpand}
+        renderExpanded={r => <span>{r.detail}</span>} />,
+    )
+    expect(screen.getByRole('button', { name: 'Collapse row' }))
+      .toHaveAccessibleDescription('1')
+    expect(screen.getByText('first row detail')).toBeInTheDocument()
+  })
 })
 
 describe('DataTable — sticky header / max height', () => {

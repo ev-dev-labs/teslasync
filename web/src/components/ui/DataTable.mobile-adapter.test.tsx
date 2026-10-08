@@ -367,28 +367,28 @@ describe('real DataTable mobile bridge', () => {
       await waitFor(() => expect(downloadJSON).toHaveBeenCalled())
     }
     await exportJson()
-    const desktop = vi.mocked(downloadJSON).mock.calls.at(-1)
+    const desktop = vi.mocked(downloadJSON).mock.calls.slice(-1)[0]
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'Visible' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Visible' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
     await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(1))
-    const desktopCsv = vi.mocked(downloadCSV).mock.calls.at(-1)
+    const desktopCsv = vi.mocked(downloadCSV).mock.calls.slice(-1)[0]
     resize(375)
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'Selected (1)' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Selected (1)' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }))
     await waitFor(() => expect(downloadJSON).toHaveBeenCalledTimes(2))
-    expect(vi.mocked(downloadJSON).mock.calls.at(-1)).toEqual(desktop)
+    expect(vi.mocked(downloadJSON).mock.calls.slice(-1)[0]).toEqual(desktop)
     expect(full).toHaveBeenCalledTimes(1)
     expect(desktop?.[1]).toEqual([{ name: 'Zero', amount: 0 }])
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
-    fireEvent.click(screen.getByRole('radio', { name: 'Visible' }))
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Visible' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
     await waitFor(() => expect(downloadCSV).toHaveBeenCalledTimes(2))
     expect(full).toHaveBeenCalledTimes(2)
-    expect(vi.mocked(downloadCSV).mock.calls.at(-1)).toEqual(desktopCsv)
-    expect(vi.mocked(downloadCSV).mock.calls.at(-1)?.[1]).toContain('String zero')
-    expect(vi.mocked(downloadCSV).mock.calls.at(-1)?.[1]).not.toContain('private')
+    expect(vi.mocked(downloadCSV).mock.calls.slice(-1)[0]).toEqual(desktopCsv)
+    expect(vi.mocked(downloadCSV).mock.calls.slice(-1)[0]?.[1]).toContain('String zero')
+    expect(vi.mocked(downloadCSV).mock.calls.slice(-1)[0]?.[1]).not.toContain('private')
     view.unmount()
   })
 
@@ -401,7 +401,7 @@ describe('real DataTable mobile bridge', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }))
     await waitFor(() => expect(downloadJSON).toHaveBeenCalled())
-    expect(vi.mocked(downloadJSON).mock.calls.at(-1)?.[1]).toEqual([
+    expect(vi.mocked(downloadJSON).mock.calls.slice(-1)[0]?.[1]).toEqual([
       { name: 'Zero', amount: 0 }, { name: 'String zero', amount: null },
     ])
   })

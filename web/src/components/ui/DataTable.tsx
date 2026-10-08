@@ -1127,27 +1127,28 @@ export function DataTable<T>({
         )}
         {expandable && (
           <td className={cn(leadingPaddingClass, tableTokens.leadingColWidth)}>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => toggleExpand(rowKey)}
               aria-expanded={expanded}
+              title={rowLabelFor(row, rowKey) ?? undefined}
               aria-label={
                 expanded
                   ? t('table.expand.collapse', 'Collapse row')
                   : t('table.expand.expand', 'Expand row')
               }
               className={cn(
-                'touch-target-overlay inline-flex h-5 w-5 items-center justify-center rounded',
-                'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-                'transition-colors',
+                'h-11 w-11 shrink-0 p-0 md:h-6 md:w-6',
+                'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
               )}
             >
               <ChevronRight
-                className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-90')}
+                className={cn('h-3.5 w-3.5 transition-transform duration-fast motion-reduce:transition-none', expanded && 'rotate-90')}
                 aria-hidden="true"
               />
-            </button>
+            </Button>
           </td>
         )}
         {visibleColumns.map(col => (
@@ -1525,7 +1526,7 @@ export function DataTable<T>({
                       col.sortable && sortKey === col.key && 'text-[var(--text-primary)]',
                       resizable && 'relative group/th',
                       headerReorderEnabled && 'relative cursor-grab active:cursor-grabbing',
-                      isDragOverTarget && 'bg-cyan-500/10 outline outline-1 outline-cyan-400/40',
+                      isDragOverTarget && 'bg-[var(--surface-2)] outline outline-1 outline-[var(--focus-ring)]',
                       col.className,
                     )}
                     style={w != null ? { width: w, minWidth: w } : undefined}
@@ -1555,13 +1556,14 @@ export function DataTable<T>({
                         </span>
                       )}
                       {col.sortable && onSort ? (
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="sm"
                           onClick={() => onSort?.(col.key)}
                           className={cn(
-                            'inline-flex items-center gap-1 cursor-pointer select-none rounded',
+                            'h-auto min-h-11 gap-1 p-0 text-size-inherit font-semibold select-none md:min-h-6',
                             'hover:text-[var(--text-secondary)]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
                           )}
                         >
                           <span>{col.header}</span>
@@ -1571,7 +1573,7 @@ export function DataTable<T>({
                               : <ChevronDown className="h-3 w-3" aria-hidden="true" />
                           )}
                           {sortKey !== col.key && <ArrowUpDown className="h-3 w-3 opacity-50" aria-hidden="true" />}
-                        </button>
+                        </Button>
                       ) : (
                         <span className="inline-flex items-center gap-1">
                           {col.header}

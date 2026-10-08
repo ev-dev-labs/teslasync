@@ -76,7 +76,11 @@ function selectMode(width: number) {
 }
 async function exportAs(format: 'CSV' | 'JSON', scope?: string) {
   fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
-  if (scope) fireEvent.click(screen.getByRole('radio', { name: scope }))
+  if (scope) {
+    const option = screen.getByRole('menuitemradio', { name: scope })
+    fireEvent.click(option)
+    expect(option).toHaveAttribute('aria-checked', 'true')
+  }
   fireEvent.click(screen.getByRole('menuitem', { name: `Download as ${format}` }))
   await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled())
 }
@@ -393,7 +397,7 @@ describe('DataTable production pipeline contracts', () => {
     expect(within(dialog).queryByText('Secret')).toBeNull()
     expect(within(dialog).queryByText('Never disclose')).toBeNull()
     const footer = dialog.querySelector('[data-modal-footer]') as HTMLElement
-    fireEvent.click(within(footer).getByRole('button', { name: 'Close', exact: true }))
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(trigger).toHaveFocus())
     fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[1])
@@ -461,7 +465,7 @@ describe('DataTable production pipeline contracts', () => {
     resize(375)
     fireEvent.click(screen.getByRole('button', { name: 'Load 1 more' }))
     expect(view.container.querySelectorAll('[data-card]')).toHaveLength(2)
-    fireEvent.click(screen.getByRole('button', { name: 'Name', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Name' }))
     expect(sort).toHaveBeenCalledWith('name')
     expect(Array.from(view.container.querySelectorAll('[data-card-label]')).map(node => node.textContent))
       .toEqual(['Numeric zero', 'String zero'])
@@ -482,7 +486,7 @@ describe('DataTable production pipeline contracts', () => {
       mobilePresentation: { ...presentation, state: { kind: 'noMatch', query: 'caller query' }, onClear: clear } })
     resize(375)
     expect(view.container.querySelectorAll('[data-card]')).toHaveLength(0)
-    fireEvent.click(screen.getByRole('button', { name: 'Clear', exact: true }))
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }))
     expect(clear).toHaveBeenCalledTimes(1)
     expect(selection).not.toHaveBeenCalled()
     expect(screen.getByRole('region', { name: 'Bulk actions' })).toHaveTextContent('2 selected')

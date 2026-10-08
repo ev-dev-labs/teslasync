@@ -627,7 +627,7 @@ describe('DataTable — cohesive paging footer', () => {
       paginationControls={controls()} />)
     const frame = container.querySelector('[data-grid-frame]')!
     const viewport = container.querySelector('[data-grid-viewport]')!
-    const footer = container.querySelector('[data-grid-footer]')!
+    const footer = container.querySelector<HTMLElement>('[data-grid-footer]')!
     expect(footer.parentElement).toBe(frame)
     expect(viewport.parentElement).toBe(frame)
     expect(viewport).not.toContainElement(footer)
@@ -810,13 +810,11 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
         url: (this as HTMLAnchorElement).href,
       })
     }
-    // @ts-expect-error — jsdom URL.createObjectURL isn't typed as configurable.
     URL.createObjectURL = vi.fn((blob: Blob) => {
       const url = `blob:test/${blobStash.size + 1}`
       blobStash.set(url, blob)
       return url
     })
-    // @ts-expect-error — jsdom URL.revokeObjectURL isn't typed as configurable.
     URL.revokeObjectURL = vi.fn()
   })
 
@@ -834,8 +832,11 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
 
   function clickExport(format: 'CSV' | 'JSON' = 'CSV', scope: 'visible' | 'selected' = 'visible') {
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
-    const scopeOption = screen.queryByRole('radio', { name: scope === 'selected' ? /Selected \(/ : /^Visible/ })
-    if (scopeOption) fireEvent.click(scopeOption)
+    const scopeOption = screen.queryByRole('menuitemradio', { name: scope === 'selected' ? /Selected \(/ : /^Visible/ })
+    if (scopeOption) {
+      fireEvent.click(scopeOption)
+      expect(scopeOption).toHaveAttribute('aria-checked', 'true')
+    }
     fireEvent.click(screen.getByRole('menuitem', { name: `Download as ${format}` }))
   }
 
@@ -892,8 +893,8 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
       selectable="multi" selectedKeys={[1, 2, 999]}
       paginationControls={{ page: 2, pageSize: 1, total: 3, onPageChange: vi.fn() }} />)
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }))
-    expect(screen.getByRole('radio', { name: 'Selected (1)' })).toBeInTheDocument()
-    expect(screen.queryByRole('radio', { name: 'Selected (3)' })).toBeNull()
+    expect(screen.getByRole('menuitemradio', { name: 'Selected (1)' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitemradio', { name: 'Selected (3)' })).toBeNull()
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
     await waitFor(() => expect(downloads).toHaveLength(1))
     expect(await latestCsv()).toBe('ID,Name,Status\r\n2,Bravo,fail')
