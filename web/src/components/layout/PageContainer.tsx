@@ -11,7 +11,9 @@ import {
   type DataSourceDescriptor,
 } from '@/components/feedback/DataSourceNotice';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button, Tooltip } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Icon } from '@/components/ui/Icon';
 import { Heading, Text } from '@/components/ui/Typography';
 import { Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -150,10 +152,8 @@ export function PageContainer({
   // arrays without guarding at the call site.
   const resolvedQuery: FreshnessQuery | null = (() => {
     if (!query) return null;
-    if (Array.isArray(query)) {
-      return query.length > 0 ? pickWorstQuery(query) : null;
-    }
-    return query as FreshnessQuery;
+    if ('isError' in query) return query;
+    return query.length > 0 ? pickWorstQuery(query) : null;
   })();
 
   return (
@@ -182,10 +182,10 @@ export function PageContainer({
                 the start of the new page's content after a client-side
                 navigation. The attribute name is asserted against
                 `ROUTE_FOCUS_TARGET_ATTR` by the PageContainer test. */}
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <Heading
                 level="page"
-                className="font-bold tracking-[-0.025em] outline-none"
+                className="min-w-0 break-words outline-none"
                 tabIndex={-1}
                 data-route-focus-target="true"
               >
@@ -198,9 +198,9 @@ export function PageContainer({
                     variant="ghost"
                     size="sm"
                     aria-label={`${t('help.tooltip.iconLabel', 'More info')}: ${title}`}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-primary)] sm:h-9 sm:w-9"
+                    className="h-11 w-11 shrink-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] sm:h-9 sm:w-9"
                   >
-                    <Info className="h-4 w-4" aria-hidden="true" />
+                    <Icon icon={Info} />
                   </Button>
                 </Tooltip>
               )}

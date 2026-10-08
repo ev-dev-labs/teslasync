@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PageContainer } from '../PageContainer';
 import { PageHeader } from '../PageHeader';
-import { Button } from '@/components/ui';
-import type { FreshnessQuery } from '@/components/data-display';
+import { Button } from '@/components/ui/Button';
+import type { FreshnessQuery } from '@/components/data-display/DataFreshness';
+import { typography } from '@/lib/tokens';
 
 // Mock react-i18next so PageContainer + DataFreshnessAuto get fallback strings
 // without booting the full i18n runtime.
@@ -42,7 +44,7 @@ function makeQuery(overrides: Partial<FreshnessQuery> = {}): FreshnessQuery {
     dataUpdatedAt: Date.now() - 1000,
     refetch: vi.fn().mockResolvedValue(undefined),
     ...overrides,
-  } as FreshnessQuery;
+  };
 }
 
 function renderWith(ui: React.ReactNode, route = '/drives') {
@@ -56,7 +58,7 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 
 describe('PageContainer', () => {
   it('preserves product names and acronyms in the default empty message', () => {
-    renderWith(<PageContainer title="Tesla API" empty />);
+    renderWith(<PageContainer title="Tesla API" empty>{null}</PageContainer>);
     expect(screen.getByText('No Tesla API found.')).toBeInTheDocument();
   });
 
@@ -133,11 +135,11 @@ describe('PageContainer', () => {
         <div>body</div>
       </PageContainer>,
     );
-    // The chip's status dot uses bg-emerald-400 for the fresh state, which
+    // The chip's status dot uses bg-[var(--semantic-success)] for the fresh state, which
     // is unique enough to confirm DataFreshnessAuto rendered. We also check
     // The shared Button keeps refresh keyboard-operable because refetchable
     // defaults to true.
-    expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument();
+    expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Refresh data/ })).toBeInTheDocument();
   });
 
@@ -149,10 +151,10 @@ describe('PageContainer', () => {
     );
     // No DataFreshnessAuto means no freshness-tier dot colors AND no refresh
     // button hidden inside the header chrome.
-    expect(container.querySelector('.bg-emerald-400')).toBeNull();
-    expect(container.querySelector('.bg-sky-400')).toBeNull();
-    expect(container.querySelector('.bg-amber-400')).toBeNull();
-    expect(container.querySelector('.bg-red-400')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).toBeNull();
   });
 
   it('renders custom actions alongside the freshness chip', () => {
@@ -218,10 +220,10 @@ describe('PageContainer', () => {
         <div>body</div>
       </PageContainer>,
     );
-    // amber-400 is stale; takes priority over fetching (sky) and fresh (emerald).
-    expect(container.querySelector('.bg-amber-400')).toBeInTheDocument();
-    expect(container.querySelector('.bg-sky-400')).toBeNull();
-    expect(container.querySelector('.bg-emerald-400')).toBeNull();
+    // semantic-warning is stale; takes priority over fetching (info) and fresh (success).
+    expect(container.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeInTheDocument();
+    expect(container.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeNull();
   });
 
   it('escalates to error state when any query in the array errors out', () => {
@@ -235,8 +237,8 @@ describe('PageContainer', () => {
       </PageContainer>,
     );
     // Error wins over stale.
-    expect(container.querySelector('.bg-red-400')).toBeInTheDocument();
-    expect(container.querySelector('.bg-amber-400')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).toBeInTheDocument();
+    expect(container.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
   });
 
   it('keeps page content visible while identifying an unavailable named source', () => {
@@ -275,8 +277,8 @@ describe('PageContainer', () => {
         <div>body</div>
       </PageContainer>,
     );
-    expect(container.querySelector('.bg-emerald-400')).toBeNull();
-    expect(container.querySelector('.bg-sky-400')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
   });
 
   it('renders a layout skeleton instead of children when loading=true', () => {
@@ -297,5 +299,97 @@ describe('PageContainer', () => {
     );
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByTestId('hidden-body')).toBeNull();
+  });
+
+  it('uses the shared title role without local tracking and preserves route focus', () => {
+    renderWith(
+      <PageContainer title="A long vehicle and route description that must remain readable">
+        <div>Retained content</div>
+      </PageContainer>,
+    );
+    const heading = screen.getByRole('heading', { level: 1 });
+    for (const token of typography.role.pageTitle.split(' ')) {
+      expect(heading).toHaveClass(token);
+    }
+    expect(heading).toHaveClass('min-w-0', 'break-words');
+    expect(heading.className).not.toContain('tracking-[');
+    expect(heading).toHaveAttribute('tabindex', '-1');
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    heading.focus();
+    expect(heading).toHaveFocus();
+  });
+
+  it('retains keyboard help with shared focus chrome and a decorative icon', async () => {
+    const user = userEvent.setup();
+    renderWith(
+      <PageContainer title="Energy" subtitle="Source details">
+        <div>Retained content</div>
+      </PageContainer>,
+    );
+    const trigger = screen.getByRole('button', { name: 'More info: Energy' });
+    expect(trigger).toHaveClass('h-11', 'w-11', 'sm:h-9', 'sm:w-9');
+    expect(trigger).toHaveClass('focus-visible:outline-[var(--focus-ring)]');
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+    await user.tab();
+    expect(trigger).toHaveFocus();
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Source details');
+    await user.keyboard('{Escape}');
+    expect(trigger).toHaveFocus();
+    expect(screen.getByText('Retained content')).toBeVisible();
+  });
+
+  it('does not turn a raw query error into a fatal page error or hide retained sections', () => {
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    renderWith(
+      <PageContainer title="Energy" query={makeQuery({ isError: true, refetch })}>
+        <section aria-label="Drives">Retained drives</section>
+        <section aria-label="Charging">Retained charging</section>
+      </PageContainer>,
+    );
+    expect(screen.getByRole('region', { name: 'Drives' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Charging' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves explicit empty state and header actions', () => {
+    renderWith(
+      <PageContainer
+        title="Fleet"
+        empty
+        emptyMessage="No matching vehicles"
+        primaryAction={<Button>Sync vehicles</Button>}
+      >
+        <div>Hidden empty body</div>
+      </PageContainer>,
+    );
+    expect(screen.getByText('No matching vehicles')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sync vehicles' })).toBeVisible();
+    expect(screen.queryByText('Hidden empty body')).not.toBeInTheDocument();
+  });
+
+  it('retains scope-first layout and caller classes in an RTL container', () => {
+    const { container } = renderWith(
+      <div dir="rtl">
+        <PageContainer
+          title="طاقة المركبة"
+          compactHeader={false}
+          actionLayout="scope-first"
+          className="space-y-8"
+          contextActions={<Button>Vehicle context</Button>}
+          metadataActions={<span>Source metadata</span>}
+        >
+          <div>Retained content</div>
+        </PageContainer>
+      </div>,
+    );
+    expect(container.querySelector('[data-role="page-container"]')).toHaveClass('space-y-8');
+    expect(container.querySelector('[data-role="page-header"]')).toHaveClass('xl:flex-row', 'py-4');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('طاقة المركبة');
+    expect(screen.getByRole('button', { name: 'Vehicle context' }).closest('[data-action-group]'))
+      .toHaveAttribute('data-action-group', 'context');
+    expect(screen.getByText('Source metadata').closest('[data-action-group]'))
+      .toHaveAttribute('data-action-group', 'metadata');
   });
 });
