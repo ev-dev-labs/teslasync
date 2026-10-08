@@ -15,6 +15,14 @@ describe('restrained foundation presentation', () => {
 
   describe('additive overlay geometry (MDC-024 / MDC-022)', () => {
     const currentConfig = loadConfig(resolve('tailwind.config.js'));
+    const resourceGeometry = [
+      ['gridTemplateColumns', 'metric-compact', 'minmax(0,1fr) minmax(0,1fr) 5rem'],
+      ['minHeight', 'error-fallback', '400px'],
+      ['transitionProperty', 'width', 'width'],
+      ['width', 'command-deck-collapsed', '76px'],
+      ['width', 'command-deck-expanded', '320px'],
+      ['minWidth', 'freshness-age', '4.5rem'],
+    ] as const;
     const remainingGeometry = [
       ['zIndex', 'presentation-controls', '9999'],
       ['zIndex', 'presentation-dimmer', '9998'],
@@ -59,6 +67,7 @@ describe('restrained foundation presentation', () => {
       minHeight: { ...currentConfig.theme?.extend?.minHeight },
       gridTemplateColumns: { ...currentConfig.theme?.extend?.gridTemplateColumns },
       flex: { ...currentConfig.theme?.extend?.flex },
+      transitionProperty: { ...currentConfig.theme?.extend?.transitionProperty },
     };
     const config: typeof currentConfig = {
       ...currentConfig,
@@ -68,7 +77,7 @@ describe('restrained foundation presentation', () => {
       },
     };
     // Exclude only explicitly verified additive roles from the frozen fingerprints.
-    for (const [group, name, value] of [...shellGeometry, ...remainingGeometry]) {
+    for (const [group, name, value] of [...shellGeometry, ...remainingGeometry, ...resourceGeometry]) {
       expect(currentConfig.theme?.extend?.[group]).toHaveProperty(name, value);
       Reflect.deleteProperty(historicalExtensions[group], name);
     }
@@ -120,7 +129,7 @@ describe('restrained foundation presentation', () => {
       return values;
     }
 
-    it('adds only the ten shell and nineteen remaining approved geometry roles to the full accepted config', () => {
+    it('adds only the ten shell, nineteen remaining and six resource geometry roles to the full accepted config', () => {
       const current = resolveConfig(currentConfig);
       const expected = {
         ...resolved,
@@ -135,11 +144,13 @@ describe('restrained foundation presentation', () => {
           minHeight: { ...resolved.theme.minHeight },
           gridTemplateColumns: { ...resolved.theme.gridTemplateColumns },
           flex: { ...resolved.theme.flex },
+          transitionProperty: { ...resolved.theme.transitionProperty },
         },
       };
       expect(shellGeometry).toHaveLength(10);
       expect(remainingGeometry).toHaveLength(19);
-      for (const [group, name, value] of [...shellGeometry, ...remainingGeometry]) {
+      expect(resourceGeometry).toHaveLength(6);
+      for (const [group, name, value] of [...shellGeometry, ...remainingGeometry, ...resourceGeometry]) {
         expect(resolved.theme[group]).not.toHaveProperty(name);
         expect(current.theme[group]).toHaveProperty(name, value);
         Reflect.set(expected.theme[group], name, value);
@@ -155,6 +166,36 @@ describe('restrained foundation presentation', () => {
       });
       expect(createHash('sha256').update(canonical).digest('hex'))
         .toBe('6429653abd11b06c328e4abe19051203bf9727eaf153ecbfc13a700508408d85');
+    });
+
+    it('preserves the exact immediate first-29 predecessor and built-in Combobox minimum', () => {
+      const current = resolveConfig(currentConfig);
+      const predecessor = {
+        ...current,
+        theme: {
+          ...current.theme,
+          width: { ...current.theme.width },
+          minWidth: { ...current.theme.minWidth },
+          minHeight: { ...current.theme.minHeight },
+          gridTemplateColumns: { ...current.theme.gridTemplateColumns },
+          transitionProperty: { ...current.theme.transitionProperty },
+        },
+      };
+      for (const [group, name, value] of resourceGeometry) {
+        expect(current.theme[group]).toHaveProperty(name, value);
+        Reflect.deleteProperty(predecessor.theme[group], name);
+      }
+      const canonical = JSON.stringify(predecessor, (_, value: unknown) => {
+        if (typeof value === 'function') return value.toString();
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const entries = value as Record<string, unknown>;
+          return Object.fromEntries(Object.keys(entries).sort().map((key) => [key, entries[key]]));
+        }
+        return value;
+      });
+      expect(createHash('sha256').update(canonical).digest('hex'))
+        .toBe('b5058f22ff07111acb0e1472273cb36a18b74501a50be0d8e835c8b7bdb52d9f');
+      expect(current.theme.minWidth['24']).toBe('6rem');
     });
 
     it('adds only the approved resolved roles and preserves every prior config entry', () => {

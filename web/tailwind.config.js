@@ -24,6 +24,8 @@ export default {
         'workspace-context': 'min(92vw, 27rem)',
         'alerts-preview': 'min(92vw, 380px)',
         'recent-pages': 'min(92vw, 360px)',
+        'command-deck-collapsed': '76px',
+        'command-deck-expanded': '320px',
       },
       maxWidth: {
         'modal-full': 'min(96vw,1100px)',
@@ -44,10 +46,12 @@ export default {
         'table-filter-viewport': 'calc(100dvh - 2rem)',
       },
       minWidth: {
+        'freshness-age': '4.5rem',
         'background-work': '260px',
         'vehicle-options': '220px',
       },
       gridTemplateColumns: {
+        'metric-compact': 'minmax(0,1fr) minmax(0,1fr) 5rem',
         'replay-shortcuts': 'auto 1fr',
         'page-actions-scope': 'minmax(0,1fr) auto',
       },
@@ -241,6 +245,7 @@ export default {
         'd-row': 'var(--density-row-h)',
       },
       minHeight: {
+        'error-fallback': '400px',
         'side-panel-header': '4.5rem',
         'vehicle-grid': '28rem',
         // Density-aware row height.
@@ -259,6 +264,9 @@ export default {
       // | duration-slow` instead of raw `duration-NNN` numeric utilities so
       // motion timings stay consistent across the app. The audit script
       // `scripts/auditMotionTokens.mjs` enforces this.
+      transitionProperty: {
+        width: 'width',
+      },
       transitionDuration: {
         fast: 'var(--motion-duration-fast)',
         normal: 'var(--motion-duration-normal)',
