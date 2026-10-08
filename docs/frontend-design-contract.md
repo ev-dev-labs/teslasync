@@ -1338,3 +1338,136 @@ It changes no source or data semantics and clears no implementation, scanner,
 browser/native/contrast or mission §§43–45 gate. Application TypeScript,
 tests/lint/build, docs build and runtime QA are **NOT RUN / NOT CLAIMED** here;
 no broad waiver or catalog/root extension is needed for this mapping.
+
+## Hero stream observation and retained trust — P172 / MDC-026 addendum
+
+**`phase3-hero-observation-contract`, attempt 1: docs-only decision.**
+Preserve the accepted **101320-byte** prefix exactly, SHA-256
+`1605f3da7414182a5ca70cd2e2f8c35ce5113fd096b2361ce1e1672d89da9ffc`.
+This explicitly authorizes a bounded extension of the existing shared Hero:
+global justification is preventing a stream timestamp from becoming a false
+measurement-freshness claim in a reused renderer, not a speculative second
+consumer or new trust framework. Styling delivery is not freshness acceptance.
+
+### Actual evidence and optional API
+
+`internal\service\current_state.go:345–373` selects the newest real, non-null,
+timestamped, non-synthetic live signal across the vehicle stream.
+`web\src\api\hooks\useVehicles.ts:126–150` already maps `observed_at` to
+`observedAt: number | null` and exposes the existing `VehicleStateFreshness`
+(`fresh/stale/unknown`). `verifiedFields` records winning-value provenance;
+it does **not** supply individual observation times or absent-field coverage.
+No backend capability is needed for stream observation. Per-reading freshness,
+completeness and continuous coverage remain unestablished by this response.
+QuickStatsPage:92–93/195–205 currently passes only `stateData?.state`; the
+mapped metadata is discarded at the Hero boundary. Query/DataState `updatedAt`
+is last successful **fetch**, never a substitute observation timestamp.
+
+Approve these optional additions to `VehicleHeroCardProps`, and no new enum,
+server field, hook or domain model:
+
+```ts
+dataState?: DataState<unknown>;
+observation?: {
+  observedAt: number | null;
+  freshness: VehicleStateFreshness;
+} | null;
+```
+
+Use the existing types from `@/api/dataState` and `@/api/hooks/useVehicles`.
+The caller owns derivation, provenance and source policy; Hero renders the
+existing `vehicleState` prop, not an independently decoded DataState payload.
+Keep these new props out of forwarded DOM attributes. Omitting them preserves
+the original identity/readings/photo/actions/ref/HTML API and layout behavior,
+but establishes no observation or fresh/complete claim. No required prop,
+replacement reading interface, automatic query, new selection or local clock
+as observation. Use existing `useDateFormat`/date helpers with a validated Date
+from server epoch milliseconds; invalid/null/non-finite instants stay unknown.
+
+### Trust, labels and limits
+
+- Keep DataState's exact initial/ok/stale/partial/unavailable/initialFailure
+  and live/cached/historical/inferred/repaired/unknown vocabulary. `ok` is
+  request success here, **not** proof that all Hero values are fresh/complete.
+  `live` identifies pipeline provenance, not vehicle online state.
+- Retain every usable reading through refresh errors, stale observations,
+  partial sources and paused refresh. Only `fatalError` without retained
+  readings replaces this source's body; identity/navigation and neighboring
+  sources remain. Missing individual readings stay `—`, including partial
+  payloads with valid zero/false. Missing metadata is unknown, not unavailable,
+  offline or measured zero; unavailable requires authoritative source evidence.
+- `isRefreshBlocked` means paused/deferred refresh, not proven device or vehicle
+  offline. Never manufacture a refresh error. Reuse SourceContent retained
+  presentation and StaleRefreshWarning with source-specific retry; avoid two
+  notices/retries for one event. Do not use `dataSources.status.paused`
+  (“Paused offline”) or `dataState.refreshBlocked.message` to assert an
+  unverified connectivity cause.
+- Use existing exact labels: `statusBar.connectionDiagnostics.telemetry`
+  (“Telemetry stream”) scopes
+  `dashboard.fleetPosture.scope.observed` (“Last real observation {{age}}”).
+  Format that age from `observation.observedAt`, not fetch time.
+  `dashboard.fleetPosture.scope.noObservation` (“No verified observation time
+  for this vehicle”) and `common.unknown` (“Unknown”) cover absent evidence.
+  `freshness.stale` (“Stale”) may qualify the **stream**, never each gauge.
+  Do not use `freshness.fresh` (“Up to date”) as blanket Hero assurance,
+  `freshness.lastUpdated` as an observation label, or infer freshness from a
+  successful fetch/`live` boolean. Retained observation age continues to grow;
+  an observation initially marked fresh must not remain so indefinitely.
+  Reuse the existing hook freshness resolver/window, not a new threshold.
+- Request retention and stream age are separate: stale refresh can retain a
+  recent observation; successful refetch can return an old/unknown observation.
+  Historical provenance must not receive a live-stream assurance. Unknown
+  provenance stays unknown; do not infer a precise server source from `live`.
+  `freshness.source` (“Source: {{source}}”) requires an established, localized
+  source label, not an invented wire field or guessed source.
+- Existing catalog has stream/observation labels but lacks a Hero-scoped
+  qualification that individual reading timestamps and completeness are not
+  supplied. **Report this as a bounded catalog prerequisite**, not permission
+  for inline English, a new invented key/copy or reuse of unrelated two-reading
+  battery copy. Catalog owner must approve that exact scope before rendering
+  the combined observation presentation. This document's limitation is a
+  design requirement, not newly shipped UI copy.
+
+Vehicle StatusBadge/FSM meaning remains distinct from trust: preserve current
+state precedence, selection, online/offline operational interpretation and
+links; trust metadata never rewrites `vehicle.state` or `vehicleState.state`.
+No per-reading badge, verified-complete indicator or fake timestamp. Source
+uncertainty is readable text, not color alone or announcements on every tick.
+
+### Bounded owners and dependency order
+
+1. **Catalog owner**, separately leased: only
+   `web\src\i18n\en.json`'s existing `vehicleHero` scope for the missing
+   observation limitation and its normal generated outputs (currently
+   `en\locale-detail-vehicleHero.json`, plus vehicleHero copies in
+   `en\locale-dashboard.json`, `en\locale-vehicles.json`, `en\locale-admin.json`
+   and required generated manifests). Obtain that explicit atomic lease before
+   regeneration; no unrelated catalog changes, new namespace, translation
+   campaign, status renaming or token/scanner work.
+2. **Hero API/test owner**, separately leased after this decision and catalog
+   acceptance: only `web\src\components\vehicles\VehicleHeroCard.tsx` and
+   `VehicleHeroCard.test.tsx`. Preserve the current accepted implementation and
+   all original assertions. Cover omitted props, true server/null/invalid
+   observation, growing age, stream-stale versus fetch-stale, retained error,
+   paused without error/offline assertion, partial/null/zero/false readings,
+   historical/unknown provenance, independent vehicle state, retries and
+   non-forwarded props. Reuse existing feedback/typography/date helpers;
+   no shared helper/type/hook/server/catalog writes under this lease.
+3. **QuickStats caller integration**, separately leased **after both the
+   QuickStats page migration and Hero API acceptance**: only
+   `web\src\features\dashboard\pages\QuickStatsPage.tsx` and its adjacent page
+   test. Derive DataState from the same selected vehicle state query, pass its
+   retained observation metadata alongside the unchanged readings, preserve
+   as-of/query policy and workspace selection, and deduplicate source notices.
+   Tests cover selection changes without attaching another vehicle's metadata,
+   retained/paused/error recovery and fetch time never becoming observation.
+   No page migration dependency on this integration, and no other Hero callers
+   silently migrated; later consumers require their own scoped evidence.
+
+Owners run their authorized scoped preservation/tests/lint/typing/scanner
+checks; composed QA remains separately owned for themes, RTL/long text,
+keyboard, narrow widths and accessible trust interpretation. This decision
+verifies prefix/hash and narrowly read-only source/label evidence only, in
+`.agent-status\receipts\phase3-hero-observation-contract-checks.log`.
+No UI/runtime/browser/composed acceptance, backend change, application or docs
+build, TypeScript, tests, scanner or full gates are run or claimed here.
