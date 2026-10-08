@@ -12,7 +12,7 @@
  */
 import '@/i18n';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import {
@@ -317,6 +317,338 @@ describe('AddAnnotationPopover — cancel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(onAdd).not.toHaveBeenCalled();
+  });
+
+  function deferred() {
+    let resolve!: () => void;
+    let reject!: (reason: Error) => void;
+    const promise = new Promise<void>((fulfill, fail) => {
+      resolve = fulfill;
+      reject = fail;
+    });
+    return { promise, resolve, reject };
+  }
+
+  describe('AddAnnotationPopover — async lifecycle', () => {
+    it('keeps the entire draft busy and unchanged, blocks duplicate click/Enter and every pending dismissal', async () => {
+      const user = userEvent.setup();
+      const request = deferred();
+      const onAdd = vi.fn(() => request.promise);
+      const onAdded = vi.fn();
+      const onCancel = vi.fn();
+      renderPopover({ editableDate: true, onAdd, onAdded, onCancel });
+      await user.type(labelInput(), '  Draft label  ');
+      typeInto(descriptionInput(), '  Draft description  ');
+      typeInto(dateInput(), '2025-04-20');
+      await user.click(catButton('Custom'));
+      await user.click(labelInput());
+      expect(labelInput()).toHaveFocus();
+      fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+      await user.keyboard('{Enter}');
+      fireEvent.submit(getForm());
+      fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      expect(onAdd).toHaveBeenCalledWith('Draft label', 'custom', 'Draft description', '2025-04-20T00:00:00Z');
+      expect(onAdded).not.toHaveBeenCalled();
+      expect(getForm()).toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByRole('status')).toHaveTextContent('Saving');
+      expect(screen.getByRole('button', { name: 'Add Annotation' })).toHaveAttribute('aria-busy', 'true');
+      expect(labelInput()).toBeDisabled();
+      expect(descriptionInput()).toBeDisabled();
+      expect(dateInput()).toBeDisabled();
+      for (const name of ['Milestone', 'Maintenance', 'Trip', 'Issue', 'Upgrade', 'Custom']) {
+        expect(catButton(name)).toBeDisabled();
+      }
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+      typeInto(labelInput(), 'Forbidden change');
+      typeInto(descriptionInput(), 'Forbidden change');
+      typeInto(dateInput(), '2025-01-01');
+      fireEvent.click(catButton('Trip'));
+
+      const outerEscape = vi.fn();
+      document.addEventListener('keydown', outerEscape);
+      try {
+        expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement);
+        await user.keyboard('{Escape}');
+        expect(outerEscape).not.toHaveBeenCalled();
+        await user.click(screen.getByRole('button', { name: 'Close' }));
+        expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+        await user.keyboard('{Escape}');
+        expect(outerEscape).not.toHaveBeenCalled();
+      } finally {
+        document.removeEventListener('keydown', outerEscape);
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      const backdrop = screen.getByRole('dialog').parentElement?.previousElementSibling;
+      if (!backdrop) throw new Error('Modal backdrop not found');
+      fireEvent.click(backdrop);
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(labelInput().value).toBe('  Draft label  ');
+      expect(descriptionInput().value).toBe('  Draft description  ');
+      expect(dateInput().value).toBe('2025-04-20');
+      expect(catButton('Custom')).toHaveAttribute('aria-pressed', 'true');
+
+      await act(async () => { request.resolve(); await request.promise; });
+      expect(onAdded).toHaveBeenCalledTimes(1);
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(labelInput().value).toBe('');
+      expect(descriptionInput().value).toBe('');
+      expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+      expect(getForm()).not.toHaveAttribute('aria-busy');
+      expect(screen.queryByRole('status')).toBeNull();
+    });
+
+    it('retains a rejected draft and focused field, then submits edited normalized retry only once after fulfillment', async () => {
+      const first = deferred();
+      const retry = deferred();
+      const onAdd = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(retry.promise);
+      const onAdded = vi.fn();
+      renderPopover({ editableDate: true, onAdd, onAdded });
+      typeInto(labelInput(), '  Original  ');
+      typeInto(descriptionInput(), '  Original description  ');
+      typeInto(dateInput(), '2025-04-20');
+      fireEvent.click(catButton('Maintenance'));
+      labelInput().focus();
+      fireEvent.submit(getForm());
+      await act(async () => { first.reject(new Error('Rejected POST')); await first.promise.catch(() => {}); });
+
+      expect(labelInput().value).toBe('  Original  ');
+      expect(descriptionInput().value).toBe('  Original description  ');
+      expect(dateInput().value).toBe('2025-04-20');
+      expect(catButton('Maintenance')).toHaveAttribute('aria-pressed', 'true');
+      expect(labelInput()).toHaveFocus();
+      expect(labelInput()).toBeEnabled();
+      expect(descriptionInput()).toBeEnabled();
+      expect(dateInput()).toBeEnabled();
+      expect(catButton('Trip')).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+      expect(screen.getByRole('alert')).toHaveTextContent('Failed to add annotation');
+      expect(screen.getByRole('alert')).toHaveTextContent('Please try again');
+      expect(getForm()).toHaveAttribute('aria-describedby', screen.getByRole('alert').id);
+      expect(onAdded).not.toHaveBeenCalled();
+
+      typeInto(labelInput(), '  Edited retry  ');
+      typeInto(descriptionInput(), '  Edited note  ');
+      typeInto(dateInput(), '2025-05-15');
+      fireEvent.click(catButton('Trip'));
+      fireEvent.submit(getForm());
+      expect(onAdd).toHaveBeenCalledTimes(2);
+      expect(onAdd).toHaveBeenLastCalledWith('Edited retry', 'trip', 'Edited note', '2025-05-15T00:00:00Z');
+      expect(labelInput().value).toBe('  Edited retry  ');
+      expect(dateInput().value).toBe('2025-05-15');
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(onAdded).not.toHaveBeenCalled();
+      await act(async () => { retry.resolve(); await retry.promise; });
+      expect(onAdded).toHaveBeenCalledTimes(1);
+      expect(labelInput().value).toBe('');
+      expect(descriptionInput().value).toBe('');
+      expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('latches synchronously before invoking even a reentrant callback', () => {
+      const onAdd = vi.fn(() => {
+        fireEvent.submit(getForm());
+      });
+      const onAdded = vi.fn();
+      renderPopover({ onAdd, onAdded });
+      typeInto(labelInput(), 'Legacy void');
+      fireEvent.submit(getForm());
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      expect(onAdded).toHaveBeenCalledTimes(1);
+      expect(labelInput().value).toBe('');
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('retains all fields on synchronous throw and keeps validation before retry', () => {
+      const onAdd = vi.fn(() => { throw new Error('Missing capability'); });
+      const onAdded = vi.fn();
+      renderPopover({ editableDate: true, onAdd, onAdded });
+      typeInto(labelInput(), '  Original  ');
+      typeInto(descriptionInput(), '  Note  ');
+      typeInto(dateInput(), '2025-04-20');
+      fireEvent.click(catButton('Issue'));
+      fireEvent.submit(getForm());
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      expect(onAdded).not.toHaveBeenCalled();
+      expect(labelInput().value).toBe('  Original  ');
+      expect(descriptionInput().value).toBe('  Note  ');
+      expect(dateInput().value).toBe('2025-04-20');
+      expect(catButton('Issue')).toHaveAttribute('aria-pressed', 'true');
+      expect(labelInput()).toBeEnabled();
+      expect(screen.getByRole('alert')).toHaveTextContent('Failed to add annotation');
+      typeInto(labelInput(), '  ');
+      fireEvent.submit(getForm());
+      typeInto(labelInput(), 'Valid');
+      typeInto(dateInput(), '');
+      fireEvent.submit(getForm());
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['Cancel', 'Close', 'Escape'])('explicit idle %s discards rejected draft without success notification', async (dismissal) => {
+      const request = deferred();
+      const onAdded = vi.fn();
+      const onCancel = vi.fn();
+      const onAdd = vi.fn(() => request.promise);
+      const user = userEvent.setup();
+      renderPopover({ onAdd, onAdded, onCancel });
+      typeInto(labelInput(), 'Discard this');
+      typeInto(descriptionInput(), 'Discard note');
+      fireEvent.click(catButton('Custom'));
+      fireEvent.submit(getForm());
+      await act(async () => { request.reject(new Error('Failure')); await request.promise.catch(() => {}); });
+      if (dismissal === 'Escape') {
+        await user.click(labelInput());
+        expect(labelInput()).toHaveFocus();
+        await user.keyboard('{Escape}');
+      } else {
+        fireEvent.click(screen.getByRole('button', { name: dismissal }));
+      }
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onAdded).not.toHaveBeenCalled();
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      expect(labelInput().value).toBe('');
+      expect(descriptionInput().value).toBe('');
+      expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it.each(['void', 'promise'])('does not turn %s success notification failure into a rejected create or duplicate POST', async (kind) => {
+      const request = deferred();
+      const onAdd = vi.fn(() => kind === 'promise' ? request.promise : undefined);
+      const onAdded = vi.fn(() => { throw new Error('Notification failed'); });
+      renderPopover({ onAdd, onAdded });
+      typeInto(labelInput(), 'Confirmed save');
+      fireEvent.submit(getForm());
+      if (kind === 'promise') {
+        expect(onAdded).not.toHaveBeenCalled();
+        await act(async () => { request.resolve(); await request.promise; });
+      }
+      expect(onAdded).toHaveBeenCalledTimes(1);
+      expect(labelInput().value).toBe('');
+      expect(screen.getByRole('alert')).toHaveTextContent('Annotation added');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Failed to add annotation');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Please try again');
+      expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeDisabled();
+      fireEvent.submit(getForm());
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['resolve', 'reject'])('disposes old %s settlement authority across unmount and a new mounted form', async (outcome) => {
+      const request = deferred();
+      const oldAdded = vi.fn();
+      const oldCancel = vi.fn();
+      const old = render(<AddAnnotationPopover open timestamp={TS} onAdd={() => request.promise} onAdded={oldAdded} onCancel={oldCancel} />);
+      typeInto(labelInput(), 'Old attempt');
+      fireEvent.submit(getForm());
+      old.unmount();
+      const current = deferred();
+      const currentAdded = vi.fn();
+      const currentAdd = vi.fn(() => current.promise);
+      renderPopover({ onAdd: currentAdd, onAdded: currentAdded });
+      typeInto(labelInput(), 'New attempt');
+      labelInput().focus();
+      fireEvent.submit(getForm());
+      await act(async () => {
+        if (outcome === 'resolve') request.resolve();
+        else request.reject(new Error('Old rejection'));
+        await request.promise.catch(() => {});
+      });
+      expect(oldAdded).not.toHaveBeenCalled();
+      expect(oldCancel).not.toHaveBeenCalled();
+      expect(currentAdded).not.toHaveBeenCalled();
+      expect(labelInput().value).toBe('New attempt');
+      expect(labelInput()).toHaveFocus();
+      expect(getForm()).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByRole('alert')).toBeNull();
+      fireEvent.submit(getForm());
+      expect(currentAdd).toHaveBeenCalledTimes(1);
+      await act(async () => { current.resolve(); await current.promise; });
+      expect(currentAdded).toHaveBeenCalledTimes(1);
+      expect(labelInput().value).toBe('');
+    });
+
+    it.each(['Cancel', 'Close', 'Escape'])('releases a failed manual date only after explicit %s and accepts a fresh opening timestamp', async (dismissal) => {
+      const request = deferred();
+      const onAdd = vi.fn(() => request.promise);
+      const onCancel = vi.fn();
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <AddAnnotationPopover open editableDate timestamp={TS} onAdd={onAdd} onCancel={onCancel} />,
+      );
+      typeInto(labelInput(), '  Retained label  ');
+      typeInto(descriptionInput(), '  Retained note  ');
+      typeInto(dateInput(), '2025-04-20');
+      fireEvent.click(catButton('Custom'));
+      fireEvent.submit(getForm());
+      await act(async () => { request.reject(new Error('Rejected')); await request.promise.catch(() => {}); });
+      const nextTimestamp = '2025-05-15T12:00:00Z';
+      rerender(<AddAnnotationPopover open editableDate timestamp={nextTimestamp} onAdd={onAdd} onCancel={onCancel} />);
+      expect(dateInput().value).toBe('2025-04-20');
+      expect(labelInput().value).toBe('  Retained label  ');
+      expect(descriptionInput().value).toBe('  Retained note  ');
+      expect(catButton('Custom')).toHaveAttribute('aria-pressed', 'true');
+      if (dismissal === 'Escape') {
+        await user.click(labelInput());
+        await user.keyboard('{Escape}');
+      } else {
+        fireEvent.click(screen.getByRole('button', { name: dismissal }));
+      }
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      rerender(<AddAnnotationPopover open={false} editableDate timestamp={nextTimestamp} onAdd={onAdd} onCancel={onCancel} />);
+      rerender(<AddAnnotationPopover open editableDate timestamp={nextTimestamp} onAdd={onAdd} onCancel={onCancel} />);
+      expect(dateInput().value).toBe('2025-05-15');
+      expect(labelInput().value).toBe('');
+      expect(descriptionInput().value).toBe('');
+      expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports an asynchronous notification rejection as saved, never as a retryable create failure', async () => {
+      const notification = deferred();
+      const onAdd = vi.fn();
+      const onAdded = vi.fn(() => notification.promise);
+      renderPopover({ onAdd, onAdded });
+      typeInto(labelInput(), 'Saved');
+      fireEvent.submit(getForm());
+      expect(labelInput().value).toBe('');
+      expect(onAdded).toHaveBeenCalledTimes(1);
+      await act(async () => { notification.reject(new Error('Notification failed')); await notification.promise.catch(() => {}); });
+      expect(screen.getByRole('alert')).toHaveTextContent('Annotation added');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Please try again');
+      expect(screen.getByRole('alert')).not.toHaveTextContent('Failed to add annotation');
+      expect(labelInput()).toBeDisabled();
+      typeInto(labelInput(), 'Saved');
+      fireEvent.submit(getForm());
+      expect(onAdd).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(labelInput()).toBeEnabled();
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('ignores notification rejection from a saved instance after explicit discard and reopening', async () => {
+      const notification = deferred();
+      const onAdd = vi.fn();
+      const onAdded = vi.fn(() => notification.promise);
+      const onCancel = vi.fn();
+      const { rerender } = render(
+        <AddAnnotationPopover open timestamp={TS} onAdd={onAdd} onAdded={onAdded} onCancel={onCancel} />,
+      );
+      typeInto(labelInput(), 'Saved');
+      fireEvent.submit(getForm());
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      rerender(<AddAnnotationPopover open={false} timestamp={TS} onAdd={onAdd} onAdded={onAdded} onCancel={onCancel} />);
+      rerender(<AddAnnotationPopover open timestamp={TS} onAdd={onAdd} onAdded={onAdded} onCancel={onCancel} />);
+      typeInto(labelInput(), 'Fresh draft');
+      await act(async () => { notification.reject(new Error('Old notification')); await notification.promise.catch(() => {}); });
+      expect(labelInput().value).toBe('Fresh draft');
+      expect(labelInput()).toBeEnabled();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('invokes onCancel from the modal Close (X) affordance', () => {
