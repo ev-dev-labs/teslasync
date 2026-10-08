@@ -1364,7 +1364,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 onKeyDown={mode !== 'search' ? handleInputKey : undefined}
               >
                 {displayItems.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-[var(--text-muted)]">
+                  <Text as="div" variant="bodySm" className="break-words py-8 text-center text-[var(--text-muted)]">
                     {mode === 'vehicle-select'
                       ? t('palette.noVehicles', 'No vehicles available')
                       : mode === 'alert-select'
@@ -1380,18 +1380,19 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                           })
                         : t('palette.noResults', { query: scopedTerm || query, defaultValue: `No results for "${scopedTerm || query}"` })
                     }
-                  </div>
+                  </Text>
                 ) : (
                   groupedItems.map((group, groupIndex) => (
                     <div key={`${group.section}-${groupIndex}`} role="group" aria-label={group.section}>
-                      <div className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                      <Text as="div" variant="label" className="break-words px-4 pt-3 pb-1">
                         {group.section}
-                      </div>
+                      </Text>
                       {group.items.map(({ item, globalIndex }) => {
                         const isCommand = item.type === 'command'
                         const isSelected = globalIndex === effectiveSelectedIndex
                         return (
-                          <button
+                          <Button
+                            variant="ghost"
                             key={item.id}
                             id={paletteRowId(globalIndex)}
                             role="option"
@@ -1409,62 +1410,59 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(
-                              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors min-h-[44px]',
+                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm px-4 py-3 text-start',
                               isSelected
-                                ? 'bg-[rgba(var(--theme-primary-rgb),0.10)] text-[var(--text-primary)] ring-1 ring-[rgba(var(--theme-primary-rgb),0.18)]'
+                                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                                 : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
                             )}
                           >
-                            <span className={cn(
-                              'flex-shrink-0',
-                              isCommand
-                                ? isSelected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-primary)] opacity-70'
-                                : isSelected ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
-                            )}>
+                            <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">
                               {item.icon}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium truncate">{item.label}</span>
+                              <div className="flex min-w-0 items-start gap-2">
+                                <Text variant="bodySm" className="min-w-0 break-words font-medium">{item.label}</Text>
                                 {isCommand && (
-                                  <Zap className="h-3 w-3 flex-shrink-0 text-[var(--theme-primary)] opacity-70" />
+                                  <Zap className="h-3 w-3 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                                 )}
                               </div>
                               {item.sublabel && (
-                                <span className="block truncate text-xs text-[var(--text-muted)]">
+                                <Text variant="caption" className="block break-words">
                                   {item.sublabel}
-                                </span>
+                                </Text>
                               )}
                             </div>
                             {item.shortcut && (
-                              <kbd
+                              <Text as="kbd" variant="caption" mono
                                 aria-label={t('palette.shortcut', { keys: item.shortcut, defaultValue: `Shortcut: ${item.shortcut}` })}
-                                className="hidden flex-shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:inline-flex"
+                                className="hidden shrink-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 sm:inline-flex"
                               >
                                 {item.shortcut}
-                              </kbd>
+                              </Text>
                             )}
                             {isSelected && (
-                              <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-[var(--theme-primary)]" />
+                              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-secondary)] rtl:rotate-180" aria-hidden="true" />
                             )}
-                          </button>
+                          </Button>
                         )
                       })}
                     </div>
                   ))
                 )}
                 {showViewAllResults && mode === 'search' && (
-                  <div className="border-t border-[var(--glass-border)] mt-1 pt-2">
-                    <button
+                  <div className="border-t border-[var(--border-default)] mt-1 pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
                       onClick={() => go(`/search?q=${encodeURIComponent(debouncedQuery)}`)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                      className="flex h-auto min-h-11 w-full items-center justify-between gap-3 whitespace-normal rounded-shape-sm px-4 py-2 text-start text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
-                      <span className="flex items-center gap-2">
-                        <Search className="h-3.5 w-3.5" />
-                        {t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Search className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <Text variant="bodySm" className="min-w-0 break-words">{t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}</Text>
                       </span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 rtl:rotate-180" aria-hidden="true" />
+                    </Button>
                   </div>
                 )}
               </div>

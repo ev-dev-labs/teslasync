@@ -173,6 +173,56 @@ beforeEach(() => {
   requestMock.mockResolvedValue({})
 })
 
+describe('CommandPalette result presentation', () => {
+  it('keeps long result text reachable, logical alignment and actual selection/navigation', async () => {
+    const title = `Alpha ${'رحلةطويلة'.repeat(24)}`
+    const subtitle = 'Long source description '.repeat(16).trim()
+    render(<div dir="rtl"><CommandPalette initialOpen /><LocationProbe /></div>, {
+      wrapper: makeWrapper(makeVehicles(), [], {
+        alpha: { query: 'alpha', hits: [{ type: 'drive', id: 77, title, subtitle, url: '/drives/77', score: 100 }] },
+      }),
+    })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'alpha' } })
+    const label = await screen.findByText(title)
+    const row = label.closest('[role="option"]')!
+    expect(label).toHaveClass('break-words', 'min-w-0')
+    expect(screen.getByText(subtitle)).toHaveClass('break-words')
+    expect(row).toHaveClass('text-start', 'min-h-11', 'h-auto', 'whitespace-normal')
+    expect(row).not.toHaveClass('text-left')
+    expect(row.querySelector('.truncate')).toBeNull()
+    expect(row).toHaveAttribute('tabindex', '-1')
+    fireEvent.mouseEnter(row)
+    expect(row).toHaveAttribute('aria-selected', 'true')
+    expect(input).toHaveAttribute('aria-activedescendant', row.id)
+    expect(row).toHaveClass('bg-[var(--surface-2)]')
+    expect(row.querySelector('.rtl\\:rotate-180')).toHaveAttribute('aria-hidden', 'true')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives/77'))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('keeps the wrapping view-all target focusable and navigates with its exact query', async () => {
+    const query = `alpha ${'extended query '.repeat(12)}`.trim()
+    render(<><CommandPalette initialOpen /><LocationProbe /></>, {
+      wrapper: makeWrapper(makeVehicles(), [], {
+        [query]: { query, hits: [{ type: 'drive', id: 77, title: 'Alpha commute', subtitle: 'Drive', url: '/drives/77', score: 100 }] },
+      }),
+    })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })
+    const target = await screen.findByRole('button', { name: `View all results for "${query}"` })
+    expect(target).toHaveClass('min-h-11', 'h-auto', 'text-start', 'whitespace-normal', 'focus-visible:outline-2')
+    expect(target.querySelector('.break-words')).toHaveTextContent(query)
+    expect(target.querySelector('.rtl\\:rotate-180')).toHaveAttribute('aria-hidden', 'true')
+    expect(getShellFocusableElements(screen.getByRole('dialog'))).toContain(target)
+    act(() => target.focus())
+    expect(target).toHaveFocus()
+    fireEvent.click(target)
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(`/search?q=${encodeURIComponent(query)}`))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+})
+
 afterEach(() => {
   localStorage.clear()
   sessionStorage.clear()
