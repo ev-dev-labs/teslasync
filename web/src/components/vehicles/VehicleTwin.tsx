@@ -963,21 +963,18 @@ function HeadlightGlows({
       )}
       {headlightsActive && (
         <>
-          <motion.ellipse
+          <ellipse
             cx={66}
             cy={181}
             rx={16}
             ry={6}
             fill={C.headlightGlow}
-            filter={`url(#${ids.glow})`}
-            animate={ambientFrames({ opacity: driveIn ? [0.1, 0.95, 0.22, 0.85, 0.28] : [0.35, 0.85, 0.35] })}
-            transition={ambientLoop(driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' })}
+            opacity={0.28}
           />
-          <motion.path
+          <path
             d="M 44 194 L 0 180 L 0 216 Z"
             fill={C.headlightBeam}
-            animate={ambientFrames({ opacity: driveIn ? [0, 0.72, 0.18, 0.58, 0.12] : [0.45, 0.8, 0.45] })}
-            transition={ambientLoop(driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' })}
+            opacity={0.12}
           />
         </>
       )}
@@ -1043,24 +1040,21 @@ function TaillightGlows({
       )}
       {driveIn && (
         <>
-          <motion.ellipse
+          <ellipse
             cx={543}
             cy={148}
             rx={18}
             ry={9}
             fill={C.taillightActive}
-            filter={`url(#${ids.glow})`}
-            animate={ambientFrames({ opacity: [0, 0.95, 0.18, 0.9, 0.22] })}
-            transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
+            opacity={0.18}
           />
-          <motion.path
+          <path
             d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5"
             fill="none"
             stroke={C.taillightActive}
             strokeWidth={3.6}
             strokeLinecap="round"
-            animate={ambientFrames({ opacity: [0, 1, 0.2, 1, 0.35] })}
-            transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
+            opacity={0.35}
           />
         </>
       )}

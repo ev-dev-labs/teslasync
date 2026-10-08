@@ -44,6 +44,82 @@ const baseTwinState = {
 } satisfies VehicleTwinProps;
 
 describe('VehicleTwin', () => {
+  it.each([false, true])('keeps light emission bounded and static with reduced motion=%s', async reduce => {
+    motionPreference.reduce = reduce;
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} headlights driveIn />);
+    const emissions = [
+      ['ellipse[cx="66"][cy="181"]', '0.28'],
+      ['path[d="M 44 194 L 0 180 L 0 216 Z"]', '0.12'],
+      ['ellipse[cx="543"][cy="148"][rx="18"]', '0.18'],
+      ['path[d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5"]', '0.35'],
+    ] as const;
+    const assertStatic = () => {
+      for (const [index, [selector, opacity]] of emissions.entries()) {
+        const emission = container.querySelector(selector);
+        if (index >= 2 && motionPreference.reduce) {
+          expect(emission).toBeNull();
+          continue;
+        }
+        expect(emission).toHaveAttribute('opacity', opacity);
+        expect(emission).not.toHaveAttribute('filter');
+        expect(emission).not.toHaveAttribute('style');
+      }
+    };
+    assertStatic();
+    await act(async () => {
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    assertStatic();
+    motionPreference.reduce = !reduce;
+    rerender(<VehicleTwin {...baseTwinState} headlights driveIn />);
+    assertStatic();
+    rerender(<VehicleTwin {...baseTwinState} headlights />);
+    for (const [selector, opacity] of emissions.slice(0, 2)) {
+      expect(container.querySelector(selector)).toHaveAttribute('opacity', opacity);
+    }
+    for (const [selector] of emissions.slice(2)) expect(container.querySelector(selector)).toBeNull();
+    for (const headlights of [false, null] as const) {
+      rerender(<VehicleTwin {...baseTwinState} headlights={headlights} />);
+      for (const [selector] of emissions) expect(container.querySelector(selector)).toBeNull();
+    }
+    rerender(<VehicleTwin {...baseTwinState} headlights={null} driveIn />);
+    if (motionPreference.reduce) {
+      for (const [selector] of emissions) expect(container.querySelector(selector)).toBeNull();
+    } else assertStatic();
+  });
+
+  it('retains real turn feedback and reduced-mode static SVG opacity', async () => {
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} hazards />);
+    const lamps = () => [
+      container.querySelector('ellipse[cx="90"][cy="180"]'),
+      container.querySelector('path[fill="none"][stroke-width="2"][d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5 C 544 156.2 540.5 154.5 539 151.5 C 537.8 148 538 144 538.5 141 Z"]'),
+    ];
+    await waitFor(() => {
+      for (const lamp of lamps()) {
+        const opacity = Number(lamp?.getAttribute('opacity'));
+        expect(opacity).toBeGreaterThan(0.15);
+        expect(opacity).toBeLessThan(1);
+      }
+    });
+    motionPreference.reduce = true;
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query === '(prefers-reduced-motion: reduce)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    rerender(<VehicleTwin {...baseTwinState} turnSignal="both" />);
+    await waitFor(() => {
+      for (const lamp of lamps()) expect(lamp).toHaveAttribute('opacity', '1');
+    });
+    rerender(<VehicleTwin {...baseTwinState} turnSignal={null} hazards={null} />);
+    for (const lamp of lamps()) expect(lamp).toBeNull();
+  });
+
   it.each([false, true])('keeps passenger warning paths static with reduced motion=%s', async reduce => {
     motionPreference.reduce = reduce;
     const doors = { ...baseTwinState.doors, passengerFront: true, passengerRear: true };
