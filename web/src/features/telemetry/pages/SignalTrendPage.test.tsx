@@ -147,11 +147,11 @@ function historyResponse(): SignalHistoryResponse {
     to: '2026-01-05T00:00:00Z',
     count: 5,
     data: [
-      { timestamp: '2026-01-01T00:00:00Z', valueNum: 50 },
-      { timestamp: '2026-01-02T00:00:00Z', valueNum: 51 },
-      { timestamp: '2026-01-03T00:00:00Z', valueNum: 52 },
-      { timestamp: '2026-01-04T00:00:00Z', valueNum: 53 },
-      { timestamp: '2026-01-05T00:00:00Z', valueNum: 54 },
+      { ts: '2026-01-01T00:00:00Z', kind: 'ValueKindDouble', value: 50, ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+      { ts: '2026-01-02T00:00:00Z', kind: 'ValueKindDouble', value: 51, ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+      { ts: '2026-01-03T00:00:00Z', kind: 'ValueKindDouble', value: 52, ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+      { ts: '2026-01-04T00:00:00Z', kind: 'ValueKindDouble', value: 53, ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+      { ts: '2026-01-05T00:00:00Z', kind: 'ValueKindDouble', value: 54, ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
     ],
   };
 }
