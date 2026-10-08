@@ -66,6 +66,51 @@ describe('ChartExportMenu', () => {
     expect(items).toHaveLength(3);
   });
 
+  it('keeps mobile targets, wrapping labels and primitive focus outlines', () => {
+    render(
+      <ChartExportMenu
+        onExportPNG={onExportPNG}
+        onExportSVG={onExportSVG}
+        onCopyImage={onCopyImage}
+        onExportCsv={vi.fn()}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Export chart' });
+    expect(trigger).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7');
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    openMenu();
+    expect(screen.getByRole('menu')).toHaveClass('end-0', 'shadow-e2');
+    for (const item of screen.getAllByRole('menuitem')) {
+      expect(item).toHaveClass(
+        'min-h-11',
+        'md:min-h-9',
+        'whitespace-normal',
+        'text-start',
+        'focus-visible:outline-2',
+        'forced-colors:focus-visible:outline-[Highlight]',
+      );
+      expect(item).not.toHaveClass('focus-visible:outline-none');
+      expect(item.querySelector('.break-words')).toBeInTheDocument();
+      expect(item.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it('retains focus on the trigger when Escape dismisses its menu', () => {
+    render(
+      <ChartExportMenu
+        onExportPNG={onExportPNG}
+        onExportSVG={onExportSVG}
+        onCopyImage={onCopyImage}
+      />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Export chart' });
+    trigger.focus();
+    openMenu();
+    fireEvent.keyDown(trigger, { key: 'Escape' });
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
   it('includes a CSV item when onExportCsv is supplied (rendered first)', () => {
     const onExportCsv = vi.fn();
     render(

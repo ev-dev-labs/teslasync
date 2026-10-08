@@ -8,9 +8,15 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Text } from '@/components/ui/Typography';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import type { ClipboardOutcome } from '@/hooks/useChartExport';
+
+const menuItemClassName =
+  'w-full min-h-11 md:min-h-9 justify-start px-2 py-2 text-start ' +
+  'text-[var(--text-secondary)] hover:text-[var(--text-primary)]';
 
 /**
  * ChartExportMenu — single Download-icon trigger that opens a menu of
@@ -178,8 +184,8 @@ export function ChartExportMenu({
         type="button"
         variant="ghost"
         size="sm"
-        className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-        icon={<Download className="h-3.5 w-3.5" />}
+        className="h-11 w-11 md:h-7 md:w-7 p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+        icon={<Icon icon={Download} size="sm" />}
         onClick={() => setOpen((v) => !v)}
         disabled={disabled || pendingAction !== null}
         loading={pendingAction !== null}
@@ -193,8 +199,8 @@ export function ChartExportMenu({
           role="menu"
           aria-label={t('chart.export.menuLabel', 'Export chart')}
           className={cn(
-            'absolute right-0 z-30 mt-1 w-56 rounded-lg p-1',
-            'border border-[var(--border-subtle)] bg-[var(--surface-elevated)] shadow-xl',
+            'absolute end-0 z-30 mt-1 w-56 rounded-shape-lg p-1',
+            'border border-[var(--border-default)] bg-[var(--surface-2)] shadow-e2',
           )}
         >
           {onExportCsv && (
@@ -203,15 +209,12 @@ export function ChartExportMenu({
               role="menuitem"
               variant="ghost"
               size="sm"
+              wrapLabel
               onClick={handleCsv}
-              icon={<FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />}
-              className={cn(
-                '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
-                'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
-                'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
-              )}
+              icon={<Icon icon={FileSpreadsheet} size="sm" />}
+              className={menuItemClassName}
             >
-              <span>{t('chart.export.csv', 'Download data as CSV')}</span>
+              <Text variant="bodySm">{t('chart.export.csv', 'Download data as CSV')}</Text>
             </Button>
           )}
           <Button
@@ -219,51 +222,39 @@ export function ChartExportMenu({
             role="menuitem"
             variant="ghost"
             size="sm"
+            wrapLabel
             onClick={handlePng}
             disabled={busy}
-            icon={<ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />}
-            className={cn(
-              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
+            icon={<Icon icon={ImageIcon} size="sm" />}
+            className={menuItemClassName}
           >
-            <span>{t('chart.export.png', 'Save as PNG')}</span>
+            <Text variant="bodySm">{t('chart.export.png', 'Save as PNG')}</Text>
           </Button>
           <Button
             type="button"
             role="menuitem"
             variant="ghost"
             size="sm"
+            wrapLabel
             onClick={handleSvg}
             disabled={busy}
-            icon={<FileImage className="h-3.5 w-3.5" aria-hidden="true" />}
-            className={cn(
-              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
+            icon={<Icon icon={FileImage} size="sm" />}
+            className={menuItemClassName}
           >
-            <span>{t('chart.export.svg', 'Save as SVG')}</span>
+            <Text variant="bodySm">{t('chart.export.svg', 'Save as SVG')}</Text>
           </Button>
           <Button
             type="button"
             role="menuitem"
             variant="ghost"
             size="sm"
+            wrapLabel
             onClick={handleCopy}
             disabled={busy}
-            icon={<Copy className="h-3.5 w-3.5" aria-hidden="true" />}
-            className={cn(
-              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-            )}
+            icon={<Icon icon={Copy} size="sm" />}
+            className={menuItemClassName}
           >
-            <span>{t('chart.export.copy', 'Copy image to clipboard')}</span>
+            <Text variant="bodySm">{t('chart.export.copy', 'Copy image to clipboard')}</Text>
           </Button>
         </div>
       )}
