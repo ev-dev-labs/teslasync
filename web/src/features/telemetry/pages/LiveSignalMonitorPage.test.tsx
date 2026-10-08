@@ -145,6 +145,14 @@ function renderPage() {
   return render(<LiveSignalMonitorPage />, { wrapper: Wrapper });
 }
 
+function summaryMetric(label: string) {
+  const summary = screen.getByRole('region', { name: 'Live stream summary' });
+  const metric = within(summary).getAllByRole('listitem')
+    .find((item) => within(item).queryByText(label) !== null);
+  if (!metric) throw new Error(`Missing live stream summary metric: ${label}`);
+  return metric;
+}
+
 beforeEach(() => {
   h.selected = makeSelected(1, [veh(1)]);
   h.stream = makeStream();
@@ -177,11 +185,20 @@ describe('LiveSignalMonitorPage', () => {
     expect(screen.getAllByText('No signals buffered yet')).toHaveLength(2);
     // Connected throughput waits for data rather than showing "offline".
     expect(screen.getByText('Waiting for live throughput…')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Live analytics' }))
+      .getAllByRole('heading', { name: 'Signal throughput' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Value types' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Most active signals' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Live signal tail' })).toBeInTheDocument();
+    expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
 
     // Unique-signals KPI reads 0 (null-safe) rather than blank.
-    const uniqueCard = screen.getByText('Unique signals').closest('div');
+    const uniqueCard = summaryMetric('Unique signals');
     expect(uniqueCard).not.toBeNull();
-    expect(within(uniqueCard as HTMLElement).getByText('0')).toBeInTheDocument();
+    expect(within(uniqueCard).getByText('0')).toBeInTheDocument();
+    expect(within(summaryMetric('Buffer size')).getByText('0')).toBeInTheDocument();
+    expect(within(summaryMetric('Numeric')).getByText('0')).toBeInTheDocument();
+    expect(within(summaryMetric('Categorical')).getByText('0')).toBeInTheDocument();
   });
 
   it('derives unique/typed counts and ranks the most active signals from the live buffer', () => {
@@ -205,18 +222,23 @@ describe('LiveSignalMonitorPage', () => {
     expect(screen.getAllByText('1 · 20.00%')).toHaveLength(2);
 
     // Ranking: speed is the busiest signal (count 3), the two singletons tie.
-    expect(screen.getByText('3×')).toBeInTheDocument();
-    expect(screen.getAllByText('1×')).toHaveLength(2);
+    const ranking = screen.getByRole('list', { name: 'Most active signals ranked by arrival frequency' });
+    expect(within(ranking).getByText('3×')).toBeInTheDocument();
+    expect(within(ranking).getAllByText('1×')).toHaveLength(2);
 
     // Unique-signals KPI counts distinct names (3), not raw buffer entries (5).
-    const uniqueCard = screen.getByText('Unique signals').closest('div');
-    expect(within(uniqueCard as HTMLElement).getByText('3')).toBeInTheDocument();
+    const uniqueCard = summaryMetric('Unique signals');
+    expect(within(uniqueCard).getByText('3')).toBeInTheDocument();
+    expect(within(summaryMetric('Buffer size')).getByText('5')).toBeInTheDocument();
+    expect(within(summaryMetric('Numeric')).getByText('3')).toBeInTheDocument();
+    expect(within(summaryMetric('Categorical')).getByText('2')).toBeInTheDocument();
+    expect(within(summaryMetric('Signals / sec')).getByText('7')).toBeInTheDocument();
 
     // The top-signal row carries the LATEST (newest-first) value, 55 not 40.
-    const topPanel = screen.getByText('Most active signals').closest('[data-print-card]');
+    const topPanel = within(ranking).getAllByRole('listitem')[0];
     expect(topPanel).not.toBeNull();
-    expect(within(topPanel as HTMLElement).getByText('speed')).toBeInTheDocument();
-    expect(within(topPanel as HTMLElement).getByText('55')).toBeInTheDocument();
+    expect(within(topPanel).getByText('speed')).toBeInTheDocument();
+    expect(within(topPanel).getByText('55')).toBeInTheDocument();
   });
 
   it('surfaces the disconnected banner and offline states when the stream drops', () => {
