@@ -5655,6 +5655,9 @@
       "title": "Helix FSM narrator"
     }
   },
+  "systemStatus": {
+    "sourceUnavailable": "{{label}} is unavailable."
+  },
   "table": {
     "filter": {
       "mobileValues": "Column value filters are active. Open the desktop grid to edit them, or clear them here.",
@@ -5749,9 +5752,6 @@
       }
     },
     "annotation": {
-      "created": {
-        "success": "Annotation added"
-      },
       "deleted": {
         "success": "Annotation removed"
       },

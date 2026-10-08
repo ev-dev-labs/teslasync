@@ -3255,6 +3255,9 @@
       "title": "Helix FSM narrator"
     }
   },
+  "systemStatus": {
+    "sourceUnavailable": "{{label}} is unavailable."
+  },
   "tagInput": {
     "added": "{{count}} tags added",
     "addedOne": "Tag added",
@@ -3388,9 +3391,6 @@
       }
     },
     "annotation": {
-      "created": {
-        "success": "Annotation added"
-      },
       "deleted": {
         "success": "Annotation removed"
       },

@@ -2786,6 +2786,9 @@
       "title": "Helix FSM narrator"
     }
   },
+  "systemStatus": {
+    "sourceUnavailable": "{{label}} is unavailable."
+  },
   "table": {
     "bulkActions": {
       "exportCsv": "Export CSV"
@@ -2884,9 +2887,6 @@
       }
     },
     "annotation": {
-      "created": {
-        "success": "Annotation added"
-      },
       "deleted": {
         "success": "Annotation removed"
       },

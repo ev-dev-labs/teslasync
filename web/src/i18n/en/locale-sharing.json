@@ -1544,6 +1544,9 @@
       "title": "Helix FSM narrator"
     }
   },
+  "systemStatus": {
+    "sourceUnavailable": "{{label}} is unavailable."
+  },
   "tco": {
     "aiNarration": {
       "badge": "Helix",
@@ -1616,9 +1619,6 @@
       }
     },
     "annotation": {
-      "created": {
-        "success": "Annotation added"
-      },
       "deleted": {
         "success": "Annotation removed"
       },

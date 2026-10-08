@@ -653,9 +653,6 @@
       }
     },
     "annotation": {
-      "created": {
-        "success": "Annotation added"
-      },
       "deleted": {
         "success": "Annotation removed"
       },

@@ -1908,6 +1908,15 @@
     }
   },
   "toast": {
+    "annotation": {
+      "created": {
+        "error": "Failed to add annotation",
+        "success": "Annotation added"
+      }
+    },
+    "common": {
+      "error": "Something went wrong"
+    },
     "pin": {
       "pinned": {
         "error": "Failed to pin"
