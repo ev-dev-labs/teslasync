@@ -10,7 +10,7 @@
  *   - every value kind (number / string / boolean / null) renders the right
  *     cell text AND the right type badge variant;
  *   - the Signal column colour-codes only signals present in `selectedSignals`
- *     (a coloured dot + inline colour), leaving un-selected signals on the
+ *     (a coloured dot), leaving all signal identifiers on the
  *     theme text colour with no dot;
  *   - REGRESSION: two samples of the same signal at the same timestamp used to
  *     share a React key (`${created_at}-${signal}`) and therefore expanded /
@@ -186,7 +186,7 @@ describe('SignalHistoryTable', () => {
     expect(screen.getAllByText('boolean')).toHaveLength(2);
   });
 
-  it('colour-codes only signals present in selectedSignals (dot + inline colour)', () => {
+  it('colour-codes only signals present in selectedSignals (dot + neutral identifier)', () => {
     const { container } = renderTable({
       selectedSignals: ['vehicle_speed'],
       rows: [numRow({ signal: 'vehicle_speed' }), numRow({ signal: 'battery_level' })],
@@ -198,16 +198,17 @@ describe('SignalHistoryTable', () => {
     const dots = container.querySelectorAll('span[aria-hidden="true"].rounded-full');
     expect(dots).toHaveLength(1);
 
-    // The selected signal name carries an inline colour (from the chart palette);
-    // the un-selected one has none and stays on the theme text colour.
+    // Only the small swatch carries chart identity; both names use readable theme ink.
     const selected = signalNameSpan('vehicle_speed');
     const unselected = signalNameSpan('battery_level');
-    expect(selected.getAttribute('style')).toContain('color');
+    expect(selected.getAttribute('style')).toBeNull();
+    expect(selected.className).toContain('text-[var(--text-primary)]');
     expect(unselected.getAttribute('style')).toBeNull();
     expect(unselected.className).toContain('text-[var(--text-primary)]');
 
     // Palette is real (not empty) so index 0 maps to a concrete colour.
     expect(CHART_COLORS.length).toBeGreaterThan(0);
+    expect(dots[0]).toHaveStyle({ background: CHART_COLORS[0] });
   });
 
   it('expands exactly one drawer even when two rows share timestamp + signal (key-collision regression)', () => {
@@ -245,7 +246,14 @@ describe('SignalHistoryTable', () => {
 
     const status = screen.getByRole('status', { name: 'Loading signal data' });
     expect(status).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    // Shared Skeleton uses static, decorative source-shaped boxes, not an ambient pulse.
+    const skeletons = status.querySelectorAll(':scope > [aria-hidden="true"]');
+    expect(skeletons).toHaveLength(5);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('h-8', 'w-full', 'bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     // No table, no pagination, no empty-state copy while loading.
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull();
@@ -320,5 +328,34 @@ describe('SignalHistoryTable', () => {
     const cell = within(screen.getByRole('table')).getByText('2026.20.1');
     expect(cell).toBeInTheDocument();
     expect(screen.getByText('string')).toBeInTheDocument();
+  });
+
+  it('keeps type labels neutral rather than implying number, string or boolean health', () => {
+    renderTable({
+      rows: [
+        numRow(),
+        numRow({ signal: 'gear', value_num: null, value_str: 'park' }),
+        numRow({ signal: 'charging', value_num: null, value_bool: false }),
+      ],
+      totalRows: 3,
+    });
+    for (const kind of ['number', 'string', 'boolean']) {
+      expect(screen.getByText(kind)).toHaveClass('text-[var(--text-secondary)]');
+      expect(screen.getByText(kind)).not.toHaveAttribute('style');
+    }
+  });
+
+  it('retains raw rows, pagination, full details and individual retry after a refresh error', () => {
+    const row = numRow({ value_num: 0 });
+    const onRetry = vi.fn();
+    const { container } = renderTable({ rows: [row], error: new Error('refresh failed'), onRetry });
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Pagination' })).toBeInTheDocument();
+    expect(screen.queryByText('No signal samples')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    expect(container.querySelector('pre')?.textContent).toBe(JSON.stringify(row, null, 2));
   });
 });

@@ -1,8 +1,8 @@
 /**
  * SignalHistoryTable — paginated history rows with raw-payload row expansion.
  *
- * Composes shared `DataTable` + `Pagination` primitives. Color-codes the
- * Signal column by its position in the caller's `selectedSignals` list so
+ * Composes shared `DataTable` + `Pagination` primitives. Marks the
+ * Signal column with a swatch by its position in the caller's `selectedSignals` list so
  * the table stays visually aligned with `SignalChartPanel`.
  *
  * The page-global signal selector (e.g. the "Add signals" picker on
@@ -26,16 +26,11 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { SourceContent } from '@/components/layout';
 import { CHART_COLORS } from '@/lib/colors';
+import { typography } from '@/lib/tokens';
 
 import { cn } from '@/lib/cn';
 import { formatValue, type SignalLogEntry } from '@/components/SignalQueryControls';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-const TYPE_BADGE_VARIANT: Record<string, 'info' | 'success' | 'warning'> = {
-  number: 'info',
-  string: 'success',
-  boolean: 'warning',
-};
 
 function valueType(row: SignalLogEntry): string {
   if (row.value_num !== null && row.value_num !== undefined) return 'number';
@@ -147,8 +142,8 @@ export function SignalHistoryTable({
             <Text
               mono
               size="xs"
-              className={cn('min-w-0 break-words [overflow-wrap:anywhere]', idx < 0 && 'text-[var(--text-primary)]')}
-              style={color ? { color } : undefined}
+              color="primary"
+              className="min-w-0 break-words [overflow-wrap:anywhere]"
             >
               {r.signal}
             </Text>
@@ -168,7 +163,7 @@ export function SignalHistoryTable({
       header: t('signalHistory.type', 'Type'),
       render: (r) => {
         const vt = valueType(r);
-        return <Badge variant={TYPE_BADGE_VARIANT[vt] ?? 'neutral'} size="sm">{vt}</Badge>;
+        return <Badge variant="neutral" size="sm">{vt}</Badge>;
       },
     },
   ], [safeSelected, t, formatDateTime]);
@@ -177,7 +172,7 @@ export function SignalHistoryTable({
     <FadeIn className="min-w-0 max-w-full">
       <GlassPanel role="region" aria-labelledby={headingId} className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
         <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2">
-          <Activity aria-hidden="true" className="h-4 w-4 text-cyan-300" />
+          <Activity aria-hidden="true" className={cn('h-4 w-4 shrink-0', typography.color.secondary)} />
           <SectionTitle id={headingId} className="min-w-0 break-words">{heading}</SectionTitle>
           {showHeaderMeta ? (
             <Caption className="ms-auto">
@@ -187,7 +182,7 @@ export function SignalHistoryTable({
         </div>
 
         <SourceContent
-          state={error ? 'error' : 'ready'}
+          state={error ? (safeRows.length > 0 ? 'retained' : 'error') : 'ready'}
           label={heading}
           error={error}
           errorMessage={t('error.loadFailed', 'Failed to load data')}
