@@ -1,15 +1,15 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Drawer } from '../ui/Drawer'
+import { GlassPanel } from '../ui/GlassPanel'
 import {
-  Badge,
-  Button,
-  Drawer,
-  GlassPanel,
   MetricLabel,
   MetricValue,
   PanelTitle,
   Text,
-} from '@/components/ui'
+} from '../ui/Typography'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
 import type { OperationalNarrative } from '@/types/operationalNarrative'
@@ -62,10 +62,10 @@ export interface OperationalBriefProps {
 }
 
 const TONE_TEXT: Record<OperationalTone, string> = {
-  success: 'text-emerald-700 dark:text-emerald-300',
-  info: 'text-sky-700 dark:text-sky-300',
-  warning: 'text-amber-800 dark:text-amber-300',
-  danger: 'text-rose-700 dark:text-rose-300',
+  success: 'text-[var(--semantic-success)]',
+  info: 'text-[var(--semantic-info)]',
+  warning: 'text-[var(--semantic-warning)]',
+  danger: 'text-[var(--semantic-danger)]',
   neutral: 'text-[var(--text-primary)]',
 }
 
@@ -122,16 +122,15 @@ export function OperationalBrief({
             className,
           )}
         >
-          <div className={cn('border-s-2 border-[var(--theme-primary)]', compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
+          <div className={cn(compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
             <div className={cn('flex flex-col xl:flex-row xl:justify-between', compact ? 'gap-2 xl:items-start' : 'gap-4 xl:items-start')}>
               <div className={cn('min-w-0', compact ? 'flex-1' : 'max-w-3xl')}>
                 <div className={cn('flex flex-wrap items-center gap-2', !compact && 'mb-2')}>
                   <Text
                     as="span"
-                    size="2xs"
-                    weight="semibold"
+                    size="xs"
+                    weight="medium"
                     color="muted"
-                    className="tracking-[0.12em]"
                   >
                     {eyebrow}
                   </Text>
@@ -147,12 +146,14 @@ export function OperationalBrief({
                 </Text>
               </div>
 
-              <div className={cn('flex flex-wrap items-center gap-2', compact && 'shrink-0 xl:flex-nowrap')}>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {actions}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  wrapLabel
+                  className="min-h-11 md:min-h-9"
                   icon={<Icons.activity className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => setDetailsOpen(true)}
                 >
@@ -165,7 +166,7 @@ export function OperationalBrief({
               role="list"
               className={cn(
                 compact ? 'mt-2 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2' : 'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
-                compact ? 'md:grid-cols-3 min-[1920px]:grid-cols-6' : METRIC_COLUMNS[metricColumns],
+                compact ? 'md:grid-cols-3 3xl:grid-cols-6' : METRIC_COLUMNS[metricColumns],
               )}
             >
               {metrics.map((metric) => (
@@ -186,11 +187,11 @@ export function OperationalBrief({
                       )}
                     >
                       {loading ? (
-                        <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
+                        <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                       ) : metric.value}
                     </MetricValue>
                   </div>
-                  <Text as="div" size="2xs" color="muted" className="mt-1">
+                  <Text as="div" size="xs" color="muted" className="mt-1 break-words">
                     {metric.detail}
                   </Text>
                 </div>
@@ -219,6 +220,8 @@ export function OperationalBrief({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    wrapLabel
+                    className="min-h-11 md:min-h-9"
                     icon={<Icons.forward className="h-4 w-4" aria-hidden="true" />}
                     onClick={() => setDetailsOpen(true)}
                   >
@@ -254,17 +257,17 @@ export function OperationalBrief({
                 key={metric.key}
                 className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex items-baseline justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-3">
                   <MetricLabel>{metric.label}</MetricLabel>
                   <Text
                     as="span"
                     size="sm"
                     weight="bold"
                     aria-busy={loading || undefined}
-                    className={cn('tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
+                    className={cn('min-w-0 break-words tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
                   >
                     {loading ? (
-                      <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)] motion-safe:animate-pulse" />
+                      <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                     ) : metric.value}
                   </Text>
                 </div>

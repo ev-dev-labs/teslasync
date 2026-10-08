@@ -14,6 +14,26 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OperationalBrief', () => {
+  it.each(['success', 'info', 'warning', 'danger', 'neutral'] as const)(
+    'keeps %s metric tone and complete captions in the summary and drawer using semantic foregrounds',
+    (tone) => {
+      render(<OperationalBrief eyebrow="Evidence" title="Semantic evidence"
+        description="Source-confirmed metric" statusLabel="Retained" statusTone={tone}
+        metrics={[{ key: 'confirmed', label: 'Confirmed', value: 0,
+          detail: 'Complete retained-source explanation', tone, valueState: 'value' }]} />);
+      const expectedTone = tone === 'neutral'
+        ? 'text-[var(--text-primary)]' : `text-[var(--semantic-${tone})]`;
+      const summary = screen.getByRole('region', { name: 'Semantic evidence' });
+      expect(within(summary).getByText('0', { exact: true })).toHaveClass(expectedTone);
+      expect(within(summary).getByRole('listitem')).toHaveAttribute('data-value-state', 'value');
+      expect(within(summary).getByText('Complete retained-source explanation')).toBeVisible();
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Semantic evidence details' });
+      expect(within(drawer).getByText('0', { exact: true })).toHaveClass(expectedTone);
+      expect(within(drawer).getByText('Complete retained-source explanation')).toBeVisible();
+      expect(within(drawer).getByText('Retained')).toBeVisible();
+    },
+  );
   it('retains exact rich source bounds and freshness in both the summary and real drawer', () => {
     render(
       <OperationalBrief
@@ -129,10 +149,10 @@ describe('OperationalBrief', () => {
         ]}
       />,
     );
-    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-3', 'min-[1920px]:grid-cols-6');
+    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-3', '3xl:grid-cols-6');
     expect(screen.getByText('Total distance in your display unit.')).toBeVisible();
     expect(screen.getByText('Both drives include measured energy.')).toBeVisible();
-    expect(screen.getByText('64 mi')).toHaveClass('text-emerald-700', 'dark:text-emerald-300');
+    expect(screen.getByText('64 mi')).toHaveClass('text-[var(--semantic-success)]');
     expect(screen.getByText('Driving posture')).not.toHaveClass('uppercase', 'capitalize');
   });
 

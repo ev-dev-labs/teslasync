@@ -100,7 +100,10 @@ describe('OperationalBrief accessible source publication', () => {
       expect(queries.getByText('Nur bestätigte Vorgänge aus der angegebenen Quelle.')).toBeVisible();
     };
     checkSurface(summary());
-    fireEvent.click(within(summary()).getByRole('button', { name: translated.review }));
+    const review = within(summary()).getByRole('button', { name: translated.review });
+    expect(review).toHaveClass('whitespace-normal', 'max-w-full', 'min-h-11', 'md:min-h-9');
+    expect(review.querySelector('span:last-child')).toHaveClass('break-words');
+    fireEvent.click(review);
     const dialog = details();
     expect(dialog).toHaveAttribute('aria-modal', 'true');
     expect(dialog).toHaveAccessibleDescription(baseProps.description);
@@ -157,6 +160,7 @@ describe('OperationalBrief accessible source publication', () => {
     }));
     expect(within(summary()).queryByText('Zusätzliche Quellenbeschränkung')).not.toBeInTheDocument();
     const opener = within(summary()).getByRole('button', { name: translated.reviewAll });
+    expect(opener).toHaveClass('whitespace-normal', 'min-h-11', 'md:min-h-9');
     act(() => opener.focus());
     fireEvent.click(opener);
     const dialog = details();
@@ -258,5 +262,7 @@ describe('OperationalBrief accessible source publication', () => {
     expect(within(dialog).getByText('Source observation is not yet confirmed')).toBeVisible();
     expect(within(dialog).queryByRole('link', { name: 'Pending measurement: 913' })).not.toBeInTheDocument();
     expect(within(dialog).queryByText('913', { exact: true })).not.toBeInTheDocument();
+    expect(summary().querySelector('[class*="animate-pulse"]')).toBeNull();
+    expect(dialog.querySelector('[class*="animate-pulse"]')).toBeNull();
   });
 });
