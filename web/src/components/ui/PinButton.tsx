@@ -2,8 +2,11 @@ import { useTranslation } from 'react-i18next';
 import { Pin, PinOff } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import type { PinnedItemType } from '@/api/types';
+import { Button } from './Button';
+import { Icon } from './Icon';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -30,16 +33,15 @@ export interface PinButtonProps {
   showLabel?: boolean;
   /** Extra classes for the trigger button. */
   className?: string;
+  /** Caller-owned localized name, for example identifying the vehicle. */
+  ariaLabel?: string;
+  /** Opt in to a 44px target without changing compact consumers. */
+  minTargetSize?: 44;
 }
 
 const SIZE_CLASS: Record<NonNullable<PinButtonProps['size']>, string> = {
-  sm: 'h-7 w-7 text-xs',
-  md: 'h-8 w-8 text-sm',
-};
-
-const ICON_CLASS: Record<NonNullable<PinButtonProps['size']>, string> = {
-  sm: 'h-3.5 w-3.5',
-  md: 'h-4 w-4',
+  sm: 'h-7 w-7',
+  md: 'h-8 w-8',
 };
 
 export function PinButton({
@@ -49,18 +51,31 @@ export function PinButton({
   size = 'sm',
   showLabel = false,
   className,
+  ariaLabel,
+  minTargetSize,
 }: PinButtonProps) {
   const { t } = useTranslation();
-  const { data: pinned = [] } = usePinned(itemType, context);
+  const pins = usePinned(itemType, context);
+  const pinned = pins.data ?? [];
   const toggle = useTogglePin(itemType);
+  const unknown = pins.data === undefined;
+  const busy = toggle.isPending || (unknown && pins.isPending);
 
   const idStr = String(itemId);
   const isPinned = pinned.some(p => String(p.item_id) === idStr);
 
-  const Icon = isPinned ? PinOff : Pin;
-  const tooltipLabel = isPinned
+  const actionLabel = isPinned
     ? t('pin.unpin', { defaultValue: 'Unpin' })
     : t('pin.pin', { defaultValue: 'Pin' });
+  const tooltipLabel = unknown
+    ? pins.isError
+      ? t('common.retry', { defaultValue: 'Retry' })
+      : t('common.loading', { defaultValue: 'Loading...' })
+    : toggle.isError
+      ? isPinned
+        ? t('toast.pin.unpinned.error', { defaultValue: 'Failed to unpin' })
+        : t('toast.pin.pinned.error', { defaultValue: 'Failed to pin' })
+      : actionLabel;
 
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     // Pin buttons are routinely placed inside row cards / list items that
@@ -68,39 +83,53 @@ export function PinButton({
     // trigger the row's onClick handler.
     e.stopPropagation();
     e.preventDefault();
-    if (toggle.isPending) return;
+    if (busy) return;
+    if (unknown) {
+      void pins.refetch();
+      return;
+    }
     toggle.mutate({ itemId: idStr, context, pin: !isPinned });
   };
 
   return (
-    <Tooltip content={tooltipLabel}>
-      <button
+    <Tooltip content={
+      !unknown && pins.isError ? (
+        <>
+          {tooltipLabel}
+          <span className="block">{t('common.unavailable', { defaultValue: 'Unavailable' })}</span>
+        </>
+      ) : tooltipLabel
+    } multiline>
+      <Button
+        variant="ghost"
+        size="sm"
         type="button"
         onClick={handleClick}
-        aria-pressed={isPinned}
-        aria-label={tooltipLabel}
-        disabled={toggle.isPending}
+        aria-pressed={unknown ? undefined : isPinned}
+        aria-label={ariaLabel ?? (unknown ? tooltipLabel : actionLabel)}
+        aria-busy={busy || undefined}
+        disabled={busy}
         data-testid="pin-button"
         className={cn(
-          'inline-flex items-center justify-center gap-1.5 rounded-md transition-colors',
-          'focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--text-secondary)]',
-          'disabled:opacity-60 disabled:cursor-not-allowed',
-          showLabel ? 'px-2' : SIZE_CLASS[size],
+          'gap-1.5 px-0',
+          showLabel ? 'h-auto min-h-7 max-w-full px-2 py-1 whitespace-normal' : SIZE_CLASS[size],
+          size === 'sm' ? typography.size.xs : typography.size.sm,
+          minTargetSize === 44 && 'min-h-11 min-w-11',
           isPinned
-            ? 'text-amber-300 hover:text-amber-200 hover:bg-amber-500/10'
-            : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]',
+            ? 'bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--surface-3)]'
+            : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
           className,
         )}
       >
-        <Icon className={ICON_CLASS[size]} aria-hidden />
+        <Icon icon={isPinned ? PinOff : Pin} size={size} />
         {showLabel && (
-          <span className="text-xs font-medium">
-            {isPinned
+          <span className={cn(typography.role.label, 'min-w-0 break-words')}>
+            {unknown ? tooltipLabel : isPinned
               ? t('pin.pinned', { defaultValue: 'Pinned' })
               : t('pin.pin', { defaultValue: 'Pin' })}
           </span>
         )}
-      </button>
+      </Button>
     </Tooltip>
   );
 }
