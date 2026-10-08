@@ -1907,7 +1907,16 @@
       "title": "Viewing data as of {{when}}"
     }
   },
-  "toast": {},
+  "toast": {
+    "pin": {
+      "pinned": {
+        "error": "Failed to pin"
+      },
+      "unpinned": {
+        "error": "Failed to unpin"
+      }
+    }
+  },
   "tour": {
     "launcher": {
       "close": "Close",
