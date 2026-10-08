@@ -73,7 +73,7 @@ export function SignalLogKpiBand({
     { metricId: 'count', occurrenceId: 'records', rawValue: valueAvailable ? s.totalRecords : null,
       label: t('signalLog.kpi.totalRecords', 'Total records'),
       display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
-      description: t('telemetryBrief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.') },
+      description: t('telemetry.brief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.') },
     { metricId: 'count', occurrenceId: 'signals', rawValue: summary == null ? null : s.signalsSelected,
       label: t('signalLog.kpi.signals', 'Signals'),
       display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
@@ -85,12 +85,12 @@ export function SignalLogKpiBand({
     ] as const).map(([key, labelKey, label, raw]): StatMetric => ({
       metricId: 'count', occurrenceId: key, rawValue: valueAvailable ? raw : null,
       label: t(labelKey, label), display: { formatter: (value) => ({ value: fmtInt(value), unit: '' }) },
-      description: t('telemetryBrief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.'),
+      description: t('telemetry.brief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.'),
     })),
     { metricId: 'duration', occurrenceId: 'span', rawValue: valueAvailable ? span : null,
       label: t('signalLog.kpi.timeSpan', 'Time span'),
       display: { formatter: () => ({ value: formatSpan(s.earliest, s.latest), unit: '' }) },
-      description: t('telemetryBrief.observedSpan', 'Elapsed span between the earliest and latest returned samples; not the requested range.'),
+      description: t('telemetry.brief.observedSpan', 'Elapsed span between the earliest and latest returned samples; not the requested range.'),
       context: s.earliest && s.latest ? `${s.earliest} → ${s.latest}` : undefined },
   ];
 
@@ -100,9 +100,9 @@ export function SignalLogKpiBand({
         <TelemetrySummaryBrief title={t('signalLog.kpis', 'Query summary')}
           metrics={metrics} testId="signal-log-summary" loading={loading && s.totalRecords === 0}
           unavailable={unavailable} unknown={!hasQueried} retained={retained}
-          scope={scope ?? t('telemetryBrief.unspecifiedQuery', 'Submitted query results · exact bounds not supplied')}
+          scope={scope ?? t('telemetry.brief.unspecifiedQuery', 'Submitted query results · exact bounds not supplied')}
           provenance={t('signalLog.subtitle', 'Query signal history from Postgres')}
-          description={t('telemetryBrief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.')} />
+          description={t('telemetry.brief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.')} />
       </div>
     </FadeIn>
   );
