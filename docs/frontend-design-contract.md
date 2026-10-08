@@ -2211,3 +2211,194 @@ paths and acyclic-scope proof are in
 UI/source/config/CSS/catalog/import/tkey/source-reference writes, Git, nested
 agents, installs, application tests/lint/TypeScript/build and browser gates
 are **NOTRUN** here. No docs-only gate or implementation acceptance is claimed.
+
+## Annotation settlement authority and honest activation time — MDC-024 / MDC-026 / MDC-034
+
+**`phase3-annotation-settlement-authority-contract`: bounded clarification.**
+Preserve the complete approved **160935-byte** prefix, SHA-256
+`77ad51822391c6af3fb1673361f53756a9ebce4ae3041a37c9c8159c9d9d33ed`.
+This additive decision makes the preceding retention contract implementable;
+it does not reopen accepted presentation, originals, catalog or geometry work.
+Queue item `phase3-annotation-create-retention-integration` remains blocked on
+separate API acceptance. Protected catalog root **242b180429**, **28135**
+English leaves, known-missing **21**, guards and ratchets are unchanged here.
+
+### Actual producer, not a claimed clicked point
+
+Read-only current `ChartContainer.tsx:379–396,595,867–873` still uses `mutate`,
+opens from the header action and supplies a new render-time ISO timestamp.
+Its public config/props/renderprops expose **no selected-point producer or
+timestamp/context setter**. The inspected production popover consumer is this
+container; its function children receive annotations/hidden/hiddenSeries, not
+an annotation-open action. Popover comments and `annotation.clickChart` are
+not evidence of connected chart-click behavior. The existing hook and hook
+tests expose real `mutateAsync`, response and rejection; no hook/backend
+expansion is required for this gap.
+
+The caller must capture `new Date().toISOString()` **inside actual header
+activation**, once per new form, together with the then-current config and
+trigger. It is an activation instant, not a measurement or clicked-point time.
+Keep that seed stable through rerenders, pending/rejected states and external
+scope changes. Preserve the existing editable date's UTC date normalization
+and UTC-midnight submitted value; capturing an instant does not silently
+convert the existing date-only UI into a precise-time editor.
+
+Any future optional point producer must first be demonstrated at a real source
+event with its actual timestamp and scope, then separately scoped. None was
+found at this boundary, so **do not add a point callback/prop/renderprop now**,
+use `data[0]`, infer a point from an axis label, or manufacture backend/context
+defaults. The container's configured scope and existing vehicle null semantics
+are actual header context, not point evidence. Absent frontend point plumbing
+is not a proven missing backend timestamp; missing source measurements remain
+unknown. The preceding “click-derived timestamps” preservation requirement
+means preserve genuinely existing producers, not invent one to satisfy wording.
+
+### Minimal optional authority API; keep the create callback unchanged
+
+At the existing `AddAnnotationPopover.tsx` owner, approve this **optional**
+local UI authority object, not another mutation callback or wire DTO:
+
+```ts
+interface AnnotationCreateAuthority {
+  targetLabel: string;
+  canSubmit: boolean;
+  getSettlementAuthority: () => 'current' | 'stale';
+}
+// Optional AddAnnotationPopover prop:
+// createAuthority?: AnnotationCreateAuthority;
+```
+
+Keep `onAdd(label, category, description?, occurredAt?) => void | Promise<void>`
+and optional `onAdded?: () => void` **exactly compatible**. No result union,
+required context prop, generic lifecycle hook, persisted draft store or category
+barrel expansion is needed. Without `createAuthority`, existing nonthrowing
+void/fulfilled-promise validation/reset/notification, rejection recovery,
+date-resync and dismissal semantics remain unchanged. This is a narrowly
+authorized repair of the existing managed flow, not a second chart-point API.
+
+ChartContainer owns the pinned form target and latest semantic-context ref.
+`targetLabel` describes the **captured** chart/vehicle/scope using real values,
+never the newly selected target or invented vehicle metadata.
+`canSubmit` compares the original target with the live target/capability and
+controls Add only; stale rejected drafts remain editable. The getter reads
+the latest ref **at settlement**, not an `onAdd` closure's old boolean or an
+effect-lagged render snapshot. Capture a monotonic semantic context revision
+at dispatch: a target change and return during that request still makes its
+success stale. Object identity, title-only equality, clock time, incidental
+range/legend rerenders and mutation-object identity are not scope identities.
+The original target can become retry-eligible after genuine rejection when
+its values/capability are current again; a confirmed saved-stale state never
+becomes retryable merely because the chart returns to that target.
+
+The popover owns draft, synchronous duplicate latch, instance/attempt generation
+and local outcome. On fulfillment, after its own live-instance check and
+**before `resetDraft` or `onAdded`**, evaluate the authority getter. A stale
+confirmed outcome becomes `saved-stale`: pending ends, every draft field/date/
+category stays intact, Add and editing are disabled, and a persistent polite
+status announces saved-for-original-context. No `onAdded`, clear, automatic
+close, focus restoration, retry or second POST occurs. Explicit Close/Escape/
+backdrop dismissal remains available after settlement; label the footer action
+with existing `common.close`, not a misleading cancellation of a saved request.
+Saved-stale is sticky until explicit dismissal. If authority evaluation throws,
+retain the confirmed draft in the same nonretryable saved state; never classify
+an authority/notification exception as failed persistence or keep busy forever.
+
+Current confirmed fulfillment retains reset then one success notification and
+same-context close. Genuine throw/rejection ends pending, retains editable raw
+fields and existing error feedback, and never notifies success. Validate and
+reject missing capability/config/time **before** POST; no success-shaped no-op.
+The caller awaits actual `createMutation.mutateAsync` with captured vehicle/
+scope and the submitted occurred-at, then returns void. It does not catch a
+confirmed save to reject it as “stale”, detach it, or leave its promise unresolved.
+Hook invalidation/broadcast/toasts remain their existing server-outcome policy,
+including real old-target success; no fake list row or new-scope local mutation.
+
+### Disposal, keyboard and scope ownership
+
+Ordinary context changes must keep the original form mounted, including when
+annotation config is removed; do not gate that retained instance solely on the
+new `annotationsEnabled`, key-remount it, resync its date, or replace its target.
+Refuse another header opening until explicit dismissal; do not retarget drafts.
+Every old completion checks instance/attempt authority before local updates.
+Controlled closure/unmount disposes that instance; reopening is a fresh
+generation. An obsolete promise must not notify either old or new callbacks,
+release a new latch, close/reset another form or move focus. No backend abort,
+navigation/reload recovery or draft persistence is promised.
+
+Pending retains existing rapid Enter/click latch, blocked Cancel/Close/backdrop
+and real focused-dialog Escape containment. After rejection, idle Cancel/Escape
+retain explicit discard and retry behavior; out-of-scope Add is disabled with
+an explanation, not silent failure. After saved-stale, Close is reachable and
+keyboard dismissal disposes once without creation or success notification.
+Retain the existing overlay focus owner and keyboard order. Only current
+success/idle same-context dismissal may restore the connected original trigger;
+stale dismissal uses the existing safe focus fallback, never a new scope's
+trigger or disposed node. Announce outcomes once without a duplicate toast;
+retain restrained success/warning distinction, visible text and form association.
+
+### Exact missing copy candidates, not catalog edits
+
+Actual canonical `annotation` has no saved-stale or changed-context feedback.
+Reuse existing add/date/category/description, `common.saving`, `common.cancel`,
+`common.close` and the actual toast labels. Propose only these missing defaults:
+
+| Candidate key | Exact default; ownership |
+| --- | --- |
+| `annotation.savedStale` | `Annotation saved for {{target}}. The chart context changed. This form is retained for reference; close it before adding another annotation.` Popover status, never error/retry. |
+| `annotation.contextChanged` | `This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.` Caller-authority explanation for editable unsaved/rejected form. |
+| `annotation.targetVehicle` | `{{chart}} — vehicle {{vehicleId}} — scope {{scope}}` Caller builds captured target from actual title, numeric ID and technical scope identifier. |
+| `annotation.targetFleet` | `{{chart}} — fleet-wide — scope {{scope}}` Only the existing null/fleet-wide create semantics; never infer this for an unknown point. |
+
+These are proposed exact defaults, **not installed tkeys** or fallback-only
+localization permission. Interpolate whole messages; do not concatenate
+translated fragments, expose VINs or invent vehicle names. Confirmed save
+with a local authority exception reuses the saved toast label as inline status,
+without claiming the target changed when that fact is unknown.
+
+### Acyclic, source-owned followups; one file per atomic lease
+
+The orchestrator reserves these proposed items, preserving every original and
+accepted predecessor. This document writes neither queue nor actor ledger.
+“Checks” below means that file's separate test/evidence owner; source delivery
+alone is not accepted implementation. No source owner waits on final caller.
+
+| Item | Single shipping file / scope | Direct prerequisites |
+| --- | --- | --- |
+| `annotation-authority-copy` | `web\src\i18n\en.json`; only the four confirmed missing defaults | This decision + released canonical-copy lease; preserve all 28135 predecessor leaves/known-missing/guards. |
+| `annotation-authority-popover-api` | `web\src\components\charts\AddAnnotationPopover.tsx` | This decision + copy acceptance + accepted/released async lifecycle. Optional authority, stale saved state and disposal only. |
+| `annotation-authority-popover-checks` | `web\src\components\charts\AddAnnotationPopover.test.tsx` | Popover API delivery/release; preserve all original/current cases, add deferred current/stale/rejection/change-return/getter-throw/disposal tests. |
+| `annotation-authority-chart-caller` | `web\src\components\charts\ChartContainer.tsx` | Popover API **verified acceptance** + all existing caller prerequisites; activation seed, pinned context/revision, actual mutateAsync, guarded notification and retained mount. |
+| `annotation-authority-chart-checks` | `web\src\components\charts\__tests__\ChartContainer.test.tsx` | Chart caller delivery/release; actual hook/request seam, exact payload and outcome/race proof, no mutate-only fake acceptance. |
+| `annotation-authority-chart-a11y-checks` | `web\src\components\charts\__tests__\ChartContainer.a11y.test.tsx` | Chart caller delivery/release; preserved figure/table/exports and genuine keyboard/status/focus assertions. |
+| `annotation-authority-card-oracle` | `web\src\components\layout\layout-reference\ChartCard.capabilities.test.tsx` | Chart caller delivery/release; actual existing mock exposes only mutate and its popover mock never calls onAdded. Adapt only that async seam, preserving exact payload/delete/controls assertions. |
+| `annotation-authority-source-catalog-proof` | Evidence only; no shipping file | All preceding source/copy/test deliveries released. Run ordinary generator check/namespace guards against final source closure; if normal check proves drift, separately reserve generator-only artifacts at their existing owner, never patch/manual-edit them from API/caller leases. |
+| `annotation-authority-mounted-proof` | Evidence only; no shipping file | Accepted popover/caller/checks/card-oracle and final normal catalog proof. Authorized mounted request/outcome/keyboard/focus/scope evidence; no production mutation. |
+
+Copy -> popover source -> popover checks/acceptance -> caller source ->
+independent caller/a11y/card tests -> final catalog proof -> mounted proof is
+acyclic. Existing caller integration/final ChartContainer owners follow these
+accepted roots and retain their other queue prerequisites; no attempt reset,
+third generic migration or invented producer is approved. A necessary generated
+artifact set is established by the **actual** normal generator result after
+source-reference changes, not guessed here or an excuse to reopen root242b180429.
+Every implementation lease freezes before/after source/reference/protected
+hashes; all tests can rerun read-only after coherent catalog acceptance.
+
+Preserve the caller's genuine original **25 cases / 116 expectations / 9
+exports** from worker445cb690's immutable provenance, not a new baseline claiming
+those originals. Current test mocks are read evidence, not fresh runtime proof.
+Require actual stale successful POST plus changed scope to retain visible draft,
+end busy and block double click/Enter forever until dismissal; also current
+success, editable rejected retry, target change-return, removed config, getter/
+notification failure, cancel/focus/unmount/reopen disposal. Header clock tests
+prove capture at activation, not render; no selected-point assertion without an
+actual producer. Preserve series/axes/gaps/legend/preferences/range/export/
+fullscreen/accessibility and all SI/query/wire semantics.
+
+This item ships **only this document**. Exact full/prefix byte hashes,
+independent immutable-prefix comparison, read-source unchanged hashes, protected
+catalog evidence and DAG checks are in
+`.agent-status\receipts\phase3-annotation-settlement-authority-contract-checks.log`
+and its own JSON report. All application tests, TypeScript, lint/audits/build,
+docs preview/build, browser/network/device and composed acceptance are **NOTRUN**.
+No application completion, point plumbing or implementation correctness is claimed.
