@@ -242,7 +242,7 @@ describe('LiveTelemetrySegment', () => {
     expect(tooltip).not.toHaveTextContent('Last message')
   })
 
-  it('links to the signal explorer and is keyboard focusable with a visible focus ring', () => {
+  it('links to the signal explorer and is keyboard focusable with a visible focus ring', async () => {
     setState('connected', agoIso(5_000))
     renderSegment()
 
@@ -252,11 +252,15 @@ describe('LiveTelemetrySegment', () => {
     expect(link.className).toContain('focus-visible:ring-offset-2')
     expect(link.className).toContain('focus-visible:ring-[var(--focus-ring)]')
 
-    link.focus()
+    await act(async () => {
+      link.focus()
+    })
     expect(link).toHaveFocus()
 
     // The anchor is a real link, so activating it does not throw.
-    expect(() => fireEvent.click(link)).not.toThrow()
+    await act(async () => {
+      expect(() => fireEvent.click(link)).not.toThrow()
+    })
   })
 
   it('marks the status dot and icon as decorative so only the link name is announced', () => {
