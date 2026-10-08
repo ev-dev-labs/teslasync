@@ -18,9 +18,16 @@ vi.mock('@/components/charts', () => ({
   XAxis: () => null,
   YAxis: () => null,
 }));
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
-}));
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const translations = createInstance();
+  await translations.init({
+    lng: 'en', fallbackLng: 'en', resources: {},
+    interpolation: { escapeValue: false },
+  });
+  const t = translations.getFixedT('en');
+  return { useTranslation: () => ({ t }) };
+});
 
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import { NotificationReportPanel } from './NotificationReportPanel';
@@ -169,6 +176,7 @@ describe('NotificationReportPanel', () => {
     expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z');
     expect(drawer).toHaveTextContent('2026-01-31T08:00:00Z');
     expect(drawer).toHaveTextContent('America/Los_Angeles');
+    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z to 2026-01-31T08:00:00Z (exclusive) · America/Los_Angeles');
     fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
     expect(screen.getAllByRole('table')).toHaveLength(5);
   });
