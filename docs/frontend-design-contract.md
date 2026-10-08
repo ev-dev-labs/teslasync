@@ -1061,3 +1061,192 @@ geometry and merge/selector behavior at MDC-070 widths, narrow containers,
 labels, themes/forced-colors and reduced motion, preserving reachable focus,
 scroll/actions and layer contexts. This DOC scope runs no UI/browser/full gates
 and claims no fresh runtime, contrast, native, backend or application acceptance.
+
+## Map renderer and authentic vehicle materials — MDC-034 / MDC-010 addendum
+
+**`phase3-map-and-material-contract`, attempt 1: design disposition only.**
+Append to accepted `bc2d35fde2` contract prefix: exactly **78429 bytes**, SHA-256
+`ddd3554dc5a39b2ca6c5b0d82e78457c28a90bb40b7a130298bf508a9c7f8fa9`.
+All preceding semantic/status/ResourcesPanel APIs, first-35 geometry decisions,
+fingerprints and original preservation requirements remain untouched.
+Read mission §§0,5–8,27–31, worker conventions and docs CONTRIBUTING first.
+No UI, helper, token, catalog, scanner, backend, tests or queue implementation
+is authorized by this documentation delivery.
+
+### Evidence and prior art before extension
+
+Fresh realpaths, full source/test/original/profile/receipt hashes and the complete
+**106-entry** retained scanner inventory (each exact line, column, literal and
+source statement) are recorded in
+`receipts\phase3-map-and-material-contract-checks.log`, rooted at
+`F:\github\TeslaSync`. Original/profile evidence lives under session
+`bba4960d-f516-4831-bda3-877640f907ce\files`, particularly
+`verified-phase3-originals`, `frontend-phase3-owner-plan.json`,
+`frontend-phase3-complex-owner-plan.json` and
+`frontend-phase3-vehicle-twin-scoping.json`; these stay immutable.
+Original scope, not a reboot delivery, defines preservation. Current hashes:
+
+| Exact existing owner | Current source SHA-256 | Evidence/acceptance boundary |
+| --- | --- | --- |
+| `web\src\components\vehicles\VehicleTwin.tsx` | `dc45bd9a1c73df45204e78e206edb12de469d9f968edca95f6d3c4d0cfb1c9c0` | Final ink delivery remains failed: 103 candidates, three token reviews; reboot receipt proves historical scoped 8/8 tests, lint/fixture zero, not current runtime acceptance. |
+| `web\src\components\vehicles\VehiclePaintPicker.tsx` | `50a138afedb421885e76b24cb0246126b4dee7ab1e53e3a1bbf6544bb224d7b6` | Oracle intake did not accept original migration; two on-fill candidates remain in unchanged scanner. |
+| `web\src\components\maps\vehicleIcon.ts` | `092001077eb129896551a27d596787a3692c909497e6992673d4ed5325172a23` | One actual default `#00f0ff` candidate, not authentic caller paint. |
+| `web\src\components\maps\GeofenceDrawer.tsx` | `e579b135516268516e5726fa191e9488aeaf90553ece3794e3e31a10ac6089b9` | CSS-variable default passed to Canvas is unsupported; mocked option assertions do not prove rendered compatibility. |
+
+Prior art: `lib\tokens.ts` has `neonColorMap`, `severityTokens`, `gaugeTone`,
+`resolveGaugeColor` and `chartTokens`; these return CSS references for DOM/SVG,
+**not resolved Canvas colors**. `lib\colors.ts` preserves ordered chart palette
+identities/derived presentation; its older COLOR/status literals are not a new
+map fallback or a domain-threshold authority. `lib\vehicleColors.ts` owns five
+physical palettes, inferred/fallback paint and gradients; `useVehiclePaint`
+owns browser-local per-vehicle override/broadcast/reset, not telemetry.
+`lib\chartTypography.ts` demonstrates guarded computed-style access for
+non-DOM rendering, but is neither a color resolver nor permission to copy its
+hardcoded font fallback into colors. Reuse these owners; no parallel theme,
+palette, paint preference or semantic-status engine.
+
+### Exact material versus meaning disposition
+
+Authentic material describes the vehicle's physical appearance; semantic ink
+describes application state. White specular reflections, black tires/shadows,
+red taillight lenses and amber physical turn lamps are not white metadata,
+danger/success chips or decorative neon. Preserve model/photo/paint precedence,
+all real artwork paths and per-instance gradient/mask IDs. Never desaturate a
+user's actual paint, recolor photos or rewrite saved choices to match chrome.
+Conversely a charge underglow, lock halo, sentry pulse or swept highlight does
+not become authentic material merely because it is drawn inside the car SVG.
+
+The pinned scanner report
+`.agent-status\receipts\phase3-vehicle-twin-semantic-overlay-ink-scan.log`,
+SHA-256 `628d37320b5d98f968edce6d4cd71dd4a9c40b2a2ea1f43af1140944da60cbd8`,
+is the exact literal/column inventory; grouped coordinates below cover every
+candidate. This is a **design exception specification, not a scanner waiver**.
+
+| Exact VehicleTwin source sites / count | Role, permitted values and state constraints | Separate acceptance requirement |
+| --- | --- | --- |
+| C:206,208,214–216,218–220,231–234 / 12 | Keep exactly pinned RGBA cladding/glass aperture, lens/light, ground/tire materials. Physical white/yellow/red/amber emission belongs only to actual light geometry and existing predicates; no domain outcome inferred from hue. | Verify all uses stay physical; do not exempt semantic C entries or ambient loops. |
+| GroundShadow:319 / 1; WheelSVG:367,371,388,395–396,401,408–409,416 (two literals),417 / 11 | Preserve exact pinned black alpha ground/contact shadow, rubber/metal/spokes/rim shading, including both :416 literals. | Mask/gradient scope and composed legibility, not a page-chrome exemption. |
+| Body/trim/glass:435,443–445,447,449–450,452–453,458,460,493,500,509,521,546,597,600–601,607,613 (two),640,678,689,697,701,704,710–711,723–724,726–727,738,750,757 / 37; charge flap:876–877 / 2 | Retain exact pinned static material shading/reflection/closed-branch literals. At 521/546/876 only the physical closed branch qualifies; open/warning/null overlays retain existing semantic roles/predicates. | Preserve optical paths; separately remove decorative sweeps, not material stops. Never convert unknown to closed/off. |
+| Physical light base branches:957,963,967,1027,1033 / 5 | Pinned smoked lens/DRL/taillight colors, including white `rgba(235,245,255,0.95)` and red `rgba(255,90,90,0.95)`, remain physical artwork, not asserted live/on status. Preserve photo suppression and existing actual hazard/turn predicates. | Light-feedback owner removes breathing/bloom; static lens color cannot manufacture confirmed headlights or hazards. |
+| SvgDefs:1338–1341,1344–1347,1350–1352,1357–1359,1362–1364,1367–1368,1373–1375,1378–1380,1383–1385,1388–1390 / 31 | Preserve exact pinned ordered stops/offsets for shoulderHighlight, softReflection, glassReflection, glassGrad, lowReflection, windshieldGrad, headlightLens, taillightGrad, rimGrad, tireOuter. No theme substitution for optical gradients. | Stops are material; animated consumers are not exempt. Preserve paint-derived body/lower/hood/mirror stops separately. |
+| PhotoOverlay edgeMask:1245 / 1 | `#000` is opaque alpha-mask coverage, not visible UI black; retain radial geometry/feather arithmetic and transparent edge. | Confirm CSS mask coverage/composition, no visible black fill substitution. |
+| ChargingUnderglow:334,339 / 2 | `rgba(34,197,94,0.18)` and `rgba(34,197,94,0.38)` are **not material exceptions**. Replace ambient green bloom with bounded static existing info-role charge indication under actual `isCharging` predicate. | Existing charge-security owner, preserving bolt/flap/security paths and null states; no generic ink retry. |
+| GradientIds:157 / 1 | `glow: p('glow')` is an instance-safe identifier, not itself paint. Identifier-only disposition cannot exempt the filter or its consumers. | Separately remove nonessential bloom uses at light/charge owners; preserve instance isolation and any justified finite physical effect. |
+
+Partition is **99 physical literal candidates + one alpha-mask literal + two
+non-exempt charging literals + one identifier = 103**; three token-reference
+reviews remain separate. No blanket 103 waiver, filename exemption, scanner
+change, candidate deletion or “scan clean” claim. QA records exact tuple
+`source hash + line/column + literal + role + branch/gradient + caller/state`
+against this inventory; any new literal/use/hash drift requires refreshed
+scoped evidence, not automatic inheritance. Material permission never permits
+extra glow, wider alpha, new loops, fake states or arbitrary layout changes.
+
+For VehiclePaintPicker preserve `vehicleId`, nullable `exteriorColor`,
+`className`, all five stable IDs/order, labels, detection/override/reset,
+roving radio arrows/Home/End/RTL, focus refs and selected announcements.
+Approve **only its :105 selected check stroke** `#000000` on pearl-white and
+`#ffffff` on the other four opaque authentic swatches, not UI text/chrome.
+Actual sRGB contrast calculation in this receipt: pearl-white `#e9ecf2`
+17.745070:1; midnight-silver `#5b6675` 5.829692:1; deep-blue `#1f3a72`
+11.015153:1; solid-black `#0d1117` 18.924631:1; red-multicoat `#a3001a`
+8.164147:1. This proves the pinned color pairs analytically, **not browser
+contrast/forced-colors acceptance**. The :93 swatch `p.swatch` and :92 bounded
+`forced-color-adjust:none` preserve authentic paint only; outer radio border,
+focus and accessible label still use theme/system roles. Changed palette pairs
+must recompute on-fill contrast, not rely on a permanent ID heuristic.
+Existing picker oracle needs no further implementation attempt; its original
+owner/QA records these exact material/on-fill dispositions with retained scan1.
+
+### Map renderer boundary and intentional public-default change
+
+Approve bounded `vehicleIcon.ts:8` default change from decorative `#00f0ff`
+to trusted **`var(--semantic-info)`** at the existing DOM DivIcon owner.
+This intentionally changes the appearance of omitted, null, blank, malformed
+and injection-rejected colors across default consumers: VehicleCharts,
+GuardLiveMap, GeofenceWidget and MapOverviewPage. It is not compatibility
+identity preservation; callers with validated explicit physical/custom paint
+retain their exact color. Keep exported DEFAULT_VEHICLE_COLOR/sanitizeColor/
+vehicleIcon signatures, injection grammar, two paint sites, static halo,
+28px geometry/anchors and surface border. A trusted internal default may be a
+CSS reference; do not broaden untrusted string interpolation to arbitrary
+var/markup/style bodies. DOM resolves the trusted role in light/dark/custom/
+forced-colors; no hardcoded old-cyan compatibility fallback. Check default
+consumers' tile contrast, selection/popup access and SSR markup separately.
+No status inferred from a dot, no pulsing marker and no page redesign.
+
+For GeofenceDrawer retain `color?: string`, default theme-primary intent,
+fences/IDs, modes, circle SI radius, polygon/rectangle topology, callbacks,
+editable/delete enablement and control handlers/cleanup. **Never send
+`var(--theme-primary)` or any unresolved CSS reference to Canvas fillStyle/
+strokeStyle.** SVG-only restriction would break its existing renderer-neutral
+public contract and is not approved.
+
+Resolve color at the map's mounted DOM/style boundary: preserve valid explicit
+literal caller colors; resolve default/valid CSS-reference inputs to a concrete
+browser-computed color in the owning map theme context (including nested vars
+and forced-colors), validate resolution, then pass the same resolved paint to
+draw shapeOptions and persisted layers. Reading a raw custom-property string
+alone is insufficient. An inert, noninteractive scoped computed-color probe
+may resolve CSS through the browser; never interpolate caller text into HTML,
+introduce a theme provider or mutate saved theme/paint. Default comes from
+existing restrained theme role, not COLOR.CYAN/first chart series/copied hex.
+An unbound variable, cyclic variable or invalid color must not be mistaken for
+the probe's inherited/default computed color. Verify the referenced role's
+availability and resolved color validity; test these failures explicitly.
+Malformed/unresolvable overrides use the resolvable existing default role;
+if that too is unavailable return explicit unresolved, never prior Canvas
+context paint, black, old cyan or another hardcoded compatibility value.
+
+SSR/no document/no computed-style/throwing style access must be guarded with
+no import-time DOM side effects. Defer renderer paint initialization until
+mounted resolution is available; keep source geometry/actions owned and
+available, retry when theme context becomes available, and expose persistent
+resolution failure through existing source feedback rather than fabricated
+data or silently invisible shapes. Do not issue create/edit/delete callbacks
+on resolution or redraw. Theme/mode/custom/forced-colors changes resolve and
+update both draft and existing shapes without losing an in-progress drawing,
+IDs, callbacks or focus. Existing structural mode/callback enablement changes
+retain their intentional lifecycle; a color-only theme update is not permission
+to rebuild the map or discard edit state. Keep 2px line and 0.08 fill opacity;
+verify draft legibility against actual tiles and selected state independently.
+
+**No new shared color helper/token root now:** only GeofenceDrawer demonstrates
+the inspected Canvas resolution need; DivIcon's DOM variable paint is a
+different boundary. Keep resolution internal to its owner. A later second
+independent Canvas consumer must supply exact source evidence before a
+separately assigned existing-token/helper-root extension, then separate
+consumer adoptions; no speculative map API, chart migration or token addition.
+
+### Bounded owners, DAG and preservation acceptance
+
+| Assignment / exclusive future write scope | Actual prerequisite / acceptance |
+| --- | --- |
+| `phase3-map-and-material-evidence-disposition` — read-only original ink/picker source/tests; assigned QA receipt only | This contract accepted; exact current/original hashes and tuple inventory verified. Resolve material/on-fill design blocker, retain raw scanner1 and distinguish remaining successor-owned decoration; do not accept whole renderer. Not a third ink/picker migration or scanner owner. |
+| `phase3-vehicle-icon-restrained-default-correction` — only maps\vehicleIcon.ts and maps\__tests__\vehicleIcon.test.ts | Contract acceptance and original owner release; exact export/default impact, sanitizer/injection and caller-paint tests plus default-consumer composed QA. No consumer writes needed to acquire DOM theme role. |
+| `phase3-geofence-canvas-paint-correction` — only maps\GeofenceDrawer.tsx and maps\__tests__\GeofenceDrawer.test.tsx | Contract acceptance and original owner release; actual SVG **and Canvas** color behavior, explicit paint/default/theme refresh, SSR/unresolved handling, draft/edit preservation and no callback fabrication. Mocked string equality alone fails acceptance. |
+| Existing `phase3-vehicle-twin-static-reflections` → body-window-door-feedback → light-feedback → charge-security-feedback — each only vehicles\VehicleTwin.tsx plus matching VehicleTwin.test.tsx | Preserve existing profile's sequential dependencies after original ink disposition/release; never concurrent source/test leases. Static reflections keep material stops; light owner removes bloom; charge/security owner owns :334/:339 and expanding rings/pulses, preserves required finite sentry ellipse. No whole-SVG rewrite or third generic migration. |
+
+Map corrections and evidence disposition are independent siblings; none waits
+on a downstream caller, resource API or geometry adoption. Original owner/QA
+may accept only the original ink/picker's bounded scope after exact exception
+review; successor-owned charging/light/reflection findings remain explicit
+open work, not an invented prerequisite cycle or whole-renderer acceptance.
+Future source owners freeze immediate accepted baseline **and** immutable originals, carry forward
+all original assertions/typed fixtures and prior approved deltas; no test
+weakening/hash reset. Existing public props, photo/model precedence, paint
+storage, geometry/shapes, sections/actions, true/false/null predicates,
+independent source trust/failure/retry and all SI/wire/cache values survive.
+No new source-state model: retained stale/error/offline data remains visible
+with existing trust presentation, never converted to confirmed live status.
+
+Implementation owners run authorized exact scoped tests/lint/typing and
+unchanged scanner, retaining findings, then separately owned composed QA:
+dark/light/custom/forced-colors, real SVG/Canvas maps/tiles, long RTL labels,
+44px radio targets, keyboard/focus/selection, 200% text and mission widths;
+OS reduced motion and low bandwidth suppress nonessential loops while genuine
+hazard/turn feedback retains accessible static meaning. Labels/text/icons,
+not color alone, communicate state. DOC-only verification here checks prefix,
+realpaths, hashes, exact inventory partition, analytical on-fill pairs and
+acyclic nonoverlapping scopes. Docs build, application tsc/lint/build/tests,
+browser/native/backend/runtime acceptance are **NOT RUN / NOT CLAIMED**.
