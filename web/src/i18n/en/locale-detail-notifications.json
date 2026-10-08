@@ -251,7 +251,7 @@
       "aiCategorize": {
         "title": "Suggest inbox categories",
         "badge": "Helix",
-        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "description": "Suggest categories through a separate recent-history request using the vehicle, severity, and rule filters supplied to this panel. The inbox or archive view and exact workspace date bounds do not filter this request; it uses its own lookback window (7 days by default). Review the proposal before applying its rule IDs as an inbox filter; this does not save categories or archive notifications.",
         "suggestButton": "Suggest categories",
         "applyButton": "Apply categories as filter",
         "previewLabel": "Proposed categories (review before applying):"
@@ -379,7 +379,7 @@
       },
       "aiBuilder": {
         "title": "Draft from natural language",
-        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "badge": "Helix",
         "draftButton": "Draft alert"
       },

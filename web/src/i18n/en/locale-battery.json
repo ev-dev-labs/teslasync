@@ -2984,7 +2984,7 @@
   "climate": {
     "aiPreheatPrecool": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "description": "Ask Helix to draft an advisory preheat or precool window using the departure heuristic and current temperatures. Helix does not save or apply a schedule. Review the proposal, then use the Vehicle command center for manual climate actions. Its Add precondition action uses a fixed 7 AM daily schedule, not the proposed window.",
       "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule.",
       "generateButton": "Draft schedule",
       "title": "Suggest a preheat or precool schedule"
@@ -3452,7 +3452,7 @@
     "alertStudio": {
       "aiBuilder": {
         "badge": "Helix",
-        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "draftButton": "Draft alert",
         "title": "Draft from natural language"
       },
@@ -3491,7 +3491,7 @@
       "aiCategorize": {
         "applyButton": "Apply categories as filter",
         "badge": "Helix",
-        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "description": "Suggest categories through a separate recent-history request using the vehicle, severity, and rule filters supplied to this panel. The inbox or archive view and exact workspace date bounds do not filter this request; it uses its own lookback window (7 days by default). Review the proposal before applying its rule IDs as an inbox filter; this does not save categories or archive notifications.",
         "previewLabel": "Proposed categories (review before applying):",
         "suggestButton": "Suggest categories",
         "title": "Suggest inbox categories"

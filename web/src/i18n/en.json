@@ -14543,7 +14543,7 @@
     "aiPreheatPrecool": {
       "title": "Suggest a preheat or precool schedule",
       "badge": "Helix",
-      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "description": "Ask Helix to draft an advisory preheat or precool window using the departure heuristic and current temperatures. Helix does not save or apply a schedule. Review the proposal, then use the Vehicle command center for manual climate actions. Its Add precondition action uses a fixed 7 AM daily schedule, not the proposed window.",
       "generateButton": "Draft schedule",
       "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule."
     },
@@ -19401,7 +19401,7 @@
       "aiCategorize": {
         "title": "Suggest inbox categories",
         "badge": "Helix",
-        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "description": "Suggest categories through a separate recent-history request using the vehicle, severity, and rule filters supplied to this panel. The inbox or archive view and exact workspace date bounds do not filter this request; it uses its own lookback window (7 days by default). Review the proposal before applying its rule IDs as an inbox filter; this does not save categories or archive notifications.",
         "suggestButton": "Suggest categories",
         "applyButton": "Apply categories as filter",
         "previewLabel": "Proposed categories (review before applying):"
@@ -19529,7 +19529,7 @@
       },
       "aiBuilder": {
         "title": "Draft from natural language",
-        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "badge": "Helix",
         "draftButton": "Draft alert"
       },
@@ -32119,6 +32119,49 @@
       "title": "Data quality",
       "unavailable": "Quality metadata has not been computed yet.",
       "window": "Observation window"
+    },
+    "verdict": {
+      "active": "active",
+      "ambiguous": "ambiguous",
+      "cancel": "cancel",
+      "degrading": "degrading",
+      "disputed": "disputed",
+      "due_soon": "due soon",
+      "duplicate": "duplicate",
+      "exact": "exact",
+      "expired": "expired",
+      "expiring_soon": "expiring soon",
+      "healthy": "healthy",
+      "high": "high",
+      "improving": "improving",
+      "insufficient": "insufficient",
+      "keep": "keep",
+      "lapsed": "lapsed",
+      "limited": "limited",
+      "moderate": "moderate",
+      "monitor": "monitor",
+      "open": "open",
+      "overdue": "overdue",
+      "preferred": "preferred",
+      "probable": "probable",
+      "reconciled": "reconciled",
+      "retired": "retired",
+      "review": "review",
+      "settled": "settled",
+      "stable": "stable",
+      "standard": "standard",
+      "strong": "strong",
+      "substandard": "substandard",
+      "sufficient": "sufficient",
+      "too_early": "too early",
+      "trusted": "trusted",
+      "unevaluated": "unevaluated",
+      "uninvoiced": "uninvoiced",
+      "unknown": "unknown",
+      "unmatched": "unmatched",
+      "unreliable": "unreliable",
+      "watch": "watch",
+      "weak": "weak"
     },
     "reconcile": {
       "audit": {
