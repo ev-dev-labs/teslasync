@@ -343,6 +343,7 @@ export default function SystemStatusPage() {
         valueText: acquired != null ? `${acquired}` : '—',
         metaText: max != null && max > 0 ? t('systemStatus.resourcesCopy.inUse', 'of {{count}} in use', { count: max }) : undefined,
         percent: acquired != null && max != null && max > 0 ? (acquired / max) * 100 : undefined,
+        sourceState: extendedState,
         icon: <Database className="h-4 w-4" />,
       })
     }
@@ -351,6 +352,7 @@ export default function SystemStatusPage() {
       rows.push({
         label: t('systemStatus.storageUsed', 'Storage used'),
         valueText: backupStats.database_size,
+        sourceState: backupStatsState,
         metaText: backupStats.table_count != null ? t('systemStatus.resourcesCopy.tables', 'across {{count}} tables', { count: backupStats.table_count }) : undefined,
         icon: <HardDrive className="h-4 w-4" />,
       })
@@ -360,6 +362,7 @@ export default function SystemStatusPage() {
       rows.push({
         label: t('systemStatus.totalRows', 'Total rows'),
         valueText: fmtInt(totalRows),
+        sourceState: backupStatsState,
         metaText: positionCount != null && positionCount > 0 ? t('systemStatus.resourcesCopy.positions', '{{displayCount}} positions', { count: positionCount, displayCount: fmtInt(positionCount) }) : undefined,
         icon: <Boxes className="h-4 w-4" />,
       })
@@ -369,31 +372,35 @@ export default function SystemStatusPage() {
       rows.push({
         label: t('systemStatus.resourcesCopy.runtimeThreads', 'Runtime threads'),
         valueText: fmtInt(extendedSystem.goroutines),
+        sourceState: extendedState,
         metaText: t('systemStatus.resourcesCopy.goroutines', 'goroutines'),
         icon: <Cpu className="h-4 w-4" />,
       })
     }
 
-    if (workers) {
-      rows.push({
-        label: t('systemStatus.workers', 'Workers'),
-        valueText: `${workers.healthy_count} / ${workers.total}`,
-        metaText: t('systemStatus.statusLabels.healthy', 'healthy'),
-        percent: workers.total > 0 ? (workers.healthy_count / workers.total) * 100 : undefined,
-        icon: <Server className="h-4 w-4" />,
-      })
-    }
+    rows.push({
+      label: t('systemStatus.workers', 'Workers'),
+      valueText: workers ? `${workers.healthy_count ?? '—'} / ${workers.total ?? '—'}` : '—',
+      metaText: t('systemStatus.statusLabels.healthy', 'healthy'),
+      metricKind: 'healthy-workers',
+      healthyCount: workers?.healthy_count ?? null,
+      totalCount: workers?.total ?? null,
+      sourceState: workersState,
+      icon: <Server className="h-4 w-4" />,
+    })
 
     if (version?.uptime_seconds != null && version.uptime_seconds > 0) {
       rows.push({
         label: t('systemStatus.resourcesCopy.uptime', 'Uptime'),
         valueText: formatUptime(version.uptime_seconds),
+        sourceState: versionState,
         icon: <Clock className="h-4 w-4" />,
       })
     } else if (extendedSystem?.uptime_seconds != null) {
       rows.push({
         label: t('systemStatus.resourcesCopy.uptime', 'Uptime'),
         valueText: formatUptime(extendedSystem.uptime_seconds),
+        sourceState: extendedState,
         icon: <Clock className="h-4 w-4" />,
       })
     }
@@ -401,12 +408,15 @@ export default function SystemStatusPage() {
     return rows
   }, [
     backupStats,
+    backupStatsState,
     extendedPool,
     extendedSystem,
+    extendedState,
     positionCount,
     totalRows,
     version,
-    workers, fmtInt, t,
+    versionState,
+    workers, workersState, fmtInt, t,
   ])
 
   // Action item flags
@@ -721,6 +731,7 @@ export default function SystemStatusPage() {
         <section id="resources" aria-label={t('systemStatus.resourcesCopy.title', 'Server resources')}>
           <ResourcesPanel
             rows={resourceRows}
+            title={t('systemStatus.resourcesCopy.title', 'Server resources')}
           />
         </section>
 
