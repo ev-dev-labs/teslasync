@@ -12,6 +12,12 @@ const owners = new Set([
   'src/components/ui/ThemeProvider.tsx', 'src/components/ui/themePresets.ts',
   'src/hooks/useChartPalette.ts',
 ]);
+const systemColors = new Set([
+  'canvas', 'canvastext', 'linktext', 'visitedtext', 'activetext',
+  'buttonface', 'buttontext', 'buttonborder', 'field', 'fieldtext',
+  'highlight', 'highlighttext', 'selecteditem', 'selecteditemtext',
+  'mark', 'marktext', 'graytext', 'accentcolor', 'accentcolortext',
+]);
 const help = `DEV/QA only; no server startup, mocks, baseline replacement or mutation actions.
 From repository root:
   node web\\scripts\\frontend-qa.mjs capture --route /battery
@@ -229,6 +235,30 @@ export function sanitizedBrowserFailure(error, step) {
   return { type, step: safeStep, detail };
 }
 
+function isForcedColorsReview(text, index, match) {
+  const color = match.match(/^(?:bg|text|border(?:-[trblxyse])?|outline|ring(?:-offset)?|decoration|fill|stroke|caret|accent|divide(?:-[xy])?)-\[([a-z]+)\]$/i)?.[1];
+  if (!color || !systemColors.has(color.toLowerCase())) return false;
+  const end = index + match.length;
+  if (end < text.length && !/[\s"'`]/.test(text[end])) return false;
+  // Only top-level variant separators count; selector/value colons do not.
+  const brackets = [];
+  const variants = [];
+  let start = 0;
+  for (let cursor = 0; cursor < index; cursor += 1) {
+    const char = text[cursor];
+    if (char === '\\') return false;
+    if (char === '[' || char === '(') brackets.push(char);
+    else if (char === ']' || char === ')') {
+      if (brackets.pop() !== (char === ']' ? '[' : '(')) return false;
+    } else if (!brackets.length) {
+      if (/[\s"'`]/.test(char)) { start = cursor + 1; variants.length = 0; }
+      else if (char === ':') { variants.push(text.slice(start, cursor)); start = cursor + 1; }
+    }
+  }
+  return brackets.length === 0 && variants.every(Boolean) &&
+    variants.includes('forced-colors') && ['', '!'].includes(text.slice(start, index));
+}
+
 export function scanSource(source, file) {
   const normalized = file.replaceAll('\\', '/');
   const findings = [];
@@ -237,18 +267,25 @@ export function scanSource(source, file) {
     ['arbitrary-tailwind', /\b(?:[a-z][\w-]*-)?[a-z][\w-]*-\[[^\]\r\n]+\]/gi, 'Use existing spacing/type/shape tokens; review genuine computed/container exceptions.'],
     ['glow-neon', /\b(?:[\w-]*(?:neon|glow)[\w-]*|drop-shadow-\[[^\]]+\])/gi, 'Remove decorative glow/neon; retain persisted IDs only at their owners.'],
   ];
-  function add(rule, match, offset, action) {
+  function add(rule, match, offset, action, forcedColorsReview = false) {
     const before = source.slice(0, offset);
     const line = before.split('\n').length;
     const column = offset - before.lastIndexOf('\n');
     const tokenReference = rule === 'arbitrary-tailwind' && /(?:var\(--|--[\w-]+)/.test(match);
     const classification = owners.has(normalized) && rule !== 'nonstandard-icon-import'
-      ? 'token-owner-exemption' : tokenReference ? 'token-reference-review' : 'candidate-violation';
+      ? 'token-owner-exemption' : tokenReference ? 'token-reference-review'
+        : forcedColorsReview ? 'forced-colors-accessibility-review' : 'candidate-violation';
+    if (classification === 'forced-colors-accessibility-review') {
+      action = 'Retain standard forced-colors system color; review MDC-041 focus, borders and selected states in OS high contrast. Static evidence is not accessibility acceptance.';
+    }
     findings.push({ file, line, column, rule, match, classification, action });
   }
   const inspect = (text, offset) => {
     for (const [rule, pattern, action] of patterns) {
-      for (const match of text.matchAll(pattern)) add(rule, match[0], offset + match.index, action);
+      for (const match of text.matchAll(pattern)) {
+        add(rule, match[0], offset + match.index, action,
+          rule === 'arbitrary-tailwind' && isForcedColorsReview(text, match.index, match[0]));
+      }
     }
   };
   if (/\.(?:css|scss)$/.test(file)) {
@@ -449,7 +486,7 @@ export async function main(argv = process.argv.slice(2)) {
     const within = relative(resolve(webRoot, 'src'), start);
     if (within.startsWith('..') || within.includes(`..${sep}`)) throw new Error('Scan scope must be inside web/src');
     const report = await scanTree(start);
-    const counts = Object.fromEntries(['candidate-violation', 'token-reference-review', 'token-owner-exemption'].map((key) =>
+    const counts = Object.fromEntries(['candidate-violation', 'token-reference-review', 'token-owner-exemption', 'forced-colors-accessibility-review'].map((key) =>
       [key, report.findings.filter((finding) => finding.classification === key).length]));
     console.log(JSON.stringify({ evidence: 'static candidates only; no visual acceptance', counts, ...report }, null, 2));
     return counts['candidate-violation'] ? 1 : 0;

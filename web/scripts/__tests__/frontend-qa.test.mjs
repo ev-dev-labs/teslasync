@@ -228,3 +228,130 @@ test('browser CLI retains sensitive, unmocked and explicit-runtime guards withou
     assert.match(result.stderr, reason);
   }
 });
+
+const forcedColorsClasses = [
+  'forced-colors:border-[CanvasText]', 'forced-colors:bg-[Canvas]',
+  'forced-colors:text-[CanvasText]', 'forced-colors:border-[ButtonBorder]',
+  'forced-colors:bg-[Highlight]', 'forced-colors:text-[HighlightText]',
+];
+const classificationFixture = (classes) => `const classes = ${JSON.stringify(classes.join(' '))};`;
+
+test('MDC-041 required utilities preserve every finding, location and review action', () => {
+  const source = classificationFixture(forcedColorsClasses);
+  const findings = scanSource(source, 'src/components/ui/example.tsx');
+  assert.equal(findings.length, forcedColorsClasses.length);
+  for (const [index, finding] of findings.entries()) {
+    assert.equal(finding.rule, 'arbitrary-tailwind');
+    assert.equal(finding.match, forcedColorsClasses[index].split(':').at(-1));
+    assert.equal(finding.classification, 'forced-colors-accessibility-review');
+    assert.match(finding.action, /MDC-041/);
+    assert.match(finding.action, /not accessibility acceptance/);
+    assert.equal(finding.line, 1);
+    assert.equal(source.slice(finding.column - 1, finding.column - 1 + finding.match.length), finding.match);
+  }
+});
+
+test('real variant chains support system colors without treating selector colons as variants', () => {
+  const classes = [
+    'forced-colors:hover:bg-[Highlight]',
+    'md:forced-colors:focus-visible:!outline-[Highlight]',
+    "forced-colors:[&:not([data-state='closed'])]:text-[ButtonText]",
+    '[&:hover]:forced-colors:border-[ButtonBorder]',
+    'forced-colors:bg-[canvas]',
+    'forced-colors:bg-[Field]', 'forced-colors:text-[FieldText]',
+    'forced-colors:bg-[ButtonFace]',
+  ];
+  // Use a real template literal so selector quotes are not JSON escapes.
+  const findings = scanSource(`const classes = \`${classes.join(' ')}\`;`, 'src/example.tsx');
+  assert.equal(findings.length, classes.length);
+  assert.ok(findings.every(({ classification }) => classification === 'forced-colors-accessibility-review'));
+});
+
+const negativeClasses = [
+  'text-[CanvasText]', 'hover:bg-[Canvas]', 'not-forced-colors:text-[CanvasText]',
+  'fake-forced-colors:bg-[Canvas]', '[forced-colors]:text-[CanvasText]',
+  '[&:forced-colors]:text-[CanvasText]',
+  "[&:not([data-mode='forced-colors'])]:text-[CanvasText]",
+  'forced-colors::text-[CanvasText]', 'forced-colors:text-[CanvasText]/50',
+  'forced-colors:text-[ImaginaryColor]', 'forced-colors:w-[Canvas]',
+  'forced-colors:p-[13px]', 'forced-colors:bg-[#abcdef]',
+  'forced-colors:bg-[rgb(1,2,3)]', 'forced-colors:shadow-[Highlight]',
+  'forced-colors:text-glow', 'forced-colors:min-h-[calc(100vh-2rem)]',
+  'forced-colors:max-w-[90vw]',
+];
+
+test('classification cannot leak across strings, utilities, selectors, templates or comments', () => {
+  for (const classes of negativeClasses) {
+    const findings = scanSource(`const classes = \`${classes}\`;`, 'src/example.tsx');
+    assert.ok(findings.length > 0, classes);
+    assert.ok(findings.every(({ classification }) => classification === 'candidate-violation'), classes);
+  }
+  for (const source of [
+    'const classes = "forced-colors:bg-[Canvas] text-[CanvasText]";',
+    'const variant = "forced-colors:"; const classes = "text-[CanvasText]";',
+    '// forced-colors:\nconst classes = "text-[CanvasText]";',
+    'const classes = `forced-colors:${variant}text-[CanvasText]`;',
+    'const classes = `forced-colors: bg-[Canvas]`;',
+  ]) {
+    assert.equal(scanSource(source, 'src/example.tsx').filter(({ classification }) => classification === 'candidate-violation').length, 1, source);
+  }
+});
+
+test('forced-colors review keeps token/owner precedence and independent icon findings', () => {
+  const source = classificationFixture([...forcedColorsClasses, 'forced-colors:bg-[var(--surface-1)]']) +
+    "\nimport { Car } from '@heroicons/react/24/outline';";
+  const normal = scanSource(source, 'src/example.tsx');
+  assert.equal(normal.filter(({ classification }) => classification === 'token-reference-review').length, 1);
+  assert.equal(normal.filter(({ classification }) => classification === 'forced-colors-accessibility-review').length, 6);
+  for (const file of ['src/example.tsx', 'src\\lib\\tokens.ts']) {
+    const findings = scanSource(source, file);
+    assert.equal(findings.find(({ rule }) => rule === 'nonstandard-icon-import').classification, 'candidate-violation');
+    if (file.includes('tokens')) assert.equal(findings.filter(({ classification }) => classification === 'token-owner-exemption').length, 7);
+  }
+});
+
+function scanFixtureCLI(source) {
+  // In-memory source at one virtual scan path: never create/change UI fixtures.
+  const path = fileURLToPath(new URL('../../src/__qa_classification_virtual__.tsx', import.meta.url));
+  const preload = `
+    import { syncBuiltinESMExports } from 'node:module';
+    const fs = process.getBuiltinModule('fs/promises');
+    const path = ${JSON.stringify(path)};
+    const source = ${JSON.stringify(source)};
+    const readFile = fs.readFile;
+    const lstat = fs.lstat;
+    fs.readFile = async (file, ...args) => file === path ? source : readFile(file, ...args);
+    fs.lstat = async (file, ...args) => file === path
+      ? { isSymbolicLink: () => false, isDirectory: () => false } : lstat(file, ...args);
+    syncBuiltinESMExports();
+  `;
+  return spawnSync(process.execPath, [
+    '--import', `data:text/javascript,${encodeURIComponent(preload)}`,
+    fileURLToPath(new URL('../frontend-qa.mjs', import.meta.url)),
+    'scan', '--path', path,
+  ], { encoding: 'utf8' });
+}
+
+test('actual scan CLI retains review counts and exits nonzero for every negative fixture', () => {
+  const positive = scanFixtureCLI(classificationFixture(forcedColorsClasses));
+  assert.equal(positive.status, 0, positive.stderr);
+  const report = JSON.parse(positive.stdout);
+  assert.equal(report.findings.length, 6);
+  assert.deepEqual(report.counts, {
+    'candidate-violation': 0, 'token-reference-review': 0,
+    'token-owner-exemption': 0, 'forced-colors-accessibility-review': 6,
+  });
+  for (const source of [
+    ...negativeClasses.map((classes) => `const classes = \`${classes}\`;`),
+    "import { Car } from '@heroicons/react/24/outline';",
+  ]) {
+    const result = scanFixtureCLI(source + '\n' + classificationFixture(forcedColorsClasses));
+    assert.equal(result.status, 1, result.stderr);
+    const negative = JSON.parse(result.stdout);
+    assert.ok(negative.counts['candidate-violation'] > 0, source);
+    assert.equal(negative.counts['forced-colors-accessibility-review'], 6, source);
+    assert.equal(negative.findings.length, Object.values(negative.counts).reduce((sum, count) => sum + count, 0));
+  }
+  const negative = scanFixtureCLI(classificationFixture([...forcedColorsClasses, 'text-[CanvasText]', 'forced-colors:p-[13px]']));
+  console.log('NEGATIVE FIXTURE CLI RAW OUTPUT:\n' + negative.stdout + '\nSTDERR:\n' + negative.stderr + '\nEXIT ' + negative.status);
+});

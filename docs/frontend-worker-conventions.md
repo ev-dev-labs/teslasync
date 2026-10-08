@@ -111,6 +111,16 @@ Artifacts and Playwright cache stay in ignored `qa-screenshots\`.
 
 Exit 0 means the bounded command passed; 1 means findings; 2 means blocked
 or invalid input. Style scans are static candidates, not visual acceptance.
+Every detected finding stays in the report. `forced-colors-accessibility-review`
+identifies only bounded standard CSS system-color utilities under an exact
+`forced-colors` variant, including nested chains such as `forced-colors:hover`.
+This is MDC-041 source review, not OS high-contrast or accessibility acceptance.
+Normal-mode system colors, unknown names, numeric/hex/rgb arbitrary values,
+decorative glow and nonstandard icon imports remain candidate violations and
+keep exit 1. Calc/viewport candidates require separate source/design review;
+they are not reclassified. Token-reference review and token-owner exemptions
+retain their existing behavior. Exit 0 can contain review findings; inspect
+the full report rather than treating it as visual or accessibility approval.
 Focused tooling tests do not establish browser, accessibility or application
 acceptance. Record actual command output and acceptance limitations.
 
