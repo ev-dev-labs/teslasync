@@ -35,7 +35,7 @@ export function SignalGapKpis({
   // zeroed shape so the band renders '—'/0 instead of throwing on `.total`.
   const b = buckets ?? EMPTY_BUCKETS;
   const available = hasVehicle && !unavailable && buckets != null;
-  const description = t('telemetryBrief.gapDescription', 'Timestamp age buckets from the current signal query; a sleeping vehicle can be stale without being unhealthy.');
+  const description = t('telemetry.brief.gapDescription', 'Timestamp age buckets from the current signal query; a sleeping vehicle can be stale without being unhealthy.');
   const metrics: readonly StatMetric[] = [
     ...([
       ['total', 'signalGap.totalSignals', 'Total signals', b.total],
@@ -50,7 +50,7 @@ export function SignalGapKpis({
     { metricId: 'percent', occurrenceId: 'freshness', rawValue: available ? freshnessPct : null,
       label: t('signalGap.freshness', 'Freshness'),
       display: { formatter: (raw) => ({ value: `${raw}%`, unit: '' }) },
-      description: t('telemetryBrief.freshnessDenominator', 'Existing share of active plus aging signals across the whole queried catalog; never-received signals remain in the denominator.'),
+      description: t('telemetry.brief.freshnessDenominator', 'Existing share of active plus aging signals across the whole queried catalog; never-received signals remain in the denominator.'),
       context: available ? t('signalGap.receivingSummary', '{{receiving}} of {{total}} signals arriving', {
         receiving: b.active + b.aging, total: b.total,
       }) : undefined },
@@ -62,8 +62,8 @@ export function SignalGapKpis({
         <TelemetrySummaryBrief title={t('signalGap.kpis', 'Signal health summary')}
           metrics={metrics} testId="signal-gap-summary" loading={loading}
           unavailable={unavailable && !loading} unknown={!hasVehicle} retained={retained}
-          scope={t('telemetryBrief.gapScope', 'Selected vehicle · queried catalog timestamp ages')}
-          provenance={t('telemetryBrief.gapProvenance', 'Current signal values and their reported timestamps')}
+          scope={t('telemetry.brief.gapScope', 'Selected vehicle · queried catalog timestamp ages')}
+          provenance={t('telemetry.brief.gapProvenance', 'Current signal values and their reported timestamps')}
           description={description} />
       </div>
     </FadeIn>
