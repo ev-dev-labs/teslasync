@@ -125,7 +125,6 @@ function CompactView({
   totalEvents,
   mostCommon,
   trend,
-  priorCount,
   t,
 }: {
   totalEvents: number;
@@ -159,6 +158,7 @@ function CompactView({
 
 export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
+  const { fmtInt } = useNumberFormatting();
   const vehicleQuery = useVehicles();
   const { data: vehicles } = vehicleQuery;
   const vehicleState = useDataState(vehicleQuery);
@@ -234,6 +234,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
 
     return {
       totalEvents: recentCount,
+      priorCount,
       mostCommon: mostCommonType ? safetyTypeLabel(mostCommonType, t) : '—',
       trend,
     };
@@ -241,7 +242,7 @@ export default function SafetyHistoryWidget({ vehicleId, size }: WidgetProps) {
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'safety-returned-events', rawValue: history === undefined ? null : stats.totalEvents,
       label: t('widget.safetyTotal', 'Events (30d)'),
-      context: t('widget.safety.priorCount', 'Returned snapshots in the preceding 30-day comparison window: {{count}}.', { count: history === undefined ? '—' : stats.priorCount }) },
+      context: t('widget.safety.priorCount', 'Returned snapshots in the preceding 30-day comparison window: {{count}}.', { replace: { count: history === undefined ? '—' : fmtInt(stats.priorCount) } }) },
     { metricId: 'text', occurrenceId: 'safety-most-common', rawValue: stats.mostCommon === '—' ? null : stats.mostCommon,
       label: t('widget.safetyMostCommon', 'Most common') },
     { metricId: 'status', occurrenceId: 'safety-trend', rawValue: stats.trend === '—' ? null : stats.trend,
