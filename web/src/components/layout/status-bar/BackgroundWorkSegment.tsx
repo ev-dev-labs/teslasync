@@ -8,12 +8,18 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Popover } from '@/components/ui/Popover';
+import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type {
   BackgroundJobKind,
   UseBackgroundJobsResult,
 } from '@/hooks/useBackgroundJobs';
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useStatusBarPopover } from './StatusBarContext';
 
 /**
@@ -42,6 +48,7 @@ export function BackgroundWorkSegment({
   embedded = false,
 }: BackgroundWorkSegmentProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   const { jobs, count, hasJobs } = backgroundJobs;
   const { open, toggle, close } = useStatusBarPopover('background');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -71,10 +78,10 @@ export function BackgroundWorkSegment({
   );
 
   const triggerTone = hasError
-    ? 'text-rose-300'
+    ? neonColorMap.red.text
     : hasRunning
-      ? 'text-amber-300'
-      : 'text-emerald-300';
+      ? neonColorMap.cyan.text
+      : neonColorMap.green.text;
   const TriggerIcon = hasError ? AlertTriangle : hasRunning ? Loader2 : CheckCircle2;
 
   const jobList = (
@@ -85,7 +92,7 @@ export function BackgroundWorkSegment({
           : t('statusBar.background.recentHeading', 'Recent activity')}
       </PanelTitle>
       {jobs.map((job) => {
-        const Icon = KIND_ICON[job.kind] ?? Sparkles;
+        const JobIcon = KIND_ICON[job.kind] ?? Sparkles;
         const status =
           job.status === 'success' || job.status === 'error'
             ? job.status
@@ -98,17 +105,19 @@ export function BackgroundWorkSegment({
               : Loader2;
         const outcomeTone =
           status === 'error'
-            ? 'text-rose-300'
+            ? neonColorMap.red.text
             : status === 'success'
-              ? 'text-emerald-300'
-              : 'text-amber-300';
+              ? neonColorMap.green.text
+              : neonColorMap.cyan.text;
         return (
           <div
             key={job.id}
             className="flex items-start gap-2 rounded-md px-1.5 py-1 text-[var(--text-secondary)]"
           >
             <Icon
-              className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
+              icon={JobIcon}
+              size="sm"
+              className={cn('mt-0.5', typography.color.muted)}
               aria-hidden
             />
             <span className="min-w-0 flex-1">
@@ -117,21 +126,22 @@ export function BackgroundWorkSegment({
                 size="xs"
                 weight="medium"
                 color="primary"
-                className="block truncate"
+                className="block break-words"
               >
                 {job.label}
               </Text>
               {job.description && (
-                <Text as="span" size="2xs" color="muted" className="block truncate">
+                <Text as="span" variant="caption" className="block break-words">
                   {job.description}
                 </Text>
               )}
             </span>
-            <OutcomeIcon
+            <Icon
+              icon={OutcomeIcon}
+              size="xs"
               className={cn(
-                'h-3 w-3 shrink-0',
                 outcomeTone,
-                status === 'running' && 'animate-spin',
+                status === 'running' && !reduce && 'animate-spin motion-reduce:animate-none',
               )}
               aria-hidden
             />
@@ -165,12 +175,15 @@ export function BackgroundWorkSegment({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
+            'h-11 min-w-11 gap-1.5 rounded-shape-sm px-1.5 py-0 md:h-6 md:min-h-6 md:min-w-6',
+            typography.size.xs,
             triggerTone,
           )}
         >
-          <TriggerIcon
-            className={cn('h-3 w-3 shrink-0', hasRunning && 'animate-spin')}
+          <Icon
+            icon={TriggerIcon}
+            size="xs"
+            className={cn(hasRunning && !reduce && 'animate-spin motion-reduce:animate-none')}
             aria-hidden
           />
           {!iconOnly && (
@@ -178,7 +191,7 @@ export function BackgroundWorkSegment({
               as="span"
               size="xs"
               weight="medium"
-              className="max-w-[180px] truncate"
+              className="max-w-background-summary truncate"
             >
               {summary}
             </Text>
@@ -193,7 +206,7 @@ export function BackgroundWorkSegment({
         side="top"
         align="end"
         ariaLabel={t('statusBar.background.aria', 'Background tasks')}
-        className="max-h-[280px] min-w-[260px] overflow-y-auto"
+        className="max-h-status-options min-w-background-work overflow-y-auto"
       >
         {jobList}
       </Popover>
