@@ -53,13 +53,13 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const feedbackId = error ? errorId : hint ? hintId : undefined;
     const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
-      <div>
+      <div className="min-w-0">
         {label && (
-          <div className="mb-1 flex items-center gap-1">
+          <div className="mb-1 flex flex-wrap items-start gap-1">
             <Label
               htmlFor={textareaId}
               required={required}
-              className="block text-xs font-medium text-[var(--text-secondary)]"
+              className="block min-w-0 break-words text-xs font-medium text-[var(--text-secondary)]"
             >
               {label}
             </Label>
@@ -80,7 +80,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           required={required}
           aria-required={required ? 'true' : undefined}
           className={cn(
-            'w-full rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)]',
+            'min-h-11 w-full min-w-0 max-w-full rounded-shape-sm border border-[var(--control-border)] bg-[var(--control-bg)] md:min-h-0',
             // Colour base MUST precede sizeClasses: tailwind-merge classifies
             // the custom density utility `text-d-base` in the same group as
             // the arbitrary colour `text-[var(--text-primary)]`, so whichever
@@ -89,9 +89,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             // silently drop its density font-size.
             'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
             sizeClasses[size],
-            'focus-visible:border-[var(--theme-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-app)]',
-            'resize-y transition-colors disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-            error && 'border-rose-500',
+            'focus-visible:border-[var(--focus-ring)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+            'resize-y transition-colors duration-fast ease-standard motion-reduce:transition-none disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
+            error && 'border-[var(--semantic-danger)] focus-visible:border-[var(--semantic-danger)]',
             className,
           )}
           aria-invalid={error ? 'true' : undefined}
@@ -99,12 +99,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p id={errorId} role="alert" className="mt-1 text-xs text-rose-300">
+          <p id={errorId} role="alert" className="mt-1 break-words text-xs text-[var(--semantic-danger)]">
             {error}
           </p>
         )}
         {hint && !error && (
-          <p id={hintId} className="mt-1 text-xs text-[var(--text-muted)]">
+          <p id={hintId} className="mt-1 break-words text-xs text-[var(--text-muted)]">
             {hint}
           </p>
         )}
