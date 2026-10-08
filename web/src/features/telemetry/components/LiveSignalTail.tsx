@@ -26,6 +26,14 @@ const TYPE_VALUE_COLOR: Record<string, string> = {
   boolean: 'text-amber-300',
 };
 
+const MOBILE_SIGNAL_ROLES = {
+  signal: 'title',
+  value: 'primary',
+  time: 'meta',
+  type: 'badge',
+  freshness: 'hidden',
+} as const;
+
 export interface LiveSignalTailProps {
   entries: SignalEntry[];
   rate: number;
@@ -93,14 +101,14 @@ export function LiveSignalTail({
       key: 'signal',
       header: t('liveMonitor.signal', 'Signal'),
       render: (entry) => (
-        <Code className="whitespace-nowrap">{entry.name}</Code>
+        <Code className="whitespace-pre-wrap break-words">{entry.name}</Code>
       ),
     },
     {
       key: 'value',
       header: t('liveMonitor.value', 'Value'),
       render: (entry) => (
-        <Text mono size="xs" className={cn('whitespace-nowrap', TYPE_VALUE_COLOR[entry.type])}>{entry.value}</Text>
+        <Text mono size="xs" className={cn('whitespace-pre-wrap break-words', TYPE_VALUE_COLOR[entry.type])}>{entry.value}</Text>
       ),
     },
     {
@@ -143,7 +151,7 @@ export function LiveSignalTail({
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           {title ? (
             <div className="flex min-w-0 items-center gap-2">
-              <Radio className="h-4 w-4 shrink-0 text-red-500 animate-pulse motion-reduce:animate-none" aria-hidden="true" />
+              <Radio className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
               <PanelTitle className="min-w-0 break-words">{title}</PanelTitle>
             </div>
           ) : null}
@@ -161,6 +169,7 @@ export function LiveSignalTail({
               onClick={onPauseToggle}
               variant="secondary"
               size="sm"
+              className="min-h-11 md:min-h-0"
               wrapLabel
               aria-pressed={paused}
               icon={paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
@@ -174,7 +183,7 @@ export function LiveSignalTail({
               wrapLabel
               aria-pressed={autoScroll}
               icon={<ArrowDown className="h-3.5 w-3.5" />}
-              className={autoScroll ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : ''}
+              className={cn('min-h-11 md:min-h-0', autoScroll && 'bg-[var(--surface-3)] border-[var(--border-strong)]')}
             >
               {t('liveMonitor.autoScroll', 'Auto-scroll')}
             </Button>
@@ -182,6 +191,7 @@ export function LiveSignalTail({
               onClick={onClear}
               variant="danger"
               size="sm"
+              className="min-h-11 md:min-h-0"
               wrapLabel
               icon={<Trash2 className="h-3.5 w-3.5" />}
             >
@@ -204,6 +214,18 @@ export function LiveSignalTail({
             tableId="telemetry:live-signal-tail"
             columns={columns}
             mobileColumns={['signal', 'value', 'time']}
+            mobilePresentation={{
+              roles: MOBILE_SIGNAL_ROLES,
+              displayValue: (entry, key) => {
+                switch (key) {
+                  case 'signal': return entry.name;
+                  case 'value': return entry.value;
+                  case 'time': return formatTime(entry.timestamp);
+                  case 'type': return entry.type;
+                  default: return undefined;
+                }
+              },
+            }}
             data={filtered}
             keyExtractor={(entry) => entry.id}
             compact
