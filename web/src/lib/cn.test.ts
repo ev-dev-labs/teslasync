@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { cn } from './cn'
 import { typography } from './tokens'
+import { resolve } from 'node:path'
+import postcss, { type Root } from 'postcss'
+import tailwindcss from 'tailwindcss'
+import loadConfig from 'tailwindcss/loadConfig'
 
 // `cn` is the app-wide className composer (clsx for conditional composition +
 // tailwind-merge for last-wins conflict resolution). It is used in hundreds of
@@ -13,6 +17,104 @@ import { typography } from './tokens'
 function tokens(value: string): Set<string> {
   return new Set(value.split(/\s+/).filter(Boolean))
 }
+
+describe('cn — Tailwind 3 outline property independence', () => {
+  const variants = ['', 'focus-visible:', 'sm:', 'md:focus-visible:', 'forced-colors:focus-visible:']
+  const properties = ['outline', 'outline-2', 'outline-offset-2', 'outline-[var(--focus-ring)]']
+
+  it.each(variants)('keeps style, width, offset and color in both orders for %s', (variant) => {
+    const classes = properties.map((className) => `${variant}${className}`)
+    expect(cn(classes)).toBe(classes.join(' '))
+    expect(cn([...classes].reverse())).toBe([...classes].reverse().join(' '))
+  })
+
+  for (const [base, alternatives] of [
+    ['outline', ['outline-dashed', 'outline-dotted', 'outline-double', 'outline-none']],
+    ['outline-2', ['outline-4', 'outline-[3px]', 'outline-[length:var(--outline-width)]', 'outline-(length:--outline-width)']],
+    ['outline-offset-2', ['outline-offset-4', 'outline-offset-[3px]', 'outline-offset-(--outline-offset)']],
+    ['outline-[var(--focus-ring)]', ['outline-red-500', 'outline-[Highlight]', 'outline-(--outline-color)']],
+  ] as const) {
+    for (const alternative of alternatives) {
+      it.each(variants)(`${base} and ${alternative} resolve only their property for %s`, (variant) => {
+        const independent = properties.filter((className) => className !== base)
+          .map((className) => `${variant}${className}`)
+        expect(tokens(cn(independent, `${variant}${base}`, `${variant}${alternative}`)))
+          .toEqual(new Set([...independent, `${variant}${alternative}`]))
+        expect(tokens(cn(independent, `${variant}${alternative}`, `${variant}${base}`)))
+          .toEqual(new Set([...independent, `${variant}${base}`]))
+      })
+    }
+  }
+
+  it('keeps distinct variants and forced-colors Highlight independent in both orders', () => {
+    const classes = variants.flatMap((variant) => properties.map((className) => `${variant}${className}`))
+    classes.push('forced-colors:outline-[Highlight]', 'xl:outline-4', 'rounded-panel', 'px-4')
+    expect(tokens(cn(classes))).toEqual(new Set(classes))
+    expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+  })
+
+  it('retains exact generated CSS declarations, importance and media in both authored orders', async () => {
+    const config = loadConfig(resolve('tailwind.config.js'))
+    const classes = variants.flatMap((variant) => properties.map((className) =>
+      `${variant}${variant.startsWith('forced-colors:') && className === 'outline-[var(--focus-ring)]'
+        ? 'outline-[Highlight]' : className}`))
+    const generate = async (classNames: string) => (await postcss([tailwindcss({
+      ...config,
+      content: [{ raw: classNames, extension: 'html' }],
+    })]).process('@tailwind utilities;', { from: undefined })).root
+
+    function generatedRules(root: Root) {
+      const rules: { selector: string; media: string[]; declarations: [string, string, boolean][] }[] = []
+      root.walkRules((rule) => {
+        const media: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') media.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls((declaration) => {
+          declarations.push([declaration.prop, declaration.value, Boolean(declaration.important)])
+        })
+        rules.push({ selector: rule.selector, media, declarations })
+      })
+      return rules
+    }
+
+    const authored = await generate(classes.join(' '))
+    const expected = generatedRules(authored)
+    for (const ordered of [classes, [...classes].reverse()]) {
+      expect(generatedRules(await generate(cn(ordered)))).toEqual(expected)
+    }
+
+    for (const variant of variants) {
+      for (const [className, property, value] of [
+        ['outline', 'outline-style', 'solid'],
+        ['outline-2', 'outline-width', '2px'],
+        ['outline-offset-2', 'outline-offset', '2px'],
+        variant.startsWith('forced-colors:')
+          ? ['outline-[Highlight]', 'outline-color', 'Highlight']
+          : ['outline-[var(--focus-ring)]', 'outline-color', 'var(--focus-ring)'],
+      ]) {
+        const selector = `.${variant}${className}${variant.includes('focus-visible:') ? ':focus-visible' : ''}`
+        const matches = expected.filter((rule) => rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1') === selector)
+        expect(matches, selector).toHaveLength(1)
+        expect(matches[0].declarations).toEqual([[property, value, false]])
+        expect(matches[0].media).toEqual(
+          variant.startsWith('sm:') ? ['@media (min-width: 640px)']
+            : variant.startsWith('md:') ? ['@media (min-width: 768px)']
+              : variant.startsWith('forced-colors:') ? ['@media (forced-colors: active)'] : [],
+        )
+      }
+    }
+    expect(expected.find((rule) => rule.selector.includes('Highlight'))).toMatchObject({
+      media: ['@media (forced-colors: active)'],
+      declarations: [['outline-color', 'Highlight', false]],
+    })
+  })
+})
 
 describe('cn — clsx composition', () => {
   it('joins multiple string arguments with single spaces', () => {
