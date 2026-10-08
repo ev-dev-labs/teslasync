@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Link2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { Icon } from '../ui/Icon';
 import { Tooltip } from '../ui/Tooltip';
 import { cn } from '@/lib/cn';
 import { useOptionalToast } from '../feedback/Toast';
@@ -73,8 +74,9 @@ export function CopyLinkButton({ className, iconOnly = false }: { className?: st
       type="button"
       variant="ghost"
       size="sm"
-      className={cn(iconOnly && 'h-11 w-11 justify-center p-0 sm:h-9 sm:w-9', className)}
-      icon={copied ? <Check className="h-3.5 w-3.5" /> : <Link2 className="h-3.5 w-3.5" />}
+      wrapLabel={!iconOnly}
+      className={cn('min-h-11 md:min-h-9', iconOnly && 'h-11 w-11 justify-center p-0 md:h-9 md:w-9', className)}
+      icon={<Icon icon={copied ? Check : Link2} size="sm" />}
       onClick={handleClick}
       aria-label={copied && iconOnly
         ? t('common.copyLink.copied', 'Copied')
