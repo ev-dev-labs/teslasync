@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, fireEvent, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
@@ -80,7 +80,7 @@ describe('DashboardSourceBrief with the actual renderer and raw bridge', () => {
     expect(within(drawer).getByText('250.00 kWh')).toBeInTheDocument();
     expect(within(drawer).getByText('Source metres')).toBeInTheDocument();
     expect(within(drawer).getAllByText(/independent source windows/).length).toBeGreaterThan(0);
-    expect(within(drawer).getByText(/exact bounds unknown/)).toBeInTheDocument();
+    expect(within(drawer).getByText('All fleet vehicles; exact bounds unknown')).toBeInTheDocument();
   });
 
   it('validates missing, non-finite and fractional counts before a specialist formatter can execute', () => {
