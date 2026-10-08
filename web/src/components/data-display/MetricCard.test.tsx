@@ -11,6 +11,8 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { MetricCard } from './MetricCard'
+import { neonColorMap, type NeonColor } from '../../lib/tokens'
+import { fmtNumber } from '../../lib/numberFormat'
 
 // Capture the props MetricCard forwards to <Delta>. Returning a plain string
 // keeps the mock JSX-free (safe inside a hoisted factory) while still giving
@@ -56,7 +58,7 @@ describe('MetricCard — label + value', () => {
     const { container, rerender } = render(
       <MetricCard compact label="Drives" value={13} delta={{ metric: 'trip_count', previous: 15 }} />,
     )
-    const trackClasses = '@[26rem]/metric:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem]'
+    const trackClasses = '@[26rem]/metric:grid-cols-metric-compact'
     expect(container.querySelector('[data-role="metric-value"]')?.parentElement)
       .toHaveClass(trackClasses)
     expect(container.querySelector('[data-role="metric-comparison"]'))
@@ -107,7 +109,7 @@ describe('MetricCard — icon + colour', () => {
     expect(box).toHaveAttribute('data-color', 'cyan')
     expect(box.className).toContain('bg-[var(--surface-2)]')
     expect(box.className).toContain('border-[var(--border-default)]')
-    expect(inner).toHaveClass('text-cyan-300')
+    expect(inner).toHaveClass(neonColorMap.cyan.text)
   })
 
   it('applies the requested colour variant', () => {
@@ -116,7 +118,7 @@ describe('MetricCard — icon + colour', () => {
     const box = inner.parentElement as HTMLElement
     expect(box).toHaveAttribute('data-color', 'green')
     expect(box.className).toContain('bg-[var(--surface-2)]')
-    expect(inner).toHaveClass('text-emerald-300')
+    expect(inner).toHaveClass(neonColorMap.green.text)
   })
 
   it('falls back to cyan for an unregistered colour instead of crashing', () => {
@@ -129,7 +131,7 @@ describe('MetricCard — icon + colour', () => {
       />,
     )
     const inner = screen.getByTestId('ic').parentElement as HTMLElement
-    expect(inner.className).toContain('text-cyan-300')
+    expect(inner).toHaveClass(neonColorMap.cyan.text)
   })
 
   it('omits the icon box when no icon is passed', () => {
@@ -143,21 +145,23 @@ describe('MetricCard — legacy change pill', () => {
     const { container } = render(
       <MetricCard label="X" value="1" change={{ value: '5%', positive: true }} />,
     )
-    const pill = container.querySelector('.text-emerald-300') as HTMLElement
+    const pill = screen.getByText('↑ 5%')
     expect(pill).not.toBeNull()
     expect(pill.textContent).toContain('↑')
     expect(pill.textContent).toContain('5%')
-    expect(container.querySelector('.text-rose-300')).toBeNull()
+    expect(pill).toHaveClass(neonColorMap.green.text)
+    expect(container.querySelector('[class*="--semantic-danger"]')).toBeNull()
   })
 
   it('renders a negative change in rose with a down arrow', () => {
     const { container } = render(
       <MetricCard label="X" value="1" change={{ value: '3%', positive: false }} />,
     )
-    const pill = container.querySelector('.text-rose-300') as HTMLElement
+    const pill = screen.getByText('↓ 3%')
     expect(pill.textContent).toContain('↓')
     expect(pill.textContent).toContain('3%')
-    expect(container.querySelector('.text-emerald-300')).toBeNull()
+    expect(pill).toHaveClass(neonColorMap.red.text)
+    expect(container.querySelector('[class*="--semantic-success"]')).toBeNull()
   })
 
   it('hides the change pill and renders the delta when both are supplied', () => {
@@ -170,9 +174,83 @@ describe('MetricCard — legacy change pill', () => {
       />,
     )
     // change pill (emerald) is suppressed; the delta takes precedence.
-    expect(container.querySelector('.text-emerald-300')).toBeNull()
+    expect(container.querySelector('[class*="--semantic-success"]')).toBeNull()
     expect(container.textContent).toContain('delta[')
     expect(deltaSpy).toHaveBeenCalled()
+  })
+
+  describe('MetricCard — restrained presentation and preservation', () => {
+    it('keeps normal subtitle truncation opt-in wrapping and complete compact descriptions', () => {
+      const subtitle = 'Retained source evidence · فترة المقارنة الطويلة · ' + 'identifier'.repeat(30)
+      const { rerender } = render(<MetricCard label="Scope" value="—" subtitle={subtitle} />)
+      expect(screen.getByText(subtitle)).toHaveClass('truncate')
+      rerender(<MetricCard label="Scope" value="—" subtitle={subtitle} wrapSubtitle />)
+      expect(screen.getByText(subtitle)).toHaveClass('whitespace-normal', 'break-words')
+      expect(screen.getByText(subtitle)).not.toHaveClass('truncate')
+      rerender(<MetricCard compact label="Scope" value="—" subtitle={subtitle} />)
+      expect(screen.getByText(subtitle)).toHaveClass('break-words', '@[26rem]/metric:col-span-3')
+      expect(screen.getByText(subtitle)).not.toHaveClass('truncate')
+    })
+
+    it('preserves measured zero, unknown text, nonfinite measurements and caller-formatted units', () => {
+      const { rerender } = render(<MetricCard label="Measurement" value={0} kind="measurement" />)
+      expect(screen.getByText(fmtNumber(0))).toBeInTheDocument()
+      rerender(<MetricCard label="Measurement" value={Number.NaN} kind="measurement" />)
+      expect(screen.getByText('—')).toBeInTheDocument()
+      rerender(<MetricCard label="Measurement" value="—" />)
+      expect(screen.getByText('—')).toBeInTheDocument()
+      rerender(<MetricCard label="Measurement" value="−12.50 °C" kind="measurement" />)
+      expect(screen.getByText('−12.50 °C')).toBeInTheDocument()
+      rerender(<MetricCard label="Count" value={0} kind="count" />)
+      expect(screen.getByText('0')).toBeInTheDocument()
+    })
+
+    it.each(['higher_better', 'lower_better', 'neutral'] as const)(
+      'delegates %s comparisons without interpreting high values as success',
+      (direction) => {
+        render(
+          <MetricCard
+            label="Comparison"
+            value={0}
+            delta={{
+              metric: { direction, unit: 'count' },
+              previous: null,
+              current: 0,
+              display: 'both',
+              comparedTo: 'Previous source window',
+              precision: 3,
+              hideArrow: true,
+              inline: false,
+              className: 'caller-delta',
+            }}
+          />,
+        )
+        expect(deltaSpy).toHaveBeenCalledWith(expect.objectContaining({
+          current: 0, previous: null, metric: { direction, unit: 'count' },
+          display: 'both', comparedTo: 'Previous source window', precision: 3,
+          hideArrow: true, inline: false, className: 'caller-delta',
+        }))
+      },
+    )
+
+    const colors: NeonColor[] = ['cyan', 'green', 'red', 'purple', 'amber', 'blue', 'neutral']
+    it.each(colors)('retains the public %s color identity on a neutral icon surface', (color) => {
+      render(<MetricCard label="Variant" value={1} color={color} icon={<svg data-testid="variant-icon" aria-label="Caller icon" />} />)
+      const icon = screen.getByTestId('variant-icon')
+      expect(icon).toHaveAttribute('aria-label', 'Caller icon')
+      expect(icon.parentElement).toHaveClass(neonColorMap[color].text)
+      expect(icon.parentElement?.parentElement).toHaveAttribute('data-color', color)
+      expect(icon.parentElement?.parentElement).not.toHaveClass('shadow-e1')
+    })
+
+    it('retains explicit empty help names, caller help sizing and compact label wrapping', () => {
+      render(
+        <MetricCard compact wrapLabel label="Long source scope" value="—" help={{ text: 'Source explanation', ariaLabel: '', size: 'md' }} />,
+      )
+      expect(screen.getByRole('button')).toHaveAttribute('aria-label', '')
+      expect(screen.getByText('Long source scope')).toHaveClass('break-words')
+      expect(screen.getByText('Source explanation')).toBeInTheDocument()
+    })
   })
 })
 
