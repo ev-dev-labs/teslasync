@@ -1,5 +1,18 @@
 {
   "liveMonitor": {
+    "brief": {
+      "bufferScope": "Current bounded SSE tail buffer only; cleared and replaced independently of durable history.",
+      "categorical": "Boolean and string entries in the current buffer; not distinct catalog fields.",
+      "sseConnection": "SSE transport connection only; not a vehicle-health or signal-freshness verdict.",
+      "sseProvenance": "Client SSE tail and locally sampled throughput",
+      "sseRate": "Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.",
+      "sseScope": "Current SSE session · bounded tail buffer",
+      "tailDescription": "Pause freezes the tail presentation, not durable telemetry ingestion. Connection and per-row timestamp freshness remain separate evidence.",
+      "tailFiltered": "Buffered entries after the case-insensitive signal-name filter; not distinct signals.",
+      "tailPaused": "Tail paused",
+      "tailRecording": "Tail recording enabled",
+      "tailTitle": "Buffered tail summary"
+    },
     "time": "Time",
     "signal": "Signal",
     "value": "Value",

@@ -1491,6 +1491,11 @@
       "loading": "Loading statistics"
     }
   },
+  "fleetOps": {
+    "brief": {
+      "refreshBlocked": "Refresh paused"
+    }
+  },
   "forms": {
     "unsavedRule": "You have an unsaved alert rule.",
     "validationFailed": "Please fix the highlighted fields before saving."

@@ -9709,7 +9709,50 @@
   },
   "admin": {
     "auditLog": {
+      "kpiActions": "Action types",
+      "kpiActors": "Actors (in view)",
+      "kpiCategories": "Categories",
+      "kpiEntries": "Entries shown",
+      "kpiFailed": "Failed (in view)",
+      "kpiOk": "OK (in view)",
+      "kpis": "Audit overview",
+      "pageTitle": "Audit log",
+      "statstrip": {
+        "actionScope": "Queried action catalog; not limited to this page",
+        "categoryScope": "Queried category catalog; not limited to this page",
+        "pageScope": "Current filtered page only; not the full ledger",
+        "period": "Current filtered page and queried catalogs",
+        "periodReason": "Page counts follow the active filters and pagination; catalog counts use independent queries. No full-ledger period is implied.",
+        "refreshing": "Refreshing this source",
+        "retainedEntries": "Entries source refresh failed; retained page counts",
+        "unavailableEntries": "Entries source unavailable; page counts unknown"
+      },
       "verifyError": "Verification failed"
+    },
+    "vehicleCost": {
+      "avgRows": "Avg rows / vehicle",
+      "avgSub": "Fleet baseline",
+      "bytesDescription": "Estimated storage for returned vehicles over the selected ingest window, using the existing 96 bytes per row estimate; not measured on-disk size.",
+      "bytesSub": "96 bytes/row average",
+      "denominatorScope": "Denominator: returned vehicles (query limit 100); not an unbounded fleet count",
+      "failuresDescription": "Reported DLQ failures over the last 24 hours for vehicles returned in the selected window; not an unbounded fleet failure count.",
+      "failuresSub": "Codec or writer rejections",
+      "kpiRegion": "Fleet ingest totals",
+      "meanScope": "Returned-vehicle total rows divided by returned vehicle count; arithmetic mean within this limited report",
+      "noDenominator": "No returned vehicles to average",
+      "pageTitle": "Vehicle ingest cost",
+      "periodReason": "Rows, estimated bytes and vehicle baseline use the selected window; rate and DLQ failures use the last 24 hours for returned vehicles. The response does not provide exact report bounds.",
+      "rateDescription": "Ingest rows per minute in the last 24 hours among returned vehicles and selected-window rows; not an unbounded fleet rate.",
+      "rateSub": "Across all vehicles",
+      "returnedQualifier": "in the returned report (up to 100 vehicles)",
+      "totalBytes": "Total bytes (est.)",
+      "totalFailures": "DLQ failures (24h)",
+      "totalRate": "Rate (rows/min, 24h)",
+      "totalRows": "Total rows",
+      "totalScope": "Totals sum the returned vehicles only (query limit 100), not the unbounded fleet",
+      "vehiclesSub": "Ingesting in window",
+      "vehiclesTracked": "Vehicles tracked",
+      "windowSub": "Window: {{days}}d"
     },
     "systemStatus": {
       "clientPerformance": {
@@ -21816,6 +21859,19 @@
     }
   },
   "liveMonitor": {
+    "brief": {
+      "bufferScope": "Current bounded SSE tail buffer only; cleared and replaced independently of durable history.",
+      "categorical": "Boolean and string entries in the current buffer; not distinct catalog fields.",
+      "sseConnection": "SSE transport connection only; not a vehicle-health or signal-freshness verdict.",
+      "sseProvenance": "Client SSE tail and locally sampled throughput",
+      "sseRate": "Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.",
+      "sseScope": "Current SSE session · bounded tail buffer",
+      "tailDescription": "Pause freezes the tail presentation, not durable telemetry ingestion. Connection and per-row timestamp freshness remain separate evidence.",
+      "tailFiltered": "Buffered entries after the case-insensitive signal-name filter; not distinct signals.",
+      "tailPaused": "Tail paused",
+      "tailRecording": "Tail recording enabled",
+      "tailTitle": "Buffered tail summary"
+    },
     "time": "Time",
     "signal": "Signal",
     "value": "Value",
