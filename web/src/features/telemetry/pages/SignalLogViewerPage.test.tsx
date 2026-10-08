@@ -300,13 +300,13 @@ describe('SignalLogViewerPage', () => {
     // KPI counters: 4 rows total, 3 numeric, 1 text, across 2 signals. Scope to
     // the KPI region — "Signals" also labels the (hidden) cockpit combobox.
     const kpi = screen.getByRole('region', { name: 'Query summary' });
-    const totalCard = within(kpi).getByText('Total records').closest('div') as HTMLElement;
+    const totalCard = within(kpi).getByText('Total records').closest('[data-operational-metric]') as HTMLElement;
     expect(within(totalCard).getByText('4')).toBeInTheDocument();
-    const numericCard = within(kpi).getByText('Numeric points').closest('div') as HTMLElement;
+    const numericCard = within(kpi).getByText('Numeric points').closest('[data-operational-metric]') as HTMLElement;
     expect(within(numericCard).getByText('3')).toBeInTheDocument();
-    const textCard = within(kpi).getByText('Text points').closest('div') as HTMLElement;
+    const textCard = within(kpi).getByText('Text points').closest('[data-operational-metric]') as HTMLElement;
     expect(within(textCard).getByText('1')).toBeInTheDocument();
-    const signalsCard = within(kpi).getByText('Signals').closest('div') as HTMLElement;
+    const signalsCard = within(kpi).getByText('Signals').closest('[data-operational-metric]') as HTMLElement;
     expect(within(signalsCard).getByText('2 with data')).toBeInTheDocument();
 
     // Rows are sorted newest-first: soc=80 @10:02 leads, 'charging' @09:59 trails.
