@@ -208,15 +208,15 @@ export default function SignalMutualInformationPage() {
           retained={result != null && (historyAState.isRefreshing || historyBState.isRefreshing
             || historyAState.status === 'stale' || historyBState.status === 'stale'
             || historyAState.refreshError != null || historyBState.refreshError != null)}
-          scope={t('telemetryBrief.pairWindow', '{{hours}}h requested · {{signalA}} / {{signalB}} · aligned overlap only', {
+          scope={t('telemetry.brief.pairWindow', '{{hours}}h requested · {{signalA}} / {{signalB}} · aligned overlap only', {
             hours: HISTORY_HOURS, signalA: signalA || '—', signalB: signalB || '—',
           })}
           sourceBounds={[
             ...(signalA ? [{ signal: signalA, from: historyA.data?.from, to: historyA.data?.to }] : []),
             ...(signalB ? [{ signal: signalB, from: historyB.data?.from, to: historyB.data?.to }] : []),
           ]}
-          provenance={t('telemetryBrief.pairProvenance', 'Two independently queried signal histories; aligned numeric samples only')}
-          description={t('telemetryBrief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+          provenance={t('telemetry.brief.pairProvenance', 'Two independently queried signal histories; aligned numeric samples only')}
+          description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
         {isError && <QueryError error={error} onRetry={() => {
           void signalsQuery.refetch(); void historyA.refetch(); void historyB.refetch();
         }} />}
