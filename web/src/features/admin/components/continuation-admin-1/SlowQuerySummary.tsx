@@ -57,7 +57,7 @@ export function SlowQuerySummary({ count, totals, limit, metricLabel, known, loa
         loading={loading && !retained}
         freshness={retained ? t('admin.operationalBrief.retained', 'Retained evidence') : undefined}
         provenance={t('admin.slowQueries.kpiCallsSub', 'Across shown queries')} />
-      {error && <QueryError error={error} onRetry={onRetry}
+      {Boolean(error) && <QueryError error={error} onRetry={onRetry}
         resourceName={t('admin.slowQueries.pageTitle', 'Slow queries')} />}
     </section>
   );
