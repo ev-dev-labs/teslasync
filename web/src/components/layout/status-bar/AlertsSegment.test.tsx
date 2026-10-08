@@ -1,7 +1,8 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Alert } from '@/api/types';
+import { severityTokens } from '@/lib/tokens';
 import { StatusBarProvider } from './StatusBarContext';
 
 let mockAlerts: Alert[] = [];
@@ -93,7 +94,7 @@ describe('AlertsSegment', () => {
       name: 'Priority alert monitoring is unavailable',
     });
     expect(trigger).toHaveTextContent('Alerts unavailable');
-    expect(trigger.className).toContain('text-rose-300');
+    expect(trigger.className).toContain(severityTokens.critical.fg);
 
     fireEvent.click(trigger);
     const dialog = screen.getByRole('dialog', { name: 'Priority alerts' });
@@ -119,7 +120,7 @@ describe('AlertsSegment', () => {
     });
     expect(trigger).toHaveTextContent('Alerts');
     expect(trigger).toHaveTextContent('2');
-    expect(trigger.className).toContain('text-rose-300');
+    expect(trigger.className).toContain(severityTokens.critical.fg);
   });
 
   it('includes warning severity in the trigger accessible name', () => {
@@ -158,7 +159,7 @@ describe('AlertsSegment', () => {
       'href',
       '/battery?vehicle_id=7&t=2026-07-05T12%3A00%3A00.000Z&signal=BatteryLevel',
     );
-    expect(links.at(-1)).toHaveAttribute('href', '/notifications/inbox?read=unread');
+    expect(links.slice(-1)[0]).toHaveAttribute('href', '/notifications/inbox?read=unread');
   });
 
   it('caps previews at four while retaining the full unread count', () => {
@@ -210,6 +211,14 @@ describe('AlertsSegment', () => {
     expect(
       screen.getByRole('dialog', { name: 'Priority alerts' }),
     ).toHaveTextContent('Priority alert monitoring is unavailable');
+    expect(
+      within(screen.getByRole('dialog', { name: 'Priority alerts' })).getByRole('link', {
+        name: /Critical.*Battery low/,
+      }),
+    ).toHaveAttribute(
+      'href',
+      '/battery?vehicle_id=7&t=2026-07-05T12%3A00%3A00.000Z&signal=BatteryLevel',
+    );
     expect(
       screen.getByRole('button', {
         name: 'Priority alert monitoring is unavailable',
@@ -283,5 +292,69 @@ describe('AlertsSegment', () => {
     expect(
       screen.getByRole('status', { name: 'Status announcements' }),
     ).toHaveTextContent('');
+  });
+
+  it('preserves native trigger and icon-only semantics with warning tokens', () => {
+    mockAlerts = [alert()];
+    renderSegment(true);
+    const trigger = screen.getByRole('button', {
+      name: 'Open 1 unread alerts. Highest severity: Warning',
+    });
+    expect(trigger).toHaveAttribute('type', 'button');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger.className).toContain(severityTokens.warn.fg);
+    expect(within(trigger).queryByText('Alerts')).not.toBeInTheDocument();
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('keeps long alert content reachable and closes on drill-through', async () => {
+    const title = 'Long alert title '.repeat(20);
+    const message = 'Detailed alert context '.repeat(30);
+    mockAlerts = [alert({ title, message })];
+    renderSegment();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Open 1 unread alerts. Highest severity: Warning',
+    }));
+    const dialog = screen.getByRole('dialog', { name: 'Priority alerts' });
+    const link = within(dialog).getAllByRole('link')[0];
+    expect(link).toHaveTextContent(title.trim());
+    expect(link).toHaveTextContent(message.trim());
+    expect(within(link).getByText(title.trim()).className).not.toContain('truncate');
+    expect(within(link).getByText(message.trim()).className).not.toContain('line-clamp');
+    await act(async () => {
+      fireEvent.click(link);
+    });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('does not fabricate an unread count before the initial source resolves', () => {
+    mockAlertsSuccess = false;
+    const { container } = renderSegment();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it('uses the exact named preview geometry without changing scroll ownership', () => {
+    mockAlerts = [alert()];
+    renderSegment();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'Open 1 unread alerts. Highest severity: Warning',
+    }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Priority alerts' });
+    expect(dialog).toHaveClass('w-alerts-preview', 'p-2');
+    expect(within(dialog).getByRole('list')).toHaveClass(
+      'max-h-alerts-preview',
+      'overflow-y-auto',
+      'space-y-0.5',
+      'py-1',
+    );
+    expect(within(dialog).getAllByRole('link')).toHaveLength(2);
+    expect(within(dialog).getAllByRole('link').slice(-1)[0]).toHaveAttribute(
+      'href',
+      '/notifications/inbox?read=unread',
+    );
   });
 });
