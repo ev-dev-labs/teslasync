@@ -72,7 +72,8 @@ vi.mock('react-i18next', () => {
 });
 
 // ── motion primitives: render children verbatim (strip animation). ──
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children, className }: { children?: ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
