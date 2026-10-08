@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 
 import { AnnotationList } from './AnnotationList';
-import { ANNOTATION_COLORS } from '@/types/annotations';
+import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import type { AnnotationCategory, DataAnnotation } from '@/types/annotations';
 
 function makeAnnotation(overrides: Partial<DataAnnotation> = {}): DataAnnotation {
@@ -141,7 +141,7 @@ describe('AnnotationList — rendering', () => {
 // Category colour dot — known map + unknown fallback (bug fix)
 // ─────────────────────────────────────────────────────────────
 describe('AnnotationList — category colour', () => {
-  it('paints the swatch with the category colour for every known category', () => {
+  it('paints the swatch with the restrained category colour for every known category', () => {
     const categories: AnnotationCategory[] = [
       'milestone',
       'maintenance',
@@ -151,6 +151,15 @@ describe('AnnotationList — category colour', () => {
       'custom',
     ];
 
+    const tones: Record<AnnotationCategory, NeonColor> = {
+      milestone: 'blue',
+      maintenance: 'amber',
+      trip: 'green',
+      issue: 'red',
+      upgrade: 'purple',
+      custom: 'neutral',
+    };
+
     for (const category of categories) {
       cleanup();
       render(
@@ -159,9 +168,7 @@ describe('AnnotationList — category colour', () => {
           onRemove={vi.fn()}
         />,
       );
-      expect(dotForRow(category)).toHaveStyle({
-        backgroundColor: ANNOTATION_COLORS[category],
-      });
+      expect(dotForRow(category)).toHaveClass(neonColorMap[tones[category]].dot);
     }
   });
 
@@ -180,8 +187,68 @@ describe('AnnotationList — category colour', () => {
       />,
     );
     const dot = dotForRow('From the future');
-    expect(dot).toHaveStyle({ backgroundColor: ANNOTATION_COLORS.custom });
-    expect(dot.style.backgroundColor).not.toBe('');
+    expect(dot).toHaveClass(neonColorMap.neutral.dot);
+    expect(dot).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  describe('AnnotationList — complete narrow presentation', () => {
+    it('keeps long descriptions, labels and timestamps visible without hover', () => {
+      const label = 'UnbrokenLabel'.repeat(30);
+      const description = 'Full maintenance details '.repeat(40);
+      render(
+        <AnnotationList
+          annotations={[makeAnnotation({ label, description })]}
+          onRemove={vi.fn()}
+        />,
+      );
+      expect(screen.getByText(label)).toHaveClass('break-words');
+      const details = screen.getByText(/^—\s*Full maintenance details/);
+      expect(details).toHaveClass('break-words');
+      expect(details).not.toHaveClass('hidden', 'truncate');
+      expect(screen.getByText('2026-04-30T12:00:00Z')).toHaveClass('break-all');
+      const action = screen.getByRole('button', { name: `Remove annotation: ${label}` });
+      expect(action).toHaveClass('h-11', 'w-11');
+      expect(action).not.toHaveClass('opacity-0');
+      action.focus();
+      expect(action).toHaveFocus();
+    });
+
+    it('retains every supplied record in source order, including duplicate labels', () => {
+      const annotations = Array.from({ length: 100 }, (_, index) =>
+        makeAnnotation({
+          id: `id-${index}`,
+          label: 'Repeated label',
+          timestamp: `timestamp-${index}`,
+        }),
+      );
+      const onRemove = vi.fn();
+      const { container } = render(
+        <AnnotationList annotations={annotations} onRemove={onRemove} />,
+      );
+      const rows = container.querySelectorAll('div.group');
+      const actions = screen.getAllByRole('button');
+      expect(rows).toHaveLength(100);
+      expect(actions).toHaveLength(100);
+      rows.forEach((row, index) => {
+        expect(within(row as HTMLElement).getByText(`timestamp-${index}`)).toBeInTheDocument();
+      });
+      fireEvent.click(actions[99]);
+      expect(onRemove).toHaveBeenCalledExactlyOnceWith('id-99');
+      expect(annotations).toHaveLength(100);
+    });
+
+    it('leaves removal lifecycle to the owner until new annotations arrive', () => {
+      const onRemove = vi.fn();
+      const annotation = makeAnnotation();
+      const { rerender } = render(
+        <AnnotationList annotations={[annotation]} onRemove={onRemove} />,
+      );
+      fireEvent.click(screen.getByRole('button', { name: /Remove annotation/ }));
+      expect(screen.getByText(annotation.label)).toBeInTheDocument();
+      expect(onRemove).toHaveBeenCalledExactlyOnceWith(annotation.id);
+      rerender(<AnnotationList annotations={[]} onRemove={onRemove} />);
+      expect(screen.queryByText('Annotations')).toBeNull();
+    });
   });
 });
 

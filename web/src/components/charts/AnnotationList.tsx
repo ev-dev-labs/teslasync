@@ -1,8 +1,19 @@
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { Button, Text } from '@/components/ui';
-import { ANNOTATION_COLORS } from '@/types/annotations';
-import type { DataAnnotation } from '@/types/annotations';
+import { Button } from '../ui/Button';
+import { Text } from '../ui/Typography';
+import { Icon } from '../ui/Icon';
+import { neonColorMap, type NeonColor } from '@/lib/tokens';
+import type { AnnotationCategory, DataAnnotation } from '@/types/annotations';
+
+const categoryTones: Record<AnnotationCategory, NeonColor> = {
+  milestone: 'blue',
+  maintenance: 'amber',
+  trip: 'green',
+  issue: 'red',
+  upgrade: 'purple',
+  custom: 'neutral',
+};
 
 interface AnnotationListProps {
   annotations: DataAnnotation[];
@@ -26,35 +37,35 @@ export function AnnotationList({ annotations, onRemove }: AnnotationListProps) {
       </Text>
       {items.map((ann) => {
         const label = ann.label ?? '—';
-        // Unknown / forward-compat categories must not yield an uncolored
-        // (transparent) dot — fall back to the neutral custom swatch.
-        const color = ANNOTATION_COLORS[ann.category] ?? ANNOTATION_COLORS.custom;
+        const tone = categoryTones[ann.category] ?? categoryTones.custom;
         return (
           <div
             key={ann.id}
-            className="group flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-1.5 text-xs"
+            className="group flex min-w-0 items-start gap-2 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
           >
             <div
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: color }}
+              className={`mt-2 h-2 w-2 shrink-0 rounded-full ${neonColorMap[tone].dot}`}
+              aria-hidden="true"
             />
-            <Text as="span" weight="medium" color="secondary">
-              {label}
-            </Text>
-            {ann.description && (
-              <Text as="span" color="muted" className="hidden truncate sm:inline">
-                — {ann.description}
+            <div className="min-w-0 flex-1 space-y-1">
+              <Text as="span" variant="label" className="block break-words">
+                {label}
               </Text>
-            )}
-            <Text as="span" color="muted" className="ml-auto shrink-0">
-              {ann.timestamp}
-            </Text>
+              {ann.description && (
+                <Text as="span" variant="bodySm" className="block break-words">
+                  — {ann.description}
+                </Text>
+              )}
+              <Text as="span" variant="caption" className="block break-all">
+                {ann.timestamp}
+              </Text>
+            </div>
             <Button
-              variant="ghost"
+              variant="danger"
               size="sm"
               onClick={() => onRemove(ann.id)}
-              className="touch-target-overlay shrink-0 !h-5 !w-5 !p-0 text-[var(--text-muted)] opacity-0 transition-all hover:!text-red-400 group-hover:opacity-100"
-              icon={<X className="h-3 w-3" />}
+              className="h-11 w-11 shrink-0 p-0 md:h-9 md:w-9"
+              icon={<Icon icon={X} size="sm" />}
               aria-label={t('annotation.removeNamed', 'Remove annotation: {{label}}', {
                 label,
               })}
