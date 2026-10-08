@@ -45,7 +45,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-import { Pagination } from './Pagination';
+import { Pagination, type PaginationProps } from './Pagination';
 
 interface RenderOpts {
   page?: number;
@@ -55,6 +55,8 @@ interface RenderOpts {
   onPageSizeChange?: (s: number) => void;
   withSelector?: boolean;
   pageSizeOptions?: number[];
+  totalKind?: PaginationProps['totalKind'];
+  hasNextPage?: boolean;
 }
 
 function renderPagination(opts: RenderOpts = {}) {
@@ -66,6 +68,8 @@ function renderPagination(opts: RenderOpts = {}) {
       page={opts.page ?? 1}
       pageSize={opts.pageSize ?? 25}
       total={opts.total ?? 60}
+      totalKind={opts.totalKind}
+      hasNextPage={opts.hasNextPage}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
       pageSizeOptions={opts.pageSizeOptions}
@@ -347,5 +351,92 @@ describe('Pagination', () => {
     renderPagination({ page: 2.9, pageSize: 20, total: 60.9, pageSizeOptions: [10, 10, 0, 50] });
     expect(screen.getByText('Showing 21–40 of 60')).toBeInTheDocument();
     expect(within(screen.getByRole('combobox')).getAllByRole('option').map(option => option.textContent)).toEqual(['20 / page', '10 / page', '50 / page']);
+  });
+
+  it('keeps the current-page marker neutral without changing its action or announcement', () => {
+    const { onPageChange } = renderPagination({ page: 2 });
+    const current = screen.getByRole('button', { current: 'page' });
+    expect(current).toHaveClass('bg-[var(--control-bg)]');
+    expect(current).not.toHaveClass('bg-[var(--theme-primary)]');
+    expect(current).toHaveAttribute('aria-label', 'Page 2 of 3');
+    fireEvent.click(current);
+    expect(onPageChange).not.toHaveBeenCalled();
+  });
+
+  it('retains mobile targets through the md breakpoint and mirrors only directional glyphs in RTL', () => {
+    const { container } = renderPagination({ page: 2 });
+    for (const name of ['First page', 'Previous page', 'Next page', 'Last page']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveClass('h-11', 'min-w-11', 'md:h-9', 'md:min-w-9');
+      expect(button).not.toHaveClass('sm:h-9', 'sm:min-w-9');
+      expect(button.querySelector('svg')).toHaveClass('rtl:rotate-180', 'shrink-0');
+    }
+    expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(screen.getByRole('combobox', { name: 'Rows per page' })).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(screen.getByRole('button', { name: 'Go' })).toHaveClass('whitespace-normal');
+    expect(container.querySelector('[aria-live="polite"]')).toHaveClass('min-w-0', 'break-words');
+  });
+
+  it.each(['loaded', 'unknown'] as const)('preserves empty later-page recovery for %s totals', totalKind => {
+    const { onPageChange, container } = renderPagination({ page: 5, total: 0, totalKind });
+    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 5');
+    expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('5');
+    expect(screen.getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
+    expect(onPageChange).toHaveBeenLastCalledWith(4);
+    fireEvent.click(screen.getByRole('button', { name: 'First page' }));
+    expect(onPageChange).toHaveBeenLastCalledWith(1);
+    expect(screen.queryByRole('button', { name: 'Last page' })).toBeNull();
+    expect(range(container)).toContain('Page 5 of Unknown');
+    expect(screen.getByRole('combobox', { name: 'Rows per page' })).toBeInTheDocument();
+  });
+
+  it.each([undefined, false, true])('requires explicit source-backed next-page evidence %s', hasNextPage => {
+    const { onPageChange } = renderPagination({ page: 2, total: 25, totalKind: 'loaded', hasNextPage });
+    const next = screen.getByRole('button', { name: 'Next page' });
+    expect(next.hasAttribute('disabled')).toBe(hasNextPage !== true);
+    fireEvent.click(next);
+    if (hasNextPage === true) expect(onPageChange).toHaveBeenCalledWith(3);
+    else expect(onPageChange).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Last page' })).toBeNull();
+  });
+
+  it('announces loaded counts separately from the unknown full total', () => {
+    const { container } = renderPagination({ page: 3, total: 7, totalKind: 'loaded' });
+    expect(range(container)).toBe('7 matching / 7 loaded rowsPage 3 of Unknown');
+    expect(indicator(container)).toHaveAttribute('aria-label', 'Page 3');
+  });
+
+  it('does not turn an unknown total into measured zero or a last-page limit', () => {
+    const { container, onPageChange } = renderPagination({ page: 3, total: 0, totalKind: 'unknown' });
+    expect(range(container)).toBe('Page 3 of Unknown');
+    const field = screen.getByRole('textbox', { name: 'Go to page' });
+    fireEvent.change(field, { target: { value: '100' } });
+    fireEvent.submit(field.closest('form')!);
+    expect(onPageChange).toHaveBeenCalledWith(100);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it.each(['0', '-1', '1.5', '1e0', '9007199254740992'])('still rejects invalid unknown-total jumps %s', value => {
+    const { onPageChange } = renderPagination({ totalKind: 'unknown' });
+    const field = screen.getByRole('textbox', { name: 'Go to page' });
+    fireEvent.change(field, { target: { value } });
+    fireEvent.submit(field.closest('form')!);
+    expect(onPageChange).not.toHaveBeenCalled();
+    expect(field).toHaveAttribute('aria-invalid', 'true');
+    expect(field).toHaveAttribute('aria-describedby', screen.getByRole('alert').id);
+  });
+
+  it('resynchronizes the jump field when changing count modes without losing locale formatting', () => {
+    const onPageChange = vi.fn();
+    const { rerender, container } = render(<Pagination page={40} pageSize={25} total={7} totalKind="loaded" onPageChange={onPageChange} />);
+    const field = screen.getByRole('textbox', { name: 'Go to page' });
+    fireEvent.change(field, { target: { value: '99' } });
+    rerender(<Pagination page={40} pageSize={25} total={7} totalKind="unknown" onPageChange={onPageChange} />);
+    expect(field).toHaveValue('40');
+    expect(range(container)).toBe('Page 40 of Unknown');
+    rerender(<Pagination page={40} pageSize={25} total={7} onPageChange={onPageChange} />);
+    expect(field).toHaveValue('1');
+    expect(range(container)).toBe('Showing 1–7 of 7');
   });
 });
