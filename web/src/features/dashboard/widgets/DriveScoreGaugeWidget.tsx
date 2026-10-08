@@ -103,7 +103,7 @@ export default function DriveScoreGaugeWidget({ vehicleId, size }: WidgetProps) 
             title={t('widget.driveScoreGauge.summaryTitle', 'Returned driving score factors')}
             description={t('widget.driveScoreGauge.summaryDescription', 'Each factor retains its returned score independently of the overall gauge, grade and detailed factor bars.')}
             scope={t('widget.driveScoreGauge.summaryScope', 'Vehicle {{id}} · weekly scoring response for {{count}} drives; recording completeness is not established.', {
-              id: vid ?? '—', count: knownNumber(score?.totalDrives) ?? '—',
+              replace: { id: vid ?? '—', count: knownNumber(score?.totalDrives) ?? '—' },
             })}
             testId="dashboard-drive-score-factors-brief" />}
           {isTall && (
