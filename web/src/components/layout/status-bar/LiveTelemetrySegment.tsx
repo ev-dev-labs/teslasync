@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
 import { Tooltip } from '@/components/ui/runtime';
+import { Icon } from '@/components/ui/Icon';
+import { Text } from '@/components/ui/Typography';
 import { useLiveConnection, type LiveConnectionStatus } from '@/hooks/useLiveConnection';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
 import { PrefetchLink } from '../PrefetchLink';
 import { useStatusBarAnnouncer } from './StatusBarContext';
 
@@ -12,10 +16,10 @@ import { useStatusBarAnnouncer } from './StatusBarContext';
  *
  * Footer status-bar segment that mirrors `<LiveIndicator>` but in a denser
  * single-line form. Reflects the SSE/MQTT pipeline freshness:
- *   - `connected`    → emerald, "Live · Xs ago"
- *   - `reconnecting` → amber spinner
- *   - `disconnected` → rose
- *   - `unknown`      → muted
+ *   - `connected`    → success, "Live · Xs ago"; warning when stale
+ *   - `reconnecting` → warning busy indicator
+ *   - `disconnected` → neutral "Offline"
+ *   - `unknown`      → neutral "Idle"
  *
  * Click navigates to `/signal-diff` (the live signal explorer).
  */
@@ -56,6 +60,7 @@ function ageSecondsLabel(iso: string | null, now: number): string {
 export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentProps) {
   const { t } = useTranslation();
   const { status, lastMessageAt } = useLiveConnection();
+  const { reduce } = useMotionPreference();
   const announce = useStatusBarAnnouncer();
   const [now, setNow] = useState(() => Date.now());
 
@@ -72,27 +77,27 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
   const cfg: Record<LiveConnectionStatus, VariantConfig> = {
     connected: {
       icon: Wifi,
-      text: 'text-emerald-300',
-      dot: 'bg-emerald-400',
+      text: neonColorMap.green.text,
+      dot: neonColorMap.green.dot,
       short: t('statusBar.live.short', 'Live'),
     },
     reconnecting: {
       icon: Loader2,
-      text: 'text-amber-300',
-      dot: 'bg-amber-400',
+      text: neonColorMap.amber.text,
+      dot: neonColorMap.amber.dot,
       short: t('statusBar.live.reconnecting', 'Reconnecting'),
       spin: true,
     },
     disconnected: {
       icon: WifiOff,
-      text: 'text-rose-300',
-      dot: 'bg-rose-400',
+      text: neonColorMap.neutral.text,
+      dot: neonColorMap.neutral.dot,
       short: t('statusBar.live.offline', 'Offline'),
     },
     unknown: {
       icon: WifiOff,
-      text: 'text-[var(--text-muted)]',
-      dot: 'bg-[var(--surface-2)]',
+      text: neonColorMap.neutral.text,
+      dot: neonColorMap.neutral.dot,
       short: t('statusBar.live.unknown', 'Idle'),
     },
   };
@@ -103,12 +108,11 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
   const effectiveVariant: VariantConfig = stale
     ? {
         icon: WifiOff,
-        text: 'text-amber-300',
-        dot: 'bg-amber-400',
+        text: neonColorMap.amber.text,
+        dot: neonColorMap.amber.dot,
         short: t('statusBar.live.stale', 'Stale'),
       }
     : v;
-  const Icon = effectiveVariant.icon;
   const previousAnnouncement = useRef(effectiveVariant.short);
 
   useEffect(() => {
@@ -135,8 +139,9 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
         to="/signal-diff"
         aria-label={ariaLabel}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
-          'hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+          'inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+          typography.size.xs,
+          'hover:bg-[var(--control-bg-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-[var(--surface-1)]',
           effectiveVariant.text,
         )}
       >
@@ -148,16 +153,20 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
           aria-hidden
         />
         <Icon
-          className={cn('h-3 w-3 shrink-0', effectiveVariant.spin && 'animate-spin')}
+          icon={effectiveVariant.icon}
+          size="xs"
+          className={cn(effectiveVariant.spin && !reduce && 'animate-spin motion-reduce:animate-none')}
           aria-hidden
         />
         {!iconOnly && (
           <>
-            <span className="font-medium">{effectiveVariant.short}</span>
+            <Text variant="label" className={cn('min-w-0 break-words', effectiveVariant.text)}>
+              {effectiveVariant.short}
+            </Text>
             {status === 'connected' && lastMessageAt && (
-              <span className="text-[var(--text-muted)]">
+              <Text variant="caption" className="shrink-0">
                 · {ageSecondsLabel(lastMessageAt, now)}
-              </span>
+              </Text>
             )}
           </>
         )}
