@@ -222,6 +222,58 @@ describe('TimelineItem — navigation (href)', () => {
     expect(link.className).toContain('focus-visible:outline')
   })
 
+  it('uses the same theme-aware hover and focus treatment in both link compositions', () => {
+    const { rerender } = renderRouted(
+      <TimelineItem title="Timeline event" time="now" href="/alerts/7" />,
+    )
+    const expectLinkTreatment = () => {
+      const link = screen.getByRole('link', { name: /timeline event/i })
+      expect(link).toHaveClass(
+        'rounded-shape-sm',
+        'hover:bg-[var(--control-bg-hover)]',
+        'focus-visible:outline-2',
+        'focus-visible:outline-offset-2',
+        'focus-visible:outline-[var(--focus-ring)]',
+        'forced-colors:focus-visible:outline-[Highlight]',
+        'duration-fast',
+        'ease-standard',
+        'motion-reduce:transition-none',
+      )
+      expect(link.className).not.toMatch(/(?:white|cyan)-/)
+      link.focus()
+      expect(link).toHaveFocus()
+    }
+    expectLinkTreatment()
+    rerender(
+      <MemoryRouter>
+        <TimelineItem
+          title="Timeline event"
+          time="now"
+          href="/alerts/7"
+          metadata={<span>Source detail</span>}
+        />
+      </MemoryRouter>,
+    )
+    expectLinkTreatment()
+  })
+
+  it('keeps zero-valued labels and rich slots distinct from missing content', () => {
+    render(<TimelineItem title="0" time="0" metadata={0} actions={0} />)
+    expect(screen.getAllByText('0')).toHaveLength(4)
+    expect(screen.queryByText('—')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
+  it('uses readable caption roles without losing long timestamp and subtitle content', () => {
+    const time = 'Wednesday, October 7, 2026 at 11:54:43 PM — America/Los_Angeles'
+    const subtitle = 'First source detail\nSecond source detail'
+    render(<TimelineItem title="Event" time={time} subtitle={subtitle} wrap />)
+    expect(screen.getByText(time)).toHaveClass('text-xs', 'text-[var(--text-muted)]', '[overflow-wrap:anywhere]')
+    expect(screen.getByText(time)).not.toHaveClass('text-2xs')
+    expect(screen.getByText(/First source detail/).textContent).toBe(subtitle)
+    expect(screen.getByText(/First source detail/)).toHaveClass('text-xs', 'whitespace-pre-wrap')
+  })
+
   it('navigates to the href when the row is clicked', () => {
     render(
       <MemoryRouter initialEntries={['/']}>

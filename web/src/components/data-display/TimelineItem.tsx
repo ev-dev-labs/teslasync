@@ -44,7 +44,7 @@ export function TimelineItem({
     : undefined
 
   const hasRichSlots = metadata != null || actions != null
-  const linkClassName = 'rounded-md hover:bg-white/[0.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400/60 transition-colors'
+  const linkClassName = 'rounded-shape-sm hover:bg-[var(--control-bg-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] transition-colors duration-fast ease-standard motion-reduce:transition-none'
   const titleContent = (
     <Text as="p" size="sm" weight="medium" color="primary" className={cn(wrap ? 'whitespace-normal break-words [overflow-wrap:anywhere]' : 'truncate')}>
       {title || '—'}
@@ -70,12 +70,12 @@ export function TimelineItem({
         {href && hasRichSlots ? (
           <Link to={href} className={cn('block min-w-0', linkClassName)}>{titleContent}</Link>
         ) : titleContent}
-        {subtitle ? <Text as="p" size="xs" color="muted" className="mt-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{subtitle}</Text> : null}
+        {subtitle ? <Text as="p" variant="caption" className="mt-0.5 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{subtitle}</Text> : null}
         {badges ? <div className="mt-1.5 flex flex-wrap items-center gap-1.5 min-w-0 break-words [overflow-wrap:anywhere]">{badges}</div> : null}
         {metadata != null ? (
           <Text as="div" variant="bodySm" className="mt-1.5 min-w-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{metadata}</Text>
         ) : null}
-        <Text as="p" size="2xs" color="muted" className="mt-1 break-words [overflow-wrap:anywhere]">{time || '—'}</Text>
+        <Text as="p" variant="caption" className="mt-1 break-words [overflow-wrap:anywhere]">{time || '—'}</Text>
         {actions != null ? <div className="mt-1.5 flex flex-wrap items-center gap-2 min-w-0 break-words [overflow-wrap:anywhere]">{actions}</div> : null}
       </div>
     </>
