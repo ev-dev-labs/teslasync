@@ -9,17 +9,27 @@ export default {
     extend: {
       zIndex: {
         overlay: '60',
+        'shell-panel': '80',
+        'map-control': '1000',
       },
       width: {
         'side-panel': '420px',
+        'theme-switcher': '22rem',
+        'connection-diagnostics': 'min(92vw, 320px)',
+        'presentation-menu': 'min(92vw, 340px)',
+        'workspace-context': 'min(92vw, 27rem)',
       },
       maxWidth: {
         'modal-full': 'min(96vw,1100px)',
         'tooltip-viewport': 'calc(100vw - 1.5rem)',
         'side-panel-viewport': '40vw',
+        'shell-panel-viewport': 'calc(100vw - 1rem)',
+        'breadcrumb-label': '200px',
       },
       maxHeight: {
         modal: '90vh',
+        'notification-panel': 'calc(100vh - 6rem)',
+        'workspace-context': 'min(80vh, 38rem)',
       },
       screens: {
         // Ultra-wide breakpoint for the modern-ui full-width redesign.

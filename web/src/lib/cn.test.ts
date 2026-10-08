@@ -5,6 +5,8 @@ import { resolve } from 'node:path'
 import postcss, { type Root } from 'postcss'
 import tailwindcss from 'tailwindcss'
 import loadConfig from 'tailwindcss/loadConfig'
+import resolveConfig from 'tailwindcss/resolveConfig'
+import { createHash } from 'node:crypto'
 
 // `cn` is the app-wide className composer (clsx for conditional composition +
 // tailwind-merge for last-wins conflict resolution). It is used in hundreds of
@@ -17,6 +19,142 @@ import loadConfig from 'tailwindcss/loadConfig'
 function tokens(value: string): Set<string> {
   return new Set(value.split(/\s+/).filter(Boolean))
 }
+
+describe('cn — approved shell overlay geometry (MDC-043)', () => {
+  const roles = [
+    ['zIndex', 'shell-panel', 'z', '80', 'z-[80]', ['z-10', 'z-[90]', 'z-map-control']],
+    ['zIndex', 'map-control', 'z', '1000', 'z-[1000]', ['z-50', 'z-[999]', 'z-shell-panel']],
+    ['width', 'theme-switcher', 'w', '22rem', 'w-[22rem]', ['w-80', 'w-full', 'w-[50vw]', 'w-workspace-context']],
+    ['width', 'connection-diagnostics', 'w', 'min(92vw, 320px)', 'w-[min(92vw,320px)]', ['w-80', 'w-full', 'w-[400px]', 'w-theme-switcher']],
+    ['width', 'presentation-menu', 'w', 'min(92vw, 340px)', 'w-[min(92vw,340px)]', ['w-80', 'w-full', 'w-[400px]', 'w-connection-diagnostics']],
+    ['width', 'workspace-context', 'w', 'min(92vw, 27rem)', 'w-[min(92vw,27rem)]', ['w-80', 'w-full', 'w-[400px]', 'w-presentation-menu']],
+    ['maxWidth', 'shell-panel-viewport', 'max-w', 'calc(100vw - 1rem)', 'max-w-[calc(100vw-1rem)]', ['max-w-sm', 'max-w-none', 'max-w-[500px]', 'max-w-breadcrumb-label']],
+    ['maxWidth', 'breadcrumb-label', 'max-w', '200px', 'max-w-[200px]', ['max-w-sm', 'max-w-none', 'max-w-[300px]', 'max-w-shell-panel-viewport']],
+    ['maxHeight', 'notification-panel', 'max-h', 'calc(100vh - 6rem)', 'max-h-[calc(100vh-6rem)]', ['max-h-80', 'max-h-full', 'max-h-[500px]', 'max-h-workspace-context']],
+    ['maxHeight', 'workspace-context', 'max-h', 'min(80vh, 38rem)', 'max-h-[min(80vh,38rem)]', ['max-h-80', 'max-h-full', 'max-h-[500px]', 'max-h-notification-panel']],
+  ] as const
+  const variants = ['', 'sm:', 'md:', 'xl:'] as const
+
+  it('adds exactly ten collision-free roles without changing previous resolved config or plugins', () => {
+    const config = loadConfig(resolve('tailwind.config.js'))
+    const prior = {
+      ...config,
+      theme: {
+        ...config.theme,
+        extend: {
+          ...config.theme?.extend,
+          zIndex: { ...config.theme?.extend?.zIndex },
+          width: { ...config.theme?.extend?.width },
+          maxWidth: { ...config.theme?.extend?.maxWidth },
+          maxHeight: { ...config.theme?.extend?.maxHeight },
+        },
+      },
+    }
+    for (const [group, name] of roles) {
+      Reflect.deleteProperty(prior.theme?.extend?.[group] ?? {}, name)
+    }
+    const previous = resolveConfig(prior)
+    const current = resolveConfig(config)
+    const canonical = JSON.stringify(previous, (_, value: unknown) => {
+      if (typeof value === 'function') return value.toString()
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const entries = value as Record<string, unknown>
+        return Object.fromEntries(Object.keys(entries).sort().map((key) => [key, entries[key]]))
+      }
+      return value
+    })
+    expect(createHash('sha256').update(canonical).digest('hex'))
+      .toBe('6429653abd11b06c328e4abe19051203bf9727eaf153ecbfc13a700508408d85')
+    const expected = {
+      ...previous,
+      theme: {
+        ...previous.theme,
+        zIndex: { ...previous.theme.zIndex },
+        width: { ...previous.theme.width },
+        maxWidth: { ...previous.theme.maxWidth },
+        maxHeight: { ...previous.theme.maxHeight },
+      },
+    }
+    for (const [group, name, , value] of roles) {
+      expect(previous.theme[group]).not.toHaveProperty(name)
+      expect(current.theme[group]).toHaveProperty(name, value)
+      Reflect.set(expected.theme[group], name, value)
+    }
+    expect(current).toEqual(expected)
+  })
+
+  for (const [, name, prefix, , arbitrary, alternatives] of roles) {
+    const named = `${prefix}-${name}`
+    for (const alternative of [arbitrary, ...alternatives]) {
+      it.each(variants)(`${named} and ${alternative} honor both orders with variant %s`, (variant) => {
+        expect(cn(`${variant}${named}`, `${variant}${alternative}`)).toBe(`${variant}${alternative}`)
+        expect(cn(`${variant}${alternative}`, `${variant}${named}`)).toBe(`${variant}${named}`)
+        expect(cn([`${variant}${named}`, false], { [`${variant}${alternative}`]: true }))
+          .toBe(`${variant}${alternative}`)
+      })
+    }
+  }
+
+  it('preserves independent properties, variant scopes and existing outline/geometry tokens in both orders', () => {
+    const classes = [
+      'z-shell-panel', 'sm:z-map-control', 'md:z-[1000]', 'xl:z-50',
+      'w-theme-switcher', 'sm:w-connection-diagnostics', 'md:w-presentation-menu', 'xl:w-workspace-context',
+      'max-w-shell-panel-viewport', 'sm:max-w-breadcrumb-label', 'md:max-w-side-panel-viewport', 'xl:max-w-sm',
+      'max-h-notification-panel', 'sm:max-h-workspace-context', 'md:max-h-[500px]', 'xl:max-h-80',
+      'min-h-side-panel-header', 'min-w-0', 'h-full', 'shrink-0', 'px-4',
+      'outline', 'outline-2', 'outline-offset-2', 'outline-[var(--focus-ring)]',
+      'rounded-panel', 'shadow-e1', 'duration-fast', 'text-size-inherit', 'text-inherit',
+    ]
+    expect(tokens(cn(classes))).toEqual(new Set(classes))
+    expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+  })
+
+  it('generates exactly equivalent declarations, importance and media for all ten old/new pairs', async () => {
+    const config = loadConfig(resolve('tailwind.config.js'))
+    const generate = async (classes: string[]) => (await postcss([tailwindcss({
+      ...config,
+      content: [{ raw: classes.join(' '), extension: 'html' }],
+    })]).process('@tailwind utilities;', { from: undefined })).root
+    const namedClasses = variants.flatMap((variant) => roles.map(([, name, prefix]) => `${variant}${prefix}-${name}`))
+    const arbitraryClasses = variants.flatMap((variant) => roles.map(([, , , , arbitrary]) => `${variant}${arbitrary}`))
+    const namedCSS = await generate(namedClasses)
+    const arbitraryCSS = await generate(arbitraryClasses)
+    function ruleFor(root: Root, className: string) {
+      const matches: { declarations: [string, string, boolean][]; media: string[] }[] = []
+      root.walkRules((rule) => {
+        const selector = rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls((declaration) => {
+          declarations.push([declaration.prop, declaration.value, Boolean(declaration.important)])
+        })
+        const media: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') media.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        matches.push({ declarations, media })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    const screens = { '': [], 'sm:': ['@media (min-width: 640px)'], 'md:': ['@media (min-width: 768px)'], 'xl:': ['@media (min-width: 1280px)'] }
+    const properties = { z: 'z-index', w: 'width', 'max-w': 'max-width', 'max-h': 'max-height' }
+    for (const variant of variants) {
+      for (const [, name, prefix, value, arbitrary] of roles) {
+        const named = ruleFor(namedCSS, `${variant}${prefix}-${name}`)
+        expect(named).toEqual(ruleFor(arbitraryCSS, `${variant}${arbitrary}`))
+        expect(named).toEqual({
+          declarations: [[properties[prefix], value, false]],
+          media: screens[variant],
+        })
+      }
+    }
+  })
+})
 
 describe('cn — Tailwind 3 outline property independence', () => {
   const variants = ['', 'focus-visible:', 'sm:', 'md:focus-visible:', 'forced-colors:focus-visible:']
