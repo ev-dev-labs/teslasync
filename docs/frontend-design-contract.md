@@ -236,6 +236,58 @@ mode too. Owners: `web\src\hooks\useMotionPreference.ts:44–48`,
 | MDC-032 scope | Header/mobile View settings and vehicle picker own workspace range/vehicle state. Consume startInstant/endInstantExclusive and selected vehicle/VIN hooks, register real route scope, pass both bounds to server lists AND whole-range aggregates. Preserve rolling/custom/calendar/DST/timezone semantics. No second page picker or scope=local bypass. Fleet/admin routes with intentionally hidden header vehicle selection retain required local selection; independent business dates/year navigation/chart zoom remain independent. | `web\src\lib\workspaceScope.ts`; `web\src\hooks\useRangeState.ts`, `useSelectedVehicle.ts`, `useVehicleVinFilter.ts` |
 | MDC-034 charts/maps | Canonical ChartContainer/ChartCard and category chart/map boundaries. Preserve all series, axes, missing gaps, annotations, zoom/brush, legend IDs/preferences, fullscreen/export and accessible table/text alternatives. Line 2px primary / 1px reference, point 3px when needed, subtle grid, neutral tooltip. Area tint at most 8%; no glow/3D/unnecessary gradients. Never change aggregates, scales or sample away source data for looks. | `web\src\components\charts\ChartContainer.tsx`; `web\src\components\layout\layout-reference\ChartCard.tsx`; `web\src\lib\tokens.ts` chartTokens; `web\src\lib\colors.ts`; `web\src\hooks\useChartPalette.ts` |
 
+### Overlay geometry adoption — MDC-024 / MDC-022
+
+**Additive source decision for `overlay-geometry-contract`:** accepted Modal,
+Drawer and Tooltip primitive sources contain genuine arbitrary geometry utilities.
+Approve the following named additions at the **existing** `theme.extend` owner in
+`web\tailwind.config.js`; do not create another token system or change existing
+semantic tokens. Read-only inspection and Tailwind's existing config resolver
+confirm these four extension names are absent, with no resolved-name collisions;
+built-in `height.dvh` / `maxHeight.dvh` are `100dvh` and `sm` remains `640px`.
+
+| Existing source utility / owner | Approved role and exact value | Source-equivalent adoption |
+| --- | --- | --- |
+| Modal and Drawer `z-[60]` | `zIndex.overlay = '60'` | `z-overlay` on the existing overlay root |
+| Modal full width `sm:max-w-[min(96vw,1100px)]` | `maxWidth['modal-full'] = 'min(96vw,1100px)'` | `sm:max-w-modal-full` |
+| Tooltip `max-w-[calc(100vw-1.5rem)]` | `maxWidth['tooltip-viewport'] = 'calc(100vw - 1.5rem)'` | `max-w-tooltip-viewport` in the existing multiline/boundary branch |
+| Modal non-fullscreen `sm:max-h-[90vh]` | `maxHeight.modal = '90vh'` | `sm:max-h-modal`, not a dynamic-viewport cap |
+| Modal fullscreen `h-[100dvh] max-h-[100dvh]` | Existing Tailwind built-ins; no extension | `h-dvh max-h-dvh` |
+
+This is a naming-only adoption, not geometry redesign or blanket numeric/calc/
+viewport scanner permission. Keep all other findings visible for their own
+bounded disposition. In particular, retain Modal's non-fullscreen base
+`max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]` exactly, its
+`pb-[var(--shell-chrome-bottom)]`, `safe-bottom` body/footer and `sm:pb-4`.
+Do not substitute `max-h-dvh` for the shell-subtracted expression.
+
+Preserve Modal size IDs `sm/md/lg/full/fullscreen`, default `md`, existing
+`sm:max-w-sm/sm:max-w-lg/sm:max-w-2xl` and fullscreen `max-w-none`; `full`
+stays width-limited, not fullscreen. Keep the <640px bottom sheet, >=640px
+centered rounded card and fullscreen branch distinct. Drawer retains `sm/md/lg`,
+default `md`, both sides, existing widths and
+`bottom-[var(--shell-chrome-bottom)]`. Layer 60 stays above shell layer 55;
+Modal internal `z-10`, Tooltip `z-50` and nested overlay ordering stay unchanged.
+Do not change portals (Modal/Drawer to body; Tooltip remains local), public props,
+refs, labels, focus trap/restoration/Escape/backdrop behavior or reduced motion.
+Preserve Modal overlay scroll, normal body scroll/fullscreen overflow ownership
+and persistent footer; Drawer keeps reference-counted body locking, independent
+body scroll, tabs and its undefined/default versus null/hidden footer behavior.
+Tooltip keeps `w-80`, wrapping, side offsets, measured boundary/viewport correction,
+computed inline max-width/translation, hover/focus/touch/Escape and described-by
+identity; only its static viewport cap receives a name.
+
+Affected owners must recheck after adoption: `overlay-geometry-tokens` proves
+generated CSS equivalence, responsive precedence and unchanged existing tokens
+at `web\tailwind.config.js` with its existing token test owner;
+`overlay-modal-adoption`, `overlay-drawer-adoption` and
+`overlay-tooltip-adoption` recheck their existing primitive/matching tests,
+preserved APIs, geometry, layering, focus, footer and scroll behavior. QA owners
+rerun bounded style classification without scanner waivers and the applicable
+MDC-040–043/060–070 open/nested overlay matrix. No implementation is made here;
+this source decision establishes neither browser/mobile nor forced-colors,
+composed contrast, keyboard or visual acceptance. No geometry deviation approved.
+
 Chart series use only as many distinguishable hues as data needs; repeated series
 keep their identities/order. Target palette starts with the blue/green/amber/rose/
 purple foreground pairs above, then neutral (`#abb4bf` dark / `#4f5f70` light)
