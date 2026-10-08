@@ -62,7 +62,7 @@ export function RegenCoverageBrief({ aggregate, model, aggregateState, detailSta
           <Badge variant={detailState.error ? 'danger' : detailState.isLoading || !detailState.isResolved ? 'neutral' : model.accounting.historyCapReached ? 'warning' : 'info'}>{detailStatus}</Badge>
         </>}
       />
-      {detailState.error && <QueryError error={detailState.error} onRetry={detailState.onRetry} />}
+      {Boolean(detailState.error) && <QueryError error={detailState.error} onRetry={detailState.onRetry} />}
       {!detailState.isResolved && !detailState.isLoading && !detailState.error && <AlertBanner variant="info">
         <Text as="p" variant="caption">{t('regen.states.detailPending', 'Detailed data availability has not resolved.')}</Text>
       </AlertBanner>}
