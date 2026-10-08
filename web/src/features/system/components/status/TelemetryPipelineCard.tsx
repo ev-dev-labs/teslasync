@@ -285,10 +285,10 @@ export function TelemetryPipelineCard({
             label: t('systemStatus.vehicles', 'Vehicles'), context: vehicles == null ? '—' : list.length > 0
               ? t('systemStatus.pipeline.connectedVehicles', '{{count}} connected', { count: list.length })
               : t('systemStatus.pipeline.noneConfigured', 'none configured') },
-          { metricId: 'count', occurrenceId: 'positions', rawValue: positionCount, label: t('systemStatus.pipeline.positions', 'GPS positions'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
-          { metricId: 'count', occurrenceId: 'drives', rawValue: drivesCount, label: t('systemStatus.pipeline.drives', 'Drives'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
-          { metricId: 'count', occurrenceId: 'charging', rawValue: chargingSessionsCount, label: t('systemStatus.pipeline.chargingSessions', 'Charging sessions'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
-          { metricId: 'count', occurrenceId: 'signals', rawValue: signalLogCount, label: t('systemStatus.pipeline.signalLog', 'Signal log'), display: { formatter: (raw) => ({ value: fmtCount(raw) }) } },
+          { metricId: 'count', occurrenceId: 'positions', rawValue: positionCount, label: t('systemStatus.pipeline.positions', 'GPS positions'), display: { formatter: (raw) => ({ value: fmtCount(raw), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'drives', rawValue: drivesCount, label: t('systemStatus.pipeline.drives', 'Drives'), display: { formatter: (raw) => ({ value: fmtCount(raw), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'charging', rawValue: chargingSessionsCount, label: t('systemStatus.pipeline.chargingSessions', 'Charging sessions'), display: { formatter: (raw) => ({ value: fmtCount(raw), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'signals', rawValue: signalLogCount, label: t('systemStatus.pipeline.signalLog', 'Signal log'), display: { formatter: (raw) => ({ value: fmtCount(raw), unit: '' }) } },
         ]}
       />
 
