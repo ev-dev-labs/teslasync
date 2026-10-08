@@ -10,7 +10,7 @@
  *   - mobile (≤640 px) viewport bypasses the popover and navigates
  */
 
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   render,
   screen,
@@ -49,7 +49,9 @@ vi.mock('@/api/hooks/useNotifications', async () => {
     ...actual,
     useUnreadCount: () => ({ data: unreadCountMock }),
     useUnreadNotifications: () => ({
-      data: unreadLogsMock,
+      data: unreadLogsMock.length === 0 && (unreadIsLoadingMock || unreadErrorMock)
+        ? undefined
+        : unreadLogsMock,
       isLoading: unreadIsLoadingMock,
       error: unreadErrorMock,
     }),
@@ -91,21 +93,22 @@ const VEHICLES: Vehicle[] = [
   },
 ]
 
-function makeRule(id: number, name: string, severity: string): AlertRule {
+function makeRule(id: number, name: string, severity: AlertRule['severity']): AlertRule {
   return {
     id,
     name,
     enabled: true,
     severity,
     vehicle_id: 1,
-    signal: 'battery_level',
-    operator: '<',
-    value: 20,
-    cooldown_seconds: 0,
-    notification_channels: [],
+    signal_name: 'battery_level',
+    op: '<',
+    value_num: 20,
+    cooldown_min: 0,
+    trigger_mode: 'once',
+    channel_ids: [],
     created_at: '',
     updated_at: '',
-  } as unknown as AlertRule
+  }
 }
 
 const RULES: AlertRule[] = [
@@ -130,7 +133,7 @@ function makeLog(id: number, title: string, message: string, alertId = 10): Noti
     sent_at: ONE_HOUR_AGO,
     read_at: null,
     archived_at: null,
-  } as unknown as NotificationLog
+  }
 }
 
 // Imported AFTER the vi.mock blocks so the mocks are wired before the
@@ -170,7 +173,13 @@ function Wrapper({ children }: { children: ReactNode }) {
 // ── Tests ─────────────────────────────────────────────────────────────
 
 describe('NotificationBellPopover', () => {
-  beforeEach(() => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    cleanup()
+  })
+
+  beforeEach(async () => {
+    await import('./NotificationSeverityFilter')
     cleanup()
     bulkMarkReadMutate.mockReset()
     bulkMarkReadMutateAsync.mockClear()
@@ -458,5 +467,85 @@ describe('NotificationBellPopover', () => {
     expect(document.activeElement).toBe(last)
     fireEvent.keyDown(dialog, { key: 'Tab' })
     expect(document.activeElement).toBe(focusables[0])
+  })
+
+  it('retains primitive focus and motion chrome without decorative badge severity', () => {
+    renderPopover()
+    const trigger = screen.getByRole('button', { name: /3 unread notifications/i })
+    expect(trigger).toHaveClass('rounded-shape-sm', 'focus-visible:outline-2', 'focus-visible:outline-offset-2')
+    expect(trigger).toHaveClass('duration-fast', 'ease-standard', 'motion-reduce:transition-none')
+    expect(trigger).not.toHaveClass('focus-visible:outline-none', 'focus-visible:ring-cyan-500')
+    const badge = trigger.querySelector('span[aria-hidden="true"]')
+    expect(badge).toHaveClass('bg-[var(--semantic-info-bg)]', 'text-[var(--semantic-info)]', 'min-w-4')
+    expect(badge).not.toHaveClass('bg-rose-500', 'shadow')
+  })
+
+  it('does not steal focus on initial mount', () => {
+    const focusedBeforeMount = document.activeElement
+    renderPopover()
+    expect(document.activeElement).toBe(focusedBeforeMount)
+  })
+
+  it('toggles closed from the trigger and removes the dialog association', async () => {
+    renderPopover()
+    const trigger = screen.getByRole('button', { name: /3 unread notifications/i })
+    expect(trigger).not.toHaveAttribute('aria-controls')
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog')
+    expect(trigger).toHaveAttribute('aria-controls', dialog.id)
+    fireEvent.mouseDown(trigger)
+    expect(dialog).toBeInTheDocument()
+    fireEvent.click(trigger)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(trigger).not.toHaveAttribute('aria-controls')
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('keeps inside presses and unrelated keys open, then restores focus from Close', async () => {
+    renderPopover()
+    const trigger = screen.getByRole('button', { name: /3 unread notifications/i })
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.mouseDown(dialog)
+    fireEvent.keyDown(document, { key: 'ArrowDown' })
+    expect(dialog).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Close$/i }))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('preserves portaled edge clamp and fixed positioning on resize and nested scroll', async () => {
+    renderPopover()
+    const trigger = screen.getByRole('button', { name: /3 unread notifications/i })
+    const bounds = vi.spyOn(trigger, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(100, 20, 36, 36))
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.parentElement).toBe(document.body)
+    expect(dialog).toHaveStyle({
+      position: 'fixed', top: '64px', width: '360px',
+      right: `${Math.max(8, window.innerWidth - 360 - 8)}px`,
+    })
+    expect(dialog.style.maxWidth).toBe('calc(100vw - 1rem)')
+    bounds.mockReturnValue(new DOMRect(window.innerWidth - 36, 80, 36, 36))
+    fireEvent.resize(window)
+    expect(dialog).toHaveStyle({ top: '124px', right: '8px' })
+    bounds.mockReturnValue(new DOMRect(window.innerWidth - 36, 100, 36, 36))
+    fireEvent.scroll(trigger.parentElement ?? trigger)
+    expect(dialog).toHaveStyle({ top: '144px', right: '8px' })
+  })
+
+  it('retains complete long notification content in an RTL host', async () => {
+    const title = 'تنبيه البطارية '.repeat(20)
+    const message = 'تفاصيل التنبيه '.repeat(40)
+    unreadLogsMock = [makeLog(100, title, message)]
+    const view = renderPopover()
+    view.container.dir = 'rtl'
+    fireEvent.click(screen.getByRole('button', { name: /3 unread notifications/i }))
+    await screen.findByRole('dialog')
+    expect(screen.getByRole('button', { name: /تنبيه البطارية/ })).toHaveTextContent(title.trim())
+    expect(screen.getByText(message.trim())).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Open full inbox/i })).toBeEnabled()
   })
 })
