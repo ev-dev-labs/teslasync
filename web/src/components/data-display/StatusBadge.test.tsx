@@ -154,3 +154,49 @@ describe('StatusBadge — className passthrough', () => {
     expect(chip).toHaveClass('inline-flex', 'items-center');
   });
 });
+
+describe('StatusBadge — restrained presentation', () => {
+  it.each([
+    ['online', 'green-400', 'semantic-success'],
+    ['driving', 'blue-500', 'semantic-info'],
+    ['charging', 'yellow-400', 'semantic-warning'],
+    ['parked', 'cyan-500', 'semantic-info'],
+    ['updating', 'indigo-500', 'semantic-info'],
+    ['asleep', 'purple-500', 'semantic-purple'],
+    ['offline', 'red-400', 'semantic-danger'],
+    ['away', 'gray-400', 'text-secondary'],
+  ])('adapts the existing %s dot hue to a theme-aware restrained role', (status, hue, role) => {
+    const { dot } = renderBadge(status);
+    expect(dot).toHaveClass(`bg-${hue}`, `[&.bg-${hue}]:bg-[var(--${role})]`);
+  });
+
+  it('keeps long labels reachable without shrinking the decorative dot', () => {
+    const { chip, dot, label } = renderBadge('A'.repeat(200));
+    expect(chip).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', 'break-words');
+    expect(dot).toHaveClass('shrink-0');
+    expect(label).toHaveTextContent('A'.repeat(200));
+    expect(chip).not.toHaveClass('truncate', 'overflow-hidden');
+    expect(chip).toHaveClass('forced-colors:border-[CanvasText]');
+  });
+
+  it('uses a localized presentation label without translating the FSM identity', () => {
+    const { container } = render(<StatusBadge status="  charging  " label="充電中" />);
+    expect(screen.getByText('充電中')).toBeInTheDocument();
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveClass('bg-yellow-400');
+  });
+
+  it.each([null, undefined, '', '   '])('keeps missing status %s unknown even with a presentation label', (status) => {
+    const { container } = render(<StatusBadge status={status} label="Online" />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Online')).not.toBeInTheDocument();
+    expect(container.querySelector('[aria-hidden="true"]')).toHaveClass(NEUTRAL_DOT);
+  });
+
+  it('preserves caller shell size overrides and RTL attributes', () => {
+    const { container } = render(<div dir="rtl"><StatusBadge status="APIReady" className="text-base px-4" /></div>);
+    const chip = screen.getByText('APIReady').parentElement;
+    expect(chip).toHaveClass('text-base', 'px-4');
+    expect(chip).not.toHaveClass('text-sm', 'px-2');
+    expect(container.firstElementChild).toHaveAttribute('dir', 'rtl');
+  });
+});
