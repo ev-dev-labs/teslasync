@@ -9,6 +9,11 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { MetricComparisonGrid } from '../MetricComparisonGrid';
 import { PrivacyBudgetPanel } from '../PrivacyBudgetPanel';
 
+type TranslationOptions = Record<string, unknown> & {
+  defaultValue?: string;
+  replace?: Record<string, unknown>;
+};
+
 const preferences = vi.hoisted(() => {
   const unitPrefs: UnitPref = {
     distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
@@ -20,8 +25,12 @@ const preferences = vi.hoisted(() => {
 vi.mock('react-i18next', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-i18next')>()),
   useTranslation: () => ({
-    t: (key: string, fallback?: unknown, values?: Record<string, unknown>) =>
-      (typeof fallback === 'string' ? fallback : key).replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? `{{${name}}}`)),
+    t: (key: string, fallback?: string | TranslationOptions, values?: TranslationOptions) => {
+      const options = typeof fallback === 'string' ? values : fallback;
+      const template = typeof fallback === 'string' ? fallback : options?.defaultValue ?? key;
+      const replacements = options?.replace ?? options;
+      return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(replacements?.[name] ?? `{{${name}}}`));
+    },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
 }));
@@ -132,6 +141,23 @@ describe('private benchmark OperationalBrief source authoring', () => {
     expect(vi.mocked(useOperationalMetrics).mock.calls[0][0].find(
       (item) => item.occurrenceId === 'efficiency_wh_per_km',
     )?.rawValue).toBe(0.186);
+  });
+
+  it('keeps localized noisy cohort counts and noise-scale precision in the real drawer', () => {
+    preferences.unitPrefs.locale = 'de-DE';
+    preferences.unitPrefs.precision = 2;
+    const localizedRelease: BenchmarkRelease = {
+      ...release,
+      metrics: [{ ...metric, noisy_cohort_size: 1234, noise_scale: 0.125 }],
+    };
+    const before = JSON.stringify(localizedRelease);
+    show(<MetricComparisonGrid release={localizedRelease} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Noisy cohort size: 1.234; noise scale: 0,13.');
+    expect(drawer).toHaveTextContent('moderate');
+    expect(drawer).toHaveTextContent('not confidence scores');
+    expect(JSON.stringify(localizedRelease)).toBe(before);
   });
 
   it('retains measurements and original retry for failed and offline release refreshes', () => {
