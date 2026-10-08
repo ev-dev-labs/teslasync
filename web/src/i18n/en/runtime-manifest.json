@@ -190,7 +190,8 @@
       "signalStats",
       "signalTransportAgreement",
       "signalTrend",
-      "signalsWorkspace"
+      "signalsWorkspace",
+      "telemetry"
     ],
     "unreferenced": [
       "AC",
@@ -567,7 +568,6 @@
       "fleet",
       "parking",
       "physicsLedger",
-      "telemetry",
       "teslaOnly",
       "utilization",
       "vehicleAccess",
@@ -1207,7 +1207,6 @@
       "stateMachineDebugger",
       "tagInput",
       "tco",
-      "telemetry",
       "tempImpact",
       "tirePressure",
       "toast",
@@ -1567,6 +1566,7 @@
       "sourceLayer",
       "stateMachineDebugger",
       "tco",
+      "telemetry",
       "tempImpact",
       "timeMachine",
       "tirePressure",

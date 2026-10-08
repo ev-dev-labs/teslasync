@@ -3489,6 +3489,15 @@
     "profile": "Profile",
     "refresh": "Refresh from Tesla",
     "resource": "Tesla profile",
+    "statstrip": {
+      "fetchedSnapshot": "Source fetched at {{date}}",
+      "idDescription": "The source Tesla Fleet API account identity, not the local TeslaSync user ID.",
+      "memberDescription": "Source account creation date; the full source date and relative context are retained.",
+      "period": "Fleet API profile snapshot",
+      "syncDescription": "Sync status comes from the source fetched-at timestamp, not the browser query update time.",
+      "unknownSnapshot": "No source fetch timestamp recorded; freshness is unknown",
+      "updatedDescription": "Source profile update date; independent of the last fetch from Tesla."
+    },
     "subtitle": "Your Tesla account profile synced from the Fleet API",
     "sync": {
       "helper": "Fetches your latest account profile from the Tesla Fleet API.",
