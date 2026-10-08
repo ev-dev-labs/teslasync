@@ -139,8 +139,8 @@ export default function LiveSignalMonitorPage() {
           uniqueSignals={analytics.uniqueSignals}
           numericCount={analytics.numericCount}
           categoricalCount={analytics.booleanCount + analytics.stringCount}
-          scope={vehicleId == null ? t('telemetryBrief.fleetSse', 'Fleet SSE session · 500-entry tail')
-            : t('telemetryBrief.vehicleSse', 'Selected vehicle SSE session · 500-entry tail')}
+          scope={vehicleId == null ? t('telemetry.brief.fleetSse', 'Fleet SSE session · 500-entry tail')
+            : t('telemetry.brief.vehicleSse', 'Selected vehicle SSE session · 500-entry tail')}
         />
       </FadeIn>
 
