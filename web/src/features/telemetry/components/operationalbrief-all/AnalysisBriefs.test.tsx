@@ -1,5 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
@@ -15,6 +17,7 @@ import { summarizeSignalChangePoints } from '../../lib/signalChangePoints';
 import { summarizeSignalEntropy } from '../../lib/signalEntropy';
 import { analyzeSignalDeadband } from '../../lib/signalDeadband';
 import { analyzeSignalMutualInformation } from '../../lib/signalMutualInformation';
+import { toSignalHistoryMeasurements } from '../../lib/signalHistorySamples';
 
 const H = vi.hoisted(() => ({
   history: undefined as SignalHistoryResponse | undefined,
@@ -24,8 +27,12 @@ const H = vi.hoisted(() => ({
 }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   t: (key: string, fallback?: unknown, variables?: Record<string, unknown>) => {
-    const text = typeof fallback === 'string' ? fallback : key;
-    return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(variables?.[name] ?? `{{${name}}}`));
+    const options = typeof fallback === 'object' && fallback !== null ? fallback : {};
+    const defaultValue = 'defaultValue' in options ? options.defaultValue : undefined;
+    const text = typeof fallback === 'string' ? fallback : typeof defaultValue === 'string' ? defaultValue : key;
+    const replacements = variables ?? options;
+    return text.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
+      String(name in replacements ? Reflect.get(replacements, name) : `{{${name}}}`));
   },
   i18n: { language: 'en' },
 }) }));
@@ -34,18 +41,9 @@ vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
   return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
 });
 vi.mock('@/api/hooks/useTelemetry', () => ({
-  useSignals: () => ({ data: ['NumericSignal', 'OtherSignal'], isLoading: false, error: null, refetch: vi.fn() }),
-  useSignalHistory: () => ({ data: H.history, isLoading: H.loading, isFetching: H.fetching, error: H.error, refetch: vi.fn() }),
-  useSignalAnalysisHistory: () => ({ data: H.history, isLoading: H.loading, isFetching: H.fetching, error: H.error, refetch: vi.fn() }),
-}));
-vi.mock('@/hooks/useDataState', () => ({
-  useDataState: (query: { data?: unknown; error?: Error | null; isFetching?: boolean }) => ({
-    hasData: query.data !== undefined,
-    fatalError: query.data === undefined ? query.error ?? null : null,
-    refreshError: query.data === undefined ? null : query.error ?? null,
-    isRefreshing: Boolean(query.isFetching),
-    status: query.error && query.data !== undefined ? 'stale' : 'ok',
-  }),
+  useSignals: () => ({ data: ['NumericSignal', 'OtherSignal'], isLoading: false, isSuccess: true, error: null, refetch: vi.fn() }),
+  useSignalHistory: (_id: number, signal: string) => historyQuery(signal),
+  useSignalAnalysisHistory: (_id: number, signal: string) => historyQuery(signal),
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: 7 }) }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
@@ -54,20 +52,45 @@ vi.mock('@/components/layout', async importOriginal => {
   const actual = await importOriginal<typeof import('@/components/layout')>();
   return { ...actual, PageLayout: ({ children }: { children?: ReactNode }) => <main>{children}</main> };
 });
-vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</> }));
-vi.mock('@/components/charts', async importOriginal => {
-  const actual = await importOriginal<typeof import('@/components/charts')>();
-  return { ...actual, ChartContainer: ({ title }: { title: string }) => <section aria-label={title} /> };
+vi.mock('@/components/motion', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/motion')>();
+  return { ...actual, FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</> };
 });
+
+function historyQuery(signal: string) {
+  const data = signal ? H.history : undefined;
+  const error = signal ? H.error : null;
+  return {
+    data: data && { ...data, signal },
+    error,
+    isLoading: Boolean(signal) && H.loading && data === undefined,
+    isFetching: Boolean(signal) && H.fetching,
+    isSuccess: Boolean(signal) && data !== undefined && error === null,
+    isError: error !== null,
+    isPending: data === undefined && error === null,
+    dataUpdatedAt: data === undefined ? 0 : Date.UTC(2026, 0, 2, 7),
+    refetch: vi.fn(),
+  };
+}
+function renderPage(Page: ComponentType) {
+  const client = new QueryClient();
+  return render(<Page />, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>
+    ),
+  });
+}
 
 const initialPreferences = getFormatterPreferences();
 const samples = Array.from({ length: 32 }, (_, index) => Object.freeze({
-  timestamp: new Date(Date.UTC(2026, 0, 1) + index * 3_600_000).toISOString(),
-  valueNum: 50 - index * 0.1234567 + (index % 3 === 0 ? 0.01 : 0),
-}));
+  ts: new Date(Date.UTC(2026, 0, 1) + index * 3_600_000).toISOString(),
+  kind: 'ValueKindDouble',
+  value: 50 - index * 0.1234567 + (index % 3 === 0 ? 0.01 : 0),
+  ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null,
+} satisfies SignalHistoryResponse['data'][number]));
 beforeEach(() => {
-  H.history = { vehicleId: 7, signal: 'NumericSignal', from: samples[0]!.timestamp,
-    to: samples.at(-1)!.timestamp, count: samples.length, data: [...samples] };
+  H.history = { vehicleId: 7, signal: 'NumericSignal', from: samples[0]!.ts,
+    to: samples.at(-1)!.ts, count: samples.length, data: [...samples] };
   H.error = null; H.loading = false; H.fetching = false;
   setGlobalLocale('de-DE'); setGlobalPrecision(5);
 });
@@ -120,7 +143,7 @@ function selectSignals(testCase: AnalysisCase) {
 describe.each(cases)('$testId actual raw analysis adoption', testCase => {
   it('retains the exact existing algorithm operands, original precision, requested period and real drawer', () => {
     const { Page } = testCase;
-    const { container } = render(<Page />);
+    const { container } = renderPage(Page);
     selectSignals(testCase);
     const brief = screen.getByTestId(testCase.testId);
     const expected = testCase.expectedRaw();
@@ -129,7 +152,7 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     expect(call?.map(metric => metric.rawValue)).toEqual(expected);
     expect(brief).toHaveTextContent(`${testCase.hours}h requested`);
     expect(brief).toHaveTextContent('not guaranteed full-window coverage');
-    expect(brief).toHaveTextContent(`NumericSignal source bounds: ${samples[0]!.timestamp} → ${samples.at(-1)!.timestamp}`);
+    expect(brief).toHaveTextContent(`NumericSignal source bounds: ${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelectorAll('[data-role="metric-card"]')).toHaveLength(0);
     const values = [...brief.querySelectorAll('[data-operational-value]')];
@@ -150,14 +173,14 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     for (const metric of call ?? []) expect(within(drawer).getByText(metric.label!)).toBeInTheDocument();
     expect(drawer).toHaveTextContent(testCase.Page === SignalMutualInformationPage
       ? 'Two independently queried signal histories' : 'Selected signal history');
-    expect(drawer).toHaveTextContent(samples[0]!.timestamp);
-    expect(samples[1]!.valueNum).toBe(50 - 0.1234567);
+    expect(drawer).toHaveTextContent(samples[0]!.ts);
+    expect(samples[1]!.value).toBe(50 - 0.1234567);
   });
 
   it('keeps unchosen and unavailable history unknown; never claims a successful zero analysis', () => {
     const { Page } = testCase;
     H.history = undefined;
-    const view = render(<Page />);
+    const view = renderPage(Page);
     const brief = screen.getByTestId(testCase.testId);
     expect([...brief.querySelectorAll('[data-operational-metric]')].every(metric => metric.getAttribute('data-value-state') === 'missing')).toBe(true);
     selectSignals(testCase);
@@ -169,8 +192,10 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
 
   it('retains all returned measurements when refresh fails, without hiding selectors or charts', () => {
     const { Page } = testCase;
-    const view = render(<Page />);
+    const view = renderPage(Page);
     selectSignals(testCase);
+    const charts = [...view.container.querySelectorAll('[data-chart-state="ready"]')];
+    expect(charts.length).toBeGreaterThan(0);
     const before = [...screen.getByTestId(testCase.testId).querySelectorAll('[data-operational-value]')].map(value => value.textContent);
     H.error = new Error('refresh failed'); H.fetching = true;
     view.rerender(<Page />);
@@ -178,7 +203,36 @@ describe.each(cases)('$testId actual raw analysis adoption', testCase => {
     expect(brief).toHaveTextContent('Retained source data');
     expect(brief).not.toHaveAttribute('aria-busy', 'true');
     expect([...brief.querySelectorAll('[data-operational-value]')].map(value => value.textContent)).toEqual(before);
-    expect(brief).toHaveTextContent(`${samples[0]!.timestamp} → ${samples.at(-1)!.timestamp}`);
+    expect(brief).toHaveTextContent(`${samples[0]!.ts} → ${samples.at(-1)!.ts}`);
     expect(screen.getByRole('combobox', { name: testCase.signalLabel })).toBeEnabled();
+    expect([...view.container.querySelectorAll('[data-chart-state="ready"]')]).toEqual(charts);
   });
+});
+
+it('keeps a raw zero and original precision, excluding non-measurements only in numeric analysis', () => {
+  const extraValues = [
+    { kind: 'ValueKindDouble', value: 0 },
+    { kind: 'ValueKindDouble', value: null },
+    { kind: 'ValueKindString', value: '0' },
+    { kind: 'ValueKindBool', value: false },
+  ] as const;
+  const evidence = Object.freeze([
+    ...samples,
+    ...extraValues.map((row, index) => Object.freeze({
+      ...samples[0]!,
+      ts: new Date(Date.UTC(2026, 0, 3) + index * 3_600_000).toISOString(),
+      ...row,
+    })),
+  ]);
+  const original = [...evidence];
+  const numeric = toSignalHistoryMeasurements(evidence);
+  expect(numeric.map(point => point.value)).toEqual([...samples.map(point => point.value), 0]);
+  expect(summarizeSignalTrend(evidence).samples).toBe(33);
+  expect(summarizeSignalChangePoints(evidence).samples).toBe(33);
+  expect(summarizeSignalEntropy(evidence).samples).toBe(33);
+  expect(analyzeSignalDeadband(evidence)?.sampleCount).toBe(33);
+  expect(toSignalHistoryMeasurements(evidence, true).at(-1)?.value).toBe(0);
+  expect(evidence).toEqual(original);
+  expect(evidence.at(-1)?.value).toBe(false);
+  expect(samples[1]!.value).toBe(50 - 0.1234567);
 });
