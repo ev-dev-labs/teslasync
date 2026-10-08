@@ -73,8 +73,8 @@ function SignalSparklineRow({ vehicleId, signal, liveValue, color, isWide }: Sig
   const numericPoints = useMemo(() => {
     const points = Array.isArray(history?.data) ? history.data : [];
     return points
-      .map((p) => p?.valueNum)
-      .filter((v): v is number => v != null && isFinite(v));
+      .map((p) => p?.value)
+      .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
   }, [history]);
 
   const currentValue = extractNumericValue(liveValue);
