@@ -3,10 +3,10 @@
  *
  * Drives every branch of the footer API-health segment by stubbing the polled
  * `useApiHealth` hook (network is never touched):
- *   - ok       → emerald accent, latency chip, "Online" aria-label + tooltip
- *   - degraded → amber accent, latency still shown, "Degraded"
- *   - offline  → rose accent, latency suppressed, "Offline" spelled out
- *   - unknown  → muted accent, no suffix, "Connecting…"
+ *   - ok       → success accent, latency chip, "Online" aria-label + tooltip
+ *   - degraded → warning accent, latency still shown, "Degraded"
+ *   - offline  → neutral accent, latency suppressed, "Offline" spelled out
+ *   - unknown  → neutral accent, no suffix, "Connecting…"
  *   - iconOnly → label + latency hidden, aria-label + decorative dot preserved
  *   - defensive fallback for an out-of-contract status (must not crash)
  *   - ok reading with no measured latency omits the latency chip
@@ -18,7 +18,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { ApiHealthState, ApiHealthStatus } from '@/api/hooks/useApiHealth';
+import type { ApiHealthState } from '@/api/hooks/useApiHealth';
 import '../../../i18n';
 
 // Controllable stand-in for the /healthz poll so we can exercise each status
@@ -85,14 +85,14 @@ describe('ConnectionSegment', () => {
     diagnosticsMock = { data: undefined, isError: false };
   });
 
-  it('renders the online state with latency, emerald accent, and a link to system status', () => {
+  it('renders the online state with latency, success accent, and a link to system status', () => {
     renderSegment({ status: 'ok', latencyMs: 42, lastCheckedAt: AT });
     const link = screen.getByRole('link');
 
     expect(link).toHaveAttribute('href', '/system-status');
     expect(link).toHaveAttribute('aria-label', 'API connection status: Online (42ms)');
-    expect(link.className).toContain('text-emerald-300');
-    expect(getDot(link).className).toContain('bg-emerald-400');
+    expect(link.className).toContain('text-[var(--semantic-success)]');
+    expect(getDot(link).className).toContain('bg-[var(--semantic-success)]');
     expect(getDot(link)).toHaveAttribute('aria-hidden');
     // Visible pill shows the short label and the measured latency.
     expect(link).toHaveTextContent('API');
@@ -108,13 +108,13 @@ describe('ConnectionSegment', () => {
     expect(tip).toHaveTextContent('42ms');
   });
 
-  it('renders the degraded state with amber accent and still surfaces latency', () => {
+  it('renders the degraded state with warning accent and still surfaces latency', () => {
     renderSegment({ status: 'degraded', latencyMs: 640, lastCheckedAt: AT });
     const link = screen.getByRole('link');
 
     expect(link).toHaveAttribute('aria-label', 'API connection status: Degraded (640ms)');
-    expect(link.className).toContain('text-amber-300');
-    expect(getDot(link).className).toContain('bg-amber-400');
+    expect(link.className).toContain('text-[var(--semantic-warning)]');
+    expect(getDot(link).className).toContain('bg-[var(--semantic-warning)]');
     expect(link).toHaveTextContent('640ms');
     expect(screen.getByRole('tooltip')).toHaveTextContent('Degraded');
   });
@@ -126,8 +126,8 @@ describe('ConnectionSegment', () => {
     // Latency is deliberately hidden while offline (a stale reading is
     // meaningless) — the aria-label and pill drop it entirely.
     expect(link).toHaveAttribute('aria-label', 'API connection status: Offline');
-    expect(link.className).toContain('text-rose-300');
-    expect(getDot(link).className).toContain('bg-rose-400');
+    expect(link.className).toContain('text-[var(--text-secondary)]');
+    expect(getDot(link).className).toContain('bg-[var(--text-secondary)]');
     expect(link).toHaveTextContent('Offline');
     expect(link).not.toHaveTextContent('1200ms');
 
@@ -141,8 +141,8 @@ describe('ConnectionSegment', () => {
     const link = screen.getByRole('link');
 
     expect(link).toHaveAttribute('aria-label', 'API connection status: Connecting…');
-    expect(link.className).toContain('var(--text-muted)');
-    expect(getDot(link).className).toContain('var(--surface-2)');
+    expect(link.className).toContain('var(--text-secondary)');
+    expect(getDot(link).className).toContain('var(--text-secondary)');
     // No latency and not offline → the only visible text is the short label.
     expect(link.textContent).toBe('API');
   });
@@ -161,15 +161,17 @@ describe('ConnectionSegment', () => {
   it('falls back to the neutral unknown variant for an out-of-contract status', () => {
     // A bad cast or a future union member must degrade gracefully rather than
     // throw on `cfg[status].icon`.
-    renderSegment({
-      status: 'bogus' as ApiHealthStatus,
+    const state: ApiHealthState = {
+      status: 'unknown',
       latencyMs: null,
       lastCheckedAt: null,
-    });
+    };
+    Reflect.set(state, 'status', 'bogus');
+    renderSegment(state);
     const link = screen.getByRole('link');
 
     expect(link).toHaveAttribute('aria-label', 'API connection status: Connecting…');
-    expect(link.className).toContain('var(--text-muted)');
+    expect(link.className).toContain('var(--text-secondary)');
     expect(link.textContent).toBe('API');
   });
 
@@ -179,7 +181,7 @@ describe('ConnectionSegment', () => {
 
     // aria-label carries no "(…ms)" suffix when latency is unavailable.
     expect(link).toHaveAttribute('aria-label', 'API connection status: Online');
-    expect(link.className).toContain('text-emerald-300');
+    expect(link.className).toContain('text-[var(--semantic-success)]');
     expect(link.textContent).toBe('API');
   });
 
@@ -233,6 +235,10 @@ describe('ConnectionSegment', () => {
     const dialog = screen.getByRole('dialog', {
       name: 'Connection diagnostics',
     });
+    expect(dialog).toHaveClass('w-connection-diagnostics');
+    expect(dialog).not.toHaveClass('w-[min(92vw,320px)]');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
     expect(dialog).toHaveTextContent('Database latency');
     expect(dialog).toHaveTextContent('8ms');
     expect(dialog).toHaveTextContent('Active DB connections');
@@ -243,5 +249,88 @@ describe('ConnectionSegment', () => {
       'href',
       '/system-status',
     );
+  });
+
+  it('keeps retained diagnostics visible alongside a refresh failure warning', () => {
+    rbacMock = {
+      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    };
+    diagnosticsMock = {
+      data: {
+        status: 'degraded',
+        components: {
+          database: { latency_ms: 0 },
+          telemetry_buffers: { drive_buffered: 0, charge_buffered: 0 },
+        },
+      },
+      isError: true,
+    };
+    renderSegment(
+      { status: 'degraded', latencyMs: 640, lastCheckedAt: AT },
+      { enableAdminDiagnostics: true },
+    );
+    fireEvent.click(screen.getByRole('button', { name: /open connection diagnostics/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Connection diagnostics' });
+    expect(dialog).toHaveTextContent('Diagnostics are temporarily unavailable.');
+    expect(dialog).toHaveTextContent('0ms');
+    expect(screen.getByText('Buffered events').parentElement).toHaveTextContent('0');
+    expect(within(dialog).getByRole('link')).toHaveAttribute('href', '/system-status');
+  });
+
+  it('does not turn incomplete queue measurements into a measured zero', () => {
+    rbacMock = {
+      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    };
+    diagnosticsMock = {
+      data: {
+        status: 'healthy',
+        components: { telemetry_buffers: { drive_buffered: 0 } },
+      },
+      isError: false,
+    };
+    renderSegment(
+      { status: 'ok', latencyMs: 0, lastCheckedAt: AT },
+      { enableAdminDiagnostics: true },
+    );
+    fireEvent.click(screen.getByRole('button', { name: /open connection diagnostics/i }));
+    expect(screen.getByText('Buffered events').parentElement).toHaveTextContent('—');
+    expect(screen.getByRole('button')).toHaveAccessibleName(/Online \(0ms\)/);
+  });
+
+  it('preserves failure-only diagnostics and reachable recovery navigation', () => {
+    rbacMock = {
+      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    };
+    diagnosticsMock = { isError: true };
+    renderSegment(
+      { status: 'offline', latencyMs: 42, lastCheckedAt: AT },
+      { enableAdminDiagnostics: true },
+    );
+    fireEvent.click(screen.getByRole('button', { name: /open connection diagnostics/i }));
+    const dialog = screen.getByRole('dialog', { name: 'Connection diagnostics' });
+    expect(dialog).toHaveTextContent('Diagnostics are temporarily unavailable.');
+    expect(dialog).not.toHaveTextContent('Database latency');
+    expect(within(dialog).getByRole('link')).toHaveAttribute('href', '/system-status');
+  });
+
+  it('closes diagnostics with Escape and restores the native trigger focus', () => {
+    rbacMock = {
+      data: { mode: 'session', my_roles: ['admin'], effective_for_me: {} },
+    };
+    renderSegment(
+      { status: 'unknown', latencyMs: null, lastCheckedAt: null },
+      { enableAdminDiagnostics: true },
+    );
+    const trigger = screen.getByRole('button', { name: /open connection diagnostics/i });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Connection diagnostics' });
+    expect(dialog).toHaveTextContent('Checking');
+    expect(dialog).toHaveTextContent('Unknown');
+    expect(trigger).toHaveAttribute('type', 'button');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
   });
 });

@@ -14,6 +14,8 @@ import { useApiHealth, type ApiHealthStatus } from '@/api/hooks/useApiHealth';
 import { useExtendedSystemHealth } from '@/api/hooks/useAdmin';
 import { useRbacMatrix } from '@/api/hooks/useRbacMatrix';
 import { cn } from '@/lib/cn';
+import { Icon } from '@/components/ui/Icon';
+import { neonColorMap, severityTokens, typography } from '@/lib/tokens';
 import { PrefetchLink } from '../PrefetchLink';
 import {
   useStatusBarAnnouncer,
@@ -88,8 +90,9 @@ function AdminConnectionControl({
           to="/system-status"
           aria-label={presentation.ariaLabel}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
-            'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--focus-ring)]',
+            'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+            typography.size.xs,
+            'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]',
             presentation.tone,
           )}
         >
@@ -99,19 +102,17 @@ function AdminConnectionControl({
     );
   }
 
-  const components = health.data?.components ?? {};
-  const database = components.database as Record<string, unknown> | undefined;
-  const pool = components.database_pool as Record<string, unknown> | undefined;
-  const telemetry = components.telemetry_buffers as Record<string, unknown> | undefined;
-  const stream = (
-    components.fleet_telemetry ??
-    components.mqtt
-  ) as Record<string, unknown> | undefined;
+  const components = health.data?.components;
+  const database = components?.database;
+  const pool = components?.database_pool;
+  const telemetry = components?.telemetry_buffers;
+  const stream = components?.fleet_telemetry ?? components?.mqtt;
   const dbLatency = readNumber(database, 'latency_ms');
   const activeConnections = readNumber(pool, 'acquired_conns');
-  const queueDepth = telemetry
-    ? (readNumber(telemetry, 'drive_buffered') ?? 0) +
-      (readNumber(telemetry, 'charge_buffered') ?? 0)
+  const driveBuffered = readNumber(telemetry, 'drive_buffered');
+  const chargeBuffered = readNumber(telemetry, 'charge_buffered');
+  const queueDepth = driveBuffered != null && chargeBuffered != null
+    ? driveBuffered + chargeBuffered
     : null;
   const diagnosticStatusLabels: Record<string, string> = {
     healthy: t('statusBar.connectionDiagnostics.status.healthy', 'Healthy'),
@@ -132,11 +133,11 @@ function AdminConnectionControl({
     : t('statusBar.connectionDiagnostics.checking', 'Checking');
   const healthStatusTone =
     healthStatus === 'healthy'
-      ? 'text-emerald-300'
+      ? severityTokens.success.fg
       : healthStatus === 'degraded'
-        ? 'text-amber-300'
+        ? severityTokens.warn.fg
         : healthStatus === 'unhealthy'
-          ? 'text-rose-300'
+          ? severityTokens.critical.fg
           : undefined;
 
   return (
@@ -155,7 +156,8 @@ function AdminConnectionControl({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
+            'h-auto min-h-5 min-w-0 gap-1.5 rounded-shape-sm px-1.5 py-0',
+            typography.size.xs,
             presentation.tone,
           )}
         >
@@ -173,15 +175,15 @@ function AdminConnectionControl({
           'statusBar.connectionDiagnostics.title',
           'Connection diagnostics',
         )}
-        className="w-[min(92vw,320px)] p-3"
+        className="w-connection-diagnostics p-3"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-2">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-subtle)] pb-2">
           <PanelTitle>
             {t('statusBar.connectionDiagnostics.title', 'Connection diagnostics')}
           </PanelTitle>
           <Text
             as="span"
-            size="2xs"
+            size="xs"
             color="muted"
             className={healthStatusTone}
           >
@@ -189,32 +191,33 @@ function AdminConnectionControl({
           </Text>
         </div>
 
-        {health.isError ? (
-          <Text as="p" size="sm" color="secondary" className="py-3 text-rose-300">
+        {health.isError && (
+          <Text as="p" size="sm" className={cn('py-3', severityTokens.critical.fg)}>
             {t(
               'statusBar.connectionDiagnostics.unavailable',
               'Diagnostics are temporarily unavailable.',
             )}
           </Text>
-        ) : (
+        )}
+        {(!health.isError || health.data) && (
           <div className="space-y-2 py-3">
             <DiagnosticRow
-              icon={<Database className="h-3.5 w-3.5" aria-hidden />}
+              icon={<Icon icon={Database} size="sm" />}
               label={t('statusBar.connectionDiagnostics.database', 'Database latency')}
               value={dbLatency == null ? '—' : `${dbLatency}ms`}
             />
             <DiagnosticRow
-              icon={<Gauge className="h-3.5 w-3.5" aria-hidden />}
+              icon={<Icon icon={Gauge} size="sm" />}
               label={t('statusBar.connectionDiagnostics.pool', 'Active DB connections')}
               value={activeConnections == null ? '—' : String(activeConnections)}
             />
             <DiagnosticRow
-              icon={<Radio className="h-3.5 w-3.5" aria-hidden />}
+              icon={<Icon icon={Radio} size="sm" />}
               label={t('statusBar.connectionDiagnostics.telemetry', 'Telemetry stream')}
               value={streamStatus}
             />
             <DiagnosticRow
-              icon={<Activity className="h-3.5 w-3.5" aria-hidden />}
+              icon={<Icon icon={Activity} size="sm" />}
               label={t('statusBar.connectionDiagnostics.queue', 'Buffered events')}
               value={queueDepth == null ? '—' : String(queueDepth)}
             />
@@ -224,7 +227,7 @@ function AdminConnectionControl({
         <PrefetchLink
           to="/system-status"
           onClick={close}
-          className="inline-flex text-xs font-medium text-[var(--theme-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+          className={cn('inline-flex max-w-full break-words hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]', typography.size.xs, typography.weight.medium, severityTokens.info.fg)}
         >
           {t('statusBar.connectionDiagnostics.fullStatus', 'Open system status')}
         </PrefetchLink>
@@ -245,10 +248,10 @@ function DiagnosticRow({
   return (
     <div className="flex items-center gap-2">
       <span className="text-[var(--text-muted)]">{icon}</span>
-      <Text as="span" size="xs" color="secondary" className="min-w-0 flex-1">
+      <Text as="span" size="xs" color="secondary" className="min-w-0 flex-1 break-words">
         {label}
       </Text>
-      <Text as="span" size="xs" weight="semibold" className="tabular-nums">
+      <Text as="span" size="xs" weight="medium" className="min-w-0 break-words tabular-nums">
         {value}
       </Text>
     </div>
@@ -265,17 +268,16 @@ export function ConnectionSegment({
 
   const short = t('statusBar.connection.short', 'API');
   const cfg: Record<ApiHealthStatus, VariantConfig> = {
-    ok: { icon: Activity, text: 'text-emerald-300', dot: 'bg-emerald-400', short },
-    degraded: { icon: AlertTriangle, text: 'text-amber-300', dot: 'bg-amber-400', short },
-    offline: { icon: CircleSlash, text: 'text-rose-300', dot: 'bg-rose-400', short },
-    unknown: { icon: HelpCircle, text: 'text-[var(--text-muted)]', dot: 'bg-[var(--surface-2)]', short },
+    ok: { icon: Activity, text: severityTokens.success.fg, dot: severityTokens.success.dot, short },
+    degraded: { icon: AlertTriangle, text: severityTokens.warn.fg, dot: severityTokens.warn.dot, short },
+    offline: { icon: CircleSlash, text: neonColorMap.neutral.text, dot: neonColorMap.neutral.dot, short },
+    unknown: { icon: HelpCircle, text: neonColorMap.neutral.text, dot: neonColorMap.neutral.dot, short },
   };
   // Defensive: an out-of-contract status (a bad cast or a future union member)
   // degrades to the neutral "unknown" variant instead of throwing on
   // `cfg[status].icon`. Every downstream lookup then uses this safe value.
   const status: ApiHealthStatus = rawStatus in cfg ? rawStatus : 'unknown';
   const v = cfg[status];
-  const Icon = v.icon;
 
   const stateLabel: Record<ApiHealthStatus, string> = {
     ok: t('statusBar.connection.ok', 'Online'),
@@ -313,15 +315,15 @@ export function ConnectionSegment({
         className={cn('inline-block h-1.5 w-1.5 shrink-0 rounded-full', v.dot)}
         aria-hidden
       />
-      <Icon className="h-3 w-3 shrink-0" aria-hidden />
+      <Icon icon={v.icon} size="xs" />
       {!iconOnly && (
         <>
-          <span className="font-medium">{v.short}</span>
+          <Text size="xs" weight="medium" className="min-w-0 break-words">{v.short}</Text>
           {status !== 'offline' && status !== 'unknown' && latencyMs != null && (
-            <span className="text-[var(--text-muted)]">· {latencyLabel}</span>
+            <Text size="xs" color="muted">· {latencyLabel}</Text>
           )}
           {status === 'offline' && (
-            <span className="text-[var(--text-muted)]">· {stateLabel.offline}</span>
+            <Text size="xs" color="muted" className="min-w-0 break-words">· {stateLabel.offline}</Text>
           )}
         </>
       )}
@@ -340,8 +342,9 @@ export function ConnectionSegment({
         to="/system-status"
         aria-label={ariaLabel}
         className={cn(
-          'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
-          'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--focus-ring)]',
+          'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+          typography.size.xs,
+          'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]',
           v.text,
         )}
       >
