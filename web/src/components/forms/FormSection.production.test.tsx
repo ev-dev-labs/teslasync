@@ -27,6 +27,7 @@ describe('FormSection production composition', () => {
     expect(heading).toHaveClass(...typography.role.panelTitle.split(' '), 'break-words')
     expect(supportingCopy).toHaveClass(...typography.role.helper.split(' '), 'break-words')
     expect(heading).not.toHaveClass('truncate')
+    expect(heading).not.toHaveClass('section-title')
     expect(supportingCopy).not.toHaveClass('truncate')
   })
 
@@ -207,7 +208,7 @@ describe('FormSection production composition', () => {
 
     const group = screen.getByRole('group', { name: 'Appearance' })
     expect(group).toHaveClass('glass-panel', 'space-y-4', 'p-2', 'sm:p-3', 'ring-2', 'caller-panel')
-    expect(group).not.toHaveClass('p-5', 'sm:p-6')
+    expect(group).not.toHaveClass('p-4', 'sm:p-6')
     expect(within(group).getByText('Custom explanatory content')).toBeVisible()
     expect(within(group).getByRole('textbox', { name: 'Editable' })).toBeEnabled()
     expect(within(group).getByRole('textbox', { name: 'Unavailable' })).toBeDisabled()
@@ -215,5 +216,28 @@ describe('FormSection production composition', () => {
     expect(group.querySelector('form')).toBeNull()
     expect(group).not.toHaveAttribute('aria-busy')
     expect(group).not.toHaveAttribute('aria-live')
+  })
+
+  it('keeps RTL content and actions in source order with unclipped, motion-free grouping', () => {
+    render(
+      <div dir="rtl">
+        <FormSection title="إعدادات السيارة" description="اختر تفضيلاتك">
+          <Input label="الاسم" />
+          <Button type="button">حفظ</Button>
+        </FormSection>
+      </div>,
+    )
+
+    const group = screen.getByRole('group', { name: 'إعدادات السيارة' })
+    expect(group.parentElement).toHaveAttribute('dir', 'rtl')
+    expect(group).not.toHaveAttribute('dir')
+    expect(group).toHaveClass('min-w-0', 'overflow-visible', 'p-4', 'sm:p-6')
+    expect(group).not.toHaveClass('overflow-hidden')
+    expect(Array.from(group.querySelectorAll('input, button'))).toEqual([
+      within(group).getByRole('textbox', { name: 'الاسم' }),
+      within(group).getByRole('button', { name: 'حفظ' }),
+    ])
+    expect(group.className).not.toMatch(/animate-|transition-|duration-/)
+    expect(group).toHaveAccessibleDescription('اختر تفضيلاتك')
   })
 })

@@ -26,10 +26,10 @@ export function FormSection({ title, description, children, className }: FormSec
       role="group"
       aria-labelledby={headingId}
       aria-describedby={hasDescription ? descriptionId : undefined}
-      className={cn('glass-panel min-w-0 p-5 sm:p-6 space-y-4', className)}
+      className={cn('glass-panel min-w-0 overflow-visible p-4 sm:p-6 space-y-4', className)}
     >
       <div>
-        <PanelTitle id={headingId} className="section-title break-words">{title}</PanelTitle>
+        <PanelTitle id={headingId} className="break-words">{title}</PanelTitle>
         {hasDescription && (
           <HelperText id={descriptionId} className="mt-1 break-words">
             {description}
