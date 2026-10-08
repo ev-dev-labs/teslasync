@@ -237,6 +237,8 @@ describe('StatusBar :: visibility & accessibility', () => {
     expect(bar.className).toContain('xl:bottom-0');
     expect(bar.className).not.toContain('lg:bottom-0');
     expect(bar.className).toContain('h-[var(--shell-status-bar-height)]');
+    expect(bar).toHaveClass('z-shell-status-bar');
+    expect(bar).not.toHaveClass('z-[55]');
   });
 
   it('renders all wide-screen status segments without More', () => {

@@ -127,7 +127,7 @@ function StatusBarContent({
         data-role="status-bar"
         data-print-hide
         className={cn(
-          'fixed left-0 right-0 z-[55] flex flex-col items-stretch justify-between md:flex-row md:items-center md:gap-2',
+          'fixed left-0 right-0 z-shell-status-bar flex flex-col items-stretch justify-between md:flex-row md:items-center md:gap-2',
           'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
           'px-3 text-xs text-[var(--text-secondary)] lg:px-4',
           'bottom-[var(--shell-tab-bar-height)] xl:bottom-0',
