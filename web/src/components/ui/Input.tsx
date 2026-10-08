@@ -83,7 +83,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           </div>
         )}
         <div className="relative">
-          {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}
+          {icon && <span className="absolute start-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">{icon}</span>}
           <input
             ref={ref}
             id={inputId}
@@ -97,15 +97,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 ? 'border-[var(--semantic-danger)]'
                 : 'enabled:hover:border-[var(--control-border-hover)] focus-visible:border-[var(--focus-ring)]',
               'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-              icon && 'pl-10',
-              suffix && 'pr-10',
+              icon && 'ps-10',
+              suffix && 'pe-10',
               className,
             )}
             aria-invalid={error ? 'true' : ariaInvalid}
             aria-describedby={describedBy}
             {...props}
           />
-          {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2">{suffix}</span>}
+          {suffix && <span className="absolute end-3 top-1/2 -translate-y-1/2">{suffix}</span>}
         </div>
         {error && <p id={`${inputId}-error`} role="alert" className="break-words text-xs text-[var(--semantic-danger)]">{error}</p>}
         {hint && !error && <p id={`${inputId}-hint`} className="break-words text-xs text-[var(--text-muted)]">{hint}</p>}

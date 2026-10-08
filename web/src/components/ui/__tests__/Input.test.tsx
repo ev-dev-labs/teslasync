@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-import { Input } from '../Input';
+import { Input, type InputProps } from '../Input';
 
 describe('Input — required indicator', () => {
   it('renders a paired <label> when label= is provided', () => {
@@ -233,11 +233,92 @@ describe('Input — primitive contract', () => {
     const fields = screen.getAllByRole('textbox', { name: 'Value' });
     expect(fields[0]).toHaveValue('0');
     expect(fields[0]?.id).not.toBe(fields[1]?.id);
-    expect(fields[0]?.className).toContain('pl-10');
-    expect(fields[0]?.className).toContain('pr-10');
+    expect(fields[0]?.className).toContain('ps-10');
+    expect(fields[0]?.className).toContain('pe-10');
     expect(fields[0]?.className).toContain('custom-field');
     expect(screen.getByText('Icon')).toBeVisible();
     expect(screen.getByText('W')).toBeVisible();
     expect(fields[1]).toHaveValue('');
+  });
+
+  describe('Input — logical adornment roles', () => {
+    const directions = ['ltr', 'rtl'] as const;
+    const sizes = ['sm', 'md', 'lg', 'auto'] as const satisfies ReadonlyArray<NonNullable<InputProps['size']>>;
+    const adornments = [
+      { name: 'none', icon: undefined, suffix: undefined },
+      { name: 'icon', icon: <span>Leading icon</span>, suffix: undefined },
+      { name: 'suffix', icon: undefined, suffix: 'W' },
+      { name: 'both', icon: <span>Leading icon</span>, suffix: 'W' },
+    ] satisfies ReadonlyArray<Pick<InputProps, 'icon' | 'suffix'> & { name: string }>;
+
+    it.each(directions)('uses start/end roles under inherited %s direction for every size and slot combination', (direction) => {
+      for (const size of sizes) {
+        for (const { icon, suffix } of adornments) {
+          const { unmount } = render(
+            <div dir={direction}>
+              <Input label="Power" size={size} icon={icon} suffix={suffix} />
+            </div>,
+          );
+          const input = screen.getByRole('textbox', { name: 'Power' });
+          expect(input.closest('[dir]')).toHaveAttribute('dir', direction);
+          expect(input.classList.contains('ps-10')).toBe(Boolean(icon));
+          expect(input.classList.contains('pe-10')).toBe(Boolean(suffix));
+          expect(input.className).not.toMatch(/\b(?:pl|pr)-10\b/);
+          if (icon) {
+            const slot = screen.getByText('Leading icon').parentElement;
+            expect(slot).toHaveClass('absolute', 'start-3', 'top-1/2', '-translate-y-1/2');
+            expect(slot).not.toHaveClass('left-3');
+          }
+          if (suffix) {
+            const slot = screen.getByText('W');
+            expect(slot).toHaveClass('absolute', 'end-3', 'top-1/2', '-translate-y-1/2');
+            expect(slot).not.toHaveClass('right-3');
+          }
+          unmount();
+        }
+      }
+    });
+
+    it('preserves RTL native/ref/events and error, disabled and caller busy state with adornments', () => {
+      const ref = createRef<HTMLInputElement>();
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <div dir="rtl">
+          <Input ref={ref} label="Power" dir="rtl" name="power" defaultValue="0"
+            icon={<span>Leading icon</span>} suffix="W" error="Invalid power"
+            aria-busy="true" onChange={onChange} className="ps-12 pe-14" />
+        </div>,
+      );
+      const input = screen.getByRole('textbox', { name: 'Power' });
+      expect(ref.current).toBe(input);
+      expect(input).toHaveAttribute('dir', 'rtl');
+      expect(input).toHaveAttribute('name', 'power');
+      expect(input).toHaveAttribute('aria-busy', 'true');
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(input).toHaveAttribute('aria-describedby', `${input.id}-error`);
+      expect(screen.getByRole('alert')).toHaveTextContent('Invalid power');
+      expect(input).toHaveClass('ps-12', 'pe-14');
+      expect(input).not.toHaveClass('ps-10', 'pe-10');
+      input.focus();
+      expect(input).toHaveFocus();
+      fireEvent.change(input, { target: { value: '42' } });
+      expect(onChange).toHaveBeenCalledOnce();
+      expect(input).toHaveValue('42');
+      rerender(
+        <div dir="rtl">
+          <Input ref={ref} label="Power" dir="rtl" name="power" defaultValue="0"
+            icon={<span>Leading icon</span>} suffix="W" disabled hint="Waiting"
+            aria-busy="false" onChange={onChange} />
+        </div>,
+      );
+      expect(ref.current).toBe(input);
+      expect(input).toHaveValue('42');
+      expect(input).toBeDisabled();
+      expect(input).toHaveAttribute('aria-busy', 'false');
+      expect(input).toHaveAttribute('aria-describedby', `${input.id}-hint`);
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('Waiting')).toBeVisible();
+      expect(input).toHaveClass('ps-10', 'pe-10');
+    });
   });
 });
