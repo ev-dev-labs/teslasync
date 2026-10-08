@@ -1,4 +1,4 @@
-import { forwardRef, type HTMLAttributes } from 'react';
+import { forwardRef, useEffect, useState, type HTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
@@ -20,6 +20,12 @@ import { convertDistanceFromSI, convertPowerFromSI, convertTempFromSI } from '@/
 import type { VehicleStatus } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { typography } from '@/lib/tokens';
+import type { DataState } from '@/api/dataState';
+import { resolveVehicleStateFreshness, type VehicleStateFreshness } from '@/api/hooks/useVehicles';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { DataProvenanceBadge } from '@/components/data-display/DataProvenanceBadge';
+import { SourceContent, type SourceState } from '@/components/layout/layout-reference/SourceContent';
+import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning';
 
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   vehicle: {
@@ -48,6 +54,11 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
    * dashboards rendering many hero cards do not trigger one query per card.
    */
   photoUrl?: string | null;
+  dataState?: DataState<unknown>;
+  observation?: {
+    observedAt: number | null;
+    freshness: VehicleStateFreshness;
+  } | null;
   className?: string;
 }
 
@@ -73,11 +84,41 @@ function toStatus(state: string): VehicleStatus {
 }
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
-  ({ vehicle, vehicleState, photoUrl, className, ...props }, ref) => {
+  ({ vehicle, vehicleState, photoUrl, dataState, observation, className, ...props }, ref) => {
     const { fmtInt, fmtNumber } = useNumberFormatting();
     const { t } = useTranslation();
     const { unitPrefs } = useUnits();
+    const { formatRelative, formatDateTime } = useDateFormat();
+    const [, setObservationTick] = useState(0);
     const vs = vehicleState;
+    const observationDate = isFiniteNumber(observation?.observedAt)
+      && Number.isFinite(new Date(observation.observedAt).getTime())
+      ? new Date(observation.observedAt)
+      : null;
+    const observedAt = observationDate?.getTime() ?? null;
+    useEffect(() => {
+      if (observedAt == null) return;
+      const timer = setInterval(() => setObservationTick((tick) => tick + 1), 30_000);
+      return () => clearInterval(timer);
+    }, [observedAt]);
+    const streamFreshness = dataState != null && dataState.provenance !== 'live'
+      && dataState.provenance !== 'cached'
+      ? 'unknown'
+      : resolveVehicleStateFreshness(observation?.freshness, observedAt);
+    const sourceLabel = t('statusBar.connectionDiagnostics.telemetry', 'Telemetry stream');
+    const hasTrustMetadata = dataState !== undefined || observation !== undefined;
+    const showRefreshWarning = dataState != null && (vs != null || dataState.hasData) && (
+      dataState.refreshError != null || dataState.isRefreshBlocked
+      || dataState.status === 'partial' || dataState.status === 'unavailable'
+    );
+    // The reading prop, not the opaque request payload, owns usable content.
+    const sourceState: SourceState = !vs && dataState?.fatalError
+      ? 'error'
+      : !vs && dataState?.status === 'initial'
+        ? 'loading'
+        : (vs || dataState?.hasData) && dataState?.status === 'stale' && !showRefreshWarning
+          ? 'retained'
+          : 'ready';
 
     /* Convert SI base units (meters, °C) to the user's display units. The state
      * endpoint returns odometer and rated_range in meters; always pull the
@@ -150,6 +191,54 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </Badge>
         </div>
 
+        {hasTrustMetadata ? (
+          <div className="min-w-0 space-y-2 break-words" data-stream-freshness={streamFreshness}>
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <Text as="span" variant="label" color="secondary">{sourceLabel}</Text>
+              <DataProvenanceBadge
+                provenance={dataState?.provenance ?? 'unknown'}
+                status={streamFreshness === 'fresh' ? dataState?.status : 'stale'}
+              />
+              {streamFreshness !== 'fresh' ? (
+                <Text as="span" variant="bodySm" color="secondary">
+                  {streamFreshness === 'stale'
+                    ? t('freshness.stale', 'Stale')
+                    : t('common.unknown', 'Unknown')}
+                </Text>
+              ) : null}
+              {dataState?.isRefreshBlocked ? (
+                <Text as="span" variant="bodySm" color="secondary">
+                  {t('carbon.source.status.paused', 'Paused')}
+                </Text>
+              ) : null}
+            </div>
+            <Text as="p" variant="bodySm" color="secondary" title={observationDate ? formatDateTime(observationDate) : undefined}>
+              {observationDate
+                ? t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', {
+                    age: formatRelative(observationDate),
+                  })
+                : t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')}
+            </Text>
+            <Text as="p" variant="bodySm" color="muted">
+              {t('vehicleHero.observationLimitation', 'Telemetry stream observation does not verify individual reading timestamps or completeness.')}
+            </Text>
+          </div>
+        ) : null}
+
+        {showRefreshWarning && dataState ? (
+          <StaleRefreshWarning
+            state={{ ...dataState, hasData: true }}
+            label={sourceLabel}
+          />
+        ) : null}
+        <SourceContent
+          state={sourceState}
+          label={sourceLabel}
+          emptyMessage={t('vehicleHero.noState', 'Live telemetry unavailable')}
+          errorMessage={t('dashboard.fleetPosture.scope.failedHelp', 'The live-state request failed. This is a fact about our pipeline, not about the vehicle.')}
+          error={dataState?.fatalError}
+          errorRecovery={dataState?.retry ? { onRetry: dataState.retry } : undefined}
+        >
         {/* Live battery / range / temperature gauges plus the detail cards.
             When telemetry is absent we render an explicit placeholder instead
             of collapsing the section, so the panel is never a blank shell. */}
@@ -230,6 +319,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
             message={t('vehicleHero.noState', 'Live telemetry unavailable')}
           />
         )}
+        </SourceContent>
 
         {/* Navigation actions for the vehicle */}
         <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
