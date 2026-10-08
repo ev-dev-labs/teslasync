@@ -162,4 +162,47 @@ describe('AiOutputPanel', () => {
       expect(trail).not.toHaveTextContent('vehicle_id')
     })
   })
+
+  describe('restrained presentation and preservation', () => {
+    it('uses existing surface and shape roles without fixed white chrome', () => {
+      renderPanel({ state: 'done', text: 'Answer' })
+      expect(screen.getByTestId(PANEL)).toHaveClass(
+        'min-w-0',
+        'rounded-shape-lg',
+        'bg-[var(--surface-1)]',
+      )
+      expect(screen.getByTestId(PANEL).className).not.toContain('bg-white')
+    })
+
+    it('keeps long RTL prose and markup literal with wrapping and paragraph breaks', () => {
+      const text = `مرحبا\n\n${'long-source-identifier'.repeat(80)}\n<script>not executable</script>`
+      renderPanel({ state: 'done', text })
+      const paragraph = screen.getByTestId(PANEL).querySelector('p')
+      expect(paragraph).toHaveClass('whitespace-pre-wrap', 'break-words')
+      expect(paragraph?.textContent).toBe(text)
+      expect(screen.getByTestId(PANEL).querySelector('script')).toBeNull()
+    })
+
+    it('keeps error semantics and long messages using the theme danger role', () => {
+      const error = 'source-unavailable'.repeat(80)
+      renderPanel({ state: 'error', error })
+      const alert = screen.getByRole('alert')
+      expect(alert).toHaveClass('text-[var(--semantic-danger)]')
+      expect(alert).toHaveTextContent(error)
+      expect(alert.querySelector('span')).toHaveClass('min-w-0', 'break-words')
+      expect(alert.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    })
+
+    it('preserves evidence-only paused streams and clears them on a caller scope reset', () => {
+      const { rerender } = renderPanel({
+        state: 'paused-confirm',
+        activity: [{ id: 'reading', name: 'query_battery_status', status: 'running' }],
+      })
+      expect(screen.getByTestId('helix-evidence-trail')).toHaveTextContent('Battery status')
+      expect(screen.getByTestId(PANEL)).toHaveTextContent('No output was generated.')
+      rerender(<AiOutputPanel text="" state="idle" error={null} />)
+      expect(screen.queryByTestId(PANEL)).toBeNull()
+      expect(screen.queryByTestId('helix-evidence-trail')).toBeNull()
+    })
+  })
 })
