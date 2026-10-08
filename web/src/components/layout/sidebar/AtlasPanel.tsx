@@ -25,6 +25,7 @@ import { VisuallyHidden } from '@/components/a11y'
 import { Button, Input } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import type { SidebarSectionInput } from '../sectionGroups'
 import type { SectionGroup } from '../sectionGroups'
 import { isExclusiveActivePath } from './compactNav'
@@ -191,7 +192,7 @@ export function AtlasPanel({
           ? t('nav.deck.pinOfflineHint', 'Saved here until navigation pins can sync')
           : actionLabel}
         onClick={() => (pinned ? onUnpin(item.to) : onPin(item.to))}
-        className={cn('h-11 w-11 shrink-0 rounded-shape-md p-0 hover:bg-[var(--control-bg)]', pinned ? 'text-amber-500' : 'text-[var(--text-muted)] hover:text-[var(--theme-primary)]')}
+        className={cn('h-11 w-11 shrink-0 rounded-shape-md p-0 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]', pinned ? typography.color.secondary : typography.color.muted)}
         data-testid={`atlas-pin-${item.to}`}
       >
         <motion.span
@@ -200,7 +201,7 @@ export function AtlasPanel({
           animate={{ scale: 1, rotate: 0, opacity: 1 }}
           transition={{ duration: durationMs / 1000 }}
         >
-          <Icons.pin className={cn('h-4 w-4', pinned && 'fill-amber-500/30')} aria-hidden />
+          <Icons.pin className={cn('h-4 w-4', pinned && 'fill-current')} aria-hidden />
         </motion.span>
       </Button>
     )
@@ -316,13 +317,13 @@ export function AtlasPanel({
             size="sm"
             onClick={onBack}
             aria-label={t('nav.deck.backToRail', 'Back to sections')}
-            className="h-9 w-9 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
           >
             <Icons.back className="h-4 w-4 rtl:rotate-180" aria-hidden />
           </Button>
         )}
         {!compact && (
-          <p className="min-w-0 flex-1 truncate px-1 text-sm font-semibold tracking-wide text-[var(--text-primary)]">
+          <p className={cn('min-w-0 flex-1 truncate px-1', typography.size.sm, typography.weight.medium, typography.color.primary)}>
             {viewTitle()}
           </p>
         )}
@@ -338,7 +339,7 @@ export function AtlasPanel({
               ? t('nav.deck.expandAllGroups', 'Expand all groups')
               : t('nav.deck.collapseAllGroups', 'Collapse all groups')}
             onClick={() => setExpandedGroups(new Set(anyGroupCollapsed ? collapsibleGroupKeys : []))}
-            className="h-9 w-9 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
           >
             {anyGroupCollapsed
               ? <Icons.expandAll className="h-5 w-5" aria-hidden />
@@ -361,11 +362,11 @@ export function AtlasPanel({
               hideTip()
               onToggleCollapsed?.()
             }}
-            className="h-9 w-9 shrink-0 rounded-shape-md p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
           >
             {compact
-              ? <Icons.sidebarSecondaryExpand className="h-5 w-5 rtl:scale-x-[-1]" aria-hidden />
-              : <Icons.sidebarSecondaryCollapse className="h-5 w-5 rtl:scale-x-[-1]" aria-hidden />}
+              ? <Icons.sidebarSecondaryExpand className="h-5 w-5 rtl:-scale-x-100" aria-hidden />
+              : <Icons.sidebarSecondaryCollapse className="h-5 w-5 rtl:-scale-x-100" aria-hidden />}
           </Button>
         )}
         {variant === 'secondary' && (
@@ -376,7 +377,7 @@ export function AtlasPanel({
             aria-label={t('nav.deck.close', 'Close panel')}
             title={t('nav.deck.close', 'Close panel')}
             onClick={onClose}
-            className="h-9 w-9 shrink-0 rounded-shape-md p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            className="h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
           >
             <Icons.close className="h-4 w-4" aria-hidden />
           </Button>
@@ -491,7 +492,7 @@ export function AtlasPanel({
                             setRecentOpen(next)
                             persistExpanded(RECENT_OPEN_KEY, next)
                           }}
-                          className="h-7 w-7 shrink-0 rounded-shape-sm p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                          className="h-11 w-11 shrink-0 rounded-shape-sm p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)] md:h-7 md:w-7"
                         >
                           {recentOpen
                             ? <Icons.expand className="h-4 w-4" aria-hidden />
@@ -582,16 +583,16 @@ export function AtlasPanel({
                       setQuickPinsOpen(next)
                       persistExpanded(QUICK_PINS_OPEN_KEY, next)
                     }}
-                    className="min-h-11 w-full justify-start gap-2 rounded-shape-md px-2 text-sm font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                    className={cn('min-h-11 w-full justify-start gap-2 rounded-shape-md px-2 hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]', typography.size.sm, typography.weight.medium, typography.color.secondary)}
                   >
                     {filtering || quickPinsOpen
                       ? <Icons.expand className="h-4 w-4 shrink-0" aria-hidden />
                       : <Icons.next className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden />}
-                    <Icons.pin className="h-4 w-4 text-amber-500" aria-hidden />
-                    <span className="min-w-0 flex-1 truncate text-start text-xs font-semibold tracking-wide">
+                    <Icons.pin className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className={cn('min-w-0 flex-1 truncate text-start', typography.role.label)}>
                       {t('nav.deck.quickAccessPins', 'Quick access pins')}
                     </span>
-                    <span aria-hidden className="rounded-full bg-[var(--surface-3)] px-2 py-0.5 text-2xs tabular-nums text-[var(--text-secondary)]">
+                    <span aria-hidden className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 tabular-nums', typography.size.xs, typography.weight.medium, typography.color.secondary)}>
                       {quickPins.length}
                     </span>
                   </Button>
@@ -652,7 +653,7 @@ export function AtlasPanel({
                     onClick={() => toggleGroup(group.groupKey)}
                     className={cn(
                       'min-h-11 rounded-shape-md text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-                      compact ? 'mx-auto flex w-11 justify-center p-0' : 'w-full justify-start gap-2 px-2 text-sm font-semibold tracking-normal',
+                      compact ? 'mx-auto flex w-11 justify-center p-0' : cn('w-full justify-start gap-2 px-2', typography.size.sm, typography.weight.medium),
                     )}
                   >
                     {expandedGroups.has(group.groupKey)
@@ -663,7 +664,7 @@ export function AtlasPanel({
                         <span className="min-w-0 flex-1 truncate text-start">
                           {group.labelKey ? t(group.labelKey, group.label) : group.label}
                         </span>
-                        <span aria-hidden className="rounded-full bg-[var(--surface-3)] px-2 py-0.5 text-2xs tabular-nums text-[var(--text-secondary)]">
+                        <span aria-hidden className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 tabular-nums', typography.size.xs, typography.weight.medium, typography.color.secondary)}>
                           {group.entries.length}
                         </span>
                       </>
