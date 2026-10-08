@@ -32,6 +32,15 @@ const locale = vi.hoisted(() => ({
   translations: {} as Record<string, string>,
 }))
 
+const motionPreference = vi.hoisted(() => ({ reduce: false }))
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({
+    reduce: motionPreference.reduce,
+    durationMs: motionPreference.reduce ? 0 : 250,
+  }),
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, second?: unknown, third?: unknown) => {
@@ -154,6 +163,7 @@ function openPaletteViaEvent() {
 }
 
 beforeEach(() => {
+  motionPreference.reduce = false
   locale.translations = {}
   localStorage.clear()
   sessionStorage.clear()
@@ -203,6 +213,33 @@ describe('CommandPalette recent storage', () => {
 })
 
 // ─── Cmd+K behavior ─────────────────────────────────────────────────────────
+
+describe('CommandPalette frame', () => {
+  it.each([false, true])('preserves overlay geometry with reduced motion %s', async (reduce) => {
+    motionPreference.reduce = reduce
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const dialog = screen.getByRole('dialog')
+    const panel = document.querySelector('[data-command-palette-panel]')
+    const backdrop = document.querySelector('[data-role="command-palette"]')
+    expect(dialog).toHaveClass('rounded-panel', 'shadow-e3', 'max-h-command-palette', 'bg-[var(--surface-1)]')
+    expect(dialog.className).not.toMatch(/backdrop-blur|shadow-2xl|rounded-2xl/)
+    expect(backdrop).toHaveClass('z-command-palette-backdrop', 'bg-[var(--surface-overlay)]')
+    expect(backdrop?.className).not.toContain('backdrop-blur')
+    expect(document.querySelector('[data-command-palette-positioner]')).toHaveClass(
+      'z-command-palette-positioner', 'py-command-palette-viewport',
+      'pointer-events-none', 'overflow-y-auto', 'px-4',
+    )
+    expect(panel).toHaveClass('w-full', 'max-w-lg', 'pointer-events-auto')
+    expect(panel?.getAttribute('style') ?? '').not.toMatch(/scale|translate/)
+    if (reduce) {
+      expect(panel).toHaveStyle({ opacity: '1' })
+      expect(backdrop).toHaveStyle({ opacity: '1' })
+    }
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+})
 
 describe('CommandPalette keyboard shortcut', () => {
   it('opens the deferred palette on its first invocation', async () => {
@@ -256,7 +293,7 @@ describe('CommandPalette keyboard shortcut', () => {
     })
 
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-[84vh]')
+    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-command-palette')
     const listbox = screen.getByRole('listbox')
     expect(listbox).toHaveClass('max-h-80', 'min-h-0', 'overflow-y-auto')
   })

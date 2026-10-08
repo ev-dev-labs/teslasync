@@ -7,6 +7,7 @@ import {
   Bookmark, FileText, CalendarDays, X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import type { TFunction } from 'i18next'
 import { Input } from './Input'
 import { cn } from '@/lib/cn'
@@ -305,6 +306,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ onOpen, initialOpen = false }: CommandPaletteProps) {
   const { t } = useTranslation()
+  const { reduce, durationMs } = useMotionPreference()
   const [open, setOpen] = useState(initialOpen)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -1208,17 +1210,17 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       {open && (
         <>
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: reduce ? 1 : 0 }}
+            transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
             data-role="command-palette"
             // Not migrated to <Modal>: the command palette is its own
             // keyboard-driven primitive
             // with custom search behavior, multi-mode navigation, and a
             // distinct visual treatment (top-anchored card, not centered
             // dialog). New interactive dialogs MUST use <Modal>.
-            // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[200] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)]"
+            className="fixed inset-0 z-command-palette-backdrop bg-[var(--surface-overlay)]"
             onClick={close}
           />
           <div
@@ -1234,15 +1236,14 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
             // keyboard-driven system overlay with its own combobox/listbox
             // semantics and top-anchored geometry; <Modal> centres and traps
             // differently. The backdrop above is the click-out surface.
-            // eslint-disable-next-line no-restricted-syntax
-            className="pointer-events-none fixed inset-0 z-[201] flex items-start justify-center overflow-y-auto px-4 py-[max(2rem,8vh)]"
+            className="pointer-events-none fixed inset-0 z-command-palette-positioner flex items-start justify-center overflow-y-auto px-4 py-command-palette-viewport"
           >
             <motion.div
               ref={panelRef}
-              initial={{ opacity: 0, scale: 0.95, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: reduce ? 1 : 0 }}
+              transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
               data-role="command-palette"
               data-command-palette-panel
               className="pointer-events-auto w-full max-w-lg"
@@ -1251,7 +1252,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 role="dialog"
                 aria-modal="true"
                 aria-label={t('palette.dialogLabel', 'Command palette')}
-                className="flex max-h-[84vh] flex-col overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
+                className="flex max-h-command-palette flex-col overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3"
               >
               {/* Search input / contextual selection header */}
               <div className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
