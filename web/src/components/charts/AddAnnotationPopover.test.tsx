@@ -7,20 +7,19 @@
  * '@/i18n' so `t(key, default)` resolves the real English strings and the
  * assertions read like the rendered UI.
  *
- * Interactions use `fireEvent` (the repo convention — see IncidentForm /
- * ConfirmDialog / TagInput tests) because `@testing-library/user-event` is not a
- * dependency of this workspace.
+ * Existing cases use `fireEvent`; the Escape regression uses awaited
+ * `userEvent` interactions so the key bubbles from the real focused control.
  */
 import '@/i18n';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import {
   AddAnnotationPopover,
   toDateInputValue,
   toIsoTimestamp,
 } from './AddAnnotationPopover';
-import { ANNOTATION_COLORS } from '@/types/annotations';
 
 // A fixed, unambiguous timestamp used across the component tests.
 const TS = '2025-06-01T10:30:00Z';
@@ -162,6 +161,33 @@ describe('AddAnnotationPopover — rendering', () => {
     expect(date.type).toBe('date');
     expect(date.value).toBe('2025-03-15');
   });
+
+  it('preserves draft field limits and required editable date validation', () => {
+    renderPopover({ editableDate: true });
+    expect(labelInput()).toHaveAttribute('maxlength', '50');
+    expect(descriptionInput()).toHaveAttribute('maxlength', '200');
+    expect(dateInput()).toBeRequired();
+    expect(dateInput()).toHaveAttribute('max', toDateInputValue(new Date().toISOString()));
+  });
+
+  it('resyncs an edited date from a new timestamp without dropping the label draft', () => {
+    const onAdd = vi.fn();
+    const onCancel = vi.fn();
+    const { rerender } = render(
+      <AddAnnotationPopover open editableDate timestamp={TS} onAdd={onAdd} onCancel={onCancel} />,
+    );
+    typeInto(labelInput(), 'Draft label');
+    typeInto(dateInput(), '2025-04-20');
+
+    rerender(
+      <AddAnnotationPopover open editableDate timestamp="2025-07-10T13:00:00Z" onAdd={onAdd} onCancel={onCancel} />,
+    );
+
+    expect(dateInput().value).toBe('2025-07-10');
+    expect(labelInput().value).toBe('Draft label');
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -177,15 +203,36 @@ describe('AddAnnotationPopover — category selection', () => {
     expect(catButton('Maintenance')).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it('moves the pressed state and semantic colour when another category is picked', () => {
+  it('moves the pressed state and neutral selected surface when another category is picked', () => {
     renderPopover();
     fireEvent.click(catButton('Maintenance'));
 
     expect(catButton('Maintenance')).toHaveAttribute('aria-pressed', 'true');
     expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'false');
-    expect(catButton('Maintenance')).toHaveStyle({ color: ANNOTATION_COLORS.maintenance });
-    // The now-unselected pill no longer carries the milestone accent colour.
-    expect(catButton('Milestone')).not.toHaveStyle({ color: ANNOTATION_COLORS.milestone });
+    expect(catButton('Maintenance')).toHaveClass('bg-[var(--control-bg)]');
+    expect(catButton('Milestone')).toHaveClass('bg-transparent');
+    expect(catButton('Maintenance')).not.toHaveAttribute('style');
+    expect(catButton('Milestone')).not.toHaveAttribute('style');
+  });
+
+  it('keeps category labels wrapping, touch targets reachable and icons decorative', () => {
+    renderPopover();
+    for (const name of ['Milestone', 'Maintenance', 'Trip', 'Issue', 'Upgrade', 'Custom']) {
+      const button = catButton(name);
+      expect(button).toHaveClass('min-h-11', 'whitespace-normal');
+      expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(button.querySelector('svg')).toHaveAttribute('focusable', 'false');
+    }
+  });
+
+  it('retains keyboard focus on the chosen category through draft updates', () => {
+    renderPopover();
+    const custom = catButton('Custom');
+    custom.focus();
+    fireEvent.click(custom);
+    typeInto(descriptionInput(), 'Draft note');
+    expect(custom).toHaveFocus();
+    expect(custom).toHaveAttribute('aria-pressed', 'true');
   });
 });
 
@@ -287,5 +334,25 @@ describe('AddAnnotationPopover — cancel', () => {
     expect(onCancel).toHaveBeenCalledTimes(1);
     // open is still true (parent controls it), so the cleared field is visible.
     expect(labelInput().value).toBe('');
+  });
+
+  it('cancels on Escape and clears every draft field without submitting', async () => {
+    const user = userEvent.setup();
+    const { onAdd, onCancel } = renderPopover();
+    await user.type(labelInput(), 'Draft entry');
+    await user.type(descriptionInput(), 'Draft description');
+    await user.click(catButton('Custom'));
+    await user.click(labelInput());
+    expect(labelInput()).toHaveFocus();
+    expect(screen.getByRole('dialog')).toContainElement(labelInput());
+
+    await user.keyboard('{Escape}');
+
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(labelInput().value).toBe('');
+    expect(descriptionInput().value).toBe('');
+    expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+    expect(labelInput()).toHaveFocus();
   });
 });
