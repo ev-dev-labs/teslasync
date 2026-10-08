@@ -19,7 +19,7 @@ export function SourceAvailabilityBrief({ id, title, period, retained, denominat
     metrics={items.map(item => ({
       metricId: 'count' as const, occurrenceId: item.id, label: item.label, rawValue: item.count,
       description: t('vehicleSystems.brief.availabilityDenominator',
-        'Counts are evaluated against {{count}} unique timestamp-valid rows.', { count: fmtInt(denominator) }),
+        'Counts are evaluated against {{count}} unique timestamp-valid rows.', { replace: { count: fmtInt(denominator) } }),
       context: item.note,
       display: { formatter: (raw: number) => ({
         value: `${fmtInt(raw)} · ${denominator > 0 ? fmtPercent((raw / denominator) * 100) : '—'}`,
