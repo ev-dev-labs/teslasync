@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle, Copy } from 'lucide-react'
 import { Button, type ButtonProps } from './Button'
+import { Icon } from './Icon'
 import { useOptionalToast } from '@/components/feedback/Toast'
 
 /**
@@ -20,8 +21,8 @@ import { useOptionalToast } from '@/components/feedback/Toast'
  *   - `onCopyError`: expose clipboard failures for caller-owned manual-copy UI.
  *
  * Accessibility: when `iconOnly` is set, an `aria-label` is provided that
- * mirrors the visible state. `aria-live="polite"` lets screen readers announce
- * the Copy → Copied transition without interrupting the user.
+ * mirrors the visible state. Polite feedback announces successful copies even
+ * when a custom label keeps the button's accessible name unchanged.
  */
 export interface CopyButtonProps {
   /** The string to copy to clipboard. */
@@ -118,30 +119,36 @@ export function CopyButton({
   }, [text, withToast, onCopy, onCopyError, toast, t, clearCopyTimer])
 
   const visibleLabel = iconOnly ? null : (label ?? (copied ? copiedLabel : copyLabel))
-  const icon = copied
-    ? <CheckCircle className="h-3.5 w-3.5" />
-    : <Copy className="h-3.5 w-3.5" />
+  const icon = <Icon icon={copied ? CheckCircle : Copy} size="sm" />
 
   // Resolve the assistive label. When the visible text already conveys the
   // action, we skip aria-label so screen readers don't double-announce.
   const resolvedAriaLabel = ariaLabel
     ?? (iconOnly ? (copied ? copiedLabel : (label ?? copyLabel)) : undefined)
+  const hasFixedName = ariaLabel != null || (!iconOnly && label != null)
 
   return (
-    <Button
-      type="button"
-      variant={variant}
-      size={size}
-      wrapLabel={!iconOnly}
-      onClick={handleCopy}
-      icon={icon}
-      disabled={disabled}
-      title={title}
-      aria-label={resolvedAriaLabel}
-      aria-live="polite"
-      className={className}
-    >
-      {visibleLabel}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant={variant}
+        size={size}
+        wrapLabel={!iconOnly}
+        onClick={handleCopy}
+        icon={icon}
+        disabled={disabled}
+        title={title}
+        aria-label={resolvedAriaLabel}
+        aria-live={hasFixedName ? undefined : 'polite'}
+        className={className}
+      >
+        {visibleLabel}
+      </Button>
+      {hasFixedName && (
+        <span role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+          {copied ? copiedLabel : ''}
+        </span>
+      )}
+    </>
   )
 }

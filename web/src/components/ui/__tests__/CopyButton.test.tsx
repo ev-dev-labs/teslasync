@@ -55,6 +55,35 @@ afterEach(() => {
 });
 
 describe('CopyButton', () => {
+  it.each(['', '  exact\r\npayload\t🙂 العربية  '])('preserves the exact clipboard payload %j', async (text) => {
+    render(<CopyButton text={text} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(text);
+  });
+
+  it('keeps long RTL labels wrapping and native focus without submitting the containing form', async () => {
+    const label = 'نسخ الرابط الكامل '.repeat(12);
+    const submit = vi.fn();
+    render(
+      <form dir="rtl" onSubmit={submit}>
+        <CopyButton text="exact link" label={label} className="custom-copy" />
+      </form>,
+    );
+    const trigger = screen.getByRole('button', { name: label.trim() });
+    expect(trigger).toHaveClass('custom-copy', 'min-w-0', 'max-w-full', 'whitespace-normal');
+    expect(trigger).toHaveAttribute('type', 'button');
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Copied'));
+    expect(submit).not.toHaveBeenCalled();
+    expect(trigger).toHaveFocus();
+    expect(trigger.querySelector('svg')).toHaveClass('h-3.5', 'w-3.5', 'shrink-0');
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
   it('writes the text to the clipboard on click and toggles to "Copied"', async () => {
     render(<CopyButton text="hello-world" />);
 
@@ -79,6 +108,63 @@ describe('CopyButton', () => {
   it('respects a custom label override', () => {
     render(<CopyButton text="x" label="Copy link" />);
     expect(screen.getByRole('button', { name: 'Copy link' })).toBeInTheDocument();
+  });
+
+  it('announces success with a custom label without changing its accessible name', async () => {
+    render(<CopyButton text="link" label="Copy link" variant="outline" size="md" title="Share link" />);
+    const trigger = screen.getByRole('button', { name: 'Copy link' });
+    const status = screen.getByRole('status');
+    expect(status).toBeEmptyDOMElement();
+    expect(trigger).toHaveAttribute('type', 'button');
+    expect(trigger).toHaveAttribute('title', 'Share link');
+    expect(trigger).not.toHaveAttribute('aria-live');
+    expect(trigger).toHaveClass('bg-transparent', 'min-h-10');
+
+    fireEvent.click(trigger);
+
+    await waitFor(() => expect(status).toHaveTextContent('Copied'));
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveAttribute('aria-atomic', 'true');
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBe(trigger);
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('link');
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
+  it('announces icon-only success with an explicit name and clears it after the reset timer', async () => {
+    vi.useFakeTimers();
+    render(<CopyButton text="key" iconOnly ariaLabel="Copy API key" />);
+    const trigger = screen.getByRole('button', { name: 'Copy API key' });
+    const status = screen.getByRole('status');
+    expect(trigger.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    await act(async () => { fireEvent.click(trigger); });
+
+    expect(status).toHaveTextContent('Copied');
+    expect(trigger).not.toHaveTextContent('Copied');
+    expect(screen.getByRole('button', { name: 'Copy API key' })).toBe(trigger);
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(status).toBeEmptyDOMElement();
+  });
+
+  it('keeps custom-label success announcements empty on failure and allows retry', async () => {
+    const error = new Error('Denied');
+    const onCopyError = vi.fn();
+    const onCopy = vi.fn();
+    writeText.mockRejectedValueOnce(error);
+    const { rerender } = render(
+      <CopyButton text="old" label="Copy query" onCopyError={onCopyError} onCopy={onCopy} />,
+    );
+    const trigger = screen.getByRole('button', { name: 'Copy query' });
+    fireEvent.click(trigger);
+
+    await waitFor(() => expect(onCopyError).toHaveBeenCalledExactlyOnceWith(error));
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
+    expect(onCopy).not.toHaveBeenCalled();
+    fireEvent.click(trigger);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Copied'));
+    expect(onCopy).toHaveBeenCalledTimes(1);
+    rerender(<CopyButton text="new" label="Copy query" />);
+    expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
   it('does not crash when rendered outside ToastProvider with withToast=true', async () => {
