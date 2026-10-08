@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
+import { Label } from '@/components/ui/Typography'
 
 export interface NavSectionHeaderProps {
   /** Localized label text. */
@@ -15,8 +16,8 @@ export interface NavSectionHeaderProps {
  * Sidebar section header — a quiet, label-weight title used to group nav items.
  *
  * Visual rules:
- *   - 10px font, weight 600, localized sentence case, 0.14em tracking
- *   - text color: text-[var(--text-muted)]
+ *   - Existing label typography role, preserving localized label casing
+ *   - Theme-aware muted foreground, no decorative letter spacing
  *   - padding: px-3 py-1, no extra mb-* (the parent container handles vertical
  *     rhythm via space-y-* / its own margins)
  *   - When `action` is provided, uses a flex row with the action shrunk to its
@@ -25,13 +26,14 @@ export interface NavSectionHeaderProps {
  */
 export function NavSectionHeader({ label, action, id, className }: NavSectionHeaderProps) {
   return (
-    <div className={cn('flex items-center justify-between gap-2 px-3 py-1', className)}>
-      <p
+    <div className={cn('flex min-w-0 items-center justify-between gap-2 px-3 py-1', className)}>
+      <Label
+        as="p"
         id={id}
-        className="text-2xs font-semibold tracking-[0.14em] text-[var(--text-muted)]"
+        className="min-w-0 break-words"
       >
         {label}
-      </p>
+      </Label>
       {action}
     </div>
   )
