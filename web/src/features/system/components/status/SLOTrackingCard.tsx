@@ -203,7 +203,7 @@ export function SLOTrackingCard() {
           metrics={[
             { metricId: 'percent', occurrenceId: 'uptime', rawValue: pct, label: t('systemStatus.slo.uptimeMetric', 'Historical uptime'),
               context: t('systemStatus.slo.targetValue', 'Target {{target}}%', { target }),
-              display: { formatter: (raw) => ({ value: fmtPercent(raw) }) } },
+              display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) } },
             { metricId: 'count', occurrenceId: 'healthy-components', rawValue: healthy,
               label: t('systemStatus.slo.componentsMetric', 'Healthy components'),
               display: totalComponents == null ? undefined : { countTotal: totalComponents },
