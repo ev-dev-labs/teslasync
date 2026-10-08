@@ -29,12 +29,12 @@ export function TelemetrySummaryBrief({
   const operationalMetrics = useOperationalMetrics(metrics);
   return (
     <OperationalBrief compact testId={testId} metrics={operationalMetrics}
-      eyebrow={t('telemetryBrief.eyebrow', 'Telemetry evidence')}
+      eyebrow={t('telemetry.brief.eyebrow', 'Telemetry evidence')}
       title={title} description={description}
       scope={<>{scope}{sourceBounds.map((bound, index) => <span key={`${bound.signal}-${index}`}>
         {' · '}{bound.from && bound.to
-          ? t('telemetryBrief.returnedBounds', '{{signal}} source bounds: {{from}} → {{to}}', bound)
-          : t('telemetryBrief.sourceBoundsUnknown', '{{signal}} source bounds not supplied', { signal: bound.signal })}
+          ? t('telemetry.brief.returnedBounds', '{{signal}} source bounds: {{from}} → {{to}}', bound)
+          : t('telemetry.brief.sourceBoundsUnknown', '{{signal}} source bounds not supplied', { signal: bound.signal })}
       </span>)}</>}
       provenance={provenance}
       loading={loading && !retained}
@@ -42,7 +42,7 @@ export function TelemetrySummaryBrief({
         : unavailable || sourceStatus === 'unavailable' ? t('operationalSummary.unavailable', 'Source unavailable')
           : loading ? t('operationalSummary.loading', 'Loading sources')
             : unknown ? t('operationalSummary.unknown', 'Source values unknown')
-              : sourceStatus === 'partial' ? t('telemetryBrief.partial', 'Partial source coverage')
+              : sourceStatus === 'partial' ? t('telemetry.brief.partial', 'Partial source coverage')
                 : statusLabel ?? t('operationalSummary.snapshot', 'Queried snapshot')}
       statusTone={retained || unavailable || sourceStatus === 'partial' || sourceStatus === 'unavailable' ? 'warning' : 'neutral'}
       freshness={freshness ?? (retained
