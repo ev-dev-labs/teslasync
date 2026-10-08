@@ -1,5 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import { cn } from '@/lib/cn';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 // Neutral variants resolve their chrome from the `--control-*` tokens
 // (index.css → CONTROL SURFACE) rather than Tailwind's fixed `gray-*` ramp.
@@ -10,12 +11,12 @@ export const BUTTON_VARIANTS = {
   primary: 'border border-transparent bg-[var(--theme-primary)] text-[var(--theme-on-primary)] shadow-sm hover:brightness-105 forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]',
   secondary: 'bg-[var(--control-bg)] text-[var(--text-primary)] border border-[var(--control-border)] hover:bg-[var(--control-bg-hover)] hover:border-[var(--control-border-hover)] forced-colors:border forced-colors:border-[ButtonBorder]',
   outline: 'border border-[var(--control-border)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] hover:border-[var(--control-border-hover)] forced-colors:border-[ButtonBorder]',
-  danger: 'bg-red-600 text-[var(--text-on-accent)] hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[ButtonFace] forced-colors:text-[ButtonText]',
+  danger: 'border border-[var(--semantic-danger)] bg-[var(--semantic-danger-bg)] text-[var(--semantic-danger)] hover:bg-[var(--control-bg-hover)] active:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder] forced-colors:[forced-color-adjust:none] forced-colors:bg-[ButtonFace] forced-colors:text-[ButtonText]',
   ghost: 'bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] forced-colors:border forced-colors:border-[ButtonBorder]',
 } as const;
 
 /**
- * Chrome shared by every Button — shape, focus ring and disabled treatment.
+ * Chrome shared by every Button — shape, focus outline and disabled treatment.
  *
  * Exported because a handful of CTAs must render as `<a>`/`<Link>` rather than
  * `<button>` (EmptyState's `actionTo`), and previously hand-copied these
@@ -24,12 +25,9 @@ export const BUTTON_VARIANTS = {
  * this constant instead of re-deriving it.
  */
 export const BUTTON_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ' +
-  // Unified focus ring: always the active accent, so it stays visible on
-  // every preset instead of inheriting whatever the variant happened to
-  // set. Offset colour is pinned to the app background so the ring reads
-  // as a gap rather than a white halo on dark themes.
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)] ' +
+  'inline-flex items-center justify-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ease-standard motion-reduce:transition-none ' +
+  // A crisp outline remains visible when forced colors suppress box shadows.
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] ' +
   'disabled:pointer-events-none disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:shadow-none disabled:opacity-100';
 
 const variants = BUTTON_VARIANTS;
@@ -60,11 +58,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = 'primary', size = 'md', loading, icon, wrapLabel = false, className, children, disabled, ...props }, ref) => (
+  ({ variant = 'primary', size = 'md', loading, icon, wrapLabel = false, className, children, disabled, ...props }, ref) => {
+    const { reduce } = useMotionPreference();
+    return (
     <button
       ref={ref}
       className={cn(
         BUTTON_BASE,
+        reduce && 'transition-none',
         variants[variant],
         sizes[size],
         wrapLabel && 'min-w-0 max-w-full whitespace-normal',
@@ -79,13 +80,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         // Decorative spinner: the loading state is already announced to
         // assistive tech via the button's aria-busy, so the SVG itself must
         // stay out of the accessibility tree.
-        <svg className="h-4 w-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+        <svg className={cn('h-4 w-4 shrink-0 motion-reduce:animate-none', !reduce && 'animate-spin')} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       ) : wrapLabel && icon ? <span className="inline-flex shrink-0">{icon}</span> : icon}
       {wrapLabel ? <span className="min-w-0 break-words">{children}</span> : children}
     </button>
-  ),
+    );
+  },
 );
 Button.displayName = 'Button';

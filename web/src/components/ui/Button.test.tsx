@@ -13,9 +13,18 @@
  */
 
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { createRef } from 'react';
-import { Button, type ButtonProps } from './Button';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { BUTTON_BASE, BUTTON_VARIANTS, Button, type ButtonProps } from './Button';
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 });
+});
 
 type Variant = NonNullable<ButtonProps['variant']>;
 type Size = NonNullable<ButtonProps['size']>;
@@ -35,9 +44,7 @@ describe('Button', () => {
     expect(cls).toContain('rounded-shape-sm');
     expect(cls).toContain('font-medium');
     expect(cls).toContain('transition');
-    // Focus ring is unified on the accent token so it stays visible on all
-    // 140 theme presets rather than depending on the variant.
-    expect(cls).toContain('focus-visible:ring-[var(--focus-ring)]');
+    expect(cls).toContain('focus-visible:outline-[var(--focus-ring)]');
     expect(cls).toContain('disabled:bg-[var(--surface-2)]');
     expect(cls).toContain('disabled:text-[var(--text-secondary)]');
     expect(cls).toContain('disabled:opacity-100');
@@ -61,7 +68,7 @@ describe('Button', () => {
       primary: 'bg-[var(--theme-primary)]',
       secondary: 'bg-[var(--control-bg)]',
       outline: 'border-[var(--control-border)]',
-      danger: 'bg-red-600',
+      danger: 'bg-[var(--semantic-danger-bg)]',
       ghost: 'hover:bg-[var(--control-bg)]',
     };
     const { rerender } = render(<Button variant="primary">x</Button>);
@@ -71,11 +78,15 @@ describe('Button', () => {
     }
   });
 
-  it('uses the fixed on-accent foreground for the solid danger surface', () => {
+  it('uses the semantic danger foreground for the restrained destructive surface', () => {
     render(<Button variant="danger">Delete</Button>);
     const cls = screen.getByRole('button', { name: 'Delete' }).className;
-    expect(cls).toContain('text-[var(--text-on-accent)]');
+    expect(cls).toContain('text-[var(--semantic-danger)]');
     expect(cls).not.toContain('text-[var(--text-primary)]');
+    expect(cls).toContain('border-[var(--semantic-danger)]');
+    expect(cls).toContain('hover:bg-[var(--control-bg-hover)]');
+    expect(cls).toContain('active:bg-[var(--control-bg)]');
+    expect(cls).not.toMatch(/(?:bg|ring)-red-/);
   });
 
   it('applies the distinctive class for every size', () => {
@@ -216,5 +227,51 @@ describe('Button', () => {
     const btn = screen.getByRole('button', { name: 'Delete' });
     expect(btn).toBeInTheDocument();
     expect(screen.getByTestId('btn-icon')).toBeInTheDocument();
+  });
+
+  it('retains the exported variant family and crisp focus treatment for link consumers', () => {
+    expect(Object.keys(BUTTON_VARIANTS)).toEqual(['primary', 'secondary', 'outline', 'danger', 'ghost']);
+    expect(BUTTON_BASE).toContain('focus-visible:outline-2');
+    expect(BUTTON_BASE).toContain('focus-visible:outline-offset-2');
+    expect(BUTTON_BASE).toContain('forced-colors:focus-visible:outline-[Highlight]');
+    expect(BUTTON_BASE).toContain('motion-reduce:transition-none');
+    expect(BUTTON_BASE).not.toContain('focus-visible:ring-');
+  });
+
+  it('retains busy feedback without spinning or transitions when motion is reduced', () => {
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce: true, durationMs: 0 });
+    const { container, rerender } = render(<Button loading wrapLabel>Saving the complete translated action label</Button>);
+    const button = screen.getByRole('button', { name: 'Saving the complete translated action label' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveClass('transition-none', 'h-auto');
+    expect(container.querySelector('svg')).not.toHaveClass('animate-spin');
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 });
+    rerender(<Button loading wrapLabel>Saving the complete translated action label</Button>);
+    expect(container.querySelector('svg')).toHaveClass('animate-spin', 'motion-reduce:animate-none');
+    expect(button).not.toHaveClass('transition-none');
+  });
+
+  it('preserves wrapped icon separation, numeric zero and absent children', () => {
+    const { rerender } = render(<Button wrapLabel icon={<span data-testid="wrapped-icon">*</span>}>{0}</Button>);
+    expect(screen.getByRole('button')).toHaveTextContent('0');
+    expect(screen.getByTestId('wrapped-icon').parentElement).toHaveClass('shrink-0');
+    rerender(<Button wrapLabel aria-label="Empty caller content">{null}</Button>);
+    expect(screen.getByRole('button', { name: 'Empty caller content' })).toHaveClass('h-auto');
+    expect(screen.queryByTestId('wrapped-icon')).toBeNull();
+  });
+
+  it('preserves native form identity, submission overrides and keyboard handlers', () => {
+    const onKeyDown = vi.fn();
+    render(<Button type="submit" form="settings" name="action" value="save" formNoValidate formAction="/save" onKeyDown={onKeyDown}>Save</Button>);
+    const button = screen.getByRole('button', { name: 'Save' });
+    expect(button).toHaveAttribute('form', 'settings');
+    expect(button).toHaveAttribute('name', 'action');
+    expect(button).toHaveAttribute('value', 'save');
+    expect(button).toHaveAttribute('formnovalidate');
+    expect(button).toHaveAttribute('formaction', '/save');
+    fireEvent.keyDown(button, { key: 'Enter' });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
   });
 });
