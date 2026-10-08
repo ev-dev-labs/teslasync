@@ -9,7 +9,6 @@ import {
   BellRing,
   Car,
   Compass,
-  Filter,
   MapPin,
   MapPinned,
   RefreshCw,
