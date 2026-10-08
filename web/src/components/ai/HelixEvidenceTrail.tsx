@@ -6,12 +6,14 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Text } from '@/components/ui';
+import { Badge, Icon, Text } from '@/components/ui';
 import type {
   AiStreamState,
   AiToolActivity,
   AiUsage,
 } from '@/hooks/useAiStream';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { cn } from '@/lib/cn';
 
 export interface HelixEvidenceTrailProps {
   activity: AiToolActivity[];
@@ -38,6 +40,7 @@ export function HelixEvidenceTrail({
   usage,
 }: HelixEvidenceTrailProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   if (activity.length === 0) return null;
 
   const succeeded = activity.filter((item) => item.status === 'succeeded').length;
@@ -56,15 +59,15 @@ export function HelixEvidenceTrail({
 
   return (
     <div
-      className="mt-4 border-t border-[var(--border-subtle)] pt-3"
+      className="mt-4 min-w-0 border-t border-[var(--border-subtle)] pt-3"
       data-testid="helix-evidence-trail"
       role="status"
       aria-live="polite"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-cyan-400" aria-hidden="true" />
-          <Text variant="label">
+        <div className="flex min-w-0 items-center gap-2">
+          <Icon icon={ShieldCheck} className="text-[var(--text-secondary)]" />
+          <Text variant="label" className="min-w-0 break-words">
             {t('helix.evidence.title', 'Evidence trail')}
           </Text>
         </div>
@@ -82,27 +85,35 @@ export function HelixEvidenceTrail({
         {activity.map((item) => (
           <div
             key={item.id}
-            className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] px-2.5 py-1.5"
+            className="flex min-w-0 max-w-full flex-wrap items-center gap-2 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2"
             title={item.name}
           >
             {item.status === 'running' ? (
-              <LoaderCircle
-                className="h-3.5 w-3.5 animate-spin text-cyan-400"
-                aria-hidden="true"
+              <Icon
+                icon={LoaderCircle}
+                size="sm"
+                className={cn(
+                  'text-[var(--semantic-info)]',
+                  !reduce && 'animate-spin motion-reduce:animate-none',
+                )}
               />
             ) : item.status === 'succeeded' ? (
-              <CheckCircle2
-                className="h-3.5 w-3.5 text-emerald-400"
-                aria-hidden="true"
+              <Icon
+                icon={CheckCircle2}
+                size="sm"
+                className="text-[var(--semantic-success)]"
               />
             ) : (
-              <AlertTriangle
-                className="h-3.5 w-3.5 text-amber-400"
-                aria-hidden="true"
+              <Icon
+                icon={AlertTriangle}
+                size="sm"
+                className="text-[var(--semantic-warning)]"
               />
             )}
-            <Text variant="bodySm">{toolLabel(item.name)}</Text>
-            <Text variant="caption">
+            <Text variant="bodySm" className="min-w-0 break-words">
+              {toolLabel(item.name)}
+            </Text>
+            <Text variant="caption" className="min-w-0 break-words">
               {item.status === 'running'
                 ? t('helix.evidence.reading', 'Reading')
                 : item.status === 'succeeded'
@@ -114,7 +125,7 @@ export function HelixEvidenceTrail({
       </div>
 
       {state === 'done' && (
-        <Text as="p" variant="caption" className="mt-2">
+        <Text as="p" variant="caption" className="mt-2 break-words">
           {succeeded} {t('helix.evidence.successful', 'successful')} · {failed}{' '}
           {t('helix.evidence.unavailable', 'unavailable')}
           {tokenCount > 0 && (
