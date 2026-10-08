@@ -7,6 +7,16 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      zIndex: {
+        overlay: '60',
+      },
+      maxWidth: {
+        'modal-full': 'min(96vw,1100px)',
+        'tooltip-viewport': 'calc(100vw - 1.5rem)',
+      },
+      maxHeight: {
+        modal: '90vh',
+      },
       screens: {
         // Ultra-wide breakpoint for the modern-ui full-width redesign.
         // Pages use `3xl:` grid columns so dashboards fill wide monitors
