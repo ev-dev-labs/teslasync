@@ -14,6 +14,85 @@ vi.mock('react-i18next', () => ({
 }));
 
 describe('OperationalBrief', () => {
+  it('retains exact rich source bounds and freshness in both the summary and real drawer', () => {
+    render(
+      <OperationalBrief
+        eyebrow="Source evidence"
+        title="Returned bounds"
+        description="Independent source bounds."
+        statusLabel="Retained"
+        scope={<>
+          <strong>A source bounds: 2026-01-01T01:02:03Z → 2026-01-02T04:05:06Z</strong>
+          <span>B source bounds not supplied</span>
+          <a href="/evidence/bounds">Inspect returned bounds</a>
+        </>}
+        freshness={<span>Last confirmed at <time dateTime="2026-01-02T04:05:06Z">2026-01-02T04:05:06Z</time>; refresh failed</span>}
+        metrics={[{ key: 'observations', label: 'Observations', value: 0, detail: 'Confirmed empty result' }]}
+      />,
+    );
+    const checkContext = (surface: HTMLElement) => {
+      const queries = within(surface);
+      expect(queries.getByText('A source bounds: 2026-01-01T01:02:03Z → 2026-01-02T04:05:06Z').tagName).toBe('STRONG');
+      expect(queries.getByText('B source bounds not supplied')).toBeVisible();
+      expect(queries.getByRole('link', { name: 'Inspect returned bounds' })).toHaveAttribute('href', '/evidence/bounds');
+      expect(queries.getByText('2026-01-02T04:05:06Z')).toHaveAttribute('datetime', '2026-01-02T04:05:06Z');
+      expect(queries.getByText(/Last confirmed at/)).toHaveTextContent('Last confirmed at 2026-01-02T04:05:06Z; refresh failed');
+      expect(queries.getByText('Retained')).toBeVisible();
+      expect(queries.getByText('0', { exact: true })).toBeVisible();
+      expect(queries.getByText('Confirmed empty result')).toBeVisible();
+    };
+    const summary = screen.getByRole('region', { name: 'Returned bounds' });
+    checkContext(summary);
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Returned bounds details' });
+    checkContext(drawer);
+    expect(within(drawer).getByText('What changed')).toBeVisible();
+    expect(within(drawer).getByText('Not scored')).toBeVisible();
+    expect(within(drawer).getByText('No supporting records were supplied.')).toBeVisible();
+  });
+
+  it('keeps caller-supplied unknown scope and freshness wording in the drawer', () => {
+    render(<OperationalBrief eyebrow="Evidence" title="Unknown context"
+      description="No observation supplied." statusLabel="Unknown"
+      scope="Source bounds unknown; no interval supplied"
+      freshness="Observation time unknown" metrics={[]} />);
+    const summary = screen.getByRole('region', { name: 'Unknown context' });
+    expect(summary).toHaveTextContent('Source bounds unknown; no interval supplied');
+    expect(summary).toHaveTextContent('Observation time unknown');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Unknown context details' });
+    const header = drawer.querySelector('[data-drawer-header]');
+    expect(header).toBeVisible();
+    expect(header).toHaveTextContent('Source bounds unknown; no interval supplied');
+    expect(header).toHaveTextContent('Observation time unknown');
+    expect(within(drawer).getByText('Unknown')).toBeVisible();
+    expect(within(drawer).queryByText('Live', { exact: true })).not.toBeInTheDocument();
+  });
+
+  it.each([undefined, null])('does not invent absent scope or freshness (%s)', (metadata) => {
+    render(<OperationalBrief eyebrow="Evidence" title="Absent context"
+      description="No metadata supplied." statusLabel="Unknown"
+      scope={metadata} freshness={metadata} metrics={[]} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Absent context details' });
+    const header = drawer.querySelector('[data-drawer-header]');
+    expect(header).toHaveTextContent('Absent context detailsUnknownNo metadata supplied.');
+    expect(header?.textContent).toBe('Absent context detailsUnknownNo metadata supplied.');
+    expect(within(drawer).getByText('Not scored')).toBeVisible();
+    expect(within(drawer).getByText('No current attention items.')).toBeVisible();
+  });
+
+  it('preserves zero-valued ReactNode metadata without truthiness filtering', () => {
+    render(<OperationalBrief eyebrow="Evidence" title="Zero context"
+      description="Caller supplied numeric metadata." statusLabel="Unknown"
+      scope={0} freshness={0} metrics={[]} />);
+    const summary = screen.getByRole('region', { name: 'Zero context' });
+    expect(summary).toHaveTextContent('Unknown00');
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Zero context details' });
+    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('Unknown00');
+  });
+
   it('preserves complete captions, rich context and long values in the summary and details', () => {
     render(<OperationalBrief compact eyebrow="Source posture" title="Source evidence"
       description="Actual source context" statusLabel="Unknown"

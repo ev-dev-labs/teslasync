@@ -236,7 +236,13 @@ export function OperationalBrief({
         onClose={() => setDetailsOpen(false)}
         title={t('operations.detailTitle', '{{title}} details', { title })}
         description={description}
-        headerMeta={<Badge variant={statusTone} dot>{statusLabel}</Badge>}
+        headerMeta={
+          <>
+            <Badge variant={statusTone} dot>{statusLabel}</Badge>
+            {scope}
+            {freshness}
+          </>
+        }
       >
         <div className="space-y-6">
           <OperationalNarrativeDetails narrative={resolvedNarrative} />
