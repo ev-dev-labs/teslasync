@@ -59,6 +59,7 @@ import { useTranslation } from 'react-i18next'
 import { HelixMark } from '@/components/branding/HelixMark'
 import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
 import { AIThinkingDots } from '@/components/ai/AIThinkingIndicator'
+import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { GlassPanel } from '@/components/ui/GlassPanel'
 import { HelperText, PanelTitle, Text } from '@/components/ui/Typography'
@@ -197,7 +198,7 @@ export interface AIFeatureCardProps {
 }
 
 /**
- * AIBadge is the small cyan "Helix" pill rendered next to AI feature
+ * AIBadge is the small neutral "Helix" pill rendered next to AI feature
  * titles. Exported separately so per-feature components that build
  * a custom header (rare) can still use the same visual treatment.
  *
@@ -210,8 +211,9 @@ export function AIBadge({ label }: { label?: string }): JSX.Element {
   const { t } = useTranslation()
   const text = label ?? t('helix.badge', 'Helix')
   return (
-    <span
-      className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-800 dark:text-cyan-300"
+    <Badge
+      variant="neutral"
+      className="gap-1.5"
       title={t(
         'helix.tooltip',
         'Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.',
@@ -219,11 +221,11 @@ export function AIBadge({ label }: { label?: string }): JSX.Element {
       aria-label={t('helix.ariaLabel', 'Helix')}
     >
       <HelixMark
-        className="h-3.5 w-3.5 text-cyan-800 dark:text-cyan-300"
+        className="h-3.5 w-3.5 shrink-0"
         aria-hidden="true"
       />
       {text}
-    </span>
+    </Badge>
   )
 }
 AIBadge.displayName = 'AIBadge'
@@ -285,15 +287,11 @@ export function AIFeatureCard({
       wrapLabel
       icon={
         <HelixMark
-          className={
-            isStreaming
-              ? 'h-3.5 w-3.5 motion-safe:animate-pulse'
-              : 'h-3.5 w-3.5'
-          }
+          className="h-3.5 w-3.5"
           aria-hidden="true"
         />
       }
-      className="gap-1.5 shrink-0 border-cyan-400/40 bg-cyan-500/5 text-cyan-800 dark:border-cyan-400/40 dark:text-cyan-100 hover:border-cyan-400/70 hover:bg-cyan-500/15 hover:text-[var(--text-primary)] focus-visible:ring-cyan-400/60 transition-all"
+      className="gap-1.5 shrink-0 min-h-11 md:min-h-9"
       disabled={buttonDisabled}
       aria-disabled={buttonDisabled ? 'true' : 'false'}
       aria-busy={isStreaming || undefined}
@@ -311,7 +309,7 @@ export function AIFeatureCard({
   )
 
   return (
-    <GlassPanel className="min-w-0 p-5">
+    <GlassPanel className="min-w-0 p-4 sm:p-6">
       <div className="min-w-0 space-y-4">
         <div
           className={

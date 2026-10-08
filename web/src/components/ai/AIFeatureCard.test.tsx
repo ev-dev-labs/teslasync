@@ -72,6 +72,8 @@ describe('AIBadge', () => {
     // The mark is purely decorative — the pill text carries the meaning.
     const icon = badge.querySelector('svg')
     expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(badge).toHaveClass('text-[var(--text-secondary)]', 'bg-[var(--surface-2)]')
+    expect(badge.className).not.toMatch(/cyan|neon|glow/)
   })
 
   it('honours a custom label override while keeping the Helix accessible name', () => {
@@ -204,8 +206,10 @@ describe('AIFeatureCard — action button (idle)', () => {
     expect(button).toHaveAttribute('title', 'Summarize')
     expect(button).toBeEnabled()
     expect(button).toHaveAttribute('aria-disabled', 'false')
-    expect(button.className).toContain('text-cyan-800')
-    expect(button.className).toContain('dark:text-cyan-100')
+    expect(button).toHaveClass('text-[var(--text-primary)]', 'border-[var(--control-border)]')
+    expect(button.className).not.toMatch(/cyan|neon|glow/)
+    expect(button).toHaveClass('min-h-11', 'md:min-h-9')
+    expect(button).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
     // Idle: no busy state announced.
     expect(button).not.toHaveAttribute('aria-busy')
   })
@@ -277,6 +281,8 @@ describe('AIFeatureCard — disabled + streaming state machine', () => {
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-disabled', 'true')
     expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(button.querySelector('svg')?.getAttribute('class')).not.toContain('animate-pulse')
   })
 })
 
@@ -469,6 +475,60 @@ describe('AIFeatureCard — placement + slots', () => {
 })
 
 describe('AIFeatureCard — output panel wiring', () => {
+  it('keeps the header, input and domain content through paused, failed and done-empty streams', () => {
+    const inputSlot = <div data-testid="retained-input">Complete prompt context</div>
+    const content = <div data-testid="retained-content">Unknown is not zero</div>
+    const { rerender } = render(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete source context"
+        buttonLabel="Explain evidence"
+        canStart
+        inputSlot={inputSlot}
+        stream={makeStream({ state: 'paused-confirm', text: 'Retained evidence' })}
+      >
+        {content}
+      </AIFeatureCard>,
+    )
+    expect(screen.getByRole('button', { name: 'Ask Helix · Explain evidence' })).toBeEnabled()
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Retained evidence')
+
+    rerender(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete source context"
+        buttonLabel="Explain evidence"
+        canStart
+        inputSlot={inputSlot}
+        stream={makeStream({ state: 'error', text: 'Retained evidence', error: 'Failed refresh' })}
+      >
+        {content}
+      </AIFeatureCard>,
+    )
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Failed refresh')
+    expect(screen.getByRole('heading', { level: 3, name: 'Evidence' })).toBeVisible()
+    expect(screen.getByTestId('retained-input')).toBeVisible()
+    expect(screen.getByTestId('retained-content')).toBeVisible()
+
+    rerender(
+      <AIFeatureCard
+        title="Evidence"
+        description="Complete source context"
+        buttonLabel="Explain evidence"
+        canStart
+        inputSlot={inputSlot}
+        stream={makeStream({ state: 'done', text: '' })}
+      >
+        {content}
+      </AIFeatureCard>,
+    )
+    expect(screen.getByRole('heading', { level: 3, name: 'Evidence' })).toBeVisible()
+    expect(screen.getByText('Complete source context')).toBeVisible()
+    expect(screen.getByTestId('retained-input')).toBeVisible()
+    expect(screen.getByTestId('retained-content')).toHaveTextContent('Unknown is not zero')
+    expect(screen.getByRole('button', { name: 'Ask Helix · Explain evidence' })).toBeEnabled()
+  })
+
   it('renders no output panel while idle with no accumulated text', () => {
     render(
       <AIFeatureCard
