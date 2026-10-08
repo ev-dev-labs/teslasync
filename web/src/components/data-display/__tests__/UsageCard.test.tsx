@@ -194,4 +194,50 @@ describe('UsageCard', () => {
     expect(screen.getByText('Heads up')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /go/i })).toBeInTheDocument()
   })
+
+  it.each([0, -12, 72.5, 250])('retains source percentage %s with only visual clamping', (pct) => {
+    wrap(<UsageCard budget={{ headline: 'Source budget', pct, ariaLabel: 'Budget' }} />)
+    const bar = screen.getByRole('progressbar')
+    expect(bar).toHaveAttribute('aria-valuenow', String(Math.max(0, Math.round(pct))))
+    expect(bar.firstElementChild).toHaveStyle({ width: `${Math.max(0, Math.min(100, pct))}%` })
+  })
+
+  it.each([NaN, Infinity, -Infinity])('does not invent a measured percentage for %s', (pct) => {
+    wrap(<UsageCard budget={{ headline: 'Unknown source budget', pct, ariaLabel: 'Budget' }} />)
+    const bar = screen.getByRole('progressbar')
+    expect(bar).not.toHaveAttribute('aria-valuenow')
+    expect(bar).toHaveAttribute('aria-valuetext', '—')
+    expect(bar).toBeEmptyDOMElement()
+    expect(screen.getByText('Unknown source budget')).toBeInTheDocument()
+  })
+
+  it('retains zero, unknown, rich captions and long source labels without truncation', () => {
+    const label = 'https://example.com/' + 'long-source-limitation/'.repeat(12)
+    wrap(
+      <UsageCard
+        className="owned-card"
+        budget={{ headline: 'Known zero', rightLabel: 0, caption: <strong>Source scope</strong>, pct: 0, ariaLabel: 'Budget' }}
+        bands={[{ label: 'Calls', value: 0, sub: 0 }]}
+        details={[{ label: 'Unobserved', value: '—' }]}
+        topLists={[{ key: 'prior', title: 'Prior history', items: [{ key: 'source', label, value: 0 }] }]}
+      />,
+    )
+    expect(screen.getAllByText('0')).toHaveLength(4)
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getByText('Source scope').tagName).toBe('STRONG')
+    expect(screen.getByText('Prior history')).toBeInTheDocument()
+    expect(screen.getByText(label)).not.toHaveClass('truncate')
+    expect(screen.getByText(label)).toHaveClass('break-all')
+    expect(screen.getByText('Known zero').closest('.owned-card')).toBeInTheDocument()
+  })
+
+  it('keeps native footer links reachable with shared focus and wrapping roles', () => {
+    wrap(<UsageCard footer={[{ key: 'route', to: '/prior', label: 'Prior history' }]} />)
+    const link = screen.getByRole('link', { name: 'Prior history' })
+    expect(link).toHaveAttribute('href', '/prior')
+    expect(link).toHaveClass('min-h-11', 'min-w-11', 'max-w-full', 'focus-visible:outline-2')
+    link.focus()
+    expect(link).toHaveFocus()
+    expect(screen.getByText('Prior history')).toHaveClass('break-all', 'text-start')
+  })
 })

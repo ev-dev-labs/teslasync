@@ -20,6 +20,8 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, ExternalLink } from 'lucide-react'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting'
+import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button'
+import { typography } from '@/lib/tokens'
 
 /** Visual intent driving accent colour for bars / banners / values. */
 export type UsageCardIntent = 'normal' | 'warn' | 'danger'
@@ -52,7 +54,7 @@ export interface UsageCardDetail {
 
 /**
  * One row in a top-list breakdown. label is the left-aligned name
- * (rendered in a monospace font), value is the right-aligned count.
+ * (rendered in a monospace font and wrapped in narrow cards), value is the count.
  */
 export interface UsageCardTopListItem {
   key: string
@@ -83,7 +85,7 @@ export interface UsageCardBudget {
   rightLabel?: ReactNode
   /** Caption under the bar, e.g. "Day 5 of 30 · resets in 25 days". */
   caption?: ReactNode
-  /** 0..100 used for bar width AND aria-valuenow. */
+  /** Finite values retain accessible overflow; visual width clamps to 0..100. */
   pct: number
   /** Visual intent — drives bar colour. */
   intent?: UsageCardIntent
@@ -137,33 +139,27 @@ export interface UsageCardProps {
 // ----------------------------------------------------------------------------
 
 const intentBarBg: Record<UsageCardIntent, string> = {
-  normal: 'bg-cyan-500/70',
-  warn: 'bg-amber-500/70',
-  danger: 'bg-red-500/70',
+  normal: 'bg-[var(--semantic-info)]',
+  warn: 'bg-[var(--semantic-warning)]',
+  danger: 'bg-[var(--semantic-danger)]',
 }
 
 const intentBandRing: Record<UsageCardIntent, string> = {
-  normal: 'bg-white/[0.03]',
-  warn: 'bg-amber-500/10 ring-1 ring-amber-500/30',
-  danger: 'bg-red-500/10 ring-1 ring-red-500/30',
+  normal: 'bg-[var(--surface-2)]',
+  warn: 'bg-[var(--semantic-warning-bg)] border border-[var(--semantic-warning-border)]',
+  danger: 'bg-[var(--semantic-danger-bg)] border border-[var(--semantic-danger-border)]',
 }
 
 const intentValueText: Record<UsageCardIntent, string> = {
-  normal: 'text-[var(--text-primary)]',
-  warn: 'text-amber-300',
-  danger: 'text-red-400',
+  normal: typography.color.primary,
+  warn: 'text-[var(--semantic-warning)]',
+  danger: 'text-[var(--semantic-danger)]',
 }
 
 const intentBannerBg: Record<UsageCardIntent, string> = {
-  normal: 'bg-cyan-500/10 text-cyan-200 ring-1 ring-cyan-500/30',
-  warn: 'bg-amber-500/10 text-amber-100 ring-1 ring-amber-500/30',
-  danger: 'bg-red-500/10 text-red-200 ring-1 ring-red-500/30',
-}
-
-const intentBannerDescription: Record<UsageCardIntent, string> = {
-  normal: 'text-cyan-300/80',
-  warn: 'text-amber-200/80',
-  danger: 'text-red-300/80',
+  normal: 'bg-[var(--semantic-info-bg)] border border-[var(--semantic-info-border)]',
+  warn: 'bg-[var(--semantic-warning-bg)] border border-[var(--semantic-warning-border)]',
+  danger: 'bg-[var(--semantic-danger-bg)] border border-[var(--semantic-danger-border)]',
 }
 
 // ----------------------------------------------------------------------------
@@ -192,14 +188,14 @@ export function UsageCard(props: UsageCardProps) {
 
   if (!hasAnything) {
     return (
-      <p className="text-sm text-[var(--text-muted)]">
+      <p className={typography.role.bodySm}>
         {emptyMessage ?? 'No data to display yet.'}
       </p>
     )
   }
 
   return (
-    <div className={'space-y-4 ' + (className ?? '')}>
+    <div className={'min-w-0 space-y-4 break-words ' + (className ?? '')}>
       {budget ? <BudgetSection budget={budget} /> : null}
 
       {bands && bands.length > 0 ? <BandsSection bands={bands} /> : null}
@@ -226,18 +222,19 @@ function BudgetSection({ budget }: { budget: UsageCardBudget }) {
   // Preserve the unclamped pct in aria-valuenow so screen readers
   // announce "over budget" overflow accurately. The visual width
   // clamps to 100% so the bar doesn't overflow its container.
-  const widthPct = Math.max(0, Math.min(100, budget.pct))
-  const ariaPct = Math.max(0, Math.round(budget.pct))
+  const finite = Number.isFinite(budget.pct)
+  const widthPct = finite ? Math.max(0, Math.min(100, budget.pct)) : undefined
+  const ariaPct = finite ? Math.max(0, Math.round(budget.pct)) : undefined
   return (
     <div className="space-y-2">
-      <div className="flex items-baseline justify-between text-sm">
-        <span className="font-medium text-[var(--text-primary)]">{budget.headline}</span>
-        {budget.rightLabel ? (
+      <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+        <span className={typography.role.body}>{budget.headline}</span>
+        {budget.rightLabel != null ? (
           <span
             className={
               intent === 'danger'
-                ? 'text-red-400 font-semibold tabular-nums'
-                : 'text-[var(--text-muted)] tabular-nums'
+                ? typography.role.caption + ' ' + intentValueText.danger + ' tabular-nums'
+                : typography.role.caption + ' tabular-nums'
             }
           >
             {budget.rightLabel}
@@ -245,21 +242,21 @@ function BudgetSection({ budget }: { budget: UsageCardBudget }) {
         ) : null}
       </div>
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
+        className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
         role="progressbar"
         aria-valuenow={ariaPct}
-        aria-valuetext={Number.isFinite(budget.pct) ? fmtPercent(Math.max(0, budget.pct)) : '—'}
+        aria-valuetext={finite ? fmtPercent(Math.max(0, budget.pct)) : '—'}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={budget.ariaLabel}
       >
-        <div
-          className={`h-full transition-all ${barColor}`}
+        {finite ? <div
+          className={`h-full ${barColor}`}
           style={{ width: `${widthPct}%` }}
-        />
+        /> : null}
       </div>
-      {budget.caption ? (
-        <p className="text-xs text-[var(--text-muted)]">{budget.caption}</p>
+      {budget.caption != null ? (
+        <p className={typography.role.caption}>{budget.caption}</p>
       ) : null}
     </div>
   )
@@ -271,16 +268,16 @@ function BandsSection({ bands }: { bands: UsageCardBand[] }) {
       {bands.map((b, i) => {
         const intent = b.intent ?? 'normal'
         return (
-          <div key={i} className={'rounded-lg p-3 ' + intentBandRing[intent]}>
-            <div className="flex items-center gap-1.5 text-xs tracking-wider text-[var(--text-muted)]">
-              {b.icon ? <span className="inline-flex h-3.5 w-3.5">{b.icon}</span> : null}
+          <div key={i} className={'min-w-0 rounded-shape-lg p-3 ' + intentBandRing[intent]}>
+            <div className={'flex items-center gap-2 ' + typography.role.label}>
+              {b.icon ? <span className="inline-flex h-3.5 w-3.5 shrink-0">{b.icon}</span> : null}
               {b.label}
             </div>
-            <div className="mt-1 font-semibold tabular-nums text-[var(--text-primary)]">
+            <div className={'mt-1 tabular-nums ' + typography.role.body + ' ' + typography.weight.semibold}>
               {b.value}
             </div>
-            {b.sub ? (
-              <div className="text-xs text-[var(--text-muted)] tabular-nums">{b.sub}</div>
+            {b.sub != null ? (
+              <div className={typography.role.caption + ' tabular-nums'}>{b.sub}</div>
             ) : null}
           </div>
         )
@@ -291,13 +288,13 @@ function BandsSection({ bands }: { bands: UsageCardBand[] }) {
 
 function DetailsSection({ details }: { details: UsageCardDetail[] }) {
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
       {details.map((d, i) => {
         const intent = d.intent ?? 'normal'
         return (
-          <div key={i}>
-            <div className="text-xs text-[var(--text-muted)]">{d.label}</div>
-            <div className={'tabular-nums ' + intentValueText[intent]}>{d.value}</div>
+          <div key={i} className="min-w-0">
+            <div className={typography.role.caption}>{d.label}</div>
+            <div className={typography.size.sm + ' tabular-nums ' + intentValueText[intent]}>{d.value}</div>
           </div>
         )
       })}
@@ -311,18 +308,18 @@ function TopListsSection({ topLists }: { topLists: UsageCardTopList[] }) {
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       {topLists.map((tl) => (
-        <div key={tl.key} className="rounded-lg bg-white/[0.03] p-3">
-          <div className="flex items-center gap-1.5 text-xs tracking-wider text-[var(--text-muted)]">
-            {tl.icon ? <span className="inline-flex h-3.5 w-3.5">{tl.icon}</span> : null}
+        <div key={tl.key} className="min-w-0 rounded-shape-lg bg-[var(--surface-2)] p-3">
+          <div className={'flex items-center gap-2 ' + typography.role.label}>
+            {tl.icon ? <span className="inline-flex h-3.5 w-3.5 shrink-0">{tl.icon}</span> : null}
             {tl.title}
           </div>
-          <ul className="mt-2 space-y-1 text-sm">
+          <ul className="mt-2 space-y-2">
             {tl.items.map((item) => (
-              <li key={item.key} className="flex items-center justify-between gap-2">
-                <span className="truncate font-mono text-xs text-[var(--text-secondary)]">
+              <li key={item.key} className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
+                <span className={'min-w-0 break-all ' + typography.role.code}>
                   {item.label}
                 </span>
-                <span className="tabular-nums text-[var(--text-primary)]">{item.value}</span>
+                <span className={typography.role.body + ' tabular-nums'}>{item.value}</span>
               </li>
             ))}
           </ul>
@@ -337,14 +334,14 @@ function BannerSection({ banner }: { banner: UsageCardBanner }) {
   const Icon = banner.icon ?? <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
   return (
     <div
-      className={'flex items-start gap-2 rounded-lg p-3 text-sm ' + intentBannerBg[intent]}
+      className={'flex min-w-0 items-start gap-2 rounded-shape-lg p-3 ' + intentBannerBg[intent]}
       role="status"
       aria-live="polite"
     >
       {Icon}
-      <div>
-        <div className="font-semibold">{banner.title}</div>
-        <div className={'text-xs ' + intentBannerDescription[intent]}>{banner.description}</div>
+      <div className="min-w-0">
+        <div className={typography.role.body + ' ' + typography.weight.semibold}>{banner.title}</div>
+        <div className={typography.role.caption}>{banner.description}</div>
       </div>
     </div>
   )
@@ -352,11 +349,10 @@ function BannerSection({ banner }: { banner: UsageCardBanner }) {
 
 function FooterSection({ links }: { links: UsageCardFooterLink[] }) {
   return (
-    <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
+    <div className="flex flex-wrap gap-2 pt-2 border-t border-[var(--border-subtle)]">
       {links.map((link) => {
-        const baseClass = link.primary
-          ? 'inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]'
-          : 'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]'
+        const baseClass = BUTTON_BASE + ' min-h-11 min-w-11 max-w-full px-3 py-2 ' +
+          typography.size.sm + ' ' + (link.primary ? BUTTON_VARIANTS.primary : BUTTON_VARIANTS.ghost)
         if (link.external) {
           return (
             <a
@@ -366,15 +362,15 @@ function FooterSection({ links }: { links: UsageCardFooterLink[] }) {
               rel="noopener noreferrer"
               className={baseClass}
             >
-              {link.label}
-              <ExternalLink className="h-3.5 w-3.5" />
+              <span className="min-w-0 break-all text-start">{link.label}</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
             </a>
           )
         }
         return (
           <Link key={link.key} to={link.to} className={baseClass}>
-            {link.label}
-            <ExternalLink className="h-3.5 w-3.5" />
+            <span className="min-w-0 break-all text-start">{link.label}</span>
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
           </Link>
         )
       })}
