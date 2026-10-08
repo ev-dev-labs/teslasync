@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag } from 'lucide-react';
 import { Tooltip, Button } from '@/components/ui/runtime';
+import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
+import { severityTokens, typography } from '@/lib/tokens';
 import { AboutBuildModal } from './AboutBuildModal';
 import { useAboutBuild } from './useAboutBuild';
 
@@ -87,21 +89,24 @@ export function VersionSegment({
           aria-haspopup="dialog"
           aria-expanded={open}
           onClick={openAbout}
-          className="h-auto min-h-9 w-full justify-start px-3 py-2 text-[var(--text-secondary)]"
+          className={cn(
+            'h-auto min-h-9 w-full min-w-0 justify-start px-3 py-2',
+            typography.color.secondary,
+          )}
           data-testid="status-bar-about-trigger"
         >
-          <Tag className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span className="font-medium">
+          <Icon icon={Tag} size="sm" />
+          <span className={cn('min-w-0 break-words text-start', typography.weight.medium)}>
             {t('statusBar.help.about', 'About TeslaSync')}
           </span>
-          <span className="ml-auto text-xs text-[var(--text-muted)]">
+          <span className={cn('ms-auto min-w-0 break-words', typography.role.caption)}>
             v{appVersion}
           </span>
           {(updateAvailable || hasUnseen) && (
             <span
               className={cn(
                 'h-1.5 w-1.5 shrink-0 rounded-full',
-                updateAvailable ? 'bg-amber-400' : 'bg-cyan-400',
+                updateAvailable ? severityTokens.warn.dot : severityTokens.info.dot,
               )}
               aria-hidden
             />
@@ -118,24 +123,24 @@ export function VersionSegment({
             aria-expanded={open}
             onClick={openAbout}
             className={cn(
-              'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
-              'text-[var(--text-muted)]',
+              'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 leading-none',
+              typography.role.caption,
             )}
           >
-            <Tag className="h-3 w-3 shrink-0" aria-hidden />
+            <Icon icon={Tag} size="xs" />
             {!iconOnly && (
               <>
-                <span className="font-medium text-[var(--text-secondary)]">v{appVersion}</span>
+                <span className={cn(typography.weight.medium, typography.color.secondary)}>v{appVersion}</span>
                 {sha && sha !== 'dev' && <span>· {sha}</span>}
                 {updateAvailable && (
                   <span
-                    className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-amber-400"
+                    className={cn('ms-1 inline-block h-1.5 w-1.5 rounded-full', severityTokens.warn.dot)}
                     aria-hidden="true"
                   />
                 )}
                 {hasUnseen && !updateAvailable && (
                   <span
-                    className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"
+                    className={cn('ms-1 inline-block h-1.5 w-1.5 rounded-full', severityTokens.info.dot)}
                     aria-hidden="true"
                   />
                 )}

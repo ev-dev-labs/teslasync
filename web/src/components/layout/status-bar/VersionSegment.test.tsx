@@ -41,7 +41,7 @@ import {
   cleanup,
 } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { Mock } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import type { ReactElement } from 'react';
 import '@/i18n';
 
@@ -62,9 +62,9 @@ import { request } from '@/api/client';
 import { useChangelogStatus, openChangelogModal } from '@/hooks/useChangelogStatus';
 import { VersionSegment } from './VersionSegment';
 
-const mockRequest = request as unknown as Mock;
+const mockRequest = vi.mocked(request);
 const mockUseChangelog = vi.mocked(useChangelogStatus);
-const mockOpenChangelog = openChangelogModal as unknown as Mock;
+const mockOpenChangelog = vi.mocked(openChangelogModal);
 
 // The same Vite `define` that injects these build constants into the
 // component also rewrites them in this test module, so reading them here keeps
@@ -177,6 +177,38 @@ afterEach(() => {
 
 // ── Trigger chip ──────────────────────────────────────────────────────
 describe('VersionSegment — trigger chip', () => {
+  it('retains native keyboard activation and externally managed About state', async () => {
+    const user = userEvent.setup();
+    const onOpenAbout = vi.fn();
+    renderSegment(
+      <VersionSegment variant="menu" aboutOpen onOpenAbout={onOpenAbout} />,
+    );
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent('v2.3.4'));
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+    await user.keyboard('{Enter}');
+    await user.keyboard(' ');
+    expect(onOpenAbout).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('keeps full long metadata and logical menu spacing in RTL', async () => {
+    const version = `2.3.4-${'release'.repeat(40)}`;
+    wireRequests({ version: makeVersionInfo({ app_version: version }) });
+    renderSegment(<div dir="rtl"><VersionSegment variant="menu" /></div>);
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent(`v${version}`));
+    expect(trigger).toHaveAccessibleName(`TeslaSync version: v${version}${
+      BUILD_SHA !== 'dev' ? ` (${BUILD_SHA})` : ''
+    }`);
+    expect(within(trigger).getByText(`v${version}`)).toHaveClass('ms-auto', 'break-words');
+    expect(trigger).toHaveClass('min-w-0');
+    expect(trigger.querySelector('svg')).toHaveAttribute('focusable', 'false');
+  });
+
   it('renders the same About dialog from the Help menu variant', async () => {
     renderSegment(<VersionSegment variant="menu" />);
 
@@ -247,8 +279,8 @@ describe('VersionSegment — trigger chip', () => {
     await waitFor(() => expect(trigger).toHaveAccessibleName(/v2\.3\.4/));
     // Visible label + indicator dots are suppressed in icon-only mode…
     expect(trigger).not.toHaveTextContent('v2.3.4');
-    expect(trigger.querySelector('.bg-amber-400')).toBeNull();
-    expect(trigger.querySelector('.bg-cyan-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
     // …but the state is still fully described for assistive tech.
     expect(trigger).toHaveAccessibleName(/Update available/i);
     expect(trigger).toHaveAccessibleName(/unseen changelog/i);
@@ -267,7 +299,7 @@ describe('VersionSegment — update + unseen indicators', () => {
       expect(trigger).toHaveAccessibleName(/Update available/i),
     );
 
-    const dot = trigger.querySelector('.bg-amber-400');
+    const dot = trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]');
     expect(dot).not.toBeNull();
     // Dot is purely visual — the state lives in the button's name.
     expect(dot).toHaveAttribute('aria-hidden', 'true');
@@ -280,8 +312,8 @@ describe('VersionSegment — update + unseen indicators', () => {
 
     const trigger = await findResolvedTrigger();
     expect(trigger).toHaveAccessibleName(/unseen changelog/i);
-    expect(trigger.querySelector('.bg-cyan-400')).not.toBeNull();
-    expect(trigger.querySelector('.bg-amber-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).not.toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
   });
 
   it('prefers the amber update dot over the cyan dot while still naming both states', async () => {
@@ -298,8 +330,8 @@ describe('VersionSegment — update + unseen indicators', () => {
     );
     expect(trigger).toHaveAccessibleName(/unseen changelog/i);
     // Only one dot renders; update wins the visual slot.
-    expect(trigger.querySelector('.bg-amber-400')).not.toBeNull();
-    expect(trigger.querySelector('.bg-cyan-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).not.toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
   });
 
   it('omits both indicators (dots + name clauses) when caught up with no update', async () => {
@@ -307,8 +339,8 @@ describe('VersionSegment — update + unseen indicators', () => {
 
     expect(trigger.getAttribute('aria-label')).not.toMatch(/Update available/i);
     expect(trigger.getAttribute('aria-label')).not.toMatch(/unseen changelog/i);
-    expect(trigger.querySelector('.bg-amber-400')).toBeNull();
-    expect(trigger.querySelector('.bg-cyan-400')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-warning)]"]')).toBeNull();
+    expect(trigger.querySelector('[class~="bg-[var(--semantic-info)]"]')).toBeNull();
   });
 });
 
