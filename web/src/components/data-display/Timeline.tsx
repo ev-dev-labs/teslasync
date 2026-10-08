@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
+import { Text } from '@/components/ui/Typography';
 
 export interface TimelineItemData {
   icon?: ReactNode;
@@ -57,15 +58,17 @@ export function Timeline({
 
   if (list.length === 0) {
     return (
-      <div
+      <Text
+        as="div"
+        variant="bodySm"
         role="status"
         className={cn(
-          'flex items-center justify-center py-8 text-center text-sm text-[var(--text-muted)]',
+          'flex min-w-0 items-center justify-center break-words py-8 text-center',
           className,
         )}
       >
         {emptyMessage ?? t('timeline.empty', 'No timeline entries yet.')}
-      </div>
+      </Text>
     );
   }
 
@@ -88,16 +91,16 @@ export function Timeline({
   });
 
   return (
-    <div className={cn('relative space-y-4', className)}>
+    <div className={cn('relative min-w-0 space-y-4', className)}>
       <VisuallyHidden>{summary}</VisuallyHidden>
       <ol className="relative space-y-4" aria-label={resolvedLabel}>
         {list.map((item, i) => (
-          <li key={i} className="relative flex gap-3 ps-6">
+          <li key={i} className="relative flex min-w-0 gap-3 ps-8">
           {/* connector line — decorative */}
           {i < list.length - 1 && (
             <span
               aria-hidden="true"
-              className="absolute start-[11px] top-6 h-full w-px bg-[var(--panel-border)]"
+              className="absolute start-3 top-6 h-full w-px bg-[var(--panel-border)]"
             />
           )}
 
@@ -107,7 +110,7 @@ export function Timeline({
             className={cn(
               // The dot sits on top of the connector line, so it must be filled
               // with the surrounding panel surface to punch a clean hole in it.
-              'absolute start-0 top-1 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-bg)]',
+              'absolute start-0 top-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 bg-[var(--panel-bg)]',
               item.color ? undefined : 'border-[var(--control-border)] text-[var(--text-muted)]',
             )}
             style={item.color ? { borderColor: item.color, color: item.color } : undefined}
@@ -123,15 +126,15 @@ export function Timeline({
           {/* content */}
           <div className="min-w-0 flex-1 pt-0.5">
             <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-2">
-              <span className="min-w-0 flex-[1_1_12rem] break-words text-sm font-medium text-[var(--text-primary)]">
+              <Text size="sm" weight="medium" color="primary" className="min-w-0 flex-1 basis-48 break-words">
                 {item.title}
-              </span>
-              <span className="max-w-full break-words text-xs text-[var(--text-muted)]">
+              </Text>
+              <Text variant="caption" className="max-w-full break-words">
                 {item.time}
-              </span>
+              </Text>
             </div>
-            {item.subtitle && (
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">{item.subtitle}</p>
+            {item.subtitle != null && item.subtitle !== false && item.subtitle !== '' && (
+              <Text as="p" variant="caption" className="mt-0.5 whitespace-pre-wrap break-words">{item.subtitle}</Text>
             )}
           </div>
         </li>

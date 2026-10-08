@@ -172,7 +172,7 @@ describe('Timeline — empty + null safety', () => {
 
   it('does not crash and shows the placeholder when items is nullish', () => {
     const { container } = render(
-      <Timeline items={undefined as unknown as TimelineItemData[]} />,
+      <Timeline items={undefined!} />,
     );
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(rows(container)).toHaveLength(0);
@@ -341,7 +341,7 @@ describe('Timeline — accessible summary bounds', () => {
     (items) => {
       render(
         <Timeline
-          items={items as unknown as TimelineItemData[]}
+          items={items!}
           chronology="oldest-first"
           summaryBounds={{ start: 'Earlier', end: 'Later' }}
           label="Evidence"
@@ -353,4 +353,64 @@ describe('Timeline — accessible summary bounds', () => {
       expect(screen.queryByText(/From /)).not.toBeInTheDocument();
     },
   );
+});
+
+describe('Timeline — long content and retained evidence', () => {
+  it('renders a measured zero subtitle rather than treating it as missing', () => {
+    const { container } = render(<Timeline items={[item({ subtitle: 0 })]} />);
+    expect(container.querySelector('p')).toHaveTextContent('0');
+  });
+
+  it('keeps unbroken identifiers, raw parameters, malformed JSON and server errors fully visible', () => {
+    const identifier = 'entity_'.repeat(60);
+    const params = `{"identifier":"${identifier}"}\n{"malformed":`;
+    const serverError = `Server error: ${'detail_'.repeat(80)}`;
+    const { container } = render(
+      <div dir="rtl">
+        <Timeline
+          label="سجل الأوامر"
+          items={[
+            item({ title: identifier, subtitle: params, time: 'وقت طويل '.repeat(20) }),
+            item({ title: 'Failed', subtitle: serverError }),
+          ]}
+        />
+      </div>,
+    );
+    expect(screen.getByRole('list', { name: 'سجل الأوامر' })).toBeInTheDocument();
+    expect(screen.getByText(identifier)).toHaveClass('min-w-0', 'break-words', 'basis-48');
+    const subtitles = container.querySelectorAll('p');
+    expect(subtitles[0].textContent).toBe(params);
+    expect(subtitles[1].textContent).toBe(serverError);
+    subtitles.forEach((subtitle) => {
+      expect(subtitle).toHaveClass('whitespace-pre-wrap', 'break-words');
+      expect(subtitle).not.toHaveClass('truncate', 'overflow-hidden');
+    });
+    rows(container).forEach((row) => {
+      expect(row).toHaveClass('min-w-0', 'ps-8');
+      expect(row).not.toHaveClass('pl-8');
+    });
+  });
+
+  it('retains source-confirmed zero and unknown values and leaves rich actions focusable after refresh', () => {
+    const onRetry = vi.fn();
+    const items: TimelineItemData[] = [
+      item({ title: 'Confirmed zero', subtitle: <>Count: {0}</> }),
+      item({
+        title: 'Unknown',
+        time: '—',
+        subtitle: <Button onClick={onRetry}>Retry source</Button>,
+      }),
+    ];
+    const { rerender } = render(<Timeline items={items} label="Live evidence" />);
+    rerender(<Timeline items={items} label="Retained evidence" summaryBounds={{ start: null }} />);
+    expect(screen.getByText('Count: 0')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Retained evidence: 2 entries')).toBeInTheDocument();
+    const retry = screen.getByRole('button', { name: 'Retry source' });
+    retry.focus();
+    expect(retry).toHaveFocus();
+    fireEvent.click(retry);
+    expect(onRetry).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
+  });
 });
