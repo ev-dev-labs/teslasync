@@ -75,6 +75,7 @@ import LiveSignalSparklinesWidget, {
 import { request } from '@/api/client';
 import type { WidgetSize } from './types';
 import type { Vehicle } from '@/types/vehicle';
+import type { SignalHistoryPoint } from '@/api/types';
 
 // The generic `request<T>` fights `mockResolvedValue`'s inference; the repo's
 // convention is to treat it as a plain untyped mock at the call site.
@@ -93,7 +94,7 @@ const DEFAULTS = [
 ];
 
 type LiveSnapshot = Record<string, { value: unknown; timestamp: string }>;
-type HistoryPoints = { timestamp: string; valueNum?: number }[];
+type HistoryPoints = SignalHistoryPoint[];
 
 let AVAILABLE: string[];
 let LIVE: LiveSnapshot;
@@ -140,8 +141,19 @@ function signalRow(label: string): HTMLElement {
   return row;
 }
 
-function points(...vals: number[]): HistoryPoints {
-  return vals.map((v, i) => ({ timestamp: `2026-07-01T0${i}:00:00Z`, valueNum: v }));
+function points(...vals: SignalHistoryPoint['value'][]): HistoryPoints {
+  return vals.map((value, i) => ({
+    ts: `2026-07-01T${String(i).padStart(2, '0')}:00:00Z`,
+    kind: typeof value === 'number' ? 'ValueKindDouble'
+      : typeof value === 'string' ? 'ValueKindString'
+      : typeof value === 'boolean' ? 'ValueKindBoolean'
+      : 'ValueKindUnknown',
+    value,
+    ingest_origin: null,
+    source_emitted_at: null,
+    received_at: null,
+    normalization_version: null,
+  }));
 }
 
 function fleet(...ids: number[]): { data: Vehicle[] } {
@@ -407,6 +419,32 @@ describe('LiveSignalSparklinesWidget — vehicle resolution', () => {
 });
 
 describe('LiveSignalSparklinesWidget — independent source trust', () => {
+  it('preserves raw history while plotting only finite numbers in source order, including zero', async () => {
+    AVAILABLE = ['BatteryLevel'];
+    LIVE = { BatteryLevel: { value: 0, timestamp: '2026-07-01T03:00:00Z' } };
+    const data = [null, {}, ...points(0, '100', true, Number.NaN, 2, null, -1, false, Number.POSITIVE_INFINITY, 4)];
+    wire();
+    const respond = mockedRequest.getMockImplementation();
+    mockedRequest.mockImplementation((url: string) =>
+      url === SOURCE_URLS.history ? Promise.resolve({ data }) : respond?.(url),
+    );
+    const { container, queryClient } = renderWidget(FULL, 1, { signals: ['BatteryLevel'] });
+
+    const sparkline = await screen.findByRole('img', { name: 'Battery Level trend' });
+    const row = signalRow('Battery Level');
+    const coordinates = sparkline.querySelector('polyline')?.getAttribute('points');
+    expect(within(row).getByText('0.00')).toBeInTheDocument();
+    expect(within(row).queryByText('—')).not.toBeInTheDocument();
+    expect(within(row).getByRole('img', { name: 'Trending up' })).toBeInTheDocument();
+    expect(coordinates?.split(' ')).toHaveLength(4);
+    expect(coordinates?.split(' ').map((point) => Number(point.split(',')[1]))).toEqual([16, 8, 20, 0]);
+    expect(coordinates).toMatch(/^0,16 .* 80,0$/);
+    expect(queryClient.getQueryData(['signal-history', 1, 'BatteryLevel', 1])).toEqual({ data });
+    expect(sourceCallCount('history')).toBe(1);
+    expect(container.textContent).not.toMatch(/NaN|Infinity|undefined/);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   function populate() {
     AVAILABLE = ['BatteryLevel'];
     LIVE = { BatteryLevel: { value: 82, timestamp: '2026-07-01T03:00:00Z' } };
