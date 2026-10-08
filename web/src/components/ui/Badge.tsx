@@ -4,19 +4,15 @@ import { cn } from '@/lib/cn';
 /**
  * Badge palette — exported as the single source of truth.
  *
- * Semantic variants keep fixed hues because the colour *is* the meaning.
- * `neutral` has none, so it must follow the active theme's control surface
- * rather than pinning slate-grey across all 140 presets.
- *
- * Tests must assert against this map rather than re-typing the class literals:
- * 26 suites previously hardcoded `bg-gray-100`, so re-skinning the neutral chip
- * broke every one of them even though the component was correct.
+ * Semantic roles preserve status meaning while the shared variables supply
+ * restrained, theme-aware foregrounds, tints and borders.
+ * Keep the variant IDs stable for data-driven consumers.
  */
 export const BADGE_VARIANTS = {
-  info: 'border border-sky-500/20 bg-blue-100 text-blue-800 dark:bg-sky-500/10 dark:text-sky-300',
-  success: 'border border-emerald-500/20 bg-green-100 text-green-800 dark:bg-emerald-500/10 dark:text-emerald-300',
-  warning: 'border border-amber-500/20 bg-yellow-100 text-yellow-800 dark:bg-amber-500/10 dark:text-amber-300',
-  danger: 'border border-rose-500/20 bg-red-100 text-red-800 dark:bg-rose-500/10 dark:text-rose-300',
+  info: 'border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] text-[var(--semantic-info)]',
+  success: 'border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]',
+  warning: 'border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)]',
+  danger: 'border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] text-[var(--semantic-danger)]',
   neutral: 'border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)]',
 } as const;
 
@@ -42,18 +38,17 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     <span
       ref={ref}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full font-medium',
+        'inline-flex min-w-0 max-w-full items-center gap-1 rounded-full whitespace-normal break-words font-medium',
         // In forced-colors mode, badge backgrounds can collapse into the OS
         // Canvas colour. Add a system-colour border so the chip outline stays
         // visible while still respecting the user's OS palette.
         'forced-colors:border forced-colors:border-[CanvasText]',
         // Data-driven call sites forward API status strings through helpers
         // (e.g. `variant={statusVariant(status)}`). Should a value land outside
-        // the union at runtime, `variants[variant]`/`badgeSizes[size]` is
-        // undefined and the chip would render with no colour — effectively
-        // invisible. Fall back to the neutral/md tokens so it stays perceivable.
-        variants[variant] ?? variants.neutral,
-        badgeSizes[size] ?? badgeSizes.md,
+        // the union at runtime, fall back to neutral/md tokens. Own-key checks
+        // also reject inherited object keys such as `constructor`.
+        Object.hasOwn(variants, variant) ? variants[variant] : variants.neutral,
+        Object.hasOwn(badgeSizes, size) ? badgeSizes[size] : badgeSizes.md,
         className,
       )}
       {...props}
