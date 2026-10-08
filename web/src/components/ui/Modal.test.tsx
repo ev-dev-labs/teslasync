@@ -141,7 +141,7 @@ describe('Modal — size presets', () => {
     ['sm', 'sm:max-w-sm'],
     ['md', 'sm:max-w-lg'],
     ['lg', 'sm:max-w-2xl'],
-    ['full', 'sm:max-w-[min(96vw,1100px)]'],
+    ['full', 'sm:max-w-modal-full'],
     ['fullscreen', 'max-w-none'],
   ];
 
@@ -173,8 +173,8 @@ describe('Modal — size presets', () => {
     const dialog = screen.getByRole('dialog', { name: 'Fullscreen widget' });
     expect(container).not.toContainElement(dialog);
     expect(document.body).toContainElement(dialog);
-    expect(dialog).toHaveClass('h-[100dvh]', 'max-h-[100dvh]', 'max-w-none');
-    expect(dialog).not.toHaveClass('sm:max-h-[90vh]');
+    expect(dialog).toHaveClass('h-dvh', 'max-h-dvh', 'max-w-none');
+    expect(dialog).not.toHaveClass('sm:max-h-modal');
     expect(dialog.querySelector('[data-modal-scroll-body]')).toHaveClass('flex', 'min-h-0', 'overflow-hidden');
     expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toHaveFocus();
   });
@@ -489,7 +489,7 @@ describe('Modal — restrained presentation and reachability', () => {
 
   it.each([false, true])('contains body scroll above shell chrome with persistent footer=%s', (withFooter) => {
     render(<Modal open onClose={vi.fn()} title="Contained" footer={withFooter ? <button>Save</button> : undefined}>Body</Modal>);
-    expect(getDialog()).toHaveClass('max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]', 'sm:max-h-[90vh]');
+    expect(getDialog()).toHaveClass('max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]', 'sm:max-h-modal');
     expect(getDialog().querySelector('[data-modal-scroll-body]')).toHaveClass('min-h-0', 'overflow-y-auto');
     if (withFooter) {
       const footer = getDialog().querySelector('[data-modal-footer]');

@@ -76,7 +76,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
       sm:   'sm:max-w-sm',
       md:   'sm:max-w-lg',
       lg:   'sm:max-w-2xl',
-      full: 'sm:max-w-[min(96vw,1100px)]',
+      full: 'sm:max-w-modal-full',
       fullscreen: 'max-w-none',
     };
 
@@ -87,15 +87,14 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     // status-bar segment is anchored to the bar's bbox, not the viewport, and
     // overflows the screen.
     //
-    // z-[60] is chosen to sit ABOVE the footer StatusBar (z-[55]) and the
+    // z-overlay is chosen to sit ABOVE the footer StatusBar (z-[55]) and the
     // mobile top bar so neither chrome ever clips the modal's edges.
     if (typeof document === 'undefined') return null;
 
     const overlay = (
       // This is the shared <Modal> source of truth. All other interactive
       // dialogs MUST use this component instead of hand-rolling overlays.
-      // eslint-disable-next-line no-restricted-syntax
-      <div className="fixed inset-0 z-[60] overflow-y-auto">
+      <div className="fixed inset-0 z-overlay overflow-y-auto">
         <div
           // Forced-colors mode suppresses
           // box-shadow + background-image, so a glass backdrop with a
@@ -126,8 +125,8 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
               'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
               // Below sm: bottom sheet that fills width, capped to viewport height.
               // From sm and up: rounded card, auto height up to 90vh, centered.
-              fullscreen ? 'h-[100dvh] max-h-[100dvh] rounded-none'
-                : 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))] rounded-none sm:h-auto sm:max-h-[90vh] sm:rounded-panel',
+              fullscreen ? 'h-dvh max-h-dvh rounded-none'
+                : 'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))] rounded-none sm:h-auto sm:max-h-modal sm:rounded-panel',
               sizes[size],
               className,
             )}
