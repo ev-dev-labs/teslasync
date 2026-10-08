@@ -5,6 +5,7 @@ import { ErrorDisplay, type ErrorDisplayProps } from '@/components/feedback/Erro
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Typography';
+import { typography } from '@/lib/tokens';
 
 export type SourceState = 'ready' | 'loading' | 'error' | 'empty' | 'retained';
 
@@ -40,7 +41,7 @@ export function SourceContent({
   const { t } = useTranslation();
   if (state === 'loading') {
     return (
-      <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label })} className="space-y-3">
+      <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label })} className="min-w-0 space-y-3 break-words">
         {loadingContent ?? (
           <>
             <Skeleton className="h-6 w-2/3" />
@@ -55,12 +56,13 @@ export function SourceContent({
   return (
     <>
       {state === 'retained' && (
-        <div className="space-y-2">
-          <Text as="p" variant="bodySm" role="status" aria-live="polite">
+        <div className="min-w-0 space-y-2 break-words">
+          <Text as="p" variant="bodySm" className={typography.color.secondary} role="status" aria-live="polite">
             {retainedMessage ?? t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
           </Text>
           {errorRecovery?.onRetry && (
-            <Button type="button" variant="secondary" size="sm" onClick={errorRecovery.onRetry}>
+            <Button type="button" variant="secondary" size="sm" wrapLabel
+              className="max-w-full min-h-11 md:min-h-9" onClick={errorRecovery.onRetry}>
               {t('error.retry', 'Retry')}
             </Button>
           )}

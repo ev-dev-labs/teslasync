@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { useDataState } from '@/hooks/useDataState';
 import { ApiError } from '@/lib/resilience';
+import { typography } from '@/lib/tokens';
 import { LayoutCard } from './LayoutCard';
 import { SourceContent, type SourceContentProps, type SourceState } from './SourceContent';
 
@@ -71,6 +72,38 @@ function TrustSource({ source }: { source: DataStateSource<number> }) {
 }
 
 describe('SourceContent production recovery contract', () => {
+  it('keeps long RTL recovery copy complete with a wrapping, reachable retry and retained zero', () => {
+    const retry = vi.fn();
+    const retryLabel = 'Retry the affected source without replacing previously loaded drive history';
+    const retainedMessage = 'Previously loaded drive history and every annotation remain available while the affected source recovers.';
+    translations.addResource('en', 'translation', 'error.retry', retryLabel);
+    mount(
+      <div dir="rtl">
+        <SourceContent {...baseProps} state="retained" retainedMessage={retainedMessage}
+          errorRecovery={{ onRetry: retry }}>
+          <span>All drive rows</span><span>Annotations and exports</span><span>{0}</span>
+        </SourceContent>
+      </div>,
+    );
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(retainedMessage);
+    expect(status).toHaveClass(typography.color.secondary);
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status.parentElement).toHaveClass('min-w-0', 'break-words');
+    expect(status.closest('[dir]')).toHaveAttribute('dir', 'rtl');
+    const action = screen.getByRole('button', { name: retryLabel });
+    expect(action).toHaveAttribute('type', 'button');
+    expect(action).toHaveClass('h-auto', 'max-w-full', 'min-h-11', 'md:min-h-9', 'whitespace-normal');
+    expect(within(action).getByText(retryLabel)).toHaveClass('min-w-0', 'break-words');
+    expect(screen.getByText('All drive rows')).toBeInTheDocument();
+    expect(screen.getByText('Annotations and exports')).toBeInTheDocument();
+    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(retry).not.toHaveBeenCalled();
+    fireEvent.click(action);
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps caller-sized loading geometry inside the localized named status boundary', async () => {
     await translations.changeLanguage('fr');
     const retry = vi.fn();
