@@ -3,10 +3,12 @@ import { useTranslation } from 'react-i18next';
 import {
   Flag, Wrench, MapPin, AlertTriangle, ArrowUpCircle, Tag,
 } from 'lucide-react';
-import { Input, Button, Modal, Text } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Modal } from '@/components/ui/Modal';
+import { Text } from '@/components/ui/Typography';
+import { Icon } from '@/components/ui/Icon';
 import type { AnnotationCategory } from '@/types/annotations';
-import { ANNOTATION_COLORS } from '@/types/annotations';
 
 /**
  * Normalises any ISO-ish timestamp into the `YYYY-MM-DD` value expected by
@@ -113,7 +115,7 @@ export function AddAnnotationPopover({
             required
           />
         ) : (
-          <Text as="div" variant="caption">
+          <Text as="div" variant="caption" className="break-words">
             {timestamp}
           </Text>
         )}
@@ -127,36 +129,25 @@ export function AddAnnotationPopover({
           label={t('annotation.label', 'Label')}
         />
 
-        {/* Category pills */}
         <div>
-          <Text as="span" variant="subhead" className="mb-1.5 block" id={categoryLabelId}>
+          <Text as="span" variant="label" className="mb-2 block" id={categoryLabelId}>
             {t('annotation.category', 'Category')}
           </Text>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={categoryLabelId}>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby={categoryLabelId}>
             {CATEGORY_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
               const isSelected = category === opt.value;
               return (
                 <Button
                   key={opt.value}
                   type="button"
-                  variant="ghost"
+                  variant={isSelected ? 'secondary' : 'ghost'}
                   size="sm"
+                  wrapLabel
+                  icon={<Icon icon={opt.icon} size="sm" />}
                   onClick={() => setCategory(opt.value)}
                   aria-pressed={isSelected}
-                  className={cn(
-                    '!h-auto rounded-full border px-2.5 py-1 text-xs font-normal',
-                    isSelected
-                      ? 'border-current bg-[var(--control-bg)] font-medium'
-                      : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
-                  )}
-                  style={
-                    isSelected
-                      ? { color: ANNOTATION_COLORS[opt.value] }
-                      : undefined
-                  }
+                  className="min-h-11 md:min-h-9"
                 >
-                  <Icon className="h-3 w-3" />
                   {t(`annotation.cat.${opt.value}`, opt.label)}
                 </Button>
               );
@@ -172,11 +163,11 @@ export function AddAnnotationPopover({
           label={t('annotation.description', 'Description')}
         />
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" type="button" onClick={handleClose}>
+        <div className="flex flex-wrap justify-end gap-2 pt-1">
+          <Button variant="ghost" size="sm" wrapLabel className="min-h-11 md:min-h-9" type="button" onClick={handleClose}>
             {t('common.cancel', 'Cancel')}
           </Button>
-          <Button size="sm" type="submit" disabled={!label.trim()}>
+          <Button size="sm" wrapLabel className="min-h-11 md:min-h-9" type="submit" disabled={!label.trim()}>
             {t('annotation.add', 'Add Annotation')}
           </Button>
         </div>
