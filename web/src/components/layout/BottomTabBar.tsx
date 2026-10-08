@@ -4,6 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import type { LucideIcon } from 'lucide-react';
 import { navRouteIcons } from '@/lib/navRouteIcons';
+import { Icon } from '../ui/Icon';
+import { Text } from '../ui/Typography';
+import { typography } from '@/lib/tokens';
 
 interface Tab {
   path: string;
@@ -40,15 +43,14 @@ export function BottomTabBar() {
       aria-label={t('nav.quickNav', 'Quick navigation')}
       data-role="bottom-tab-bar"
       className="fixed inset-x-0 bottom-0 z-50 xl:hidden
-        flex h-[var(--shell-tab-bar-height)] items-center justify-around border-t border-[var(--border-default)]
-        bg-[var(--surface-1)] px-2 shadow-e3 dark:bg-[var(--surface-overlay)] dark:backdrop-blur-xl
+        flex h-[var(--shell-tab-bar-height)] items-center overflow-x-auto border-t border-[var(--border-default)]
+        bg-[var(--surface-1)] px-2 shadow-e2
         safe-bottom forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
     >
       {TABS.map(tab => {
         const isActive = tab.path === '/'
           ? location.pathname === '/'
           : location.pathname === tab.path || location.pathname.startsWith(tab.path + '/');
-        const Icon = tab.icon;
         // Resolve once so the anchor's accessible name (aria-label) and the
         // visible caption can never drift apart — WCAG 2.5.3 (Label in Name).
         const label = t(tab.i18nKey, tab.fallback);
@@ -60,20 +62,20 @@ export function BottomTabBar() {
             aria-label={label}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'relative flex min-h-[44px] min-w-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-shape-md px-1 py-1',
-              'text-sm font-medium leading-none transition-colors duration-fast',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--theme-primary)]',
+              'relative flex min-h-11 min-w-12 flex-1 basis-auto shrink-0 flex-col items-center justify-center gap-1 rounded-shape-sm px-2 py-1',
+              'transition-colors duration-fast motion-reduce:transition-none',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)] forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-[Highlight]',
               isActive
-                ? 'bg-[rgba(var(--theme-primary-rgb),0.10)] font-semibold text-[var(--text-primary)] ring-1 ring-inset ring-[rgba(var(--theme-primary-rgb),0.20)] forced-colors:border forced-colors:border-[Highlight]'
-                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] active:bg-[var(--surface-2)]'
+                ? cn(typography.weight.semibold, typography.color.primary, 'bg-[var(--surface-2)] ring-1 ring-inset ring-[var(--border-strong)] forced-colors:border forced-colors:border-[Highlight]')
+                : cn(typography.weight.medium, typography.color.secondary, 'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] active:bg-[var(--surface-2)]')
             )}
           >
-            <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={isActive ? 2.4 : 2} />
-            <span className="whitespace-nowrap">{label}</span>
+            <Icon icon={tab.icon} size="lg" aria-hidden={true} strokeWidth={2} />
+            <Text size="sm" className="whitespace-nowrap">{label}</Text>
             {isActive && (
               <span
                 aria-hidden="true"
-                className="absolute bottom-0 h-0.5 w-6 rounded-full bg-[var(--theme-primary)] forced-colors:bg-[Highlight]"
+                className="absolute bottom-0 h-0.5 w-6 rounded-full bg-[var(--text-secondary)] forced-colors:bg-[Highlight]"
               />
             )}
           </PrefetchLink>

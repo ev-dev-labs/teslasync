@@ -77,11 +77,11 @@ function renderBar(pathname = '/') {
 }
 
 function indicatorsWithin(el: HTMLElement): HTMLElement[] {
-  // The active underline is the theme-primary pill span. Filter by className
+  // The active underline is the neutral pill span. Filter by className
   // rather than a CSS selector to avoid escaping the `[var(--…)]` arbitrary
   // value in querySelector.
   return Array.from(el.querySelectorAll('span')).filter((s) =>
-    s.className.includes('bg-[var(--theme-primary)]'),
+    s.className.includes('bg-[var(--text-secondary)]'),
   )
 }
 
@@ -216,15 +216,17 @@ describe('BottomTabBar', () => {
 
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
     expect(nav.className).toContain('bg-[var(--surface-1)]')
-    expect(nav.className).toContain('dark:bg-[var(--surface-overlay)]')
+    expect(nav.className).not.toContain('backdrop-blur')
+    expect(nav.className).not.toContain('dark:bg-[var(--surface-overlay)]')
     expect(nav.className).toContain('border-[var(--border-default)]')
-    expect(nav.className).toContain('shadow-e3')
+    expect(nav.className).toContain('shadow-e2')
 
     const active = screen.getByRole('link', { name: 'Charging' })
     expect(active.className).toContain('text-[var(--text-primary)]')
-    expect(active.className).toContain('bg-[rgba(var(--theme-primary-rgb),0.10)]')
+    expect(active.className).toContain('bg-[var(--surface-2)]')
+    expect(active.className).toContain('ring-[var(--border-strong)]')
     expect(active.className).toContain('font-semibold')
-    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2.4')
+    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2')
 
     const inactive = screen.getByRole('link', { name: 'Drives' })
     expect(inactive.className).toContain('text-[var(--text-secondary)]')
@@ -259,9 +261,39 @@ describe('BottomTabBar', () => {
     expect(nav.className).toContain('xl:hidden')
     expect(nav.className).toContain('safe-bottom')
     screen.getAllByRole('link').forEach((link) => {
-      expect(link.className).toContain('min-h-[44px]')
-      expect(link.className).toContain('min-w-[48px]')
+      expect(link.className).toContain('min-h-11')
+      expect(link.className).toContain('min-w-12')
     })
+  })
+
+  it('retains full long translated captions in a contained scroll region for RTL', () => {
+    const longLabel = 'Eine sehr lange übersetzte Navigationsbeschriftung'
+    tSpy.mockImplementation((key: string, fallback?: string) =>
+      key === 'nav.mobileCharging' ? longLabel : fallback ?? key,
+    )
+    const { container } = renderBar('/charging/42')
+    container.setAttribute('dir', 'rtl')
+    const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
+    expect(nav.className).toContain('overflow-x-auto')
+    const charging = screen.getByRole('link', { name: longLabel })
+    expect(charging).toHaveTextContent(longLabel)
+    expect(charging).toHaveAttribute('aria-current', 'page')
+    expect(charging.className).toContain('basis-auto')
+    expect(charging.className).toContain('shrink-0')
+    expect(charging.querySelector('span')).toHaveClass('text-sm')
+    expect(charging.querySelector('span')).not.toHaveClass('truncate')
+    expect(container).toHaveAttribute('dir', 'rtl')
+  })
+
+  it('retains keyboard prefetch, explicit focus and reduced-motion presentation', () => {
+    renderBar()
+    const charging = screen.getByRole('link', { name: 'Charging' })
+    charging.focus()
+    expect(charging).toHaveFocus()
+    expect(mockedPrefetch).toHaveBeenCalledWith('/charging')
+    expect(charging.className).toContain('focus-visible:ring-[var(--focus-ring)]')
+    expect(charging.className).toContain('forced-colors:focus-visible:outline-[Highlight]')
+    expect(charging.className).toContain('motion-reduce:transition-none')
   })
 })
 
