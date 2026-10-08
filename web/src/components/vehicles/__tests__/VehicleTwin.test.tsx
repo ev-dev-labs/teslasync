@@ -44,6 +44,44 @@ const baseTwinState = {
 } satisfies VehicleTwinProps;
 
 describe('VehicleTwin', () => {
+  it.each([false, true])('keeps body and glass reflections static with reduced motion=%s', async reduce => {
+    motionPreference.reduce = reduce;
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} />);
+    fireEvent.error(container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!);
+    const reflections = [
+      ['M 96 170 C 200 152 330 140 468 120', '0.4'],
+      ['M 212 154 C 280 150 380 145 458 136 L 450 144 C 372 151 282 156 218 160 Z', '0.28'],
+      ['M 118 166 C 230 148 390 134 508 120', '0.1'],
+      ['M 236 114 C 300 95 378 91 456 105', '0.1'],
+    ] as const;
+    const assertReflections = () => {
+      for (const [d, opacity] of reflections) {
+        const reflection = container.querySelector(`path[d="${d}"]`);
+        expect(reflection).toHaveAttribute('opacity', opacity);
+        expect(reflection).not.toHaveAttribute('style');
+        if (d === reflections[2][0] || d === reflections[3][0]) {
+          expect(reflection).toHaveAttribute('stroke-dashoffset', '0');
+          expect(reflection).toHaveAttribute('stroke-dasharray', d === reflections[2][0] ? '58 420' : '42 260');
+        }
+      }
+      expect(container.querySelector(`path[d="${reflections[0][0]}"]`)?.getAttribute('stroke'))
+        .toMatch(/^url\(#.+-shoulder-highlight\)$/);
+      expect(container.querySelector(`path[d="${reflections[1][0]}"]`)?.getAttribute('fill'))
+        .toMatch(/^url\(#.+-soft-reflection\)$/);
+      expect(container.querySelector(`path[d="${reflections[3][0]}"]`))
+        .toHaveAttribute('stroke', 'rgba(255,255,255,0.16)');
+    };
+    await waitFor(assertReflections);
+    rerender(<VehicleTwin {...baseTwinState} isDriving isCharging windowFD="open" windowFP="partial" />);
+    await act(async () => {
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    assertReflections();
+    motionPreference.reduce = !reduce;
+    rerender(<VehicleTwin {...baseTwinState} />);
+    assertReflections();
+  });
+
   it.each(['photo', 'svg'] as const)('uses the passenger warning role only for open or partial windows in %s mode', async variant => {
     motionPreference.reduce = true;
     const { container, rerender } = render(<VehicleTwin {...baseTwinState} />);

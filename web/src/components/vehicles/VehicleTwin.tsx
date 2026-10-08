@@ -619,30 +619,28 @@ function BodyReflections() {
   const { ids } = useTwinCtx();
   return (
     <g id="body-reflections" pointerEvents="none">
-      <motion.path
+      <path
         d="M 96 170 C 200 152 330 140 468 120"
         fill="none"
         stroke={`url(#${ids.shoulderHighlight})`}
         strokeWidth={1.4}
         strokeLinecap="round"
-        animate={ambientFrames({ opacity: [0.4, 0.7, 0.4] })}
-        transition={ambientLoop({ duration: 5.5, repeat: Infinity, ease: 'easeInOut' })}
+        opacity={0.4}
       />
-      <motion.path
+      <path
         d="M 212 154 C 280 150 380 145 458 136 L 450 144 C 372 151 282 156 218 160 Z"
         fill={`url(#${ids.softReflection})`}
-        animate={ambientFrames({ opacity: [0.28, 0.55, 0.28] })}
-        transition={ambientLoop({ duration: 6.5, repeat: Infinity, ease: 'easeInOut' })}
+        opacity={0.28}
       />
-      <motion.path
+      <path
         d="M 118 166 C 230 148 390 134 508 120"
         fill="none"
         stroke="rgba(255,255,255,0.1)"
         strokeWidth={1}
         strokeLinecap="round"
         strokeDasharray="58 420"
-        animate={ambientFrames({ strokeDashoffset: [0, -420], opacity: [0, 0.32, 0] })}
-        transition={ambientLoop({ duration: 7.5, repeat: Infinity, ease: 'easeInOut' })}
+        strokeDashoffset={0}
+        opacity={0.1}
       />
     </g>
   );
@@ -732,15 +730,15 @@ function SideWindows({
           strokeWidth={1.4}
           strokeLinecap="round"
         />
-        <motion.path
+        <path
           d="M 236 114 C 300 95 378 91 456 105"
           fill="none"
           stroke="rgba(255,255,255,0.16)"
           strokeWidth={1}
           strokeLinecap="round"
           strokeDasharray="42 260"
-          animate={ambientFrames({ strokeDashoffset: [0, -260], opacity: [0.1, 0.42, 0.1] })}
-          transition={ambientLoop({ duration: 6.8, repeat: Infinity, ease: 'easeInOut' })}
+          strokeDashoffset={0}
+          opacity={0.1}
         />
       </g>
 
