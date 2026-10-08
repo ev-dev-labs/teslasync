@@ -99,8 +99,7 @@ export function Drawer({
   return createPortal(
     <div
       ref={drawerRef}
-      // eslint-disable-next-line no-restricted-syntax -- overlay primitive; z-[60] matches Modal above StatusBar/tab bar
-      className="fixed inset-0 z-[60]"
+      className="fixed inset-0 z-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
@@ -143,7 +142,7 @@ export function Drawer({
                   size="2xs"
                   weight="semibold"
                   color="muted"
-                  className="mb-1 uppercase tracking-[0.12em]"
+                  className="mb-1 uppercase"
                 >
                   {eyebrow}
                 </Text>

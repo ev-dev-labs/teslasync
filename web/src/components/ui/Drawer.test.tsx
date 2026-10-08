@@ -29,6 +29,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { Drawer } from './Drawer';
 import * as motionPreference from '@/hooks/useMotionPreference';
+import { typography } from '@/lib/tokens';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -75,7 +76,7 @@ describe('<Drawer>', () => {
       </Drawer>,
     );
     const dialog = screen.getByRole('dialog', { name: 'Drive preview' });
-    expect(dialog.className).toContain('z-[60]');
+    expect(dialog.className).toContain('z-overlay');
     expect(dialog.className).not.toContain('z-50');
     expect(getPanel().className).toContain('bottom-[var(--shell-chrome-bottom)]');
   });
@@ -372,6 +373,16 @@ describe('<Drawer>', () => {
     expect(dialog.querySelector('[data-drawer-tabs]')).toContainElement(
       screen.getByRole('tablist'),
     );
+    const eyebrow = screen.getByText('Evidence');
+    expect(eyebrow.tagName).toBe('DIV');
+    expect(eyebrow).toHaveClass(
+      typography.size['2xs'],
+      typography.weight.semibold,
+      typography.color.muted,
+      'mb-1',
+      'uppercase',
+    );
+    expect(eyebrow.className).not.toMatch(/tracking-/);
   });
 
   it('locks background scrolling while open and restores it on close', () => {
