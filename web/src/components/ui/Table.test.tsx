@@ -75,4 +75,38 @@ describe('Table', () => {
     expect(screen.getByRole('rowheader', { name: 'A' })).toBeInTheDocument();
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  it('uses logical alignment while preserving RTL content and native table events', () => {
+    const onClick = vi.fn();
+    const identifier = 'tesla_vehicle_unit_history_signal_identifier';
+    render(<Table dir="rtl" lang="ar" aria-label="Signal schema" onClick={onClick}>
+      <thead><tr><th scope="col">Identifier</th></tr></thead>
+      <tbody><tr><td>{identifier}</td></tr></tbody>
+    </Table>);
+
+    const table = screen.getByRole('table', { name: 'Signal schema' });
+    expect(table).toHaveAttribute('dir', 'rtl');
+    expect(table).toHaveAttribute('lang', 'ar');
+    expect(table).toHaveClass('text-start');
+    expect(table).not.toHaveClass('text-left');
+    fireEvent.click(screen.getByText(identifier));
+    expect(onClick).toHaveBeenCalledOnce();
+    expect(table).toHaveTextContent(identifier);
+  });
+
+  it('keeps caller alignment overrides without adding redundant wrapper tab stops or labels', () => {
+    render(<Table className="text-right" tabIndex={0} aria-label="Reference matrix">
+      <tbody><tr><td>0</td></tr></tbody>
+    </Table>);
+
+    const table = screen.getByRole('table', { name: 'Reference matrix' });
+    expect(table).toHaveClass('text-right');
+    expect(table).not.toHaveClass('text-start');
+    expect(table).toHaveAttribute('tabindex', '0');
+    expect(table).toHaveTextContent('0');
+    expect(table.parentElement).not.toHaveAttribute('tabindex');
+    expect(table.parentElement).not.toHaveAttribute('aria-label');
+    expect(table.parentElement?.parentElement).toHaveAttribute('data-table-variant', 'standalone');
+    expect(screen.queryByRole('region')).toBeNull();
+  });
 });
