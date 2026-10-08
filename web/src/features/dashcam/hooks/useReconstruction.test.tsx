@@ -4,8 +4,9 @@ import { defaultDashcamSettings, type ClipRecord } from '../lib/types';
 import { useReconstruction } from './useReconstruction';
 import { deriveDataState } from '@/api/dataState';
 import type { SignalHistoryResponse } from '@/types/telemetry';
+import type { useSignalEvidenceBundle } from '@/api/hooks/useTelemetry';
 
-const { useBundle } = vi.hoisted(() => ({ useBundle: vi.fn() }));
+const { useBundle } = vi.hoisted(() => ({ useBundle: vi.fn<typeof useSignalEvidenceBundle>() }));
 vi.mock('@/api/hooks/useTelemetry', () => ({ useSignalEvidenceBundle: useBundle }));
 
 const clip: ClipRecord = {
@@ -24,8 +25,12 @@ describe('reconstruction retained-source boundary', () => {
   it('forwards complete mixed source identities, original payload and last success without changing alignment inputs', () => {
     const data: SignalHistoryResponse = {
       vehicleId: 1, signal: 'Speed', from: '', to: '', count: 1,
-      data: [{ timestamp: '2026-10-05T10:00:00Z', valueNum: 0 }],
+      data: [{
+        ts: '2026-10-05T10:00:00Z', value: 0, kind: 'ValueKindDouble',
+        ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null,
+      }],
     };
+    const originalPayload = structuredClone(data);
     const retry = vi.fn();
     const sources = [
       { signal: 'Speed', state: deriveDataState({ data, dataUpdatedAt: 123456, error: new Error('refresh failed'), refetch: retry }, { provenance: 'historical' }) },
@@ -40,6 +45,7 @@ describe('reconstruction retained-source boundary', () => {
     expect(result.current.sources).toBe(sources);
     expect(result.current.sources.map(source => source.signal)).toEqual(['Speed', 'Heading', 'Gear']);
     expect(result.current.sources[0].state.data).toBe(data);
+    expect(data).toEqual(originalPayload);
     expect(result.current.sources[0].state.updatedAt).toBe(123456);
     expect(result.current.sources[0].state.fatalError).toBeNull();
     expect(result.current.sources[1].state.status).toBe('initial');
@@ -66,12 +72,13 @@ describe('reconstruction retained-source boundary', () => {
 
   it('counts a received empty signal response as known data and retains independent retry ownership', () => {
     const refetch = vi.fn(async () => {});
+    const data: SignalHistoryResponse = {
+      vehicleId: 1, signal: 'Speed', from: '', to: '', count: 0, data: [],
+    };
     useBundle.mockReturnValue({
-      data: [{ signal: 'Speed', response: { data: [] } }],
+      data: [{ signal: 'Speed', response: data }],
       sources: [
-        { signal: 'Speed', state: deriveDataState({ data: {
-          vehicleId: 1, signal: 'Speed', from: '', to: '', count: 0, data: [],
-        } }, { unavailable: true }) },
+        { signal: 'Speed', state: deriveDataState({ data }, { unavailable: true }) },
         { signal: 'Heading', state: deriveDataState<SignalHistoryResponse>({ error: new Error('another signal failed') }) },
       ],
       isLoading: false, isFetching: false, isError: true,
@@ -82,5 +89,33 @@ describe('reconstruction retained-source boundary', () => {
     expect(result.current.reconstruction?.series.map(series => series.signal)).toEqual(['Speed']);
     expect(result.current.refetch).toBe(refetch);
     expect(useBundle).toHaveBeenCalledWith(1, ['Speed', 'Heading'], expect.any(Number));
+  });
+
+  it('preserves false, null and raw sample order while aligning canonical history chronologically', () => {
+    const data: SignalHistoryResponse = {
+      vehicleId: 1, signal: 'Gear', from: '', to: '', count: 3,
+      data: [
+        { ts: '2026-10-05T10:00:02Z', value: null, kind: 'ValueKindString', ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+        { ts: '2026-10-05T10:00:00Z', value: false, kind: 'ValueKindBoolean', ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+        { ts: '2026-10-05T10:00:01Z', value: 'Drive', kind: 'ValueKindString', ingest_origin: null, source_emitted_at: null, received_at: null, normalization_version: null },
+      ],
+    };
+    const originalPayload = structuredClone(data);
+    const originalPoints = [...data.data];
+    const sources = [{ signal: 'Gear', state: deriveDataState({ data }, { provenance: 'historical' }) }];
+    useBundle.mockReturnValue({
+      data: [{ signal: 'Gear', response: data }], sources,
+      isLoading: false, isFetching: false, isError: false, error: null,
+      refetch: vi.fn(async () => {}),
+    });
+    const settings = { ...defaultDashcamSettings(), assumedTimezoneOffsetMinutes: 0 };
+    const { result } = renderHook(() => useReconstruction(1, clip, settings, ['Gear']));
+    expect(result.current.sources).toBe(sources);
+    expect(result.current.sources[0].state.data).toBe(data);
+    expect(result.current.hasRetainedHistory).toBe(true);
+    expect(result.current.reconstruction?.series[0].points.map(point => point.value)).toEqual([false, 'Drive', null]);
+    expect(result.current.reconstruction?.series[0].points.map(point => point.atSeconds)).toEqual([0, 1, 2]);
+    expect(data).toEqual(originalPayload);
+    data.data.forEach((point, index) => expect(point).toBe(originalPoints[index]));
   });
 });
