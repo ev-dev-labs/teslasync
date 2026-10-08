@@ -23,7 +23,7 @@
  * `{{var}}` placeholders) are asserted as the user sees them.
  */
 
-import { act, render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -108,6 +108,12 @@ function renderCard() {
 async function openEditor() {
   fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
   return screen.findByRole('spinbutton', { name: 'Target uptime percentage' })
+}
+
+function targetControls() {
+  const controls = screen.getByRole('button', { name: 'Edit' }).parentElement
+  if (!controls) throw new Error('Missing personal target controls')
+  return within(controls)
 }
 
 beforeEach(() => {
@@ -210,6 +216,7 @@ describe('SLOTrackingCard — window selector', () => {
     requestMock.mockResolvedValue(makePayload())
     renderCard()
 
+    expect(screen.getByRole('tablist', { name: 'Uptime window selector' })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: '30d · Last 30 days' })).toHaveAttribute('aria-selected', 'true')
 
     fireEvent.click(screen.getByRole('tab', { name: '7d · Last 7 days' }))
@@ -309,7 +316,7 @@ describe('SLOTrackingCard — personal target', () => {
     requestMock.mockResolvedValue(makePayload())
     renderCard()
 
-    expect(await screen.findByText('Target 95%')).toBeInTheDocument()
+    expect(await targetControls().findByText('Target 95%')).toBeInTheDocument()
   })
 
   it('ignores an out-of-range persisted target and falls back to 99%', () => {
@@ -317,7 +324,7 @@ describe('SLOTrackingCard — personal target', () => {
     requestMock.mockResolvedValue(makePayload())
     renderCard()
 
-    expect(screen.getByText('Target 99%')).toBeInTheDocument()
+    expect(targetControls().getByText('Target 99%')).toBeInTheDocument()
   })
 
   it('saves an edited target, persists it, and leaves edit mode', async () => {
@@ -328,7 +335,7 @@ describe('SLOTrackingCard — personal target', () => {
     fireEvent.change(input, { target: { value: '90' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(await screen.findByText('Target 90%')).toBeInTheDocument()
+    expect(await targetControls().findByText('Target 90%')).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
     await waitFor(() => expect(window.localStorage.getItem(TARGET_KEY)).toBe('90'))
   })
@@ -341,7 +348,7 @@ describe('SLOTrackingCard — personal target', () => {
     fireEvent.change(input, { target: { value: '150' } })
     fireEvent.click(screen.getByRole('button', { name: 'Save' }))
 
-    expect(screen.getByText('Target 99%')).toBeInTheDocument()
+    expect(targetControls().getByText('Target 99%')).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
 
@@ -353,7 +360,7 @@ describe('SLOTrackingCard — personal target', () => {
     fireEvent.change(input, { target: { value: '80' } })
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
 
-    expect(screen.getByText('Target 99%')).toBeInTheDocument()
+    expect(targetControls().getByText('Target 99%')).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
 
@@ -365,7 +372,7 @@ describe('SLOTrackingCard — personal target', () => {
     fireEvent.change(input, { target: { value: '88' } })
     fireEvent.keyDown(input, { key: 'Enter' })
 
-    expect(await screen.findByText('Target 88%')).toBeInTheDocument()
+    expect(await targetControls().findByText('Target 88%')).toBeInTheDocument()
   })
 
   it('cancels the edit when Escape is pressed in the input', async () => {
@@ -376,7 +383,7 @@ describe('SLOTrackingCard — personal target', () => {
     fireEvent.change(input, { target: { value: '77' } })
     fireEvent.keyDown(input, { key: 'Escape' })
 
-    expect(screen.getByText('Target 99%')).toBeInTheDocument()
+    expect(targetControls().getByText('Target 99%')).toBeInTheDocument()
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
 })
@@ -386,13 +393,21 @@ describe('SLOTrackingCard — accessibility', () => {
     requestMock.mockResolvedValue(makePayload({ historical_source: 'snapshot' }))
     const { container } = renderCard()
 
-    await screen.findByRole('note')
+    const note = await screen.findByRole('note')
     expect(screen.queryByText('99.98%')).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(container.querySelector('[aria-live="polite"]')).toHaveTextContent('—')
 
     // Both the header Target glyph and the caveat Info glyph are decorative.
-    const decorativeIcons = container.querySelectorAll('svg[aria-hidden="true"]')
-    expect(decorativeIcons.length).toBe(2)
+    const header = screen.getByRole('heading', { name: 'Uptime & SLO' }).parentElement
+    if (!header) throw new Error('Missing SLO heading container')
+    const decorativeIcons = [
+      ...header.querySelectorAll('svg'),
+      ...note.querySelectorAll('svg'),
+    ]
+    expect(decorativeIcons).toHaveLength(2)
+    decorativeIcons.forEach(icon => expect(icon).toHaveAttribute('aria-hidden', 'true'))
+    expect(screen.getByRole('button', { name: 'Review details' }).querySelector('svg'))
+      .toHaveAttribute('aria-hidden', 'true')
   })
 })
