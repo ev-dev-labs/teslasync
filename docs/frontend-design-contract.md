@@ -809,3 +809,69 @@ candidates, normal tests, source-preservation unknowns or composed/browser/
 mobile/RTL/contrast/native acceptance is cleared. No UI/token implementation,
 scanner exception or runtime acceptance is claimed; MDC-040–043/060–070 and
 mission §§43–45 remain required at their implementation/QA owners.
+
+## Remaining geometry naming — MDC-024 / MDC-030 / MDC-034 / MDC-043
+
+**Additive `phase3-remaining-geometry-contract`: naming only; prior decisions immutable.**
+Read-only `.agent-status\receipts\phase3-presentation-overlay-checks.log` retains
+six layer candidates (four 9999 roots, one 9998, one 9997); `phase3-alerts-segment-checks.log`
+retains two dimensions. Both scanners exited 1. The corresponding exact
+`phase3-{map-tile-layer,background-work-segment,virtualized-vehicle-grid,recent-pages-segment,
+active-vehicle-segment,playback-controls,page-actions}-crash-review.log` receipts retain
+1/3/2/1/4/2/1 candidates; HeaderFilter's `phase3-data-table-header-filter-attempt-2-checks.log`
+retains two (scan exit 1, normal tests exit 1). These are inspected receipts, not fresh gates.
+
+Approve the following additions at existing `web\tailwind.config.js` `theme.extend`.
+Current resolved config has no exactly equivalent values; names must also be collision-checked
+against intervening additions. Reuse accepted `max-w-shell-panel-viewport` for HeaderFilter's
+`calc(100vw - 1rem)` cap; it is the same property/value, unlike Tooltip's 1.5rem cap.
+
+| Exact current owner / region | Approved map key = exact current value; replacement |
+| --- | --- |
+| `web\src\components\layout\presentation\PresentationOverlay.tsx:71,136,151,178` toolbar/clock/rotation/exit | `zIndex['presentation-controls'] = '9999'`; `z-presentation-controls` |
+| Same file `:113` inert burn-in dimmer | `zIndex['presentation-dimmer'] = '9998'`; `z-presentation-dimmer` |
+| Same file `:124` inert cursor layer | `zIndex['presentation-cursor'] = '9997'`; `z-presentation-cursor` |
+| `web\src\components\layout\status-bar\AlertsSegment.tsx:204,231` Popover/list scroll | `width['alerts-preview'] = 'min(92vw,380px)'`; `w-alerts-preview`; `maxHeight['alerts-preview'] = '320px'`; `max-h-alerts-preview` |
+| `web\src\components\maps\MapTileLayer.tsx:183` Leaflet control | `zIndex['map-tile-control'] = '800'`; `z-map-tile-control` |
+| `web\src\components\layout\status-bar\BackgroundWorkSegment.tsx:194,209` summary/Popover | `maxWidth['background-summary'] = '180px'`; `max-w-background-summary`; `maxHeight['status-options'] = '280px'`; `max-h-status-options`; `minWidth['background-work'] = '260px'`; `min-w-background-work` |
+| `web\src\components\vehicles\VirtualizedVehicleGrid.tsx:108` list scroll | `height['vehicle-grid'] = 'min(72vh,56rem)'`; `h-vehicle-grid`; `minHeight['vehicle-grid'] = '28rem'`; `min-h-vehicle-grid` |
+| `web\src\components\layout\status-bar\RecentPagesSegment.tsx:137` Popover | `width['recent-pages'] = 'min(92vw,360px)'`; `w-recent-pages` |
+| `web\src\components\layout\status-bar\ActiveVehicleSegment.tsx:97,176,208,225` options/two labels/Popover | Reuse `max-h-status-options`; `maxWidth['active-vehicle-label'] = '160px'`; `max-w-active-vehicle-label`; `maxWidth['active-vehicle-compact-label'] = '140px'`; `max-w-active-vehicle-compact-label`; `minWidth['vehicle-options'] = '220px'`; `min-w-vehicle-options` |
+| `web\src\components\data-display\PlaybackControls.tsx:315,455` shortcuts/scrubber | `gridTemplateColumns['replay-shortcuts'] = 'auto 1fr'`; `grid-cols-replay-shortcuts`; `flex['replay-scrubber'] = '1 1 12rem'`; `flex-replay-scrubber` |
+| `web\src\components\layout\PageActions.tsx:112` scope-first responsive grid | `gridTemplateColumns['page-actions-scope'] = 'minmax(0,1fr) auto'`; `sm:grid-cols-page-actions-scope` |
+| `web\src\components\ui\DataTableHeaderFilter.tsx:53` filter Popover scroll | Reuse `max-w-shell-panel-viewport`; `maxHeight['table-filter-viewport'] = 'calc(100dvh - 2rem)'`; `max-h-table-filter-viewport` |
+
+This resolves the prior BackgroundWorkSegment/grid **UNKNOWN naming mappings only**:
+current literals, scroll/minimum purpose and matching crash receipts suffice; no behavior
+acceptance is inferred. Keep grid height/min-height together (minimum can exceed the vh cap),
+virtualizer measurement/ref/callbacks/row transforms, stable scrollbar gutter and caller override.
+Retain 280px shared scroll caps, distinct 180/160/140px truncation and 260/220px minimum widths.
+No rounding px to rem, viewport to container/dynamic units, fixed height for minimum, or
+new breakpoint. HeaderFilter keeps w-80, start alignment and dynamic-viewport subtraction;
+status Popovers keep top/end positioning. PageActions keeps base single column, sm grid,
+xl flex; replay keeps auto/1fr tracks and its 1 1 12rem wrapping basis. Preserve logical
+start/end, meaningful RTL direction, reachable scrolling/actions/focus and all public semantics.
+Presentation keeps fixed/inert/pointer-events branches, dim opacity, clock/rotation/exit behavior
+and equal-layer DOM order: 9997 < 9998 < 9999. Map 800 remains map-local and distinct from
+accepted map-control 1000; unchanged stacking contexts/portals, not cross-context priority proof.
+
+Independent **`phase3-remaining-geometry-tokens`** owns only `web\tailwind.config.js`,
+`web\src\lib\cn.ts`, `web\src\lib\__tests__\tokens.test.ts`, `web\src\lib\cn.test.ts`.
+Add exactly 19 entries; register each in existing merge groups z/w/max-w/min-w/max-h/h/min-h/
+grid-cols/flex (same property prefixes). Preserve the accepted first ten shell roles and all
+earlier entries. Compare every old/new utility's generated declarations/value/importance/media
+exactly except selector, including actual sm grid and matching sm/md/xl variants. Require
+both-order last-conflict-wins versus ordinary/arbitrary same-property classes and caller overrides;
+different variants/properties coexist, including width/caps and height/minimum. No !important.
+After tokens, ten independent `phase3-<owner>-geometry-adoption` scopes use owner names
+`presentation-overlay`, `alerts-segment`, `map-tile-layer`, `background-work-segment`,
+`virtualized-vehicle-grid`, `recent-pages-segment`, `active-vehicle-segment`, `playback-controls`,
+`page-actions`, `data-table-header-filter`: each owns only its table-cited source and directly
+matching reserved tests, never config/merge/parents/catalog/scanner. Rerun strict scoped checks
+and unchanged scanner; retain unrelated findings and failing normal-test/preservation receipts.
+Downstream compare computed dimensions/layers/bounding boxes before/after at MDC-070 widths,
+16/20px roots, 200% text, short/tall viewports, narrow containers and RTL, preserving scroll/focus.
+Authentic supplied vehicle paint is not decorative chrome. `phase3-vehicle-icon-crash-review.log`
+retains public `web\src\components\maps\vehicleIcon.ts:8` fallback `#00f0ff`: separate semantic/
+color-renderer decision must preserve caller paint and public-default compatibility; geometry
+does not resolve that color finding. No UI/browser/contrast pass, scanner waiver or full gate here.
