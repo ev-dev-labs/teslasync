@@ -19,7 +19,7 @@ describe('getActivityVisual — exact matches', () => {
   it('resolves a leaf vehicle command (wake) to its full visual', () => {
     const v = getActivityVisual('vehicle.command.wake')
     expect(v.icon).toBe(Icons.power)
-    expect(v.color).toBe('text-amber-300')
+    expect(v.color).toBe('text-[var(--semantic-warning)]')
     expect(v.i18nKey).toBe('activity.action.vehicleCommandWake')
     expect(v.fallback).toBe('Wake vehicle')
   })
@@ -248,13 +248,13 @@ describe('getActivityVisual — real backend automation vocabulary (past-tense)'
   it('colour-codes lifecycle state and flags failures distinctly', () => {
     const failed = getActivityVisual('automation.failed')
     expect(failed.icon).toBe(Icons.error)
-    expect(failed.color).toBe('text-rose-300')
+    expect(failed.color).toBe('text-[var(--semantic-danger)]')
 
     // enable/disable are colour-coded to convey the resulting run state.
-    expect(getActivityVisual('automation.enabled').color).toBe('text-emerald-300')
-    expect(getActivityVisual('automation.re_enabled').color).toBe('text-emerald-300')
+    expect(getActivityVisual('automation.enabled').color).toBe('text-[var(--semantic-success)]')
+    expect(getActivityVisual('automation.re_enabled').color).toBe('text-[var(--semantic-success)]')
     expect(getActivityVisual('automation.disabled').color).toBe('text-[var(--text-muted)]')
-    expect(getActivityVisual('automation.auto_disabled').color).toBe('text-amber-300')
+    expect(getActivityVisual('automation.auto_disabled').color).toBe('text-[var(--semantic-warning)]')
   })
 
   it('uses directional transfer icons for import vs export', () => {
@@ -284,5 +284,50 @@ describe('getActivityVisual — real backend automation vocabulary (past-tense)'
     expect(getActivityVisual('automation.created.v2').i18nKey).toBe(
       'activity.action.automationCreated',
     )
+  })
+})
+
+describe('getActivityVisual — restrained theme-adaptive roles', () => {
+  const roles: Array<[string, string[]]> = [
+    ['text-[var(--text-secondary)]', [
+      'vehicle.command', 'settings.update', 'settings',
+      'dashboard.layout.save', 'dashboard',
+    ]],
+    ['text-[var(--semantic-warning)]', [
+      'vehicle.command.wake', 'vehicle.command.honk', 'vehicle.command.flash',
+      'vehicle.command.unlock', 'automation.undo', 'automation.auto_disabled',
+      'api_key.create', 'api_key.update', 'api_key.delete', 'api_key',
+    ]],
+    ['text-[var(--semantic-success)]', [
+      'vehicle.command.lock', 'vehicle.command.charge',
+      'automation.enabled', 'automation.re_enabled', 'auth.login',
+    ]],
+    ['text-[var(--semantic-danger)]', [
+      'alert.rule.create', 'alert.rule.update', 'alert.rule.delete', 'alert',
+      'automation.failed',
+    ]],
+    ['text-[var(--semantic-info)]', [
+      'vehicle.command.climate', 'automation.create', 'automation.update',
+      'automation.delete', 'automation.created', 'automation.updated',
+      'automation.deleted', 'automation.test_run', 'automation.imported',
+      'automation.exported', 'automation.executed', 'automation',
+      'data_export.create', 'data_export',
+    ]],
+    ['text-[var(--text-muted)]', [
+      'automation.disabled', 'auth.logout', 'auth',
+    ]],
+  ]
+
+  it.each(roles)('uses the existing %s role without fixed palette accents', (role, actions) => {
+    for (const action of actions) {
+      expect(getActivityVisual(action).color).toBe(role)
+      expect(getActivityVisual(`${action}.extra`).color).toBe(role)
+    }
+  })
+
+  it('keeps unknown and nullish actions neutral rather than implying a status', () => {
+    expect(getActivityVisual('totally.unknown.action').color).toBe('text-[var(--text-muted)]')
+    expect(getActivityVisual(null).color).toBe('text-[var(--text-muted)]')
+    expect(getActivityVisual(undefined).color).toBe('text-[var(--text-muted)]')
   })
 })
