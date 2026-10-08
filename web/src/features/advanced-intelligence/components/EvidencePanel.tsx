@@ -1,9 +1,11 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { Badge, Text } from '@/components/ui';
+import { Badge, Icon, Text, type BadgeProps } from '@/components/ui';
 import { KVList } from '@/components/data-display';
 import { formatDateTime } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
 import { InsightPanel } from './InsightPanel';
@@ -16,10 +18,10 @@ interface EvidencePanelProps {
   unsupported?: string[] | null;
 }
 
-function qualityVariant(status: DataQuality['status'] | undefined) {
-  if (status === 'sufficient') return 'success' as const;
-  if (status === 'limited') return 'warning' as const;
-  return 'danger' as const;
+function qualityVariant(status: DataQuality['status'] | undefined): BadgeProps['variant'] {
+  if (status === 'sufficient') return 'success';
+  if (status === 'limited') return 'warning';
+  return 'danger';
 }
 
 export function EvidencePanel({
@@ -42,10 +44,10 @@ export function EvidencePanel({
         'Supported observations are separated from assumptions and unsupported fields.',
       )}
     >
-      <div className="grid gap-5 lg:grid-cols-3">
-        <section aria-label={t('advancedIntelligence.quality.title', 'Data quality')} className="space-y-3">
+      <div className="grid min-w-0 gap-5 break-words lg:grid-cols-3">
+        <section aria-label={t('advancedIntelligence.quality.title', 'Data quality')} className="min-w-0 space-y-3">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={ShieldCheck} className={typography.color.secondary} aria-hidden={true} />
             <Text as="h3" variant="label">
               {t('advancedIntelligence.quality.title', 'Data quality')}
             </Text>
@@ -59,8 +61,8 @@ export function EvidencePanel({
                 { id: 'window', label: t('advancedIntelligence.quality.window', 'Observation window'), value: quality.window_start || quality.window_end
                   ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}` : '—' },
               ]} />
-              {(quality.reasons ?? []).map((reason) => (
-                <Text as="p" variant="caption" key={reason}>• {reason}</Text>
+              {(quality.reasons ?? []).map((reason, index) => (
+                <Text as="p" variant="caption" key={`${reason}-${index}`}>• {reason}</Text>
               ))}
             </>
           ) : (
@@ -70,15 +72,15 @@ export function EvidencePanel({
           )}
         </section>
 
-        <section aria-label={t('advancedIntelligence.evidence.sources', 'Evidence sources')} className="space-y-3">
+        <section aria-label={t('advancedIntelligence.evidence.sources', 'Evidence sources')} className="min-w-0 space-y-3">
           <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Database} className={typography.color.secondary} aria-hidden={true} />
             <Text as="h3" variant="label">
               {t('advancedIntelligence.evidence.sources', 'Evidence sources')}
             </Text>
           </div>
           {evidenceItems.length > 0 ? evidenceItems.map((item, index) => (
-            <div key={`${item.source}-${index}`} className="rounded-lg border border-white/[0.07] bg-white/[0.025] p-3">
+            <div key={`${item.source}-${index}`} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
               <Text as="p" variant="label">{item.source}</Text>
               <Text as="p" variant="caption">{item.summary}</Text>
               <Text as="p" variant="caption" className="mt-1">
@@ -99,27 +101,27 @@ export function EvidencePanel({
           )}
         </section>
 
-        <section aria-label={t('advancedIntelligence.limitations.title', 'Limitations')} className="space-y-3">
+        <section aria-label={t('advancedIntelligence.limitations.title', 'Limitations')} className="min-w-0 space-y-3">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
+            <Icon icon={AlertTriangle} className={neonColorMap.amber.text} aria-hidden={true} />
             <Text as="h3" variant="label">
               {t('advancedIntelligence.limitations.title', 'Limitations')}
             </Text>
           </div>
-          {limitationItems.length > 0 ? limitationItems.map((item) => (
-            <Text as="p" variant="bodySm" key={item}>• {item}</Text>
+          {limitationItems.length > 0 ? limitationItems.map((item, index) => (
+            <Text as="p" variant="bodySm" key={`${item}-${index}`}>• {item}</Text>
           )) : (
             <Text as="p" variant="bodySm">
               {t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.')}
             </Text>
           )}
           {unsupportedItems.length > 0 ? (
-            <div className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3">
+            <div className={cn('min-w-0 rounded-lg border p-3', neonColorMap.amber.border, neonColorMap.amber.bg)}>
               <Text as="p" variant="label">
                 {t('advancedIntelligence.unsupported.title', 'Explicitly unsupported')}
               </Text>
-              {unsupportedItems.map((item) => (
-                <Text as="p" variant="caption" key={item}>• {item}</Text>
+              {unsupportedItems.map((item, index) => (
+                <Text as="p" variant="caption" key={`${item}-${index}`}>• {item}</Text>
               ))}
             </div>
           ) : null}
