@@ -316,9 +316,30 @@ describe('RoadmapPage — data integrity', () => {
   it('renders every initiative as a non-empty card and reconciles with the total KPI', () => {
     renderPage();
 
-    const cardHeadings = screen.getAllByRole('heading', { level: 3 });
+    const cardHeadings = ['Completed', 'Active focus', 'Up next', 'Future'].flatMap(
+      (name) => phase(name).getAllByRole('heading', { level: 3 }),
+    );
     // One card heading per initiative …
     expect(cardHeadings).toHaveLength(17);
+    expect(cardHeadings.map((heading) => heading.textContent)).toEqual([
+      'Core Platform',
+      'Smart Notifications',
+      'Intelligence & Observability',
+      'Fleet Telemetry',
+      'Premium UI & Design System',
+      'Vehicle History & Physics',
+      'Charging & Energy Intelligence',
+      'Journeys & Ownership',
+      'Helix & Alert Studio',
+      'Operator Experience',
+      'Reliability & Data Trust',
+      'Helix Quality & Cost Controls',
+      'Recovery & Documentation',
+      'Energy Ecosystem',
+      'Privacy-preserving Fleet Insights',
+      'Interoperability',
+      'Accessible Operator Workflows',
+    ]);
     // … reconciling with the Total Initiatives KPI.
     expect(cardHeadings).toHaveLength(Number(metricValue('Total initiatives')));
 
