@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { cn } from '@/lib/cn'
 
 const stream = vi.hoisted(() => ({
   start: vi.fn(),
@@ -31,6 +32,28 @@ afterEach(() => {
 })
 
 describe('HelixSidePanel', () => {
+  it('preserves named dock geometry overrides in both merge orders and responsive contexts', () => {
+    const geometry = [
+      ['w-side-panel', 'w-96', 'w-[420px]'],
+      ['max-w-side-panel-viewport', 'max-w-full', 'max-w-[40vw]'],
+      ['min-h-side-panel-header', 'min-h-16', 'min-h-[4.5rem]'],
+    ]
+
+    for (const [named, ordinary, arbitrary] of geometry) {
+      for (const prefix of ['', 'xl:']) {
+        for (const competing of [ordinary, arbitrary]) {
+          expect(cn(`${prefix}${named}`, `${prefix}${competing}`)).toBe(`${prefix}${competing}`)
+          expect(cn(`${prefix}${competing}`, `${prefix}${named}`)).toBe(`${prefix}${named}`)
+        }
+      }
+    }
+
+    expect(cn('w-side-panel', 'max-w-side-panel-viewport', 'min-h-side-panel-header'))
+      .toBe('w-side-panel max-w-side-panel-viewport min-h-side-panel-header')
+    expect(cn('w-side-panel', 'xl:w-96')).toBe('w-side-panel xl:w-96')
+    expect(cn('xl:w-96', 'w-side-panel')).toBe('xl:w-96 w-side-panel')
+  })
+
   it('renders a full-width composer with an integrated privacy control and Send action', () => {
     render(
       <MemoryRouter>
