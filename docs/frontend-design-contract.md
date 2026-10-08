@@ -1250,3 +1250,91 @@ not color alone, communicate state. DOC-only verification here checks prefix,
 realpaths, hashes, exact inventory partition, analytical on-fill pairs and
 acyclic nonoverlapping scopes. Docs build, application tsc/lint/build/tests,
 browser/native/backend/runtime acceptance are **NOT RUN / NOT CLAIMED**.
+
+## Ownership evidence-strength badges — MDC-025 / MDC-026 / MDC-044 addendum
+
+**`phase3-verdict-strength-contract`, attempt 1: explicit presentation decision only.**
+Preserve the accepted **95305-byte** prefix exactly, SHA-256
+`4c4a5a9c5456812ef4726f2db1d7e57900f6d9e3d0224f8d36ebc7cb5ce2243b`.
+The prior label-adoption refusal correctly identified an absent strength mapping;
+canonical copy alone did not authorize guessing success/failure semantics.
+
+### Supported roles and source-backed meaning
+
+Reuse `web\src\components\ui\Badge.tsx` and its actual supported variants
+`info/success/warning/danger/neutral`; no new variant, token or component.
+At `web\src\features\ownership\components\VerdictBadge.tsx`, explicitly assign:
+
+| Normalized evidence/confidence-strength value | Exact Badge variant | Meaning, not outcome or health |
+| --- | --- | --- |
+| `strong` | `info` | Informational emphasis for stronger supporting evidence; not success, confirmed identity or a desirable recommendation. |
+| `moderate` | `neutral` | Intermediate evidence strength without an alarm; visible text preserves its distinction from unknown. |
+| `weak` | `warning` | Caution about reliance on limited separation/evidence; not danger, failed operation, unhealthy system or a negative verdict. |
+| `unknown` / unrecognized value / absent value | `neutral` | No known strength classification; never substitute weak, zero, failure or success. Preserve the distinct text rules below. |
+
+These are restrained existing roles, not a new ordinal color scale or confidence
+thresholds. Source reasons: `web\src\types\ownership.ts` defines
+`DriverAttributionReport.separation_verdict: string`, nullable separation score,
+separate numeric confidence, DataQuality and Evidence; it supplies no closed
+strength enum or numeric-to-strength conversion. The existing interpretation in
+`web\src\features\ownership\pages\DriverAttributionPage.tsx:794–813` and canonical
+`ownership.driver.verdict` copy describes strong as well-separated clusters,
+moderate as overlapping clusters needing more labels, and weak as indicative
+only. Thus info/neutral/warning communicates evidence and reliance, not
+positive/negative outcome. Its separate metric's positive/default/warning tones
+are not a Badge API or authority to equate strong with success.
+SubscriptionVerdict and its separate confidence also remain independent.
+Do not remap the original **38** VerdictBadge tone entries (including health,
+quality, trust and keep/review/cancel), general MDC-025 statuses, page metrics,
+numeric confidence, source freshness or backend classifications.
+
+### Exact bounded adoption and acceptance
+
+Resume only **`phase3-verdict-label-adoption`** after this decision is accepted
+and its source lease is released: only
+`web\src\features\ownership\components\VerdictBadge.tsx`, plus the explicitly
+reserved new adjacent `VerdictBadge.test.tsx` after verifying it remains absent.
+This is the existing narrow adoption, not a third generic verdict-badge retry.
+No Badge/shared primitive, ownership types, page, catalog, generator, token,
+scanner, backend or API-hook writes; no downstream caller prerequisite.
+
+Adopt the existing **41** `ownership.verdict.<value>` canonical short labels in
+`web\src\i18n\en.json` (matching generated `en\locale-ownership.json`), not the
+long interpretation prose. All 41 English labels exactly match the current
+lowercase/underscore-to-space display. Keep `value: string | null | undefined`,
+optional `label`, optional `dot`, default `dot=true` and category-barrel Badge
+reuse unchanged. Preserve `(value ?? '').toLowerCase()` without trimming or
+recasing unknown input beyond that existing rule. Explicit `label` wins via
+`??`, including the empty string. Recognized `unknown` shows its localized
+short label; null/undefined/empty value without override shows **`—`**; every
+unrecognized nonempty string remains its normalized underscore-to-space text,
+never relabeled "unknown", dropped or sent to an invented catalog key.
+Unknown inherited object names must not accidentally resolve as known values.
+The decorative dot remains hidden from assistive technology; preserve native
+span semantics, wrapping and Badge forced-colors behavior, without new live
+announcements, controls, tooltips or status claims.
+
+Use an exhaustive typed local mapping for all 41 known labels/tones constrained
+to actual Badge variant types; safe own-key recognition keeps arbitrary public
+strings valid. No `any`, unsafe cast to a closed backend enum or public API
+narrowing. Tests must verify all original38 tone/label pairs unchanged, the
+three exact strength assignments, all41 canonical English label parity and
+localized-label lookup, uppercase inputs, underscore fallback, unknown/new
+strings and inherited names, null/undefined/empty, explicit/custom/empty label,
+dot default/false and readable text independent of hue.
+Freeze original source SHA-256
+`98853bb9668e8cdc09083a3158962d97770becc568ebc3930d748a7fca699d3d`
+and retain original behavior assertions; do not regenerate preservation evidence
+or weaken tests. Run normal exact-scope tests, strict scoped lint, source and
+fixture typing/preservation and unchanged scanner, recording raw commands/exits
+and all remaining findings. QA separately checks long localized/RTL labels,
+200% text, narrow containers/mission widths, dark/light/custom/forced-colors
+and composed text contrast under MDC-040–043/060–070.
+
+This DOC-only item verifies prefix, read-only hashes, supported variants,
+canonical41 parity and decision scope in
+`.agent-status\receipts\phase3-verdict-strength-contract-checks.log`.
+It changes no source or data semantics and clears no implementation, scanner,
+browser/native/contrast or mission §§43–45 gate. Application TypeScript,
+tests/lint/build, docs build and runtime QA are **NOT RUN / NOT CLAIMED** here;
+no broad waiver or catalog/root extension is needed for this mapping.
