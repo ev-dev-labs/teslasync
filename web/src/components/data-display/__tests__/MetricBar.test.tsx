@@ -69,7 +69,7 @@ describe('MetricBar defaults and formatting', () => {
     expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
       initial: { width: 0 },
       animate: { width: '17%' },
-      transition: { duration: 1, ease: [0.16, 1, 0.3, 1] },
+      transition: { duration: 0.25, ease: [0.2, 0, 0, 1] },
       style: { background: 'linear-gradient(90deg, #22c55e99, #22c55e)' },
     }))
   })
@@ -94,6 +94,32 @@ describe('MetricBar defaults and formatting', () => {
       setGlobalLocale('de-DE')
     })
     expect(screen.getByText('42,500')).toBeInTheDocument()
+  })
+
+  it('keeps long RTL labels and caller readouts complete in a wrapping header', () => {
+    const label = 'استهلاك الطاقة'.repeat(12)
+    const sublabel = 'A caller-provided explanation with a long identifier '.repeat(8)
+    render(
+      <div dir="rtl">
+        <MetricBar value={12} max={24} color="var(--text-secondary)"
+          label={label} sublabel={sublabel} fill="solid" />
+      </div>,
+    )
+    const bar = screen.getByRole('progressbar', { name: label })
+    expect(bar).toHaveClass('min-w-0')
+    expect(bar.firstElementChild).toHaveClass('flex-wrap', 'gap-x-3', 'gap-y-1')
+    const labelNode = bar.firstElementChild?.firstElementChild
+    const readoutNode = bar.firstElementChild?.lastElementChild
+    expect(labelNode?.textContent).toBe(label)
+    expect(labelNode).toHaveClass('min-w-0', 'flex-1', 'break-words')
+    expect(readoutNode?.textContent).toBe(sublabel)
+    expect(readoutNode).toHaveClass('min-w-0', 'max-w-full', 'break-words', 'text-end')
+    expect(bar).toHaveAttribute('aria-valuenow', '12')
+    expect(bar).toHaveAttribute('aria-valuemax', '24')
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      animate: { width: '50%' },
+      style: { background: 'var(--text-secondary)' },
+    }))
   })
 })
 
@@ -137,6 +163,38 @@ describe('MetricBar compact passive presentation', () => {
     expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
       animate: { width: '50%' },
       style: { background: 'var(--text-secondary)' },
+    }))
+  })
+
+  it('preserves caller series color changes without reinterpreting the reading or scale', () => {
+    const { rerender } = render(
+      <MetricBar value={12} max={24} color="var(--theme-success)" label="Measured energy"
+        sublabel="12 Wh / 24 Wh" fill="solid" />,
+    )
+    rerender(
+      <MetricBar value={12} max={24} color="var(--theme-warning)" label="Measured energy"
+        sublabel="12 Wh / 24 Wh" fill="solid" />,
+    )
+    const bar = screen.getByRole('progressbar', { name: 'Measured energy' })
+    expect(bar).toHaveAttribute('aria-valuenow', '12')
+    expect(bar).toHaveAttribute('aria-valuemax', '24')
+    expect(screen.getByText('12 Wh / 24 Wh')).toBeInTheDocument()
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      animate: { width: '50%' },
+      style: { background: 'var(--theme-warning)' },
+    }))
+  })
+
+  it('retains forced-colors track boundaries and a system fill without altering caller colors', () => {
+    render(<MetricBar value={50} max={100} color="#22c55e" label="Power" />)
+    const track = screen.getByRole('progressbar', { name: 'Power' }).lastElementChild
+    expect(track).toHaveClass(
+      'forced-colors:outline-1', 'forced-colors:outline-[CanvasText]',
+      'forced-colors:!bg-[Canvas]', 'forced-colors:[forced-color-adjust:none]',
+    )
+    expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
+      className: expect.stringContaining('forced-colors:!bg-[Highlight]'),
+      style: { background: 'linear-gradient(90deg, #22c55e99, #22c55e)' },
     }))
   })
 })
@@ -222,7 +280,7 @@ describe('MetricBar motion preference', () => {
     expect(state.fill).toHaveBeenLastCalledWith(expect.objectContaining({
       initial: false,
       animate: { width: '60%' },
-      transition: { duration: 0, ease: [0.16, 1, 0.3, 1] },
+      transition: { duration: 0, ease: [0.2, 0, 0, 1] },
     }))
   })
 })

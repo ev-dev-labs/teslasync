@@ -46,7 +46,7 @@ export function MetricBar({
 }: MetricBarProps) {
   const { t } = useTranslation()
   const { fmtNumber } = useNumberFormatting()
-  const { reduce } = useMotionPreference()
+  const { reduce, durationMs } = useMotionPreference()
   const hasReading = typeof value === 'number' && Number.isFinite(value)
   const safeValue = hasReading ? value : 0
   const safeMax = Number.isFinite(max) && max > 0 ? max : 0
@@ -54,6 +54,7 @@ export function MetricBar({
   const boundedValue = safeMax > 0 ? Math.min(Math.max(safeValue, 0), safeMax) : 0
   return (
     <div
+      className="min-w-0"
       role="progressbar"
       aria-label={ariaLabel ?? label}
       aria-valuemin={0}
@@ -62,10 +63,10 @@ export function MetricBar({
       aria-valuetext={hasReading ? undefined : t('common.noReading', 'No reading')}
     >
       {showHeader && (label != null || showValue) && (
-        <div className="mb-2 flex items-center justify-between gap-3">
-          {label != null && <Text size="sm" weight="medium" color="secondary">{label}</Text>}
+        <div className="mb-2 flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+          {label != null && <Text size="sm" weight="medium" color="secondary" className="min-w-0 flex-1 break-words">{label}</Text>}
           {showValue && (
-            <Text mono size="sm" color="primary">
+            <Text mono size="sm" color="primary" className="min-w-0 max-w-full break-words text-end">
               {sublabel ?? (hasReading ? fmtNumber(safeValue) : '—')}
             </Text>
           )}
@@ -82,7 +83,7 @@ export function MetricBar({
             className="h-full rounded-pill forced-colors:!bg-[Highlight] forced-colors:!bg-none forced-colors:[forced-color-adjust:none]"
             initial={reduce ? false : { width: 0 }}
             animate={{ width: `${pct}%` }}
-            transition={{ duration: reduce ? 0 : 1, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
             style={{ background: fill === 'solid' ? color : `linear-gradient(90deg, ${color}99, ${color})` }}
           />
         )}
