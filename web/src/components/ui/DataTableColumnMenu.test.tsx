@@ -345,6 +345,54 @@ describe('DataTableColumnMenu — reset + empty hardening', () => {
     expect(onReset).toHaveBeenCalledTimes(1)
   })
 
+  describe('DataTableColumnMenu — restrained presentation preservation', () => {
+    it('keeps long RTL labels readable and native reorder actions tied to stable keys', () => {
+      const header = 'تفاصيل العمود الطويلة '.repeat(12)
+      const { onChange } = setup({
+        columns: [{ key: 'stable-name', header }, { key: 'status', header: 'Status' }],
+        layout: { order: ['status', 'stable-name'], hidden: ['status'] },
+      })
+      document.documentElement.dir = 'rtl'
+      try {
+        const menu = openMenu()
+        expect(menu).toHaveClass('end-0', 'shadow-e2')
+        const label = screen.getByText(header.trim(), { exact: false })
+        expect(label).toHaveClass('min-w-0', 'break-words')
+        expect(label).not.toHaveClass('truncate')
+        const up = screen.getByTestId('datatable-column-menu-up-stable-name')
+        expect(up.tagName).toBe('BUTTON')
+        expect(up).toHaveAttribute('type', 'button')
+        expect(up).toHaveAccessibleName(`Move ${header.trim()} up`)
+        expect(up).toHaveClass('h-11', 'w-11', 'md:h-6', 'md:w-6')
+        up.focus()
+        expect(up).toHaveFocus()
+        fireEvent.click(up)
+        expect(onChange).toHaveBeenCalledWith({
+          order: ['stable-name', 'status'],
+          hidden: ['status'],
+        })
+        expect(up).toHaveFocus()
+      } finally {
+        document.documentElement.removeAttribute('dir')
+      }
+    })
+
+    it('uses semantic focus and reduced-motion roles without changing trigger semantics', () => {
+      setup()
+      const trigger = screen.getByRole('button', { name: 'Reorder or hide columns' })
+      expect(trigger).toHaveAttribute('type', 'button')
+      expect(trigger).toHaveClass('motion-reduce:transition-none', 'duration-fast')
+      openMenu()
+      const buttons = screen.getAllByRole('button')
+      buttons.forEach(button => {
+        expect(button).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
+        expect(button).not.toHaveClass('focus-visible:ring-cyan-500')
+      })
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(screen.queryByTestId('datatable-column-menu')).toBeNull()
+    })
+  })
+
   it('renders an empty-state row instead of crashing when there are no columns', () => {
     setup({ columns: [] })
     openMenu()
