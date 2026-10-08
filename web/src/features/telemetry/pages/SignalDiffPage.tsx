@@ -267,19 +267,19 @@ export default function SignalDiffPage() {
       metricId: 'count', occurrenceId: key, rawValue: metricsUnavailable || diffResp == null ? null : raw,
       label: t(labelKey, label),
       description: key === 'changed'
-        ? t('telemetryBrief.diffAllRows', 'All returned changed rows before name and category filters.')
-        : t('telemetryBrief.diffFiltered', 'Returned changed rows after the current name and category filters; numeric changes retain the existing value coercion.'),
+        ? t('telemetry.brief.diffAllRows', 'All returned changed rows before name and category filters.')
+        : t('telemetry.brief.diffFiltered', 'Returned changed rows after the current name and category filters; numeric changes retain the existing value coercion.'),
     })),
     { metricId: 'count', occurrenceId: 'pinned', rawValue: pinnedQuery.data == null ? null : pinnedSignals.size,
       label: t('signalDiff.pinnedCount', 'Pinned'),
-      description: t('telemetryBrief.pinSource', 'Independent saved pins for this vehicle; not limited to visible diff rows.'),
+      description: t('telemetry.brief.pinSource', 'Independent saved pins for this vehicle; not limited to visible diff rows.'),
       context: pinnedState.refreshError || pinnedState.status === 'stale'
         ? t('operationalSummary.retained', 'Retained source data')
         : pinnedState.fatalError ? t('operationalSummary.unavailable', 'Source unavailable') : undefined },
     { metricId: 'duration', occurrenceId: 'window-span', rawValue: rawWindowSpan,
       label: t('signalDiff.windowSpan', 'Window span'),
       display: { formatter: () => ({ value: windowSpanLabel, unit: '' }) },
-      description: t('telemetryBrief.diffWindow', 'Absolute time between the two snapshot inputs; not a sample coverage duration.'),
+      description: t('telemetry.brief.diffWindow', 'Absolute time between the two snapshot inputs; not a sample coverage duration.'),
       context: `${atAIso || '—'} → ${atBIso || '—'}` },
   ];
 
@@ -331,8 +331,8 @@ export default function SignalDiffPage() {
           retained={diffResp != null && (diffState.isRefreshing || diffState.status === 'stale' || diffState.refreshError != null)}
           statusLabel={initialLoading ? t('operationalSummary.loading', 'Loading sources') : undefined}
           scope={`${atAIso || '—'} → ${atBIso || '—'}`}
-          provenance={t('telemetryBrief.diffProvenance', 'Server snapshot diff; independent saved-pin query and local snapshot inputs')}
-          description={t('telemetryBrief.diffScope', 'Changed-row counts describe the returned comparison. Filtered counts, saved pins, and the snapshot input span have independent scopes.')} />
+          provenance={t('telemetry.brief.diffProvenance', 'Server snapshot diff; independent saved-pin query and local snapshot inputs')}
+          description={t('telemetry.brief.diffScope', 'Changed-row counts describe the returned comparison. Filtered counts, saved pins, and the snapshot input span have independent scopes.')} />
       </FadeIn>
 
       {/* 3 — Change analysis bento: category + source-layer + pinned breakdowns */}
