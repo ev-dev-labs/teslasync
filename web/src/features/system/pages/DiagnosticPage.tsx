@@ -317,10 +317,10 @@ function StatusSummary({ summary, generatedAt, retained }: { summary: Diagnostic
         { metricId: 'count', occurrenceId: 'warnings', rawValue: summary.warn, label: t('diagnostic.summary.warnings', 'Warnings') },
         { metricId: 'count', occurrenceId: 'failures', rawValue: summary.fail, label: t('diagnostic.summary.failures', 'Failures') },
         { metricId: 'latency', occurrenceId: 'total-time', rawValue: summary.totalMs / 1000, label: t('diagnostic.summary.totalTime', 'Total time'),
-          display: { formatter: (raw) => ({ value: formatMs(raw * 1000) }) } },
+          display: { formatter: (raw) => ({ value: formatMs(raw * 1000), unit: '' }) } },
         { metricId: 'latency', occurrenceId: 'slowest', rawValue: summary.slowest?.duration_ms != null ? summary.slowest.duration_ms / 1000 : null,
           label: t('diagnostic.summary.slowest', 'Slowest check'), context: summary.slowest?.name,
-          display: { formatter: (raw) => ({ value: formatMs(raw * 1000) }) } },
+          display: { formatter: (raw) => ({ value: formatMs(raw * 1000), unit: '' }) } },
       ]}
     />
   );
