@@ -27,7 +27,7 @@
  * web/package.json).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import './operationalbrief-all/metricPreferencesTestSetup';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn> via useReducedMotion) reads
@@ -298,5 +298,59 @@ describe('LiveSignalTail — optional slots + resilience', () => {
 
     expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
     expect(statCard('Buffer size').getByText('0')).toBeInTheDocument();
+  });
+});
+
+describe('LiveSignalTail — mobile full-row presentation', () => {
+  it('retains paused raw readings, all detail fields and unknown freshness in a narrow host', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const name = 'VehicleSpeedTelemetrySignal'.repeat(4);
+      const value = '0 m/s; producer=FleetTelemetry; sample='.repeat(6);
+      const { container, onPauseToggle, onClear } = renderTail({
+        entries: [makeEntry({ name, value, timestamp: '' })],
+        paused: true,
+        title: 'Live Signal Tail',
+        headerExtra: <span data-testid="mobile-connection">Transport evidence</span>,
+      });
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(container.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      expect(screen.getByTestId('mobile-connection')).toHaveTextContent('Transport evidence');
+      expect(screen.getByText('Tail paused')).toBeInTheDocument();
+      expect(statCard('Buffer size').getByText('1')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      const detail = within(screen.getByRole('dialog', { name: 'telemetry:live-signal-tail' }));
+      for (const label of ['Time', 'Signal', 'Value', 'Type', 'Freshness']) {
+        expect(detail.getByText(label)).toBeInTheDocument();
+      }
+      expect(detail.getByText(name)).toHaveTextContent(name);
+      expect(detail.getByText(value)).toHaveTextContent(value);
+      expect(detail.getByText('number')).toBeInTheDocument();
+      expect(detail.getByRole('img', { name: 'No recent data' })).toBeInTheDocument();
+      fireEvent.click(detail.getByLabelText('Close', { selector: 'button' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+      expect(onPauseToggle).toHaveBeenCalledTimes(1);
+      expect(onClear).toHaveBeenCalledTimes(1);
+      const autoScroll = screen.getByRole('button', { name: 'Auto-scroll' });
+      expect(autoScroll).toHaveClass('min-h-11', 'md:min-h-0');
+      fireEvent.click(autoScroll);
+      expect(autoScroll).toHaveAttribute('aria-pressed', 'false');
+      fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'no-match' } });
+      expect(screen.getByText('No signals match filter')).toBeInTheDocument();
+      expect(statCard('Filtered').getByText('0')).toBeInTheDocument();
+      expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
