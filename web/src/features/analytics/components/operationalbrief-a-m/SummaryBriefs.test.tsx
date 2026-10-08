@@ -195,7 +195,7 @@ describe('real analytics summary OperationalBrief contracts', () => {
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(count);
     expect(screen.getByText('Retained evidence')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-value-state="value"]')).toHaveLength(count);
-    if (mode === 'funfacts') expect(screen.getByText('250.00 %')).toBeInTheDocument();
+    if (mode === 'funfacts') expect(screen.getByText('250.00%')).toBeInTheDocument();
     if (mode === 'activity') {
       expect(screen.getByText('0:00')).toBeInTheDocument();
       expect(screen.getByText('88.40')).toBeInTheDocument();
@@ -203,6 +203,13 @@ describe('real analytics summary OperationalBrief contracts', () => {
     }
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+    if (mode === 'funfacts') {
+      const details = within(screen.getByRole('dialog'));
+      expect(details.getByText('250.00%')).toBeInTheDocument();
+      expect(details.getByText('3.20%')).toBeInTheDocument();
+      expect(details.getByText('All time')).toBeInTheDocument();
+      expect(details.getAllByText('Percentage input is already on the 0–100 scale.')).toHaveLength(2);
+    }
     if (mode === 'activity') expect(within(screen.getByRole('dialog'))
       .getByText('Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers.'))
       .toBeInTheDocument();
