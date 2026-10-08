@@ -35231,5 +35231,11 @@
       "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "returned": "Returned evidence"
     }
+  },
+  "resourcesPanel": {
+    "emptyText": "No resource metrics available",
+    "healthyWorkersBarLabel": "{{label}} health",
+    "title": "Resources",
+    "utilizationBarLabel": "{{label}} usage"
   }
 }

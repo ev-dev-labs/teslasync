@@ -632,7 +632,8 @@
     "quickActions": "settings",
     "summaryBrief": "settings",
     "segments": "driving",
-    "driving": "driving"
+    "driving": "driving",
+    "resourcesPanel": "unreferenced"
   },
   "bundles": {
     "shell": [
@@ -985,6 +986,7 @@
       "privacy",
       "queryError",
       "records",
+      "resourcesPanel",
       "saved",
       "selectSession",
       "sessions",
@@ -3074,6 +3076,7 @@
     "privacy",
     "queryError",
     "records",
+    "resourcesPanel",
     "saved",
     "selectSession",
     "sessions",
@@ -3723,7 +3726,8 @@
     "quickActions": "settings",
     "summaryBrief": "settings",
     "segments": "driving",
-    "driving": "driving"
+    "driving": "driving",
+    "resourcesPanel": "unreferenced"
   },
   "featureRequiredKeys": {
     "explore": [

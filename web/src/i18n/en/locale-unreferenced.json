@@ -343,6 +343,12 @@
     "retryWhenOnline": "Retry when online"
   },
   "records": "records",
+  "resourcesPanel": {
+    "emptyText": "No resource metrics available",
+    "healthyWorkersBarLabel": "{{label}} health",
+    "title": "Resources",
+    "utilizationBarLabel": "{{label}} usage"
+  },
   "saved": "saved",
   "selectSession": "Select charging session",
   "sessions": "sessions",
