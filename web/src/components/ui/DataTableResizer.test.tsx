@@ -143,6 +143,21 @@ describe('DataTableResizer — accessibility & rendering', () => {
     expect(handle).toHaveAttribute('aria-valuemin', '80')
     expect(handle).toHaveAttribute('aria-valuemax', '400')
   })
+
+  it('keeps a narrow theme-aware divider inside a reachable pointer target', () => {
+    render(<DataTableResizer columnKey="price" width={120} onResize={() => {}} />)
+    const handle = getHandle()
+    expect(handle).toHaveClass('w-11', 'min-h-11', 'md:w-6', 'md:min-h-6', 'touch-none')
+    expect(handle).toHaveClass('after:w-0.5', 'after:bg-[var(--text-secondary)]')
+    expect(handle).toHaveClass(
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'motion-reduce:transition-none',
+      'forced-colors:focus-visible:outline-[Highlight]',
+      'forced-colors:after:bg-[CanvasText]',
+    )
+  })
 })
 
 describe('DataTableResizer — pointer drag', () => {
@@ -246,17 +261,16 @@ describe('DataTableResizer — pointer drag', () => {
   it('applies the active drag styling only while a drag is in progress', () => {
     render(<DataTableResizer columnKey="price" width={120} onResize={() => {}} />)
     const handle = getHandle()
-    // classList.contains does exact-token matching, so it ignores the
-    // always-present `focus-visible:bg-cyan-400/60` variant token.
-    expect(handle.classList.contains('bg-cyan-400/60')).toBe(false)
-    expect(handle.classList.contains('opacity-0')).toBe(true)
+    // Exact-token matching excludes hover/focus variants on the divider.
+    expect(handle.classList.contains('after:opacity-100')).toBe(false)
+    expect(handle.classList.contains('after:opacity-0')).toBe(true)
 
     fireEvent.pointerDown(handle, { clientX: 100, pointerId: 1 })
-    expect(handle.classList.contains('bg-cyan-400/60')).toBe(true)
-    expect(handle.classList.contains('opacity-0')).toBe(false)
+    expect(handle.classList.contains('after:opacity-100')).toBe(true)
+    expect(handle.classList.contains('after:opacity-0')).toBe(false)
 
     fireEvent.pointerUp(handle, { clientX: 100, pointerId: 1 })
-    expect(handle.classList.contains('bg-cyan-400/60')).toBe(false)
+    expect(handle.classList.contains('after:opacity-100')).toBe(false)
   })
 
   it('updates aria-valuenow through a controlled parent and reports the final width', () => {
