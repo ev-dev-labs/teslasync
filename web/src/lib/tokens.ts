@@ -392,11 +392,10 @@ export const chartTokens = {
   /** Secondary text color inside Recharts tooltip (label key, units). */
   tooltipMutedText: 'var(--text-secondary)',
   /**
-   * Series palette for multi-line/area charts. Color-blind safe (Okabe-Ito-
-   * inspired) and identical across themes — chart series should "pop" against
-   * either light or dark backgrounds.
+   * Restrained series in the existing blue/green/amber/rose/purple/cyan/pink/
+   * lime order. The existing root color-scheme selects the presentation pair.
    */
-  series: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'] as const,
+  series: ['light-dark(#385e7e, #91b4d2)', 'light-dark(#38614f, #91b9a5)', 'light-dark(#745829, #cfb481)', 'light-dark(#83464e, #d6a0a5)', 'light-dark(#625077, #b5a8c9)', 'light-dark(#3f6268, #91bbc0)', 'light-dark(#785568, #c3a2b5)', 'light-dark(#586437, #acba91)'] as const,
   /**
    * Brush widget styling — used by `<ChartBrush>` to keep zoom-selection bars
    * consistent across pages. The fill is intentionally near-transparent so the

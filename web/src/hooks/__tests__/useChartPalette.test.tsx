@@ -4,6 +4,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 
+vi.mock('@/components/ui/ThemeProvider', () => ({
+  useTheme: () => ({
+    theme: { primary: '#00f0ff', accent: '#4f46e5' },
+    mode: { colorScheme: nextColorScheme },
+  }),
+}))
+let nextColorScheme: 'dark' | 'light' = 'dark'
+
 // Stub the API client so useSettings() resolves without network.
 let nextSettings: { chart_palette?: string } = {}
 vi.mock('@/api/client', () => ({
@@ -58,6 +66,7 @@ describe('CHART_PALETTES', () => {
 describe('useChartPalette (hook)', () => {
   beforeEach(() => {
     nextSettings = {}
+    nextColorScheme = 'dark'
   })
 
   it('returns CB-safe palette by default when settings have not loaded', () => {
@@ -99,5 +108,21 @@ describe('useChartPalette (hook)', () => {
       expect(result.current.length).toBeGreaterThanOrEqual(6)
       result.current.forEach((c) => expect(c).toMatch(/^#[0-9a-f]{6}$/i))
     })
+  })
+
+  it('adapts a saved neon choice to light mode without changing its ID or order', async () => {
+    nextSettings = { chart_palette: 'neon' }
+    const { result, rerender } = renderHook(() => useChartPalette(), { wrapper: wrap() })
+    await waitFor(() => expect(result.current).toBe(CHART_COLORS_NEON))
+    nextColorScheme = 'light'
+    rerender()
+    expect(result.current).not.toEqual(CHART_COLORS_NEON)
+    expect(result.current).toHaveLength(8)
+    expect(new Set(result.current).size).toBe(8)
+    result.current.forEach(color => expect(color).toMatch(/^#[0-9a-f]{6}$/i))
+    expect(nextSettings.chart_palette).toBe('neon')
+    nextColorScheme = 'dark'
+    rerender()
+    expect(result.current).toBe(CHART_COLORS_NEON)
   })
 })
