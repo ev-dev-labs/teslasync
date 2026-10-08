@@ -55,22 +55,22 @@ export function LiveMonitorKpiBand({
     { metricId: 'status', occurrenceId: 'connection',
       rawValue: connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected'),
       label: t('liveMonitor.connection', 'Connection'),
-      description: t('telemetryBrief.sseConnection', 'SSE transport connection only; not a vehicle-health or signal-freshness verdict.') },
+      description: t('liveMonitor.brief.sseConnection', 'SSE transport connection only; not a vehicle-health or signal-freshness verdict.') },
     { metricId: 'rate', occurrenceId: 'rate', rawValue: rate,
       label: t('liveMonitor.sigPerSec', 'Signals / sec'), display: countDisplay,
-      description: t('telemetryBrief.sseRate', 'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.') },
+      description: t('liveMonitor.brief.sseRate', 'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.') },
     { metricId: 'count', occurrenceId: 'buffer', rawValue: bufferCount,
       label: t('liveMonitor.bufferSize', 'Buffer size'), display: countDisplay,
       description: `/ ${fmtInt(safeMax)} · ${fmtPercent(fillPct)}` },
     { metricId: 'count', occurrenceId: 'unique', rawValue: uniqueSignals,
       label: t('liveMonitor.uniqueSignals', 'Unique signals'), display: countDisplay,
-      description: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
+      description: t('liveMonitor.brief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
     { metricId: 'count', occurrenceId: 'numeric', rawValue: numericCount,
       label: t('liveMonitor.numeric', 'Numeric'), display: countDisplay,
-      description: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
+      description: t('liveMonitor.brief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
     { metricId: 'count', occurrenceId: 'categorical', rawValue: categoricalCount,
       label: t('liveMonitor.categorical', 'Categorical'), display: countDisplay,
-      description: t('telemetryBrief.categorical', 'Boolean and string entries in the current buffer; not distinct catalog fields.') },
+      description: t('liveMonitor.brief.categorical', 'Boolean and string entries in the current buffer; not distinct catalog fields.') },
   ];
 
   return (
@@ -79,9 +79,9 @@ export function LiveMonitorKpiBand({
         metrics={metrics} testId="live-monitor-summary"
         statusLabel={connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
         retained={!connected && safeBufferCount > 0}
-        scope={scope ?? t('telemetryBrief.sseScope', 'Current SSE session · bounded tail buffer')}
-        provenance={t('telemetryBrief.sseProvenance', 'Client SSE tail and locally sampled throughput')}
-        description={t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.')} />
+        scope={scope ?? t('liveMonitor.brief.sseScope', 'Current SSE session · bounded tail buffer')}
+        provenance={t('liveMonitor.brief.sseProvenance', 'Client SSE tail and locally sampled throughput')}
+        description={t('liveMonitor.brief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.')} />
     </div>
   );
 }
