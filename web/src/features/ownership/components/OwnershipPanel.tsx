@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { DataStateSource } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { LayoutCard, SourceContent } from '@/components/layout';
+import { Icon } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 
 interface OwnershipPanelProps {
@@ -37,17 +38,26 @@ export function OwnershipPanel({
   const { t } = useTranslation();
   const dataState = useDataState(source ?? {});
   const message = emptyMessage ?? t('ownership.source.empty', 'No supported data is available yet.');
+  const independentEditor = editing && !dataState.hasData;
+  const retainedMessage = dataState.refreshError
+    ? t('dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')
+    : dataState.isRefreshBlocked
+      ? dataState.hasData
+        ? t('shareCard.states.cachedPaused', 'Cached evidence remains visible while its refresh is paused.')
+        : t('shareCard.states.paused', 'The initial query is paused while the network is unavailable; no empty response is inferred.')
+      : undefined;
   const state = !source || !sourceEnabled
     ? empty ? 'empty' : 'ready'
     // An unsaved editor does not depend on the register's first successful read.
-    : editing && !dataState.hasData ? 'ready'
+    : independentEditor ? 'ready'
       : dataState.fatalError ? 'error'
-      : !dataState.hasData && source.isLoading ? 'loading'
+      : dataState.isRefreshBlocked ? 'retained'
+        : !dataState.hasData ? 'loading'
         : dataState.status === 'stale' ? 'retained'
           : empty && !editing ? 'empty' : 'ready';
   const emptyContent = <>
     <EmptyState /* no-action: callers own domain prerequisites; source retry is supplied separately. */
-      icon={<Info className="h-6 w-6" aria-hidden="true" />} message={message} />
+      icon={<Icon icon={Info} size="xl" />} message={message} />
     {preserveSummary && children}
   </>;
   const content = (
@@ -57,11 +67,14 @@ export function OwnershipPanel({
       emptyMessage={message}
       errorMessage={t('ownership.source.error', 'This source could not be loaded.')}
       error={dataState.fatalError}
-      errorRecovery={dataState.retry ? { onRetry: dataState.retry } : undefined}
+      errorRecovery={!independentEditor && dataState.retry ? { onRetry: dataState.retry } : undefined}
+      retainedMessage={retainedMessage}
       emptyContent={emptyContent}
       loadingContent={preserveSummary ? children : undefined}
     >
-      {empty && !editing ? emptyContent : children}
+      {source && sourceEnabled && !dataState.hasData && !editing
+        ? preserveSummary ? children : null
+        : empty && !editing ? emptyContent : children}
     </SourceContent>
   );
   return (
