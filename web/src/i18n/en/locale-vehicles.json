@@ -2392,6 +2392,13 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "carbon": {
+    "source": {
+      "status": {
+        "paused": "Paused"
+      }
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -2455,6 +2462,15 @@
       "description": "Ask Helix to explain the deterministic charging-cost forecast — the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.",
       "generateButton": "Narrate forecast",
       "title": "Narrate the charging-cost forecast"
+    }
+  },
+  "dashboard": {
+    "fleetPosture": {
+      "scope": {
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
     }
   },
   "dataRepair": {
@@ -3643,6 +3659,7 @@
       "range": "Range"
     },
     "locked": "Locked",
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
     "photo": {
       "alt": "{{name}} photo"
     },
