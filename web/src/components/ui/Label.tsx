@@ -23,11 +23,12 @@
  * label. Import this Label directly from `@/components/ui/Label`.
  */
 
-import { type LabelHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type LabelHTMLAttributes, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { VisuallyHidden } from '@/components/a11y';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
   /**
@@ -39,20 +40,20 @@ export interface LabelProps extends LabelHTMLAttributes<HTMLLabelElement> {
   children?: ReactNode;
 }
 
-export function Label({
+export const Label = forwardRef<HTMLLabelElement, LabelProps>(function Label({
   required,
   children,
   className,
   ...rest
-}: LabelProps) {
+}, ref) {
   const { t } = useTranslation();
   return (
-    <label className={cn(className)} {...rest}>
+    <label ref={ref} className={cn(typography.role.label, 'break-words', className)} {...rest}>
       {children}
       {required ? (
         <>
           {' '}
-          <span aria-hidden="true" className="text-rose-300">
+          <span aria-hidden="true" className="text-[var(--semantic-danger)]">
             *
           </span>
           <VisuallyHidden>{` ${t('form.required', 'required')}`}</VisuallyHidden>
@@ -60,6 +61,6 @@ export function Label({
       ) : null}
     </label>
   );
-}
+});
 
 Label.displayName = 'Label';
