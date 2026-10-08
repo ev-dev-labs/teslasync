@@ -310,14 +310,15 @@ describe('DataExportPage — Project Apex elevation', () => {
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('4.77 MB')).toBeInTheDocument();
     expect(within(drawer).getByText('By count')).toBeInTheDocument();
-    expect(within(drawer).getByText('Loaded export jobs; no server-wide total or reporting window is supplied.')).toBeInTheDocument();
+    expect(drawer.querySelector('[data-drawer-header]')).toHaveTextContent('Loaded export jobs; no server-wide total or reporting window is supplied.');
   });
 
   it('keeps all four export metrics and creation/download controls after a failed background refresh', async () => {
     renderPage();
     await waitFor(() => expect(metricCard('Total exports')).toHaveAttribute('data-value-state', 'value'));
     jobsError = new Error('background export refresh failed');
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    const history = screen.getByRole('region', { name: 'Export history' });
+    fireEvent.click(within(history).getByRole('button', { name: 'Refresh' }));
     await screen.findByTestId('stale-refresh-warning');
     const summary = screen.getByRole('region', { name: 'Export summary metrics' });
     expect(within(summary).getByText('Retained source')).toBeInTheDocument();
@@ -488,9 +489,12 @@ describe('DataExportPage — Project Apex elevation', () => {
 
     // Unknown format is upper-cased defensively; missing format still lets the
     // row render (asserted via its unique record count).
-    expect(await screen.findByText('XML')).toBeInTheDocument();
-    expect(screen.getByText('777')).toBeInTheDocument();
-    expect(screen.getByText('888')).toBeInTheDocument();
+    const table = await screen.findByRole('table');
+    const xmlJob = within(table).getByRole('row', { name: /Drives/ });
+    const missingFormatJob = within(table).getByRole('row', { name: /Charging/ });
+    expect(within(xmlJob).getByText('XML')).toBeInTheDocument();
+    expect(within(xmlJob).getByText('777')).toBeInTheDocument();
+    expect(within(missingFormatJob).getByText('888')).toBeInTheDocument();
   });
 
   it('gates the scheduled-exports section behind auth mode (open mode → placeholder)', async () => {
