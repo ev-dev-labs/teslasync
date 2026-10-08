@@ -15,7 +15,11 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import { formatRelative } from '@/lib/dateFormat'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { ErrorDisplay } from '@/components/feedback/ErrorDisplay'
+import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning'
+import { useDataState } from '@/hooks/useDataState'
+import { typography } from '@/lib/tokens'
 import { useBulkMarkRead, useUnreadNotifications, useAlertRules } from '@/api/hooks/useNotifications'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import type { AlertRule } from '@/api/types'
@@ -29,9 +33,9 @@ type Severity = 'info' | 'warn' | 'critical'
 const NotificationSeverityFilter = lazy(() => import('./NotificationSeverityFilter'))
 
 const SEVERITY_TONE: Record<Severity, { dot: string; ring: string; label: string }> = {
-  info: { dot: 'bg-sky-400', ring: 'ring-sky-400/30', label: 'Info' },
-  warn: { dot: 'bg-amber-400', ring: 'ring-amber-400/30', label: 'Warning' },
-  critical: { dot: 'bg-rose-500', ring: 'ring-rose-400/40', label: 'Critical' },
+  info: { dot: 'bg-[var(--semantic-info)]', ring: 'ring-[var(--semantic-info-border)]', label: 'Info' },
+  warn: { dot: 'bg-[var(--semantic-warning)]', ring: 'ring-[var(--semantic-warning-border)]', label: 'Warning' },
+  critical: { dot: 'bg-[var(--semantic-danger)]', ring: 'ring-[var(--semantic-danger-border)]', label: 'Critical' },
 }
 
 function severityOf(rule?: AlertRule): Severity {
@@ -62,11 +66,10 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
     const { t } = useTranslation()
     const dialogRef = useRef<HTMLDivElement | null>(null)
 
-    const {
-      data: logs = [],
-      isLoading,
-      error,
-    } = useUnreadNotifications({ limit: PREVIEW_LIMIT })
+    const unreadQuery = useUnreadNotifications({ limit: PREVIEW_LIMIT })
+    const unreadState = useDataState(unreadQuery)
+    const logs = unreadState.data ?? []
+    const error = unreadState.fatalError
     const { data: rules = [] } = useAlertRules()
     const { data: vehicles = [] } = useVehicles()
     const bulkMarkRead = useBulkMarkRead()
@@ -175,7 +178,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
     }
 
     const hasLogs = logs.length > 0
-    const showSpinner = isLoading && !hasLogs
+    const showSpinner = unreadQuery.isLoading && !unreadState.hasData
 
     return (
       // role="dialog" with onKeyDown is the WAI-ARIA pattern for a
@@ -194,14 +197,14 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
         tabIndex={-1}
         onKeyDown={onKeyDown}
         style={positionStyle}
-        className="z-[80] flex max-h-[calc(100vh-6rem)] flex-col overflow-hidden rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] shadow-2xl forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
+        className="z-shell-panel flex max-h-notification-panel flex-col overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] shadow-e2 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
       >
-        <header className="flex items-center justify-between gap-3 border-b border-[var(--glass-border)] px-4 py-3">
-          <div className="flex flex-col">
-            <h2 id={headingId} className="text-sm font-semibold text-[var(--text-primary)]">
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border-default)] px-4 py-3">
+          <div className="flex min-w-0 flex-col break-words">
+            <h2 id={headingId} className={cn(typography.role.body, typography.weight.semibold)}>
               {t('notifications.bellPopover.title', 'Notifications')}
             </h2>
-            <p className="text-xs text-[var(--text-muted)]">
+            <p className={typography.role.caption}>
               {unreadBadgeCount > 0
                 ? t('notifications.bellPopover.unreadCount', '{{count}} unread', {
                     count: unreadBadgeCount,
@@ -215,7 +218,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
             size="sm"
             onClick={onClose}
             aria-label={t('common.close', 'Close')}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            className="h-11 w-11 shrink-0 p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
           >
             <Icons.close className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -235,9 +238,17 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          <StaleRefreshWarning state={unreadState} />
+          {bulkMarkRead.error && (
+            <ErrorDisplay
+              compact
+              error={bulkMarkRead.error}
+              message={t('toast.notifications.markRead.error', 'Failed to mark as read')}
+            />
+          )}
           {showSpinner && (
             <div
-              className="flex items-center justify-center py-8 text-xs text-[var(--text-muted)]"
+              className={cn('flex items-center justify-center py-8', typography.role.caption)}
               role="status"
               aria-live="polite"
             >
@@ -247,7 +258,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
 
           {!showSpinner && error && (
             <div
-              className="flex flex-col items-center gap-1 py-8 px-4 text-center text-xs text-rose-300"
+              className={cn('flex flex-col items-center gap-1 py-8 px-4 text-center', typography.role.error)}
               role="alert"
             >
               <Icons.warning className="h-5 w-5" aria-hidden="true" />
@@ -260,13 +271,13 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
           {!showSpinner && !error && !hasLogs && (
             <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
               <Icons.notifications
-                className="h-8 w-8 text-[var(--text-muted)] opacity-60"
+                className="h-8 w-8 text-[var(--text-muted)]"
                 aria-hidden="true"
               />
-              <p className="text-sm font-medium text-[var(--text-primary)]">
+              <p className={cn(typography.role.body, typography.weight.medium)}>
                 {t('notifications.bellPopover.emptyTitle', "You're all caught up")}
               </p>
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className={typography.role.caption}>
                 {t(
                   'notifications.bellPopover.emptyMessage',
                   'No unread notifications right now.',
@@ -277,7 +288,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
 
           {!showSpinner && !error && hasLogs && visibleLogs.length === 0 && (
             <div
-              className="flex flex-col items-center gap-1 px-4 py-8 text-center text-xs text-[var(--text-muted)]"
+              className={cn('flex flex-col items-center gap-1 px-4 py-8 text-center', typography.role.caption)}
               role="status"
             >
               {t('notifications.bellPopover.emptyFiltered', 'No matches in this preview. Open the inbox for older notifications.')}
@@ -285,7 +296,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
           )}
 
           {!showSpinner && !error && visibleLogs.length > 0 && (
-            <ul className="divide-y divide-white/[0.04]" data-testid="bell-popover-list">
+            <ul className="divide-y divide-[var(--border-subtle)]" data-testid="bell-popover-list">
               {visibleLogs.map((log) => {
                 const rule = log.alert_id != null ? ruleMap[log.alert_id] : undefined
                 const vehicle =
@@ -299,7 +310,7 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                       variant="ghost"
                       size="sm"
                       onClick={() => onNavigate('/notifications/inbox')}
-                      className="group flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-500"
+                      className="group flex h-auto min-h-11 w-full items-start gap-3 px-4 py-3 text-start hover:bg-[var(--control-bg-hover)] focus-visible:bg-[var(--control-bg-hover)] focus-visible:-outline-offset-2"
                     >
                       <span
                         aria-label={tone.label}
@@ -311,21 +322,21 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                       />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="flex items-baseline gap-2">
-                          <span className="truncate text-sm font-medium text-[var(--text-primary)]">
+                          <span className={cn('min-w-0 break-words', typography.role.body, typography.weight.medium)}>
                             {log.title || rule?.name || t('notifications.bellPopover.untitled', 'Notification')}
                           </span>
                         </span>
                         {log.message && (
-                          <span className="mt-0.5 line-clamp-1 text-xs text-[var(--text-secondary)]">
+                          <span className={cn('mt-0.5 break-words', typography.size.xs, typography.color.secondary)}>
                             {log.message}
                           </span>
                         )}
-                        <span className="mt-1 flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                        <span className={cn('mt-1 flex flex-wrap items-center gap-1.5', typography.role.caption)}>
                           <span>{formatRelative(log.created_at)}</span>
                           {vehicle && (
                             <>
                               <span aria-hidden="true">·</span>
-                              <span className="truncate">
+                              <span className="min-w-0 break-words">
                                 {vehicle.display_name || `#${vehicle.id}`}
                               </span>
                             </>
@@ -340,14 +351,15 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
           )}
         </div>
 
-        <footer className="flex items-center justify-between gap-2 border-t border-[var(--glass-border)] bg-[var(--surface-2)] px-3 py-2">
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleMarkAllRead}
             disabled={!hasLogs || bulkMarkRead.isPending}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+            wrapLabel
+            className={cn('min-h-11 gap-1.5 px-2 py-1 hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)] md:min-h-9', typography.size.xs, typography.weight.medium, typography.color.secondary)}
           >
             <Icons.confirm className="h-3.5 w-3.5" aria-hidden="true" />
             <span>
@@ -363,7 +375,8 @@ const NotificationBellPanel = forwardRef<HTMLDivElement, NotificationBellPanelPr
                 ? '/notifications/inbox'
                 : `/notifications/inbox?severity=${severityFilter}&read=unread`,
             )}
-            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold text-cyan-300 hover:bg-white/[0.06] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+            wrapLabel
+            className={cn('min-h-11 gap-1 px-2 py-1 hover:bg-[var(--control-bg-hover)] md:min-h-9', typography.size.xs, typography.weight.medium, typography.color.primary)}
           >
             <span>
               {severityFilter === 'all'
