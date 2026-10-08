@@ -37,6 +37,24 @@ describe('BulkActionsToolbar — viewport containment', () => {
     vi.unstubAllGlobals();
   });
 
+  it('keeps long labels, disabled reasons and Clear in the wrapping mobile action rail', () => {
+    const label = 'Export only the selected loaded records with their complete metadata';
+    const reason = 'Read-only access prevents changing the selected loaded records.';
+    renderToolbar({
+      actions: [
+        { id: 'export', label, onClick: vi.fn().mockResolvedValue(undefined) },
+        { id: 'delete', label: 'Delete selected', disabled: true, disabledReason: reason, onClick: vi.fn() },
+      ],
+    });
+    const action = screen.getByRole('button', { name: label });
+    expect(action).toBeVisible();
+    expect(action).toHaveClass('min-h-11', 'whitespace-normal');
+    expect(action.parentElement).toHaveClass('w-full', 'min-w-0', 'md:w-auto');
+    expect(action.parentElement?.parentElement).toHaveClass('flex-wrap', 'w-full');
+    expect(screen.getByRole('button', { name: 'Delete selected' })).toHaveAccessibleDescription(reason);
+    expect(screen.getByRole('button', { name: /clear/i })).toHaveClass('w-full', 'min-h-11');
+  });
+
   it('keeps oversized actions in flow and restores sticky positioning when they fit', () => {
     let height = window.innerHeight + 20;
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
@@ -158,6 +176,20 @@ describe('BulkActionsToolbar — actions', () => {
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
+  it('clears once on toolbar Escape without changing focus or consuming other keys', () => {
+    const onClear = vi.fn();
+    renderToolbar({ onClear });
+    const button = screen.getByRole('button', { name: /clear/i });
+    button.focus();
+    fireEvent.keyDown(button, { key: 'Enter' });
+    expect(onClear).not.toHaveBeenCalled();
+    fireEvent.keyDown(button, { key: 'Escape' });
+    expect(onClear).toHaveBeenCalledOnce();
+    expect(button).toHaveFocus();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClear).toHaveBeenCalledOnce();
+  });
+
   it('marks a disabled action as disabled and never invokes its onClick', () => {
     const onClick = vi.fn().mockResolvedValue(undefined);
     renderToolbar({
@@ -173,6 +205,15 @@ describe('BulkActionsToolbar — actions', () => {
 });
 
 describe('BulkActionsToolbar — caller-described selection', () => {
+  it('keeps a caller-measured zero denominator distinct from unknown', () => {
+    renderToolbar({
+      selectedIds: ['row-0'],
+      total: 0,
+      itemNoun: { one: 'drive', other: 'drives' },
+    });
+    expect(screen.getByRole('region')).toHaveTextContent('of 0');
+  });
+
   it.each([
     ['loaded', '2 of 8 loaded notifications selected'],
     ['filtered', '2 of 6 filtered automations selected'],
@@ -412,6 +453,22 @@ describe('BulkActionsToolbar — confirm routing', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('gives confirmation Escape precedence over clearing and restores trigger focus', async () => {
+    const onClear = vi.fn();
+    const onClick = vi.fn().mockResolvedValue(undefined);
+    renderToolbar({ onClear, actions: [confirmAction(onClick)] });
+    const trigger = screen.getByRole('button', { name: 'Delete selected' });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(onClear).not.toHaveBeenCalled();
+    expect(onClick).not.toHaveBeenCalled();
+    expect(screen.getByRole('region')).toHaveTextContent('3 selected');
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
 
   it('preserves confirmation and per-action pending semantics with an explicit scoped summary', async () => {

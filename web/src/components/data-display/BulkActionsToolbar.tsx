@@ -21,7 +21,7 @@ import { cn } from '@/lib/cn';
  * returns a `Promise` from `onClick`.
  *
  * Keyboard:
- *   `Escape` clears the selection (handled by the consumer).
+ *   `Escape` within the toolbar clears selection; open dialogs take precedence.
  *
  * The toolbar renders nothing when `selectedIds.length === 0` so consumers
  * can always mount it unconditionally.
@@ -71,7 +71,7 @@ export interface BulkActionsToolbarProps {
    * toolbar neither discovers matching IDs nor infers a result count.
    */
   selectionScope?: 'selected' | 'loaded' | 'filtered' | 'all-matching';
-  /** Clears the selection. Wired to the "Clear" button + Escape key. */
+  /** Clears selection via the Clear button or Escape while toolbar controls have focus. */
   onClear: () => void;
   /** Per-page action definitions, rendered in array order. */
   actions: BulkAction[];
@@ -183,39 +183,53 @@ export function BulkActionsToolbar({
         role="region"
         aria-label={t('bulk.toolbarLabel', 'Bulk actions for selected items')}
         data-selection-scope={selectionScope}
+        onKeyDown={(event) => {
+          if (
+            event.key !== 'Escape'
+            || event.defaultPrevented
+            || dialogProps
+            || document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')
+          ) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onClear();
+        }}
       >
-        <div className="flex min-w-0 max-w-full items-center gap-2 text-sm text-[var(--text-primary)]">
-          <span
-            className="inline-flex min-w-0 max-w-full items-center justify-center break-words rounded-full bg-[var(--surface-3)] px-2 py-0.5 font-semibold text-[var(--text-primary)]"
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+          <Text
+            as="span"
+            variant="bodySm"
+            className="min-w-0 max-w-full break-words rounded-shape-sm bg-[var(--surface-2)] px-2 py-1 font-medium"
             aria-live="polite"
           >
             {selectionSummary ?? countLabel}
-          </span>
+          </Text>
           {selectionSummary == null && itemNoun && (
-            <span className="text-[var(--text-secondary)]">
+            <Text as="span" variant="bodySm" color="secondary" className="min-w-0 break-words">
               {noun}
               {typeof total === 'number' && (
                 <>
                   {' '}
-                  <span className="text-[var(--text-muted)]">
+                  <Text as="span" variant="caption">
                     {t('bulk.ofTotal', { total, defaultValue: 'of {{total}}' })}
-                  </span>
+                  </Text>
                 </>
               )}
-            </span>
+            </Text>
           )}
         </div>
 
-        <div className="ms-auto flex min-w-0 max-w-full flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 md:ms-auto md:w-auto">
           {items.map((action) => {
             const reason = action.disabled ? action.disabledReason : undefined;
             const reasonId = `${toolbarId}-${encodeURIComponent(action.id)}-disabled-reason`;
             return (
-              <div key={action.id} className="flex min-w-0 max-w-full flex-col gap-1">
+              <div key={action.id} className="flex w-full min-w-0 max-w-full flex-col gap-1 md:w-auto">
                 <Button
                   variant={action.variant === 'danger' ? 'danger' : 'secondary'}
                   size="sm"
                   wrapLabel
+                  className="min-h-11 md:min-h-9"
                   icon={action.icon}
                   loading={Boolean(pending[action.id])}
                   disabled={action.disabled || Boolean(pending[action.id])}
@@ -228,7 +242,7 @@ export function BulkActionsToolbar({
                   {action.label}
                 </Button>
                 {reason && (
-                  <Text id={reasonId} variant="bodySm" className="max-w-xs">
+                  <Text id={reasonId} variant="bodySm" color="secondary" className="max-w-xs break-words">
                     {reason}
                   </Text>
                 )}
@@ -239,6 +253,7 @@ export function BulkActionsToolbar({
             variant="ghost"
             size="sm"
             wrapLabel
+            className="w-full min-h-11 md:w-auto md:min-h-9"
             onClick={onClear}
             data-bulk-action="clear"
           >
