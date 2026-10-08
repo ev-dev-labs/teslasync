@@ -68,7 +68,7 @@ export function Accordion({
   }, [isControlled, onOpenChange, openProp])
 
   return (
-    <div className={cn('rounded-xl border border-white/[0.06] overflow-hidden forced-colors:border-[CanvasText]', className)}>
+    <div className={cn('rounded-panel border border-[var(--border-default)] overflow-hidden forced-colors:border-[CanvasText]', className)}>
       <Button
         variant="ghost"
         type="button"
@@ -78,8 +78,8 @@ export function Accordion({
         aria-labelledby={hasDescription ? titleId : undefined}
         aria-describedby={hasDescription ? descriptionId : undefined}
         className={cn(
-          'flex h-auto w-full flex-wrap items-center justify-start gap-3 rounded-none text-start text-[length:inherit] font-normal hover:bg-white/[0.02] transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50 focus-visible:ring-inset focus-visible:ring-offset-0',
+          'flex h-auto w-full flex-wrap items-center justify-start gap-3 rounded-none text-start text-[length:inherit] font-normal hover:bg-[var(--control-bg)] transition-colors',
+          'focus-visible:-outline-offset-2',
           'forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-[Highlight] forced-colors:focus-visible:-outline-offset-2',
           headerClassName ?? 'px-4 py-3',
         )}
@@ -90,7 +90,7 @@ export function Accordion({
           </div>
         )}
         <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-          <Text id={titleId} size="sm" weight="medium" color="primary" className="block forced-colors:text-[ButtonText]">
+          <Text id={titleId} variant="body" className="block font-medium forced-colors:text-[ButtonText]">
             {title}
           </Text>
           {hasDescription && (
@@ -108,7 +108,8 @@ export function Accordion({
         <ChevronDown
           aria-hidden="true"
           className={cn(
-            'h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-normal',
+            'h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform duration-normal ease-standard motion-reduce:transition-none',
+            reduce && 'transition-none',
             open && 'rotate-180',
           )}
         />
@@ -125,7 +126,7 @@ export function Accordion({
             transition={{ duration: reduce ? 0 : 0.2 }}
             className="overflow-hidden"
           >
-            <div className={cn('border-t border-white/[0.04] forced-colors:border-[CanvasText]', bodyClassName ?? 'px-4 py-3')}>
+            <div className={cn('border-t border-[var(--border-subtle)] forced-colors:border-[CanvasText]', bodyClassName ?? 'px-4 py-3')}>
               {children}
             </div>
           </motion.div>

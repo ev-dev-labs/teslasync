@@ -29,6 +29,14 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { useEffect } from 'react'
 
+const motionPreference = vi.hoisted(() => ({ reduce: false }))
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({
+    reduce: motionPreference.reduce,
+    durationMs: motionPreference.reduce ? 0 : 250,
+  }),
+}))
+
 // Render every `motion.<tag>` as its plain DOM element, dropping framer-only
 // animation props but passing through real DOM attributes (id, role,
 // aria-labelledby, className). AnimatePresence becomes a Fragment so the
@@ -67,7 +75,10 @@ import { Accordion } from './Accordion'
 
 const BODY = <div data-testid="body">panel content</div>
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  motionPreference.reduce = false
+})
 
 describe('<Accordion /> — uncontrolled', () => {
   it('is collapsed by default: header shows, panel is unmounted, no region', () => {
@@ -228,13 +239,15 @@ describe('<Accordion /> — slots & accessibility', () => {
     expect(container.querySelector('svg.rotate-180')).not.toBeNull()
   })
 
-  it('exposes a visible focus ring on the trigger for keyboard users (WCAG 2.4.7)', () => {
+  it('exposes a visible focus outline on the trigger for keyboard users (WCAG 2.4.7)', () => {
     render(<Accordion title="Details">{BODY}</Accordion>)
     const toggle = screen.getByRole('button')
     // Native <button type="button"> → platform keyboard operability, no submit.
     expect(toggle.tagName).toBe('BUTTON')
     expect(toggle).toHaveAttribute('type', 'button')
-    expect(toggle.className).toContain('focus-visible:ring-2')
+    expect(toggle).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-[var(--focus-ring)]', 'focus-visible:-outline-offset-2')
+    toggle.focus()
+    expect(toggle).toHaveFocus()
   })
 })
 
@@ -247,7 +260,7 @@ describe('<Accordion /> — styling overrides', () => {
     )
     const root = container.firstElementChild as HTMLElement
     expect(root.className).toContain('mt-4')
-    expect(root.className).toContain('rounded-xl')
+    expect(root.className).toContain('rounded-panel')
 
     // Header + body fall back to the px-4 py-3 defaults.
     const toggle = screen.getByRole('button')
@@ -276,6 +289,27 @@ describe('<Accordion /> — styling overrides', () => {
     const bodyWrap = container.querySelector('.border-t') as HTMLElement
     expect(bodyWrap.className).toContain('p-1')
     expect(bodyWrap.className).not.toContain('px-4')
+  })
+
+  it('uses existing neutral border, hover and typography roles in the open state', () => {
+    const { container } = render(<Accordion title="Details" defaultOpen>{BODY}</Accordion>)
+    expect(container.firstElementChild).toHaveClass('rounded-panel', 'border-[var(--border-default)]')
+    expect(screen.getByRole('button')).toHaveClass('hover:bg-[var(--control-bg)]')
+    expect(screen.getByText('Details')).toHaveClass('text-sm', 'font-medium', 'text-[var(--text-primary)]')
+    expect(container.querySelector('.border-t')).toHaveClass('border-[var(--border-subtle)]')
+    expect(container.querySelector('[class*="border-white"], [class*="ring-cyan"], [class*="hover:bg-white"]')).toBeNull()
+  })
+
+  it('removes chevron motion for the shared reduced-motion or low-bandwidth preference without changing disclosure', () => {
+    motionPreference.reduce = true
+    const { container } = render(<Accordion title="Details">{BODY}</Accordion>)
+    const chevron = container.querySelector('svg')
+    expect(chevron).toHaveClass('motion-reduce:transition-none', 'transition-none')
+    fireEvent.click(screen.getByRole('button'))
+    expect(chevron).toHaveClass('rotate-180', 'transition-none')
+    expect(screen.getByRole('region', { name: 'Details' })).toContainElement(screen.getByTestId('body'))
+    fireEvent.click(screen.getByRole('button'))
+    expect(screen.queryByRole('region')).toBeNull()
   })
 })
 
