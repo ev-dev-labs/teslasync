@@ -62,12 +62,13 @@
 //     baseline editor's state, then explicitly click the
 //     baseline Run button to execute.
 
-import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
+import { useCallback, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button, Textarea } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Textarea'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
 
 /**
@@ -122,6 +123,7 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
 
   const [prompt, setPrompt] = useState('')
   const [draft, setDraft] = useState<ReadonlySQLDraft | null>(null)
+  const requestIsCurrent = useRef(false)
 
   const trimmed = prompt.trim()
   const hasPrompt = trimmed.length > 0
@@ -129,6 +131,7 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
   const body = useMemo(() => ({ prompt: trimmed }), [trimmed])
 
   const onEvent = useCallback((ev: AiStreamEvent) => {
+    if (!requestIsCurrent.current) return
     // Only a SUCCESSFUL (ok) draft_readonly_sql tool_result carries an
     // applicable proposal. A failed tool call (ok === false) reports an
     // error payload, never a draft, so it must not populate the editor
@@ -143,6 +146,7 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
     url: '/ai/power/sql/draft',
     body,
     onEvent,
+    scopeKey: prompt,
   })
 
   const isStreaming = stream.state === 'streaming'
@@ -151,6 +155,7 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
 
   const handleDraft = useCallback(() => {
     if (!canDraft) return
+    requestIsCurrent.current = true
     setDraft(null)
     stream.start()
   }, [canDraft, stream])
@@ -162,6 +167,7 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
 
   const handlePromptChange = useCallback(
     (e: ChangeEvent<HTMLTextAreaElement>) => {
+      requestIsCurrent.current = false
       setPrompt(e.target.value)
       // Editing the request invalidates any previously captured proposal:
       // the "Apply to editor" hand-off must never copy SQL that no longer
@@ -203,6 +209,8 @@ function InnerSection(props: AINLSqlPlaygroundProps) {
           <Button
             variant="primary"
             size="sm"
+            wrapLabel
+            className="min-h-11 max-w-full md:min-h-9"
             disabled={!canApply}
             aria-disabled={!canApply ? 'true' : 'false'}
             onClick={handleApply}

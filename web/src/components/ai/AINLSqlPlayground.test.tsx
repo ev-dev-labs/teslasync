@@ -45,6 +45,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
+import { deriveDataState } from '@/api/dataState'
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -56,7 +57,7 @@ import {
   type ReadonlySQLDraft,
 } from '@/components/ai/AINLSqlPlayground'
 
-const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
+const mockUseSettings = vi.mocked(useSettings)
 
 const ROOT_TESTID = 'ai-feature-nl-sql-playground-root'
 const DRAFT_ROUTE = '/api/v1/ai/power/sql/draft'
@@ -85,8 +86,21 @@ const baseSettings: AppSettings = {
   alert_digest_mode: 'instant',
 }
 
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
+function settingsPayload(overrides: Partial<AppSettings>): ReturnType<typeof useSettings> {
+  const settings = { ...baseSettings, ...overrides }
+  return {
+    settings,
+    settingsState: deriveDataState({ data: settings, isSuccess: true }),
+    settingsUnavailable: false,
+    refetch: vi.fn<ReturnType<typeof useSettings>['refetch']>(),
+    isMiles: settings.unit_of_length === 'mi',
+    isFahrenheit: settings.unit_of_temp === 'F',
+    isPSI: settings.unit_of_pressure === 'psi',
+    decimals: settings.decimal_precision,
+    locale: 'en-US',
+    density: 'comfortable',
+    rangeType: settings.preferred_range === 'ideal' ? 'ideal' : 'rated',
+  }
 }
 
 // enableFeature flips the gate fully on: ai_mode != off AND the
@@ -160,7 +174,7 @@ function installStreamingFetch(
         headers: { 'Content-Type': 'text/event-stream' },
       })
     },
-  ) as unknown as typeof globalThis.fetch
+  )
   return calls
 }
 
@@ -175,7 +189,7 @@ function installNeverClosingFetch(): { count: () => number } {
       new ReadableStream<Uint8Array>({ start() {} }),
       { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
     )
-  }) as unknown as typeof globalThis.fetch
+  })
   return { count: () => fetchCount }
 }
 
@@ -223,7 +237,7 @@ beforeEach(() => {
   // clearly instead of silently timing out.
   globalThis.fetch = vi.fn(async () => {
     throw new Error('fetch not mocked')
-  }) as unknown as typeof globalThis.fetch
+  })
 })
 
 afterEach(() => {
@@ -435,7 +449,7 @@ describe('AINLSqlPlayground — streaming lifecycle', () => {
     enableFeature()
     globalThis.fetch = vi.fn(
       async () => new Response('', { status: 404 }),
-    ) as unknown as typeof globalThis.fetch
+    )
 
     render(<AINLSqlPlayground onApply={vi.fn()} />)
     await typePrompt('rows per table')
@@ -634,6 +648,71 @@ describe('AINLSqlPlayground — typed draft capture + Apply hand-off', () => {
 })
 
 describe('AINLSqlPlayground — stale-draft invalidation (regression guard)', () => {
+  it('aborts an edited request and ignores its late successful draft without touching the editor', async () => {
+    enableFeature()
+    const onApply = vi.fn<(draft: ReadonlySQLDraft) => void>()
+    const encoder = new TextEncoder()
+    let enqueue: (frame: string) => void = () => {
+      throw new Error('stream not started')
+    }
+    let close: () => void = () => {
+      throw new Error('stream not started')
+    }
+    const response = new ReadableStream<Uint8Array>({
+      start(controller) {
+        enqueue = (frame) => controller.enqueue(encoder.encode(frame))
+        close = () => controller.close()
+      },
+    })
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(response, {
+      headers: { 'Content-Type': 'text/event-stream' },
+    }))
+    globalThis.fetch = fetchMock
+
+    render(<AINLSqlPlayground onApply={onApply} />)
+    await typePrompt(validDraft.prompt)
+    await clickDraft()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const signal = fetchMock.mock.calls[0][1]?.signal
+    expect(signal?.aborted).toBe(false)
+
+    await typePrompt('how many charging sessions this month')
+    expect(signal?.aborted).toBe(true)
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+    await act(async () => {
+      // Deliver buffered frames even after abort to exercise local invalidation.
+      enqueue(draftFrame(validDraft) + doneFrame)
+      close()
+    })
+    expect(queryApplyButton()).not.toBeInTheDocument()
+    expect(promptBox()).toHaveValue('how many charging sessions this month')
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('clears completed narration and evidence along with the proposal after editing the prompt', async () => {
+    enableFeature()
+    const onApply = vi.fn<(draft: ReadonlySQLDraft) => void>()
+    installStreamingFetch(
+      sseFrame('delta', { text: 'Proposal for the original request' }) +
+      draftFrame(validDraft) + doneFrame,
+    )
+
+    render(<AINLSqlPlayground onApply={onApply} />)
+    await typePrompt(validDraft.prompt)
+    await clickDraft()
+    const apply = await screen.findByRole('button', { name: /Apply to editor/i })
+    expect(apply).toHaveClass('min-h-11', 'max-w-full', 'md:min-h-9')
+    expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(
+      'Proposal for the original request',
+    )
+
+    await typePrompt('a different request')
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+    expect(queryApplyButton()).not.toBeInTheDocument()
+    expect(draftButton()).toBeEnabled()
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
   it('clears the captured draft when the prompt is edited so a mismatched proposal can never be applied', async () => {
     enableFeature()
     const onApply = vi.fn()
