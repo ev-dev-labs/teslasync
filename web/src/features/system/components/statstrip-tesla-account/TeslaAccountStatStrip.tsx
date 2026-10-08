@@ -26,23 +26,23 @@ export function TeslaAccountStatStrip({ profile, fetchedAt, hasData, loading, er
       context: fetchedAt ? <><Text as="span" variant="caption">{formatRelative(fetchedAt)}</Text>
         {' · '}<Text as="span" variant="caption">{formatDateTime(fetchedAt)}</Text></>
         : hasData ? t('teslaAccount.neverSyncedShort', 'Not synced yet') : '—',
-      description: t('statstrip.teslaAccount.syncDescription', 'Sync status comes from the source fetched-at timestamp, not the browser query update time.') },
+      description: t('teslaAccount.statstrip.syncDescription', 'Sync status comes from the source fetched-at timestamp, not the browser query update time.') },
     { metricId: 'identifier', occurrenceId: 'account-id', rawValue: profile?.id,
       display: { identifierPrefix: '#' }, label: t('teslaAccount.kpi.accountId', 'Account ID'),
       context: t('teslaAccount.kpi.accountIdSub', 'Fleet API identity'),
-      description: t('statstrip.teslaAccount.idDescription', 'The source Tesla Fleet API account identity, not the local TeslaSync user ID.') },
+      description: t('teslaAccount.statstrip.idDescription', 'The source Tesla Fleet API account identity, not the local TeslaSync user ID.') },
     { metricId: 'text', occurrenceId: 'member-since',
       rawValue: profile?.created_at ? formatDate(profile.created_at) : null,
       label: t('teslaAccount.kpi.memberSince', 'Member since'),
       context: profile?.created_at ? <><Text as="span" variant="caption">{formatRelative(profile.created_at)}</Text>
         {' · '}<Text as="span" variant="caption">{formatDateTime(profile.created_at)}</Text></> : '—',
-      description: t('statstrip.teslaAccount.memberDescription', 'Source account creation date; the full source date and relative context are retained.') },
+      description: t('teslaAccount.statstrip.memberDescription', 'Source account creation date; the full source date and relative context are retained.') },
     { metricId: 'text', occurrenceId: 'last-updated',
       rawValue: profile?.updated_at ? formatRelative(profile.updated_at) : null,
       label: t('teslaAccount.kpi.updated', 'Last updated'),
       context: profile?.updated_at ? <><Text as="span" variant="caption">{formatDate(profile.updated_at)}</Text>
         {' · '}<Text as="span" variant="caption">{formatDateTime(profile.updated_at)}</Text></> : '—',
-      description: t('statstrip.teslaAccount.updatedDescription', 'Source profile update date; independent of the last fetch from Tesla.') },
+      description: t('teslaAccount.statstrip.updatedDescription', 'Source profile update date; independent of the last fetch from Tesla.') },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
   return <section aria-label={t('teslaAccount.kpis', 'Account summary')}>
@@ -55,10 +55,10 @@ export function TeslaAccountStatStrip({ profile, fetchedAt, hasData, loading, er
             : !hasData ? t('operationalSummary.unknown', 'Source values unknown')
               : fetchedAt ? t('teslaAccount.synced', 'Synced') : t('teslaAccount.never', 'Never synced')}
       statusTone={retained || error ? 'warning' : 'neutral'}
-      scope={t('statstrip.teslaAccount.period', 'Fleet API profile snapshot')}
+      scope={t('teslaAccount.statstrip.period', 'Fleet API profile snapshot')}
       freshness={<>{hasFetchTimestamp && fetchedAt
-        ? t('statstrip.teslaAccount.fetchedSnapshot', 'Source fetched at {{date}}', { date: formatDateTime(fetchedAt) })
-        : t('statstrip.teslaAccount.unknownSnapshot', 'No source fetch timestamp recorded; freshness is unknown')}
+        ? t('teslaAccount.statstrip.fetchedSnapshot', 'Source fetched at {{date}}', { date: formatDateTime(fetchedAt) })
+        : t('teslaAccount.statstrip.unknownSnapshot', 'No source fetch timestamp recorded; freshness is unknown')}
         {retained && <> · {t('developerReference.stats.state.retained', 'Showing retained measurements')}</>}</>}
       provenance={t('teslaAccount.kpi.accountIdSub', 'Fleet API identity')} />
     {error && <QueryError error={error} onRetry={onRetry}
