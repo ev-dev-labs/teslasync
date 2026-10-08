@@ -19,12 +19,18 @@ import React from 'react'
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { AreaChartWrapper, resolveAreaTooltip, type SeriesConfig } from './AreaChartWrapper'
+import { chartTokens } from '@/lib/tokens'
+
+const motion = vi.hoisted(() => ({ reduce: false }))
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: motion.reduce, durationMs: motion.reduce ? 0 : 250 }),
+}))
 
 vi.mock('recharts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('recharts')>()
   return {
     ...actual,
-    ResponsiveContainer: ({ children }: { children: React.ReactElement }) =>
+    ResponsiveContainer: ({ children }: { children: React.ReactElement<{ width?: number; height?: number }> }) =>
       React.cloneElement(children, { width: 640, height: 240 }),
   }
 })
@@ -47,6 +53,7 @@ const context = {
 let canvasDescriptor: PropertyDescriptor | undefined
 
 beforeEach(() => {
+  motion.reduce = false
   canvasDescriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'getContext')
   context.measureText.mockClear()
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
@@ -138,6 +145,58 @@ describe('AreaChartWrapper', () => {
       gradient.getAttribute('id'),
     )
     expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('subdues area tint without changing series colors, order, stroke weight or gradient fade', () => {
+    const { container } = render(<AreaChartWrapper data={data} xKey="i" series={series} />)
+    const gradients = Array.from(container.querySelectorAll('linearGradient'))
+    gradients.forEach((gradient, index) => {
+      expect(gradient).toHaveAttribute('x1', '0')
+      expect(gradient).toHaveAttribute('y1', '0')
+      expect(gradient).toHaveAttribute('x2', '0')
+      expect(gradient).toHaveAttribute('y2', '1')
+      const stops = gradient.querySelectorAll('stop')
+      expect(stops[0]).toHaveAttribute('offset', '0%')
+      expect(stops[0]).toHaveAttribute('stop-color', series[index].color)
+      expect(stops[0]).toHaveAttribute('stop-opacity', '0.08')
+      expect(stops[1]).toHaveAttribute('offset', '100%')
+      expect(stops[1]).toHaveAttribute('stop-color', series[index].color)
+      expect(stops[1]).toHaveAttribute('stop-opacity', '0')
+    })
+    const curves = Array.from(container.querySelectorAll('.recharts-area-curve'))
+    expect(curves.map(curve => curve.getAttribute('stroke'))).toEqual(series.map(item => item.color))
+    curves.forEach(curve => expect(curve).toHaveAttribute('stroke-width', '2'))
+    container.querySelectorAll('.recharts-cartesian-axis-line').forEach(line => {
+      expect(line).toHaveAttribute('stroke', chartTokens.axisStroke)
+    })
+  })
+
+  it('keeps measured zero, negative SI values and unknown gaps distinct under reduced motion', () => {
+    motion.reduce = true
+    const rows = [
+      { i: '0', energy: 0 },
+      { i: '1', energy: null },
+      { i: '2', energy: -1500 },
+      { i: '3', energy: undefined },
+      { i: '4', energy: 2500 },
+    ]
+    const formatter = vi.fn((value: number) => `${value / 1000} kWh`)
+    const { container } = render(
+      <AreaChartWrapper data={rows} xKey="i" series={[series[0]]} yFormatter={formatter} />,
+    )
+    expect(formatter).toHaveBeenCalledWith(0)
+    expect(formatter).toHaveBeenCalledWith(-1500)
+    expect(formatter).toHaveBeenCalledWith(2500)
+    expect(formatter.mock.calls.every(([value]) => typeof value === 'number' && Number.isFinite(value))).toBe(true)
+    expect(container.querySelector('.recharts-area-curve')?.getAttribute('d')?.match(/M/g)).toHaveLength(3)
+    expect(container.querySelector('.recharts-yAxis')).toHaveTextContent('-1.5 kWh')
+    expect(rows).toEqual([
+      { i: '0', energy: 0 },
+      { i: '1', energy: null },
+      { i: '2', energy: -1500 },
+      { i: '3', energy: undefined },
+      { i: '4', energy: 2500 },
+    ])
   })
 
   it('renders both X and Y axes for the provided keys', () => {

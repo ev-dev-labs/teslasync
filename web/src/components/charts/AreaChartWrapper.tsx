@@ -15,6 +15,7 @@ import { ChartLegend } from './ChartLegend';
 import { resolveChartHeights } from './chartSizing';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useMeasuredAxisWidth } from './useMeasuredAxisWidth';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 export interface SeriesConfig {
   key: string;
@@ -66,6 +67,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
     ref,
   ) {
     const safeSeries = series ?? [];
+    const { reduce } = useMotionPreference();
     const { fmtNumber, fmtInt } = useNumberFormatting();
     const formatY = yFormatter ?? (kind === 'count'
       ? (value: number) => fmtInt(value)
@@ -106,7 +108,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
                   x2="0"
                   y2="1"
                 >
-                  <stop offset="0%" stopColor={s.color} stopOpacity={0.3} />
+                  <stop offset="0%" stopColor={s.color} stopOpacity={0.08} />
                   <stop offset="100%" stopColor={s.color} stopOpacity={0} />
                 </linearGradient>
               ))}
@@ -120,16 +122,19 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
 
             <XAxis
               dataKey={xKey}
+              stroke={chartTokens.axisStroke}
               tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
               tickFormatter={xFormatter}
             />
             <YAxis
               width={axisWidth}
+              stroke={chartTokens.axisStroke}
               tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
               tickFormatter={formatY}
             />
 
             <Tooltip
+              cursor={chartTokens.cursor}
               content={(
                 <ChartTooltip
                   valueFormatter={
@@ -155,6 +160,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
                 name={s.label}
                 stroke={s.color}
                 strokeWidth={2}
+                isAnimationActive={reduce ? false : undefined}
                 fill={`url(#${gradientId(instanceId, s.key)})`}
               />
             ))}
