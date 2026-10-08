@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileJson, FileSpreadsheet, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { Popover } from '@/components/ui/Popover';
+import { Caption, Label } from '@/components/ui/Typography';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 
@@ -59,26 +61,19 @@ export function ListExportMenu({
   const [scope, setScope] = useState<ExportScope>(
     selectedCount > 0 ? 'selected' : 'visible',
   );
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const focusLastRef = useRef(false);
   const previousSelectedCountRef = useRef(selectedCount);
 
   const close = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) close();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClickOutside);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open, close]);
+    if (!open || disabled || exporting) return;
+    const items = menuRef.current?.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]');
+    items?.[focusLastRef.current ? items.length - 1 : 0]?.focus();
+    focusLastRef.current = false;
+  }, [open, disabled, exporting]);
 
   // A newly-created selection is the likely export intent. Preserve explicit
   // scope changes while the selection remains active, then reset when cleared.
@@ -144,17 +139,24 @@ export function ListExportMenu({
 
   return (
     <div
-      ref={containerRef}
       className={cn('relative', className)}
       data-testid={testId}
     >
       <Button
+        ref={triggerRef}
         type="button"
         variant="ghost"
         size="sm"
-        className="!h-8 gap-1.5 !px-2 text-[var(--text-secondary)]"
-        icon={<Download className="h-3.5 w-3.5" />}
+        className="!h-auto min-h-11 min-w-11 gap-2 px-2 md:min-h-9 md:min-w-9 text-[var(--text-secondary)]"
+        icon={<Download className="h-4 w-4 shrink-0" aria-hidden />}
+        wrapLabel
         onClick={() => setOpen((v) => !v)}
+        onKeyDown={(event) => {
+          if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+          event.preventDefault();
+          focusLastRef.current = event.key === 'ArrowUp';
+          setOpen(true);
+        }}
         disabled={disabled || exporting !== null}
         loading={exporting !== null}
         aria-haspopup="menu"
@@ -163,29 +165,49 @@ export function ListExportMenu({
         title={triggerLabel}
         data-testid={testId ? `${testId}-trigger` : undefined}
       >
-        <span className="hidden sm:inline text-xs">
+        <Caption className="hidden sm:inline">
           {t('listExport.button', 'Export')}
-        </span>
+        </Caption>
       </Button>
-      {open && !disabled && !exporting && (
+      <Popover
+        open={open && !disabled && !exporting}
+        onClose={close}
+        anchorRef={triggerRef}
+        align="end"
+        role="menu"
+        ariaLabel={triggerLabel}
+        avoidMobileChrome
+        className="w-56 max-w-full overflow-y-auto rounded-shape-sm border-[var(--border-default)] bg-[var(--surface-2)] p-2 shadow-e2"
+      >
         <div
-          role="menu"
-          aria-label={triggerLabel}
+          ref={menuRef}
           data-testid={testId ? `${testId}-menu` : undefined}
-          className={cn(
-            'absolute right-0 z-30 mt-1 w-56 rounded-lg p-2',
-            'border border-white/[0.08] bg-[var(--surface-elevated)] shadow-xl',
-          )}
+          onBlur={(event) => {
+            if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) close();
+          }}
+          onKeyDown={(event) => {
+            const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role^="menuitem"]'));
+            const index = items.findIndex((item) => item === document.activeElement);
+            let next: number;
+            if (event.key === 'ArrowDown') next = (index + 1) % items.length;
+            else if (event.key === 'ArrowUp') next = (index - 1 + items.length) % items.length;
+            else if (event.key === 'Home') next = 0;
+            else if (event.key === 'End') next = items.length - 1;
+            else return;
+            event.preventDefault();
+            items[next]?.focus();
+          }}
         >
           {selectedCount > 0 && (
             <fieldset
-              className="mb-2 border-b border-white/[0.06] pb-2"
+              className="mb-2 min-w-0 border-b border-[var(--border-subtle)] pb-2"
+              role="group"
               aria-label={t('listExport.scopeLegend', 'Export scope')}
             >
-              <div className="mb-1 px-1 text-2xs font-semibold tracking-wide text-[var(--text-muted)]">
-                <ListChecks className="inline h-3 w-3 mr-1" aria-hidden />
+              <Label as="div" className="mb-1 flex items-center gap-1 px-1 break-words">
+                <ListChecks className="h-4 w-4 shrink-0" aria-hidden />
                 {t('listExport.scopeLegend', 'Export scope')}
-              </div>
+              </Label>
               <ScopeRadio
                 checked={scope === 'visible'}
                 onChange={() => setScope('visible')}
@@ -203,15 +225,16 @@ export function ListExportMenu({
           <Button
             type="button"
             role="menuitem"
+            tabIndex={-1}
             variant="ghost"
             size="sm"
             onClick={handleCsv}
             data-testid={testId ? `${testId}-csv` : undefined}
             className={cn(
-              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
             )}
+            wrapLabel
             icon={<FileSpreadsheet className="h-3.5 w-3.5" aria-hidden />}
           >
             <span>{t('listExport.csv', 'Download as CSV')}</span>
@@ -219,21 +242,22 @@ export function ListExportMenu({
           <Button
             type="button"
             role="menuitem"
+            tabIndex={-1}
             variant="ghost"
             size="sm"
             onClick={handleJson}
             data-testid={testId ? `${testId}-json` : undefined}
             className={cn(
-              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
             )}
+            wrapLabel
             icon={<FileJson className="h-3.5 w-3.5" aria-hidden />}
           >
             <span>{t('listExport.json', 'Download as JSON')}</span>
           </Button>
         </div>
-      )}
+      </Popover>
     </div>
   );
 }
@@ -249,16 +273,18 @@ function ScopeRadio({ checked, onChange, label, testId }: ScopeRadioProps) {
   return (
     <Button
       type="button"
-      role="radio"
+      role="menuitemradio"
+      tabIndex={-1}
       aria-checked={checked}
       variant="ghost"
       size="sm"
       onClick={onChange}
       data-testid={testId}
       className={cn(
-        '!h-auto w-full justify-start gap-2 rounded px-2 py-1 text-xs',
-        'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
+        '!h-auto min-h-11 w-full justify-start gap-2 px-2 py-2 text-start md:min-h-9',
+        'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
       )}
+      wrapLabel
       icon={
         <span
           className={cn(
@@ -275,7 +301,7 @@ function ScopeRadio({ checked, onChange, label, testId }: ScopeRadioProps) {
         </span>
       }
     >
-      <span>{label}</span>
+      <Caption>{label}</Caption>
     </Button>
   );
 }
