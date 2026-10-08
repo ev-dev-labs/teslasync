@@ -308,39 +308,39 @@ export function PlaybackControls({
   // the tooltip's text colour keeps the labels readable in both themes.
   const helpContent = useMemo(
     () => (
-      <div className="space-y-2 text-xs">
-        <div className="font-semibold">
+      <Text as="div" size="xs" className="space-y-2">
+        <Text as="div" weight="semibold">
           {t('replay.shortcuts.title', 'Trip replay shortcuts')}
-        </div>
-        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 opacity-90">
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">Space / K</kbd>
+        </Text>
+        <div className="grid grid-cols-replay-shortcuts gap-x-3 gap-y-1">
+          <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">Space / K</Text>
           <span>{t('replay.shortcuts.playPause', 'Play / Pause')}</span>
           {canSeekBy && (
             <>
-              <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">← / →</kbd>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">← / →</Text>
               <span>{t('replay.shortcuts.skip5', 'Skip ±5s (Shift = ±30s)')}</span>
-              <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">J / L</kbd>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">J / L</Text>
               <span>{t('replay.shortcuts.skip10', 'Skip ±10s')}</span>
             </>
           )}
           {onStepFrame && (
             <>
-              <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">, / .</kbd>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">, / .</Text>
               <span>{t('replay.shortcuts.frame', 'Previous / next frame')}</span>
             </>
           )}
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">Home / End</kbd>
+          <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">Home / End</Text>
           <span>{t('replay.shortcuts.startEnd', 'Jump to start / end')}</span>
-          <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">0 – 9</kbd>
+          <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">0 – 9</Text>
           <span>{t('replay.shortcuts.percent', 'Jump to N×10%')}</span>
           {canStepSpeed && (
             <>
-              <kbd className="rounded border border-gray-500/30 bg-gray-500/15 px-1.5 py-0.5 font-mono text-2xs">+ / −</kbd>
+              <Text as="kbd" size="xs" mono className="rounded-shape-xs border border-current px-1.5 py-0.5">+ / −</Text>
               <span>{t('replay.shortcuts.speed', 'Speed up / slow down')}</span>
             </>
           )}
         </div>
-      </div>
+      </Text>
     ),
     [t, canSeekBy, canStepSpeed, onStepFrame],
   );
@@ -380,18 +380,20 @@ export function PlaybackControls({
     <div
       className={cn(
         'relative min-w-0',
-        framed && 'rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-1)] px-4 py-3 backdrop-blur-sm',
+        framed && 'rounded-panel border border-[var(--border-default)] bg-[var(--panel-bg)] px-4 py-3 shadow-panel',
         className,
       )}
     >
       {/* Inline shortcut feedback */}
       {shortcutToast && (
-        <div
+        <Text
+          as="div"
+          variant="code"
           aria-live="polite"
-          className="pointer-events-none absolute -top-7 right-3 z-10 rounded-md border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1 text-xs font-mono text-[var(--text-primary)] shadow-lg backdrop-blur-md"
+          className="pointer-events-none absolute -top-7 end-3 z-10 max-w-full break-words rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1 shadow-e2"
         >
           {shortcutToast.label}
-        </div>
+        </Text>
       )}
 
       <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -404,7 +406,7 @@ export function PlaybackControls({
             aria-label={onRestart
               ? t('replay.controls.restart', 'Restart')
               : t('replay.controls.reset', 'Reset')}
-            className="h-8 w-8 p-0"
+            className="h-11 w-11 shrink-0 p-0"
           >
             <SkipBack className="h-4 w-4" aria-hidden />
           </Button>
@@ -419,7 +421,7 @@ export function PlaybackControls({
           aria-label={isPlaying
             ? t('replay.controls.pause', 'Pause')
             : t('replay.controls.play', 'Play')}
-          className="h-8 w-8 p-0"
+          className="h-11 w-11 shrink-0 p-0"
         >
           {isPlaying
             ? <Pause className="h-4 w-4" aria-hidden />
@@ -434,7 +436,7 @@ export function PlaybackControls({
             size="sm"
             onClick={onStop}
             aria-label={t('replay.controls.stop', 'Stop')}
-            className="h-8 w-8 p-0"
+            className="h-11 w-11 shrink-0 p-0"
           >
             <Square className="h-3.5 w-3.5" aria-hidden />
           </Button>
@@ -442,11 +444,15 @@ export function PlaybackControls({
 
         {/* Speed */}
         {speed !== undefined && onSpeedChange && (
-          <PlaybackSpeedMenu speed={speed} onChange={onSpeedChange} />
+          <PlaybackSpeedMenu
+            speed={speed}
+            onChange={onSpeedChange}
+            className="flex h-11 min-w-11 shrink-0 items-center gap-0.5 px-2 text-xs font-mono"
+          />
         )}
 
         {/* Scrubber takes the remaining space */}
-        <div className="min-w-0 flex-[1_1_12rem]">
+        <div className="min-w-0 flex-replay-scrubber">
           <TimelineScrubber
             progress={progress}
             duration={durationMs ? durationMs / 1000 : 0}
@@ -458,7 +464,7 @@ export function PlaybackControls({
         </div>
 
         {/* Time display */}
-        <Text variant="caption" mono className="min-w-0 break-all text-right">
+        <Text variant="caption" mono className="min-w-0 break-all text-end">
           {elapsed ?? '—'} / {total ?? '—'}
         </Text>
 
@@ -470,7 +476,7 @@ export function PlaybackControls({
               variant="ghost"
               size="sm"
               aria-label={t('replay.shortcuts.help', 'Show keyboard shortcuts')}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-white/40"
+              className="h-11 w-11 shrink-0 p-0"
             >
               <Keyboard className="h-3.5 w-3.5" aria-hidden />
             </Button>

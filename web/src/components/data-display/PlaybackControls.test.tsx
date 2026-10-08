@@ -114,13 +114,11 @@ describe('PlaybackControls — transport controls (render + a11y)', () => {
   });
 
   it('falls back to an em-dash when the pre-formatted times are missing', () => {
-    const { container } = render(
-      <PlaybackControls
-        {...makeProps()}
-        elapsed={undefined as unknown as string}
-        total={undefined as unknown as string}
-      />,
-    );
+    const props = makeProps();
+    // Exercise missing runtime values without widening the public clock props.
+    Reflect.set(props, 'elapsed', undefined);
+    Reflect.set(props, 'total', undefined);
+    const { container } = render(<PlaybackControls {...props} />);
     expect(container).toHaveTextContent('— / —');
   });
 
@@ -490,15 +488,15 @@ describe('PlaybackControls — optional capabilities and adaptive frame', () => 
     const props = makeProps({ onRestart: vi.fn() });
     const { container, rerender } = render(<PlaybackControls {...props} className="caller-slot" />);
     const frame = container.firstElementChild;
-    expect(frame).toHaveClass('relative', 'min-w-0', 'rounded-xl', 'border', 'px-4', 'py-3', 'caller-slot');
+    expect(frame).toHaveClass('relative', 'min-w-0', 'rounded-panel', 'border', 'px-4', 'py-3', 'shadow-panel', 'caller-slot');
     const transport = frame?.lastElementChild;
     expect(transport).toHaveClass('flex', 'min-w-0', 'flex-wrap');
-    const scrubberSlot = screen.getByRole('slider').closest('.flex-\\[1_1_12rem\\]');
-    expect(scrubberSlot).toHaveClass('min-w-0', 'flex-[1_1_12rem]');
+    const scrubberSlot = screen.getByRole('slider').closest('.flex-replay-scrubber');
+    expect(scrubberSlot).toHaveClass('min-w-0', 'flex-replay-scrubber');
 
     rerender(<PlaybackControls {...props} framed={false} className="caller-slot" />);
     expect(frame).toHaveClass('relative', 'min-w-0', 'caller-slot');
-    expect(frame).not.toHaveClass('rounded-xl', 'border', 'px-4', 'py-3', 'backdrop-blur-sm');
+    expect(frame).not.toHaveClass('rounded-panel', 'border', 'px-4', 'py-3', 'shadow-panel', 'backdrop-blur-sm');
     expect(screen.getAllByRole('button', { name: 'Restart' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Play' })).toHaveLength(1);
     expect(screen.getAllByRole('button', { name: 'Stop' })).toHaveLength(1);
@@ -552,5 +550,39 @@ describe('PlaybackControls — optional capabilities and adaptive frame', () => 
     fireEvent.keyDown(screen.getByRole('slider', { name: 'Playback progress' }), { key: 'ArrowRight' });
     expect(props.onSeek).toHaveBeenCalledTimes(1);
     expect(vi.mocked(props.onSeek).mock.calls[0][0]).toBeCloseTo(0.21);
+  });
+
+  it('keeps transport targets reachable and inherits primitive focus and forced-color chrome', () => {
+    render(<PlaybackControls {...makeProps({ enableKeyboardShortcuts: true })} />);
+    for (const name of ['Reset', 'Play', 'Stop', 'Show keyboard shortcuts']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveAttribute('type', 'button');
+      expect(button).toHaveClass('h-11', 'w-11', 'shrink-0', 'rounded-shape-sm');
+      expect(button).toHaveClass('focus-visible:outline-2', 'forced-colors:focus-visible:outline-[Highlight]');
+      expect(button).not.toHaveClass('focus:outline-none', 'focus-visible:ring-white/40');
+    }
+    expect(screen.getByRole('button', { name: /Playback speed:/ })).toHaveClass('h-11', 'min-w-11');
+    const help = screen.getByRole('button', { name: 'Show keyboard shortcuts' });
+    fireEvent.focus(help);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Trip replay shortcuts');
+    expect(tooltip.querySelectorAll('kbd')).toHaveLength(4);
+    expect(tooltip.querySelector('.grid')).toHaveClass('grid-cols-replay-shortcuts', 'gap-x-3', 'gap-y-1');
+    for (const key of tooltip.querySelectorAll('kbd')) {
+      expect(key).toHaveClass('text-xs', 'font-mono', 'border-current');
+      expect(key).not.toHaveClass('text-2xs', 'text-[var(--text-primary)]');
+    }
+  });
+
+  it('retains caller clocks, zero position and latest playback position after presentation updates', () => {
+    const props = makeProps({ enableKeyboardShortcuts: true, durationMs: 100_000 });
+    const { rerender } = render(<PlaybackControls {...props} />);
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText('0:00 / 5:00')).toHaveClass('text-end');
+    rerender(<PlaybackControls {...props} progress={0.7} elapsed="1:10" total="1:40" />);
+    pressKey('ArrowRight');
+    expect(vi.mocked(props.onSeek).mock.calls[0][0]).toBeCloseTo(0.75);
+    expect(screen.getByText('1:10 / 1:40')).toBeInTheDocument();
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '70');
   });
 });
