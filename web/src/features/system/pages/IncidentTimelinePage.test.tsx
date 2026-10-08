@@ -110,7 +110,7 @@ function baseIncident(overrides?: Partial<Incident>): Incident {
     title: 'API gateway intermittent 502s',
     description:
       'Customers report bursty 502 responses from the public API gateway.',
-    severity: 'Major',
+    severity: 'major',
     status: 'monitoring',
     source: 'auto',
     affected_components: ['api-gateway', 'edge-cache'],
@@ -145,7 +145,12 @@ function baseIncident(overrides?: Partial<Incident>): Incident {
 
 /** A resolved TanStack-Query-shaped result the page can consume + forward to
  *  PageContainer's `query` (DataFreshness) prop. */
-function loadedQuery(data: Incident | undefined) {
+type IncidentFixture = Omit<Incident, 'updates' | 'affected_components'> & {
+  updates?: Incident['updates'] | null;
+  affected_components?: Incident['affected_components'] | null;
+};
+
+function loadedQuery(data: IncidentFixture | undefined) {
   return {
     data,
     isLoading: false,
@@ -351,12 +356,26 @@ describe('IncidentTimelinePage', () => {
   });
 
   it('renders every timeline update newest-first and the append-update form for open incidents', () => {
-    mockUseIncident.mockReturnValue(loadedQuery(baseIncident()));
+    const incident = baseIncident();
+    mockUseIncident.mockReturnValue(loadedQuery(incident));
 
     renderAt();
 
-    const items = screen.getAllByRole('listitem');
+    const region = screen.getByRole('region', { name: 'Incident timeline and updates' });
+    const timeline = within(region).getByRole('list', { name: 'Incident updates' });
+    const items = within(timeline).getAllByRole('listitem');
     expect(items).toHaveLength(3);
+    const expected = [...incident.updates].reverse();
+    items.forEach((item, index) => {
+      expect(within(item).getByText(expected[index].message, { exact: true })).toBeInTheDocument();
+      expect(item).toHaveTextContent(expected[index].status.charAt(0).toUpperCase() + expected[index].status.slice(1));
+      expect(item).toHaveTextContent(expected[index].author ?? '');
+    });
+    expect(incident.updates.map(update => update.message)).toEqual([
+      'PagerDuty fired alert api-gateway-5xx-burst.',
+      'Root cause: rolling restart on edge-cache fleet.',
+      'Restart completed. Watching error rate before resolving.',
+    ]);
 
     // Every message is rendered.
     const newest = screen.getByText(/Restart completed\./);
@@ -487,13 +506,14 @@ describe('IncidentTimelinePage', () => {
     expect(screen.getByRole('button', { name: 'Resolve' })).toBeDisabled();
   });
 
-  it('is null-safe when updates and affected_components are missing', () => {
+  it.each([undefined, null])('is null-safe when updates and affected_components are %s', missing => {
     mockUseIncident.mockReturnValue(
       loadedQuery(
-        baseIncident({
-          updates: undefined,
-          affected_components: undefined,
-        }),
+        {
+          ...baseIncident(),
+          updates: missing,
+          affected_components: missing,
+        },
       ),
     );
 
@@ -501,13 +521,108 @@ describe('IncidentTimelinePage', () => {
 
     // No timeline items, and each surface shows its own empty placeholder
     // rather than a blank panel or a crash.
-    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+    const region = screen.getByRole('region', { name: 'Incident timeline and updates' });
+    expect(within(region).queryAllByRole('listitem')).toHaveLength(0);
+    expect(within(region).queryByRole('list', { name: 'Incident updates' })).not.toBeInTheDocument();
     expect(
       screen.getByText(/No updates recorded yet/i),
     ).toBeInTheDocument();
     expect(screen.getByText(/None recorded/i)).toBeInTheDocument();
     // The page still mounted its header.
     expect(screen.getByText(/Incident #7/)).toBeInTheDocument();
+  });
+
+  it.each(['', 'identified'] as const)('submits the native append form with status %s and clears drafts only on success', async status => {
+    const mutateAsync = vi.fn().mockResolvedValue(baseIncident());
+    mockUseAppendIncidentUpdate.mockReturnValue({ mutateAsync, isPending: false });
+    mockUseIncident.mockReturnValue(loadedQuery(baseIncident()));
+    renderAt();
+
+    const form = screen.getByRole('form', { name: 'Add incident update' });
+    const message = within(form).getByRole('textbox', { name: 'Update message required' });
+    const select = within(form).getByRole('combobox', { name: 'Change status with this update' });
+    const submit = within(form).getByRole('button', { name: 'Add update' });
+    expect(form.tagName).toBe('FORM');
+    expect(message).toBeRequired();
+    expect(message).toHaveAttribute('maxlength', '4000');
+    expect(submit).toHaveAttribute('type', 'submit');
+    expect(message).toHaveValue('');
+    expect(select).toHaveValue('');
+
+    fireEvent.change(message, { target: { value: '  Mitigation verified.\n  ' } });
+    fireEvent.change(select, { target: { value: status } });
+    fireEvent.click(submit);
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledExactlyOnceWith({
+      id: 7,
+      payload: { message: 'Mitigation verified.', status: status || undefined },
+    }));
+    await waitFor(() => expect(message).toHaveValue(''));
+    expect(select).toHaveValue('');
+    expect(screen.getByText('Update added.')).toBeInTheDocument();
+  });
+
+  it('rejects empty and whitespace-only native append submissions without mutating', () => {
+    const mutateAsync = vi.fn();
+    mockUseAppendIncidentUpdate.mockReturnValue({ mutateAsync, isPending: false });
+    mockUseIncident.mockReturnValue(loadedQuery(baseIncident()));
+    renderAt();
+
+    const form = screen.getByRole('form', { name: 'Add incident update' });
+    const message = within(form).getByRole('textbox', { name: 'Update message required' });
+    fireEvent.click(within(form).getByRole('button', { name: 'Add update' }));
+    expect(message).toBeInvalid();
+    expect(mutateAsync).not.toHaveBeenCalled();
+    fireEvent.change(message, { target: { value: '   ' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Add update' }));
+    expect(within(form).getByRole('alert')).toHaveTextContent('Update message is required.');
+    expect(message).toHaveValue('   ');
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('retains append drafts after failure and retries the exact update through the native form', async () => {
+    const mutateAsync = vi.fn()
+      .mockRejectedValueOnce(new Error('append failed'))
+      .mockResolvedValueOnce(baseIncident());
+    mockUseAppendIncidentUpdate.mockReturnValue({ mutateAsync, isPending: false });
+    mockUseIncident.mockReturnValue(loadedQuery(baseIncident()));
+    renderAt();
+
+    const form = screen.getByRole('form', { name: 'Add incident update' });
+    const message = within(form).getByRole('textbox', { name: 'Update message required' });
+    const select = within(form).getByRole('combobox', { name: 'Change status with this update' });
+    fireEvent.change(message, { target: { value: '  Cache recovered.  ' } });
+    fireEvent.change(select, { target: { value: 'monitoring' } });
+    fireEvent.click(within(form).getByRole('button', { name: 'Add update' }));
+
+    await waitFor(() => expect(screen.getByText('append failed')).toBeInTheDocument());
+    expect(message).toHaveValue('  Cache recovered.  ');
+    expect(select).toHaveValue('monitoring');
+    expect(screen.queryByText('Update added.')).not.toBeInTheDocument();
+    expect(mutateAsync).toHaveBeenNthCalledWith(1, {
+      id: 7, payload: { message: 'Cache recovered.', status: 'monitoring' },
+    });
+
+    fireEvent.click(within(form).getByRole('button', { name: 'Add update' }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+    expect(mutateAsync).toHaveBeenNthCalledWith(2, {
+      id: 7, payload: { message: 'Cache recovered.', status: 'monitoring' },
+    });
+    await waitFor(() => expect(message).toHaveValue(''));
+    expect(select).toHaveValue('');
+    expect(screen.getByText('Update added.')).toBeInTheDocument();
+  });
+
+  it('disables native append submission while its mutation is pending', () => {
+    const mutateAsync = vi.fn();
+    mockUseAppendIncidentUpdate.mockReturnValue({ mutateAsync, isPending: true });
+    mockUseIncident.mockReturnValue(loadedQuery(baseIncident()));
+    renderAt();
+    const form = screen.getByRole('form', { name: 'Add incident update' });
+    const submit = within(form).getByRole('button', { name: 'Adding…' });
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 
   it('exposes the three primary content sections as accessible landmark regions', () => {
