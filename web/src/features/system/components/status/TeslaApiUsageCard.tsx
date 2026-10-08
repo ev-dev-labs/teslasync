@@ -34,7 +34,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
         { metricId: 'currency', occurrenceId: 'estimate', rawValue: currentSource?.estimated_usd,
           label: t('teslaUsage.cycle', 'Current 30-day cycle'),
           context: t('teslaUsage.notInvoice', 'Local estimate, not an invoice'),
-          display: { formatter: (raw) => ({ value: formatCurrency(raw) }) } },
+          display: { formatter: (raw) => ({ value: formatCurrency(raw), unit: '' }) } },
         { metricId: 'count', occurrenceId: 'signals', rawValue: currentSource?.signals,
           label: t('teslaUsage.signals', 'Streaming signals'), context: t('teslaUsage.signalRate', '150,000 / $1') },
         { metricId: 'count', occurrenceId: 'api-calls', rawValue: currentSource
