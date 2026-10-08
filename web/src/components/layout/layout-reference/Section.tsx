@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Heading, Text } from '@/components/ui';
+import { Heading, Text } from '@/components/ui/Typography';
 
 export interface SectionProps {
   id: string;
@@ -15,7 +15,7 @@ export function Section({ id, title, description, children }: SectionProps) {
         <Heading id={`${id}-title`} level="section" data-section-title className="break-words">
           {title}
         </Heading>
-        {description && <Text as="p" variant="bodySm">{description}</Text>}
+        {description && <Text as="p" variant="bodySm" className="break-words">{description}</Text>}
       </header>
       {children}
     </section>
