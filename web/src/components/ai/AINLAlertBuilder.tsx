@@ -2,15 +2,15 @@
 // The Draft button streams from POST /api/v1/ai/alerts/rules/draft.
 //
 // The deterministic AlertStudio form remains the baseline when AI is
-// off; this opt-in surface only drafts a typed AlertRule that the user
-// reviews and saves through the existing typed alerts handler.
+// off; this opt-in surface streams advisory text for manual entry in
+// that form. It does not hydrate, save, or enable an AlertRule.
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Textarea } from '@/components/ui'
+import { Textarea } from '@/components/ui/Textarea'
 import { useAiStream } from '@/hooks/useAiStream'
 
 // Stable no-op event sink hoisted to module scope so useAiStream's
@@ -57,7 +57,7 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
       title={t('notifications.alertStudio.aiBuilder.title', 'Draft from natural language')}
       description={t(
         'notifications.alertStudio.aiBuilder.description',
-        'Describe the alert you want and get a typed AlertRule draft you can review and save below.',
+        'Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.',
       )}
       buttonLabel={t('notifications.alertStudio.aiBuilder.draftButton', 'Draft alert')}
       badgeLabel={t('notifications.alertStudio.aiBuilder.badge', 'Helix')}
