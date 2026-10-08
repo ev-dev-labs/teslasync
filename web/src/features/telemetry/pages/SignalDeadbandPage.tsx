@@ -176,10 +176,10 @@ export default function SignalDeadbandPage() {
           metrics={metrics} testId="signal-deadband-summary" loading={historyLoading}
           unavailable={historyError} unknown={!signalChosen || analysis == null} sourceStatus={historyState.status}
           retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
-          scope={t('telemetryBrief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal: signal || '—' })}
+          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal: signal || '—' })}
           sourceBounds={signal ? [{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
-          provenance={t('telemetryBrief.historyProvenance', 'Selected signal history; numeric samples only')}
-          description={t('telemetryBrief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+          provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
+          description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
         {historyError && <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
@@ -254,9 +254,9 @@ export default function SignalDeadbandPage() {
             <TelemetrySummaryBrief title={t('signalDeadband.recommendation.title', 'Retention audit')}
               metrics={auditMetrics} testId="signal-deadband-retention-summary" sourceStatus={historyState.status}
               retained={historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null}
-              scope={t('telemetryBrief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal })}
+              scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal })}
               sourceBounds={[{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }]}
-              provenance={t('telemetryBrief.historyProvenance', 'Selected signal history; numeric samples only')}
+              provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
               description={t('signalDeadband.curve.subtitle', 'Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas')} />
           )}
         </GlassPanel>
