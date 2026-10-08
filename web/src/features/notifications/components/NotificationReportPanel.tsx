@@ -99,11 +99,11 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
         eyebrow={t('notifications.report.title', 'Notification activity')}
         title={t('notifications.report.brief.title', 'Triggers, linked deliveries, and outbound calls')}
         description={t('notifications.report.description', 'Explore triggers and delivery outcomes across every notification source. Historical periods remain available.')}
-        statusLabel={firstLoad ? t('common.loading', 'Loading…') : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
-          : state.status === 'offline' ? t('dataState.offline.title', 'Offline')
+        statusLabel={firstLoad ? t('common.loading', 'Loading…') : state.isRefreshBlocked ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+          : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
             : report ? t('notifications.report.brief.available', 'Report loaded')
               : t('notifications.report.brief.unavailable', 'Report unavailable')}
-        statusTone={state.fatalError || state.status === 'stale' || state.status === 'offline' ? 'warning' : 'neutral'}
+        statusTone={state.fatalError || state.isRefreshBlocked || state.status === 'stale' ? 'warning' : 'neutral'}
         metrics={operationalMetrics}
         scope={scope}
         freshness={<DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />}
