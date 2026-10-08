@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
+import { Caption } from '@/components/ui';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { DataStatus } from '@/api/dataState';
 
@@ -31,11 +32,11 @@ export function TelemetrySummaryBrief({
     <OperationalBrief compact testId={testId} metrics={operationalMetrics}
       eyebrow={t('telemetry.brief.eyebrow', 'Telemetry evidence')}
       title={title} description={description}
-      scope={<>{scope}{sourceBounds.map((bound, index) => <span key={`${bound.signal}-${index}`}>
+      scope={<>{scope}{sourceBounds.map((bound, index) => <Caption key={`${bound.signal}-${index}`} className="min-w-0 break-words">
         {' · '}{bound.from && bound.to
           ? t('telemetry.brief.returnedBounds', '{{signal}} source bounds: {{from}} → {{to}}', bound)
           : t('telemetry.brief.sourceBoundsUnknown', '{{signal}} source bounds not supplied', { signal: bound.signal })}
-      </span>)}</>}
+      </Caption>)}</>}
       provenance={provenance}
       loading={loading && !retained}
       statusLabel={retained ? t('operationalSummary.retained', 'Retained source data')

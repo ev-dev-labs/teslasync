@@ -110,4 +110,46 @@ describe('Telemetry compact OperationalBrief contract', () => {
       metrics={[]} testId="brief" scope="Unknown coverage" provenance="History" unavailable />);
     expect(screen.getByTestId('brief')).toHaveTextContent('Source unavailable');
   });
+
+  it('keeps long source identities and incomplete bounds as muted, wrapping metadata in both surfaces', () => {
+    const signal = `source-${'long-identity-'.repeat(12)}`;
+    setup({ sourceBounds: [
+      { signal, from: '2026-01-01T01:02:03Z' },
+      { signal: 'observed', from: '2026-01-02T04:05:06Z', to: '2026-01-02T04:06:07Z' },
+    ] });
+    const summary = screen.getByTestId('brief');
+    const missingBounds = within(summary).getByText(`${signal} source bounds not supplied`, { exact: false });
+    expect(missingBounds).toHaveClass('min-w-0', 'break-words');
+    expect(missingBounds).not.toHaveClass('truncate');
+    expect(summary).toHaveTextContent('24h requested; overlap only');
+    expect(summary).not.toHaveTextContent('2026-01-01T01:02:03Z');
+    expect(summary).toHaveTextContent('observed source bounds: 2026-01-02T04:05:06Z → 2026-01-02T04:06:07Z');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(`${signal} source bounds not supplied`);
+    expect(screen.getByRole('dialog')).toHaveTextContent('24h requested; overlap only');
+  });
+
+  it.each(['Refresh failed; last successful measurement retained', 'Offline; refresh paused'])(
+    'preserves caller-owned freshness without inventing source metadata: %s',
+    message => {
+      setup({ retained: true, sourceStatus: 'stale', freshness: <span>{message}</span> });
+      expect(screen.getByTestId('brief')).toHaveTextContent('Retained source data');
+      expect(screen.getByTestId('brief')).toHaveTextContent(message);
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      expect(screen.getByRole('dialog')).toHaveTextContent(message);
+      expect(vi.mocked(useOperationalMetrics).mock.lastCall?.[0]).toBe(metrics);
+    },
+  );
+
+  it('preserves explicit unknown, empty source, and caller-supplied fatal labels without measured zeros', () => {
+    const { container, rerender } = setup({ metrics: [], unknown: true });
+    expect(screen.getByTestId('brief')).toHaveTextContent('Source values unknown');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    rerender(<TelemetrySummaryBrief title="Signal evidence" description="Independent returned evidence"
+      metrics={[]} testId="brief" scope="Requested range" provenance="Unknown source"
+      sourceStatus="initialFailure" statusLabel="Initial source request failed" />);
+    expect(screen.getByTestId('brief')).toHaveTextContent('Initial source request failed');
+    expect(screen.getByTestId('brief')).not.toHaveTextContent('Queried snapshot');
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+  });
 });
