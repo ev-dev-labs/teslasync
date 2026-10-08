@@ -11,7 +11,9 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button, Textarea } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Textarea'
+import { Text } from '@/components/ui/Typography'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
 
 /**
@@ -194,6 +196,7 @@ function InnerSection(props: AINLGrafanaPanelProps) {
       onAction={handleDraft}
       inputSlot={
         <Textarea
+          label={t('powerGrafana.aiDrafter.promptLabel', 'Grafana panel request')}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder={t(
@@ -211,6 +214,8 @@ function InnerSection(props: AINLGrafanaPanelProps) {
             <Button
               variant="primary"
               size="sm"
+              wrapLabel
+              className="min-h-11 md:min-h-9"
               disabled={!canApply}
               aria-disabled={!canApply ? 'true' : 'false'}
               onClick={handleApply}
@@ -230,14 +235,14 @@ function InnerSection(props: AINLGrafanaPanelProps) {
               'Proposed Grafana panel (review before applying)',
             )}
             data-testid="ai-feature-nl-grafana-panel-draft"
-            className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm text-[var(--text-secondary)]"
+            className="min-w-0 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
           >
-            <div className="font-medium text-[var(--text-primary)]">
+            <Text as="div" variant="body" className="break-words">
               {draft.panel.title.trim().length > 0
                 ? draft.panel.title
                 : t('powerGrafana.aiDrafter.previewUntitled', 'Untitled panel')}
-            </div>
-            <ul className="mt-1 list-inside list-disc text-xs">
+            </Text>
+            <Text as="ul" variant="bodySm" className="mt-1 list-inside list-disc space-y-1 break-words">
               <li>
                 {t('powerGrafana.aiDrafter.previewType', 'Panel type:')}{' '}
                 {draft.panel.type}
@@ -256,7 +261,7 @@ function InnerSection(props: AINLGrafanaPanelProps) {
                   {referencedTables.join(', ')}
                 </li>
               )}
-            </ul>
+            </Text>
           </div>
         </>
       )}
