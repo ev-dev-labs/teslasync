@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useSignalEvidenceBundle, type SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
-import { resolveClipEpochMs, alignSignalHistoryToClip, type ReconstructionResult } from '../lib/timelineAlignment';
+import { resolveClipEpochMs, alignSignalHistoryToClip, type ReconstructionResult, type SignalPointLike } from '../lib/timelineAlignment';
 import type { ClipRecord, DashcamSettings } from '../lib/types';
 
 export interface UseReconstructionResult {
@@ -58,7 +58,15 @@ export function useReconstruction(
       clipDurationSeconds: clip.durationSeconds ?? 0,
       preRollSeconds: settings.reconstructionPreRollSeconds,
       postRollSeconds: settings.reconstructionPostRollSeconds,
-      seriesInput: bundle.data.map((s) => ({ signal: s.signal, points: s.response.data })),
+      seriesInput: bundle.data.map((s) => ({
+        signal: s.signal,
+        points: s.response.data.map((point): SignalPointLike => ({
+          timestamp: point.ts,
+          valueNum: typeof point.value === 'number' ? point.value : undefined,
+          valueStr: typeof point.value === 'string' ? point.value : undefined,
+          valueBool: typeof point.value === 'boolean' ? point.value : undefined,
+        })),
+      })),
     });
   }, [clip, clipEpochMs, settings.reconstructionPreRollSeconds, settings.reconstructionPostRollSeconds, bundle.data]);
 
