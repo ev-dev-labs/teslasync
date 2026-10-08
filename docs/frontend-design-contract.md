@@ -334,6 +334,72 @@ MDC-040–043/060–070 open/nested overlay matrix. No implementation is made he
 this source decision establishes neither browser/mobile nor forced-colors,
 composed contrast, keyboard or visual acceptance. No geometry deviation approved.
 
+### Docked side-panel geometry adoption — MDC-024 / MDC-030 / MDC-043
+
+**Additive decision for `phase3-side-panel-geometry-contract`:** the read-only
+HelixSidePanel receipt retains three genuine arbitrary-geometry candidates:
+`w-[420px]`, `max-w-[40vw]` and `min-h-[4.5rem]` (final scanner exit **1**).
+Existing resolved Tailwind width/max-width/min-height roles have no exact
+equivalents; `spacing.18` is absent. Reuse existing Drawer and shell breakpoints,
+but do not round these dimensions to nearby spacing or Drawer size values.
+The earlier modal/tooltip roles are different constraints, not replacements.
+
+Approve only these additions at the existing `theme.extend` owner in
+`web\tailwind.config.js`; names below are design targets, not implemented roles:
+
+| Source utility | Semantic role and exact value | Naming-only adoption |
+| --- | --- | --- |
+| Desktop dock `w-[420px]` | `width['side-panel'] = '420px'` | `w-side-panel` |
+| Desktop dock `max-w-[40vw]` | `maxWidth['side-panel-viewport'] = '40vw'` | `max-w-side-panel-viewport` |
+| Dock header `min-h-[4.5rem]` | `minHeight['side-panel-header'] = '4.5rem'` | `min-h-side-panel-header` |
+
+These are existing global-shell geometry roles, not a new side-panel component,
+public size API or generic spacing extension. Generate exactly `width: 420px`,
+`max-width: 40vw` and `min-height: 4.5rem`, with no added declarations.
+Keep pixel width pixel-based, the cap viewport-based (not 40% of the dock),
+and the header minimum rem-based: 72px at a 16px root, 90px at 20px.
+Do not replace the minimum with fixed height or multiply by `--font-scale`;
+long/scaled text must be allowed to grow the header.
+
+Register the named utilities in the existing `extendTailwindMerge` groups at
+`web\src\lib\cn.ts`: `w: [{ w: ['side-panel'] }]`,
+`max-w: [{ 'max-w': ['side-panel-viewport'] }]` and
+`min-h: [{ 'min-h': ['side-panel-header'] }]`. Prove last-conflicting-class-wins
+in both orders against ordinary and arbitrary utilities, including matching
+responsive variants. Different properties/variants must coexist; width and
+max-width must never conflict with each other. Do not rely on CSS source order,
+`!important` or a scanner exemption. No token/config/merge implementation occurs
+in this documentation item.
+
+Preserve the actual <=1279px Drawer / >=1280px dock split, not the Drawer
+primitive's own `sm` breakpoint. Desktop continues using `helix-dock-slot`,
+`role="complementary"`, localized label, `h-full`, `min-w-0`, `shrink-0`,
+logical start border and `pb-7`. The width/cap pair is `min(420px, 40vw)`
+under the existing flex constraints; at all current desktop QA widths the
+420px width wins. No portal, overlay layering, modal semantics, focus trap,
+body locking, safe-area/chrome offset or workspace-layout redesign is approved.
+Retain the growing header, visible Close, independent transcript scroll,
+persistent composer, full privacy hint, toggle, Send and configuration link.
+Preserve open/onClose, Escape/composer focus, mobile Drawer behavior and all
+stream/session/route cancellation, source/error and opt-in semantics.
+
+Separate downstream assignments: **`phase3-side-panel-geometry-tokens`** owns
+only the existing Tailwind config and cn registrations with directly matching
+tests, generated-CSS equivalence, resolved-name collision and merge checks;
+**`phase3-helix-side-panel-geometry-adoption`** owns only
+`web\src\components\layout\status-bar\HelixSidePanel.tsx` and its matching test
+after implementation, substituting the three utilities and retaining behavior.
+Recheck strict scoped lint/tests, preservation and the unchanged style scanner,
+keeping every other finding visible. The inherited preservation exit **2**
+(computed message identities) is not cleared by this decision.
+QA rechecks MDC-040–043/060–070: 1279/1280 transition, mission widths and narrow
+allocated docks, 200% text/root scaling, long translations/RTL, reachable
+unclipped focus/Close/composer, keyboard dismissal, transcript scrolling,
+mobile safe-area/chrome and dark/light/custom/forced-colors contrast.
+Documentation resolves the naming decision only; unimplemented utilities,
+source-equivalent geometry and old test receipts are not completed UI or runtime
+acceptance. No arbitrary-value waiver or geometry deviation is approved.
+
 Chart series use only as many distinguishable hues as data needs; repeated series
 keep their identities/order. Target palette starts with the blue/green/amber/rose/
 purple foreground pairs above, then neutral (`#abb4bf` dark / `#4f5f70` light)
