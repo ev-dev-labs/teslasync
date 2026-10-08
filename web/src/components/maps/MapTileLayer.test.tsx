@@ -62,4 +62,26 @@ describe('MapTileLayer', () => {
     expect(screen.getByTestId('tiles')).toHaveAttribute('data-url', expect.stringContaining('openstreetmap'));
     expect(screen.getByTestId('tiles')).toHaveAttribute('data-idle', 'true');
   });
+
+  it.each(['azure', 'google'])('keeps %s provider identity under low bandwidth', provider => {
+    state.config = { provider, api_key: 'test-map-key' };
+    state.richMapTiles = false;
+    render(<MapTileLayer style="satellite" />);
+    const tiles = screen.getByTestId('tiles');
+    expect(tiles.getAttribute('data-url')).toContain('test-map-key');
+    expect(tiles).toHaveAttribute('data-idle', 'true');
+    expect(tiles.className).toBe('');
+    expect(tiles.getAttribute('data-url')).toContain(
+      provider === 'azure' ? 'microsoft.base.darkgrey' : 'lyrs=r',
+    );
+  });
+
+  it.each(['azure', 'google', 'unknown'])('keeps anonymous free fallback for %s without a key', provider => {
+    state.config = { provider };
+    render(<MapTileLayer />);
+    expect(screen.getByTestId('tiles')).toHaveAttribute(
+      'data-url', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    );
+    expect(screen.getByTestId('tiles')).toHaveAttribute('data-idle', 'false');
+  });
 });

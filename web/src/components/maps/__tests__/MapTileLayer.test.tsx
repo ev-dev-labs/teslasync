@@ -34,6 +34,7 @@ type CapturedFsProps = {
   ariaLabelEnter?: string;
   ariaLabelExit?: string;
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
   targetRef: React.RefObject<HTMLElement | null>;
 };
 
@@ -316,11 +317,37 @@ describe('MapFullscreenControl', () => {
     const props = H.fsProps.mock.calls[H.fsProps.mock.calls.length - 1]?.[0] as CapturedFsProps;
     expect(props.ariaLabelEnter).toBe('Grow map');
     expect(props.ariaLabelExit).toBe('Shrink map');
-    expect(props.className).toContain('bg-[var(--surface-1)]/90');
+    expect(props.className).toContain('bg-surface-2');
+    expect(props.className).toContain('border-[var(--control-border)]');
+    expect(props.className).toContain('text-[var(--text-secondary)]');
+    expect(props.className).toContain('shadow-e1');
+    expect(props.className).toContain('h-11 w-11 p-0 md:h-9 md:w-9');
+    expect(props.size).toBe('md');
     expect(props.targetRef.current).toBe(container);
     // The button surfaces the enter-label so screen readers get a name.
     expect(screen.getByRole('button', { name: 'Grow map' })).toBeInTheDocument();
   });
+
+  it.each(['topleft', 'topright', 'bottomleft', 'bottomright'] as const)(
+    'preserves the %s corner and explicit empty label overrides',
+    position => {
+      const { container, map } = makeMapWithContainer();
+      H.map = map;
+      render(<MapFullscreenControl position={position} ariaLabelEnter="" ariaLabelExit="" />);
+      const control = container.querySelector('.leaflet-control');
+      expect(control).toHaveClass(
+        position.startsWith('top') ? 'top-2' : 'bottom-2',
+        position.endsWith('left') ? 'left-2' : 'right-2',
+        'pointer-events-auto',
+        'z-map-tile-control',
+      );
+      expect(H.fsProps).toHaveBeenLastCalledWith(expect.objectContaining({
+        ariaLabelEnter: '',
+        ariaLabelExit: '',
+        targetRef: expect.objectContaining({ current: container }),
+      }));
+    },
+  );
 
   it('renders nothing when the map has no container yet', () => {
     const invalidateSize = vi.fn();

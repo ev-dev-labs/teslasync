@@ -180,7 +180,7 @@ export function MapFullscreenControl({
       // shadows = 600… leaflet's own controls live at 800; we use
       // 800 here so the button stays clickable above marker
       // popups too).
-      className={`leaflet-control absolute z-[800] m-2 pointer-events-auto ${POSITION_CLASS[position] ?? POSITION_CLASS.topright}`}
+      className={`leaflet-control absolute z-map-tile-control m-2 pointer-events-auto ${POSITION_CLASS[position] ?? POSITION_CLASS.topright}`}
       // The leaflet container uses pointer-events for map drags —
       // the wrapper here MUST re-enable them on the button so
       // clicks register.
@@ -189,7 +189,8 @@ export function MapFullscreenControl({
         targetRef={containerRef}
         ariaLabelEnter={ariaLabelEnter}
         ariaLabelExit={ariaLabelExit}
-        className="bg-[var(--surface-1)]/90 border border-[var(--border-default)] text-[var(--text-primary)] shadow"
+        size="md"
+        className="h-11 w-11 p-0 md:h-9 md:w-9 bg-surface-2 border border-[var(--control-border)] text-[var(--text-secondary)] shadow-e1"
       />
     </div>,
     container,
