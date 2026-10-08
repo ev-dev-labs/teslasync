@@ -15,6 +15,8 @@ export default {
         'presentation-dimmer': '9998',
         'presentation-cursor': '9997',
         'map-tile-control': '800',
+        'command-palette-backdrop': '200',
+        'command-palette-positioner': '201',
       },
       width: {
         'side-panel': '420px',
@@ -44,6 +46,7 @@ export default {
         'alerts-preview': '320px',
         'status-options': '280px',
         'table-filter-viewport': 'calc(100dvh - 2rem)',
+        'command-palette': '84vh',
       },
       minWidth: {
         'freshness-age': '4.5rem',
@@ -54,6 +57,10 @@ export default {
         'metric-compact': 'minmax(0,1fr) minmax(0,1fr) 5rem',
         'replay-shortcuts': 'auto 1fr',
         'page-actions-scope': 'minmax(0,1fr) auto',
+        'workspace-header': 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)',
+      },
+      padding: {
+        'command-palette-viewport': 'max(2rem,8vh)',
       },
       flex: {
         'replay-scrubber': '1 1 12rem',
@@ -254,6 +261,7 @@ export default {
         'd-row': 'var(--density-row-h)',
       },
       height: {
+        'workspace-header': '4.5rem',
         'vehicle-grid': 'min(72vh, 56rem)',
         // Same density-aware row height as a fixed-height utility.
         'd-row': 'var(--density-row-h)',

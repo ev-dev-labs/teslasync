@@ -15,6 +15,32 @@ describe('restrained foundation presentation', () => {
 
   describe('additive overlay geometry (MDC-024 / MDC-022)', () => {
     const currentConfig = loadConfig(resolve('tailwind.config.js'));
+    const newGeometry = [
+      ['height', 'workspace-header', '4.5rem'],
+      ['gridTemplateColumns', 'workspace-header', 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)'],
+      ['zIndex', 'command-palette-backdrop', '200'],
+      ['zIndex', 'command-palette-positioner', '201'],
+      ['padding', 'command-palette-viewport', 'max(2rem,8vh)'],
+      ['maxHeight', 'command-palette', '84vh'],
+    ] as const;
+    const acceptedExtensions = {
+      ...currentConfig.theme?.extend,
+      height: { ...currentConfig.theme?.extend?.height },
+      gridTemplateColumns: { ...currentConfig.theme?.extend?.gridTemplateColumns },
+      zIndex: { ...currentConfig.theme?.extend?.zIndex },
+      padding: { ...currentConfig.theme?.extend?.padding },
+      maxHeight: { ...currentConfig.theme?.extend?.maxHeight },
+    };
+    for (const [group, name, value] of newGeometry) {
+      expect(acceptedExtensions[group]).toHaveProperty(name, value);
+      Reflect.deleteProperty(acceptedExtensions[group], name);
+    }
+    // This extension group was absent in the frozen immediate predecessor.
+    expect(acceptedExtensions.padding).toEqual({});
+    Reflect.deleteProperty(acceptedExtensions, 'padding');
+    const acceptedConfig = {
+      ...currentConfig, theme: { ...currentConfig.theme, extend: acceptedExtensions },
+    };
     const resourceGeometry = [
       ['gridTemplateColumns', 'metric-compact', 'minmax(0,1fr) minmax(0,1fr) 5rem'],
       ['minHeight', 'error-fallback', '400px'],
@@ -57,17 +83,17 @@ describe('restrained foundation presentation', () => {
       ['maxHeight', 'workspace-context', 'min(80vh, 38rem)'],
     ] as const;
     const historicalExtensions = {
-      ...currentConfig.theme?.extend,
-      zIndex: { ...currentConfig.theme?.extend?.zIndex },
-      width: { ...currentConfig.theme?.extend?.width },
-      maxWidth: { ...currentConfig.theme?.extend?.maxWidth },
-      maxHeight: { ...currentConfig.theme?.extend?.maxHeight },
-      minWidth: { ...currentConfig.theme?.extend?.minWidth },
-      height: { ...currentConfig.theme?.extend?.height },
-      minHeight: { ...currentConfig.theme?.extend?.minHeight },
-      gridTemplateColumns: { ...currentConfig.theme?.extend?.gridTemplateColumns },
-      flex: { ...currentConfig.theme?.extend?.flex },
-      transitionProperty: { ...currentConfig.theme?.extend?.transitionProperty },
+      ...acceptedConfig.theme?.extend,
+      zIndex: { ...acceptedConfig.theme?.extend?.zIndex },
+      width: { ...acceptedConfig.theme?.extend?.width },
+      maxWidth: { ...acceptedConfig.theme?.extend?.maxWidth },
+      maxHeight: { ...acceptedConfig.theme?.extend?.maxHeight },
+      minWidth: { ...acceptedConfig.theme?.extend?.minWidth },
+      height: { ...acceptedConfig.theme?.extend?.height },
+      minHeight: { ...acceptedConfig.theme?.extend?.minHeight },
+      gridTemplateColumns: { ...acceptedConfig.theme?.extend?.gridTemplateColumns },
+      flex: { ...acceptedConfig.theme?.extend?.flex },
+      transitionProperty: { ...acceptedConfig.theme?.extend?.transitionProperty },
     };
     const config: typeof currentConfig = {
       ...currentConfig,
@@ -129,7 +155,7 @@ describe('restrained foundation presentation', () => {
       return values;
     }
 
-    it('adds only the ten shell, nineteen remaining and six resource geometry roles to the full accepted config', () => {
+    it('adds only the ten shell, nineteen remaining, six resource and exactly six new geometry roles to the full accepted config', () => {
       const current = resolveConfig(currentConfig);
       const expected = {
         ...resolved,
@@ -145,12 +171,14 @@ describe('restrained foundation presentation', () => {
           gridTemplateColumns: { ...resolved.theme.gridTemplateColumns },
           flex: { ...resolved.theme.flex },
           transitionProperty: { ...resolved.theme.transitionProperty },
+          padding: { ...resolved.theme.padding },
         },
       };
       expect(shellGeometry).toHaveLength(10);
       expect(remainingGeometry).toHaveLength(19);
       expect(resourceGeometry).toHaveLength(6);
-      for (const [group, name, value] of [...shellGeometry, ...remainingGeometry, ...resourceGeometry]) {
+      expect(newGeometry).toHaveLength(6);
+      for (const [group, name, value] of [...shellGeometry, ...remainingGeometry, ...resourceGeometry, ...newGeometry]) {
         expect(resolved.theme[group]).not.toHaveProperty(name);
         expect(current.theme[group]).toHaveProperty(name, value);
         Reflect.set(expected.theme[group], name, value);
@@ -169,7 +197,7 @@ describe('restrained foundation presentation', () => {
     });
 
     it('preserves the exact immediate first-29 predecessor and built-in Combobox minimum', () => {
-      const current = resolveConfig(currentConfig);
+      const current = resolveConfig(acceptedConfig);
       const predecessor = {
         ...current,
         theme: {
@@ -195,7 +223,40 @@ describe('restrained foundation presentation', () => {
       });
       expect(createHash('sha256').update(canonical).digest('hex'))
         .toBe('b5058f22ff07111acb0e1472273cb36a18b74501a50be0d8e835c8b7bdb52d9f');
-      expect(current.theme.minWidth['24']).toBe('6rem');
+      expect(current.theme.minWidth?.['24']).toBe('6rem');
+    });
+
+    it('preserves the entire frozen immediate accepted35 config with exactly six additions', () => {
+      const prior = resolveConfig(acceptedConfig);
+      const current = resolveConfig(currentConfig);
+      const expected = {
+        ...prior,
+        theme: {
+          ...prior.theme,
+          height: { ...prior.theme.height },
+          gridTemplateColumns: { ...prior.theme.gridTemplateColumns },
+          zIndex: { ...prior.theme.zIndex },
+          padding: { ...prior.theme.padding },
+          maxHeight: { ...prior.theme.maxHeight },
+        },
+      };
+      expect(newGeometry).toHaveLength(6);
+      for (const [group, name, value] of newGeometry) {
+        expect(prior.theme[group]).not.toHaveProperty(name);
+        expect(current.theme[group]).toHaveProperty(name, value);
+        Reflect.set(expected.theme[group], name, value);
+      }
+      expect(current).toEqual(expected);
+      const canonical = JSON.stringify(prior, (_, value: unknown) => {
+        if (typeof value === 'function') return value.toString();
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const entries = value as Record<string, unknown>;
+          return Object.fromEntries(Object.keys(entries).sort().map((key) => [key, entries[key]]));
+        }
+        return value;
+      });
+      expect(createHash('sha256').update(canonical).digest('hex'))
+        .toBe('c857d7f5842a83387d7bfffefc499df4062b0ce3deff4882ab059e5f99614152');
     });
 
     it('adds only the approved resolved roles and preserves every prior config entry', () => {

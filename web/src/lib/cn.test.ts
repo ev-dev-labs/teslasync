@@ -20,6 +20,160 @@ function tokens(value: string): Set<string> {
   return new Set(value.split(/\s+/).filter(Boolean))
 }
 
+const newGeometry = [
+  ['height', 'workspace-header', 'h', '4.5rem', 'h-[4.5rem]', 'h-16', 'h-[5rem]'],
+  ['gridTemplateColumns', 'workspace-header', 'grid-cols', 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)', 'grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)_minmax(0,1fr)]', 'grid-cols-3', 'grid-cols-[1fr_2fr]'],
+  ['zIndex', 'command-palette-backdrop', 'z', '200', 'z-[200]', 'z-50', 'z-[300]'],
+  ['zIndex', 'command-palette-positioner', 'z', '201', 'z-[201]', 'z-50', 'z-[301]'],
+  ['padding', 'command-palette-viewport', 'py', 'max(2rem,8vh)', 'py-[max(2rem,8vh)]', 'py-8', 'py-[3rem]'],
+  ['maxHeight', 'command-palette', 'max-h', '84vh', 'max-h-[84vh]', 'max-h-screen', 'max-h-[90vh]'],
+] as const
+
+function newGeometryPredecessor() {
+  const current = loadConfig(resolve('tailwind.config.js'))
+  const extend = {
+    ...current.theme?.extend,
+    height: { ...current.theme?.extend?.height },
+    gridTemplateColumns: { ...current.theme?.extend?.gridTemplateColumns },
+    zIndex: { ...current.theme?.extend?.zIndex },
+    padding: { ...current.theme?.extend?.padding },
+    maxHeight: { ...current.theme?.extend?.maxHeight },
+  }
+  expect(newGeometry).toHaveLength(6)
+  for (const [group, name, , value] of newGeometry) {
+    expect(extend[group]).toHaveProperty(name, value)
+    Reflect.deleteProperty(extend[group], name)
+  }
+  expect(extend.padding).toEqual({})
+  Reflect.deleteProperty(extend, 'padding')
+  return { ...current, theme: { ...current.theme, extend } }
+}
+
+describe('cn — exact six workspace and command-palette geometry roles', () => {
+  const variants = ['', 'sm:', 'md:', 'xl:', '@[26rem]/metric:', 'motion-reduce:', 'forced-colors:'] as const
+  for (const [, name, prefix, , arbitrary, ordinary, alternate] of newGeometry) {
+    const named = `${prefix}-${name}`
+    for (const caller of [arbitrary, ordinary, alternate]) {
+      it.each(variants)(`${named} versus ${caller} preserves both orders for %s`, variant => {
+        expect(cn(`${variant}${named}`, `${variant}${caller}`)).toBe(`${variant}${caller}`)
+        expect(cn(`${variant}${caller}`, `${variant}${named}`)).toBe(`${variant}${named}`)
+        expect(cn([`${variant}${named}`, false], { [`${variant}${caller}`]: true }))
+          .toBe(`${variant}${caller}`)
+      })
+    }
+  }
+
+  it.each(variants)('preserves directional padding and independent properties/variants for %s', variant => {
+    const py = `${variant}py-command-palette-viewport`
+    const cls = (value: string) => `${variant}${value}`
+    for (const padding of ['p-4', 'p-[3rem]']) {
+      expect(cn(cls(padding), py)).toBe(`${cls(padding)} ${py}`)
+      expect(cn(py, cls(padding))).toBe(cls(padding))
+    }
+    for (const edge of ['pt', 'pb']) {
+      for (const size of ['4', '[3rem]']) {
+        const caller = cls(`${edge}-${size}`)
+        expect(cn(caller, py)).toBe(py)
+        expect(cn(py, caller)).toBe(`${py} ${caller}`)
+      }
+    }
+    for (const horizontal of ['px-4', 'pl-4', 'pr-4', 'ps-4', 'pe-4']) {
+      expect(cn(cls(horizontal), py)).toBe(`${cls(horizontal)} ${py}`)
+      expect(cn(py, cls(horizontal))).toBe(`${py} ${cls(horizontal)}`)
+    }
+    const independent = [
+      ...newGeometry.filter(([, , prefix]) => prefix !== 'z').map(([, name, prefix]) => cls(`${prefix}-${name}`)),
+      cls('z-command-palette-backdrop'), cls('min-h-side-panel-header'),
+      cls('w-side-panel'), cls('max-w-side-panel-viewport'),
+      'lg:h-20', 'lg:py-4', cls('col-start-2'),
+    ]
+    expect(tokens(cn(independent))).toEqual(new Set(independent))
+    expect(tokens(cn([...independent].reverse()))).toEqual(new Set(independent))
+    expect(cn(cls('z-command-palette-backdrop'), cls('z-command-palette-positioner')))
+      .toBe(cls('z-command-palette-positioner'))
+    expect(cn(cls('z-command-palette-positioner'), cls('z-command-palette-backdrop')))
+      .toBe(cls('z-command-palette-backdrop'))
+  })
+
+  it('proves entire before/after generated declarations, importance and variant context for all six roles', async () => {
+    const current = loadConfig(resolve('tailwind.config.js'))
+    const predecessor = newGeometryPredecessor()
+    const generate = async (config: typeof current, classes: string[]) =>
+      (await postcss([tailwindcss({
+        ...config, content: [{ raw: classes.join(' '), extension: 'html' }],
+      })]).process('@tailwind utilities;', { from: undefined })).root
+    const oldClasses = variants.flatMap(variant => newGeometry.flatMap(([, , , , arbitrary, ordinary, alternate]) =>
+      [arbitrary, ordinary, alternate].map(utility => `${variant}${utility}`)))
+    const namedClasses = variants.flatMap(variant => newGeometry.map(([, name, prefix]) => `${variant}${prefix}-${name}`))
+    const before = await generate(predecessor, oldClasses)
+    const after = await generate(current, [...oldClasses, ...namedClasses])
+    console.log('RAW EXACT SIX GEOMETRY BEFORE CSS\n' + before.toString())
+    console.log('RAW EXACT SIX GEOMETRY AFTER CSS\n' + after.toString())
+    function signature(root: Root, className: string) {
+      const matches: { declarations: [string, string, boolean][]; context: string[] }[] = []
+      root.walkRules(rule => {
+        const selector = rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls(decl => { declarations.push([decl.prop, decl.value, Boolean(decl.important)]) })
+        const context: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') context.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        matches.push({ declarations, context })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    const properties = { h: 'height', 'grid-cols': 'grid-template-columns', z: 'z-index', 'max-h': 'max-height' }
+    const contexts = {
+      '': [], 'sm:': ['@media (min-width: 640px)'], 'md:': ['@media (min-width: 768px)'],
+      'xl:': ['@media (min-width: 1280px)'], '@[26rem]/metric:': ['@container metric (min-width: 26rem)'],
+      'motion-reduce:': ['@media (prefers-reduced-motion: reduce)'],
+      'forced-colors:': ['@media (forced-colors: active)'],
+    }
+    for (const variant of variants) {
+      for (const [, name, prefix, value, arbitrary, ordinary, alternate] of newGeometry) {
+        const named = `${variant}${prefix}-${name}`
+        const original = signature(before, `${variant}${arbitrary}`)
+        if (prefix === 'py') {
+          // Tailwind inserts comma whitespace only in arbitrary max() values.
+          expect(original).toEqual({
+            declarations: [
+              ['padding-top', 'max(2rem, 8vh)', false],
+              ['padding-bottom', 'max(2rem, 8vh)', false],
+            ],
+            context: contexts[variant],
+          })
+          expect(signature(after, named)).toEqual({
+            ...original,
+            declarations: original.declarations.map(([property, cssValue, important]) =>
+              [property, cssValue.replace(/,\s*/g, ','), important]),
+          })
+        } else {
+          expect(signature(after, named)).toEqual(original)
+        }
+        expect(signature(after, named)).toEqual({
+          declarations: prefix === 'py'
+            ? [['padding-top', value, false], ['padding-bottom', value, false]]
+            : [[properties[prefix], value, false]],
+          context: contexts[variant],
+        })
+        for (const utility of [arbitrary, ordinary, alternate]) {
+          const caller = `${variant}${utility}`
+          expect(signature(after, caller)).toEqual(signature(before, caller))
+          expect(signature(after, cn(named, caller))).toEqual(signature(before, caller))
+          expect(signature(after, cn(caller, named))).toEqual(signature(after, named))
+        }
+      }
+    }
+  })
+})
+
 const resourceGeometry = [
   ['gridTemplateColumns', 'metric-compact', 'grid-cols', 'minmax(0,1fr) minmax(0,1fr) 5rem', 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem]', 'grid-cols-2', 'grid-cols-[1fr_2fr]'],
   ['minHeight', 'error-fallback', 'min-h', '400px', 'min-h-[400px]', 'min-h-0', 'min-h-[500px]'],
@@ -30,7 +184,7 @@ const resourceGeometry = [
 ] as const
 
 function resourcePredecessor() {
-  const current = loadConfig(resolve('tailwind.config.js'))
+  const current = newGeometryPredecessor()
   const extend = {
     ...current.theme?.extend,
     gridTemplateColumns: { ...current.theme?.extend?.gridTemplateColumns },
