@@ -124,17 +124,17 @@ export function LiveSignalTail({
     { metricId: 'rate', occurrenceId: 'rate', rawValue: rate,
       label: t('liveMonitor.sigPerSec', 'Signals / sec'),
       display: { formatter: (raw) => ({ value: String(raw), unit: '' }) },
-      description: t('telemetryBrief.sseRate', 'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.') },
+      description: t('liveMonitor.brief.sseRate', 'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.') },
     { metricId: 'count', occurrenceId: 'buffer', rawValue: items.length,
       label: t('liveMonitor.bufferSize', 'Buffer size'),
       description: `/ ${bufferMax ?? 0}`,
-      context: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
+      context: t('liveMonitor.brief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
     { metricId: 'count', occurrenceId: 'unique', rawValue: uniqueSignals,
       label: t('liveMonitor.uniqueSignals', 'Unique signals'),
-      description: t('telemetryBrief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
+      description: t('liveMonitor.brief.bufferScope', 'Current bounded SSE tail buffer only; cleared and replaced independently of durable history.') },
     { metricId: 'count', occurrenceId: 'filtered', rawValue: filtered.length,
       label: t('liveMonitor.filtered', 'Filtered'),
-      description: t('telemetryBrief.tailFiltered', 'Buffered entries after the case-insensitive signal-name filter; not distinct signals.') },
+      description: t('liveMonitor.brief.tailFiltered', 'Buffered entries after the case-insensitive signal-name filter; not distinct signals.') },
   ];
 
   return (
@@ -191,12 +191,12 @@ export function LiveSignalTail({
         </div>
 
         {showStats ? (
-          <TelemetrySummaryBrief title={t('telemetryBrief.tailTitle', 'Buffered tail summary')}
+          <TelemetrySummaryBrief title={t('liveMonitor.brief.tailTitle', 'Buffered tail summary')}
             metrics={metrics} testId="live-tail-summary"
-            statusLabel={paused ? t('telemetryBrief.tailPaused', 'Tail paused') : t('telemetryBrief.tailRecording', 'Tail recording enabled')}
-            scope={t('telemetryBrief.sseScope', 'Current SSE session · bounded tail buffer')}
-            provenance={t('telemetryBrief.sseProvenance', 'Client SSE tail and locally sampled throughput')}
-            description={t('telemetryBrief.tailDescription', 'Pause freezes the tail presentation, not durable telemetry ingestion. Connection and per-row timestamp freshness remain separate evidence.')} />
+            statusLabel={paused ? t('liveMonitor.brief.tailPaused', 'Tail paused') : t('liveMonitor.brief.tailRecording', 'Tail recording enabled')}
+            scope={t('liveMonitor.brief.sseScope', 'Current SSE session · bounded tail buffer')}
+            provenance={t('liveMonitor.brief.sseProvenance', 'Client SSE tail and locally sampled throughput')}
+            description={t('liveMonitor.brief.tailDescription', 'Pause freezes the tail presentation, not durable telemetry ingestion. Connection and per-row timestamp freshness remain separate evidence.')} />
         ) : null}
 
         <div ref={tableRef} className="overflow-auto rounded-lg border border-[var(--border-subtle)]" style={{ maxHeight }}>
