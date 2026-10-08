@@ -204,30 +204,30 @@ function useTwinCtx(): TwinContextValue {
  */
 const C = {
   cladding: 'rgba(10,13,20,0.88)',
-  glassStroke: 'rgba(125,211,252,0.32)',
+  glassStroke: 'var(--semantic-info-border)',
   glassOpen: 'rgba(3,7,18,0.72)',
-  glassPartial: 'rgba(100,200,255,0.05)',
-  glassUnknown: 'rgba(255,255,255,0.04)',
-  doorClosed: 'rgba(255,255,255,0.13)',
-  doorOpen: 'rgba(251,191,36,0.72)',
-  doorUnknown: 'rgba(255,255,255,0.07)',
+  glassPartial: 'var(--semantic-warning-bg)',
+  glassUnknown: 'var(--surface-2)',
+  doorClosed: 'var(--border-default)',
+  doorOpen: 'var(--semantic-warning)',
+  doorUnknown: 'var(--text-secondary)',
   headlightOff: 'rgba(255,255,255,0.14)',
   headlightOn: 'rgba(255,255,220,0.9)',
   headlightBeam: 'rgba(255,255,220,0.08)',
-  headlightGlow: 'rgba(34,211,238,0.35)',
+  headlightGlow: 'var(--semantic-info-border)',
   taillightBase: 'rgba(239,68,68,0.45)',
   taillightActive: 'rgba(239,68,68,0.85)',
   amber: 'rgba(251,191,36,0.78)',
-  amberFill: 'rgba(251,191,36,0.18)',
-  chargeGreen: 'rgba(34,197,94,0.82)',
-  chargeGreenFill: 'rgba(34,197,94,0.22)',
-  lockedGreen: 'rgba(34,197,94,0.9)',
-  unlockedRed: 'rgba(239,68,68,0.9)',
-  sentryRed: 'rgba(239,68,68,0.8)',
-  sentryGlow: 'rgba(239,68,68,0.35)',
-  seatOccupied: 'rgba(34,211,238,0.32)',
-  frunkTrunkOpen: 'rgba(251,191,36,0.2)',
-  neutral: 'rgba(255,255,255,0.05)',
+  amberFill: 'var(--semantic-warning-bg)',
+  chargeGreen: 'var(--semantic-info)',
+  chargeGreenFill: 'var(--semantic-info-bg)',
+  lockedGreen: 'var(--text-secondary)',
+  unlockedRed: 'var(--semantic-info)',
+  sentryRed: 'var(--semantic-info)',
+  sentryGlow: 'var(--semantic-info-border)',
+  seatOccupied: 'var(--semantic-info-bg)',
+  frunkTrunkOpen: 'var(--semantic-warning-bg)',
+  neutral: 'var(--surface-2)',
   shadow: 'rgba(0,0,0,0.5)',
   wheelDark: 'rgba(0,0,0,0.94)',
   wheelSidewall: 'rgba(8,12,22,0.95)',
@@ -245,10 +245,10 @@ function windowFill(state: WindowState, glassClosedRef: string): string {
 
 function windowStroke(state: WindowState): string {
   switch (state) {
-    case 'open': return C.amber;
-    case 'partial': return 'rgba(245,158,11,0.45)';
+    case 'open': return C.doorOpen;
+    case 'partial': return 'var(--semantic-warning-border)';
     case 'closed': return C.glassStroke;
-    default: return 'rgba(255,255,255,0.08)';
+    default: return 'var(--text-secondary)';
   }
 }
 
@@ -785,7 +785,7 @@ function SideWindows({
         <motion.path
           d="M 236 116 C 290 97 340 90 390 92.5 C 420 95.5 450 103 476 112"
           fill="none"
-          stroke={C.amber}
+          stroke="var(--semantic-warning)"
           strokeWidth={2}
           strokeLinecap="round"
           animate={ambientFrames({ opacity: [0.35, 1, 0.35] })}
@@ -1205,7 +1205,7 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
   if (!occupied) return null;
 
   return (
-    <ellipse cx={268} cy={122} rx={8.5} ry={11.5} fill={C.seatOccupied} stroke="rgba(34,211,238,0.35)" />
+    <ellipse cx={268} cy={122} rx={8.5} ry={11.5} fill={C.seatOccupied} stroke="var(--semantic-info)" />
   );
 }
 

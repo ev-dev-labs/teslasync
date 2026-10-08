@@ -44,6 +44,89 @@ const baseTwinState = {
 } satisfies VehicleTwinProps;
 
 describe('VehicleTwin', () => {
+  it.each(['photo', 'svg'] as const)('uses the passenger warning role only for open or partial windows in %s mode', async variant => {
+    motionPreference.reduce = true;
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} />);
+    const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    if (variant === 'photo') fireEvent.load(photo);
+    else fireEvent.error(photo);
+    await waitFor(() => expect(container.querySelectorAll('[data-wheel-spinner]'))
+      .toHaveLength(variant === 'photo' ? 2 : 0));
+    const warning = () => container.querySelector('path[d="M 236 116 C 290 97 340 90 390 92.5 C 420 95.5 450 103 476 112"]');
+    for (const passengerWindow of ['windowFP', 'windowRP'] as const) {
+      for (const state of ['open', 'partial', 'closed', null] as const) {
+        rerender(<VehicleTwin {...baseTwinState} {...{ [passengerWindow]: state }} />);
+        if (state === 'open' || state === 'partial') {
+          expect(warning()).toHaveAttribute('stroke', 'var(--semantic-warning)');
+          expect(warning()).toHaveAttribute('fill', 'none');
+          expect(warning()).toHaveAttribute('stroke-width', '2');
+          expect(warning()).toHaveAttribute('stroke-linecap', 'round');
+        } else {
+          expect(warning()).toBeNull();
+        }
+      }
+    }
+    rerender(<VehicleTwin {...baseTwinState} windowFD="open" windowRD="partial" />);
+    expect(warning()).toBeNull();
+  });
+
+  it.each(['photo', 'svg'] as const)('preserves exact amber physical lamps and turn/hazard predicates in %s mode', async variant => {
+    motionPreference.reduce = true;
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} windowFP="open" />);
+    const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    if (variant === 'photo') fireEvent.load(photo);
+    else fireEvent.error(photo);
+    await waitFor(() => expect(container.querySelectorAll('[data-wheel-spinner]'))
+      .toHaveLength(variant === 'photo' ? 2 : 0));
+    const amber = 'rgba(251,191,36,0.78)';
+    const frontLamp = () => container.querySelector('ellipse[cx="90"][cy="180"]');
+    const rearLamps = () => container.querySelectorAll('path[d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5 C 544 156.2 540.5 154.5 539 151.5 C 537.8 148 538 144 538.5 141 Z"]');
+    for (const turnSignal of ['off', 'left', 'right', 'both', null] as const) {
+      for (const hazards of [false, true, null] as const) {
+        rerender(<VehicleTwin {...baseTwinState} windowFP="open" turnSignal={turnSignal} hazards={hazards} />);
+        const frontActive = hazards === true || turnSignal === 'left' || turnSignal === 'both';
+        const rearActive = hazards === true || turnSignal === 'right' || turnSignal === 'both';
+        if (frontActive) {
+          expect(frontLamp()).toHaveAttribute('fill', amber);
+          expect(frontLamp()).toHaveAttribute('rx', '6');
+          expect(frontLamp()).toHaveAttribute('ry', '3.5');
+        } else {
+          expect(frontLamp()).toBeNull();
+        }
+        expect(rearLamps()).toHaveLength((variant === 'svg' ? 1 : 0) + (rearActive ? 1 : 0));
+        for (const lamp of rearLamps()) {
+          const activeOverlay = lamp.getAttribute('fill') === 'none';
+          expect(lamp).toHaveAttribute('stroke', rearActive ? amber : 'rgba(248,113,113,0.5)');
+          expect(lamp).toHaveAttribute('stroke-width', activeOverlay ? '2' : '0.9');
+          if (activeOverlay) expect(lamp).toHaveAttribute('stroke-linecap', 'round');
+          else expect(lamp.getAttribute('fill')).toMatch(/^url\(#.+-taillight-grad\)$/);
+        }
+        expect(container.querySelector('path[stroke="var(--semantic-warning)"][stroke-width="2"]'))
+          .toHaveAttribute('d', 'M 236 116 C 290 97 340 90 390 92.5 C 420 95.5 450 103 476 112');
+      }
+    }
+  });
+
+  it('uses theme-aware activity inks without changing unknown and false predicates', () => {
+    const { container, rerender } = render(
+      <VehicleTwin {...baseTwinState} locked={false} sentryMode isCharging chargePortOpen driverSeatOccupied />,
+    );
+    const seat = () => container.querySelector('ellipse[cx="268"][cy="122"]');
+    expect(seat()).toHaveAttribute('fill', 'var(--semantic-info-bg)');
+    expect(seat()).toHaveAttribute('stroke', 'var(--semantic-info)');
+    expect(container.querySelector('.lucide-shield')).toHaveAttribute('stroke', 'var(--semantic-info)');
+    expect(container.querySelector('.lucide-lock-open')).toHaveAttribute('stroke', 'var(--semantic-info)');
+    expect(container.querySelector('rect[x="527"][y="132"]')).toHaveAttribute('stroke', 'var(--semantic-info)');
+    rerender(<VehicleTwin {...baseTwinState} driverSeatOccupied={null} locked={null} sentryMode={null} />);
+    expect(seat()).toBeNull();
+    expect(container.querySelector('.lucide-lock')).toBeNull();
+    expect(container.querySelector('.lucide-lock-open')).toBeNull();
+    expect(container.querySelector('.lucide-shield')).toBeNull();
+    rerender(<VehicleTwin {...baseTwinState} />);
+    expect(seat()).toBeNull();
+    expect(container.querySelector('.lucide-lock')).toHaveAttribute('stroke', 'var(--text-secondary)');
+  });
+
   it('rescales photo and wheel calibration to the actual container and can expand again', async () => {
     const observers: TestObserver[] = [];
     class TestObserver implements ResizeObserver {
