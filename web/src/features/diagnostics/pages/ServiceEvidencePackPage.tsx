@@ -221,8 +221,6 @@ export default function ServiceEvidencePackPage() {
       <EvidenceSourceNotice
         state={evidenceState}
         sources={workspace.evidenceBundle.sources}
-        summary={focalAvailable ? liveCore.summary : null}
-        limitations={liveCore.limitations}
         label={t('serviceEvidencePack.kpis.signals', 'Signals in pack')}
         hasChosenSignal={workspace.hasChosenSignal}
       />
