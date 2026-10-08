@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { formatMetric, type MetricPreferences } from '@/lib/metric-reference';
 import type { TeslaUserProfile } from '@/api/hooks/useUser';
 import { formatDate, formatDateTime, formatRelative } from '@/lib/dateFormat';
@@ -29,7 +30,8 @@ const PROFILE: TeslaUserProfile = Object.freeze({ id: 123456, email: 'fixture@ex
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 function setup(overrides: Partial<Parameters<typeof TeslaAccountStatStrip>[0]> = {}) {
   return render(<TeslaAccountStatStrip profile={PROFILE} fetchedAt={PROFILE.fetched_at}
-    hasData loading={false} error={null} retained={false} onRetry={vi.fn()} {...overrides} />);
+    hasData loading={false} error={null} retained={false} onRetry={vi.fn()} {...overrides} />,
+  { wrapper: MemoryRouter });
 }
 describe('Tesla account canonical summary source preservation', () => {
   it('renders the actual OperationalBrief with source account evidence and review details', () => {
@@ -75,15 +77,21 @@ describe('Tesla account canonical summary source preservation', () => {
   });
 
   it('distinguishes never-synced from an unavailable query, retaining missing identifiers and dates', () => {
+    const retry = vi.fn();
     const { container, rerender } = setup({ profile: null, fetchedAt: null });
     expect(container).toHaveTextContent('Never synced');
     expect([...container.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
       .toEqual(['value', 'missing', 'missing', 'missing']);
     expect(container).toHaveTextContent('freshness is unknown');
     rerender(<TeslaAccountStatStrip profile={null} fetchedAt={null} hasData={false}
-      loading={false} error={new Error('profile unavailable')} retained={false} onRetry={vi.fn()} />);
+      loading={false} error={new Error('profile unavailable')} retained={false} onRetry={retry} />);
+    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Source unavailable');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'missing')).toBe(true);
     expect(container).not.toHaveTextContent('Never synced');
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole('button').map(button => button.textContent)).toEqual(['Review details', 'Retry']);
   });
 
   it('uses only the envelope source fetch timestamp when the profile has not been populated', () => {
@@ -106,8 +114,10 @@ describe('Tesla account canonical summary source preservation', () => {
     expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
     expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Showing retained measurements');
     expect(screen.getByTestId('tesla-account-summary')).not.toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect([...container.querySelectorAll('[data-operational-metric]')].every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getAllByRole('button').map(button => button.textContent)).toEqual(['Review details', 'Retry']);
   });
 });
