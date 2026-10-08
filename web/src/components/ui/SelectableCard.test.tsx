@@ -9,7 +9,7 @@
  *      form semantics come for free; features never hand-roll a raw control.
  *   2. `type` defaults to `"button"` (so a card inside a `<form>` never submits
  *      it by accident) but an explicit `type` override wins.
- *   3. Selection is conveyed by BOTH styling AND `aria-selected` — but
+ *   3. Selection is conveyed by styling and native `aria-pressed` or `aria-selected` — but
  *      `aria-selected` is only emitted when the caller supplies a `role` that
  *      supports it, so a bare `role="button"` never carries an invalid ARIA
  *      prop.
@@ -70,6 +70,30 @@ describe('SelectableCard — role & aria-selected contract', () => {
     expect(btn.hasAttribute('aria-selected')).toBe(false);
   });
 
+  it('reflects native button selection through aria-pressed on rerender', () => {
+    const { rerender } = render(<SelectableCard selected>Native</SelectableCard>);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+    rerender(<SelectableCard>Native</SelectableCard>);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('uses pressed rather than selected for an explicit button role', () => {
+    render(<SelectableCard role="button" selected>Native</SelectableCard>);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button')).not.toHaveAttribute('aria-selected');
+  });
+
+  it('retains a caller-provided aria-pressed override', () => {
+    render(<SelectableCard selected aria-pressed="mixed">Mixed</SelectableCard>);
+    expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'mixed');
+  });
+
+  it('does not add selection ARIA to an unsupported role', () => {
+    render(<SelectableCard role="link" selected>Link</SelectableCard>);
+    expect(screen.getByRole('link')).not.toHaveAttribute('aria-selected');
+    expect(screen.getByRole('link')).not.toHaveAttribute('aria-pressed');
+  });
+
   it('exposes the caller-supplied role on the element', () => {
     render(
       <SelectableCard role="option" aria-label="Option A">
@@ -78,6 +102,7 @@ describe('SelectableCard — role & aria-selected contract', () => {
     );
     // Locatable by the option role — not the default button role.
     expect(screen.getByRole('option', { name: 'Option A' })).toBeInTheDocument();
+    expect(screen.getByRole('option')).not.toHaveAttribute('aria-pressed');
     expect(screen.queryByRole('button')).toBeNull();
   });
 
@@ -123,13 +148,23 @@ describe('SelectableCard — styling contract', () => {
     expect(cls).toContain('w-full');
     expect(cls).toContain('min-h-11');
     expect(cls).toContain('focus-visible:ring-2');
+    expect(cls).toContain('focus-visible:ring-[var(--focus-ring)]');
+    expect(cls).toContain('focus-visible:ring-offset-2');
+    expect(cls).toContain('rounded-panel');
+    expect(cls).toContain('text-start');
+    expect(cls).toContain('min-w-0');
+    expect(cls).toContain('break-words');
+    expect(cls).toContain('duration-fast');
+    expect(cls).toContain('motion-reduce:transition-none');
+    expect(cls).toContain('forced-colors:focus-visible:outline-[Highlight]');
   });
 
   it('applies the selected accent and drops the unselected/hover classes when selected', () => {
     render(<SelectableCard selected>Sel</SelectableCard>);
     const cls = classesOf(screen.getByRole('button'));
-    expect(cls).toContain('border-cyan-400/60');
-    expect(cls).toContain('bg-cyan-500/5');
+    expect(cls).toContain('border-[var(--theme-primary)]');
+    expect(cls).toContain('bg-surface-2');
+    expect(cls).toContain('forced-colors:border-[Highlight]');
     // The unselected surface + its hover affordance must NOT be present.
     expect(cls).not.toContain('border-[var(--border-subtle)]');
     expect(cls).not.toContain('enabled:hover:border-[var(--border-strong)]');
@@ -139,6 +174,9 @@ describe('SelectableCard — styling contract', () => {
     render(<SelectableCard>Unsel</SelectableCard>);
     const cls = classesOf(screen.getByRole('button'));
     expect(cls).toContain('border-[var(--border-subtle)]');
+    expect(cls).toContain('bg-surface-1');
+    expect(cls).toContain('enabled:hover:bg-surface-2');
+    expect(cls).toContain('forced-colors:border-[ButtonText]');
     expect(cls).toContain('enabled:hover:border-[var(--border-strong)]');
     // Hover is gated behind `enabled:` so a disabled card is never a live
     // hover target — the bare `hover:` variant must not leak in.
@@ -166,6 +204,26 @@ describe('SelectableCard — styling contract', () => {
 });
 
 describe('SelectableCard — interaction', () => {
+  it('preserves focus and forwarded keyboard callbacks for long RTL content', () => {
+    const onFocus = vi.fn();
+    const onKeyDown = vi.fn();
+    const label = 'اختيار '.repeat(40);
+    render(
+      <SelectableCard dir="rtl" onFocus={onFocus} onKeyDown={onKeyDown}>
+        {label}
+      </SelectableCard>,
+    );
+    const btn = screen.getByRole('button');
+    btn.focus();
+    expect(btn).toHaveFocus();
+    expect(onFocus).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(btn, { key: 'Enter' });
+    fireEvent.keyDown(btn, { key: ' ' });
+    expect(onKeyDown).toHaveBeenCalledTimes(2);
+    expect(btn).toHaveAttribute('dir', 'rtl');
+    expect(btn.textContent).toBe(label);
+  });
+
   it('invokes onClick when clicked', () => {
     const onClick = vi.fn();
     render(<SelectableCard onClick={onClick}>Go</SelectableCard>);
