@@ -9,6 +9,7 @@ export default {
     extend: {
       zIndex: {
         overlay: '60',
+        'shell-status-bar': '55',
         'shell-panel': '80',
         'map-control': '1000',
         'presentation-controls': '9999',
@@ -20,6 +21,7 @@ export default {
       },
       width: {
         'side-panel': '420px',
+        'help-menu': 'min(92vw,260px)',
         'theme-switcher': '22rem',
         'connection-diagnostics': 'min(92vw, 320px)',
         'presentation-menu': 'min(92vw, 340px)',

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import postcss, { type Root, type Rule } from 'postcss';
 import tailwindcss from 'tailwindcss';
@@ -7,6 +8,65 @@ import resolveConfig from 'tailwindcss/resolveConfig';
 import { beforeAll, describe, it, expect } from 'vitest';
 import { motion, neonColorMap, semanticToNeon, severityTokens, gaugeTone, glassCardClasses, chartTokens, typography } from '../tokens';
 
+function finalShellPredecessor(): ReturnType<typeof loadConfig> {
+  const current = loadConfig(resolve('tailwind.config.js'));
+  const additions = [
+    ['width', 'help-menu', 'min(92vw,260px)'],
+    ['zIndex', 'shell-status-bar', '55'],
+  ] as const;
+  const extend = {
+    ...current.theme?.extend,
+    width: { ...current.theme?.extend?.width },
+    zIndex: { ...current.theme?.extend?.zIndex },
+  };
+  expect(additions).toHaveLength(2);
+  for (const [group, name, value] of additions) {
+    expect(extend[group]).toHaveProperty(name, value);
+    Reflect.deleteProperty(extend[group], name);
+  }
+  return { ...current, theme: { ...current.theme, extend } };
+}
+
+describe('exact two final shell additions', () => {
+  it('projects only the two verified additions onto the exact accepted predecessor', () => {
+    const source = readFileSync(resolve('tailwind.config.js'), 'utf8');
+    const addedLines = [
+      "        'help-menu': 'min(92vw,260px)',\n",
+      "        'shell-status-bar': '55',\n",
+    ];
+    let predecessorSource = source;
+    expect(addedLines).toHaveLength(2);
+    for (const line of addedLines) {
+      expect(predecessorSource.split(line)).toHaveLength(2);
+      predecessorSource = predecessorSource.replace(line, '');
+    }
+    expect(createHash('sha256').update(predecessorSource).digest('hex'))
+      .toBe('45987adc4bbc8d71638e2ea447328dbc1d9b873caaf48ce7cdd7afe058943937');
+    const prior = resolveConfig(finalShellPredecessor());
+    const current = resolveConfig(loadConfig(resolve('tailwind.config.js')));
+    expect(current).toEqual({
+      ...prior,
+      theme: {
+        ...prior.theme,
+        width: { ...prior.theme.width, 'help-menu': 'min(92vw,260px)' },
+        zIndex: { ...prior.theme.zIndex, 'shell-status-bar': '55' },
+      },
+    });
+    const canonical = JSON.stringify(prior, (_, value: unknown) => {
+      if (typeof value === 'function') return value.toString();
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        const entries = value as Record<string, unknown>;
+        return Object.fromEntries(Object.keys(entries).sort().map(key => [key, entries[key]]));
+      }
+      return value;
+    });
+    // The initial oracle resolved a filename string, not the frozen config.
+    // This fingerprint was derived from the byte-verified immutable predecessor.
+    expect(createHash('sha256').update(canonical).digest('hex'))
+      .toBe('4d95a49c5aafefa2d94c0a04b9061ab965d4279d0d59aa6d38415d1a8fc0d03c');
+  });
+});
+
 describe('restrained foundation presentation', () => {
   it('keeps unknown/neutral distinct from information', () => {
     expect(semanticToNeon.neutral).not.toBe(semanticToNeon.info);
@@ -14,7 +74,7 @@ describe('restrained foundation presentation', () => {
   });
 
   describe('additive overlay geometry (MDC-024 / MDC-022)', () => {
-    const currentConfig = loadConfig(resolve('tailwind.config.js'));
+    const currentConfig = finalShellPredecessor();
     const newGeometry = [
       ['height', 'workspace-header', '4.5rem'],
       ['gridTemplateColumns', 'workspace-header', 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)'],

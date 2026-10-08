@@ -30,7 +30,7 @@ const newGeometry = [
 ] as const
 
 function newGeometryPredecessor() {
-  const current = loadConfig(resolve('tailwind.config.js'))
+  const current = finalShellPredecessor()
   const extend = {
     ...current.theme?.extend,
     height: { ...current.theme?.extend?.height },
@@ -48,6 +48,106 @@ function newGeometryPredecessor() {
   Reflect.deleteProperty(extend, 'padding')
   return { ...current, theme: { ...current.theme, extend } }
 }
+
+const finalShellGeometry = [
+  ['width', 'help-menu', 'w', 'min(92vw,260px)', 'w-[min(92vw,260px)]', 'w-64', 'w-[300px]'],
+  ['zIndex', 'shell-status-bar', 'z', '55', 'z-[55]', 'z-50', 'z-[70]'],
+] as const
+
+function finalShellPredecessor(): ReturnType<typeof loadConfig> {
+  const current = loadConfig(resolve('tailwind.config.js'))
+  const extend = {
+    ...current.theme?.extend,
+    width: { ...current.theme?.extend?.width },
+    zIndex: { ...current.theme?.extend?.zIndex },
+  }
+  expect(finalShellGeometry).toHaveLength(2)
+  for (const [group, name, , value] of finalShellGeometry) {
+    expect(extend[group]).toHaveProperty(name, value)
+    Reflect.deleteProperty(extend[group], name)
+  }
+  return { ...current, theme: { ...current.theme, extend } }
+}
+
+describe('cn — exact two final shell naming roles', () => {
+  const variants = ['', 'md:', '!', 'md:!'] as const
+  for (const [, name, prefix, , arbitrary, ordinary, alternate] of finalShellGeometry) {
+    for (const caller of [arbitrary, ordinary, alternate]) {
+      it.each(variants)(`${name} versus ${caller} keeps both orders for %s`, variant => {
+        const named = `${variant}${prefix}-${name}`
+        const old = `${variant}${caller}`
+        expect(cn(named, old)).toBe(old)
+        expect(cn(old, named)).toBe(named)
+      })
+    }
+  }
+
+  it('keeps different breakpoints, importance and independent properties in both orders', () => {
+    for (const [, name, prefix] of finalShellGeometry) {
+      const named = `${prefix}-${name}`
+      for (const independent of [`md:${named}`, `!${named}`, `md:!${named}`, `sm:${named}`]) {
+        expect(tokens(cn(named, independent))).toEqual(new Set([named, independent]))
+        expect(tokens(cn(independent, named))).toEqual(new Set([named, independent]))
+      }
+    }
+    const independent = ['w-help-menu', 'min-w-64', 'max-w-sm', 'z-shell-status-bar', 'fixed', 'bottom-0']
+    expect(tokens(cn(independent))).toEqual(new Set(independent))
+    expect(tokens(cn([...independent].reverse()))).toEqual(new Set(independent))
+  })
+
+  it('generates equal real declarations, selector context, media and importance', async () => {
+    const current = loadConfig(resolve('tailwind.config.js'))
+    const oldClasses = variants.flatMap(variant =>
+      finalShellGeometry.flatMap(([, , , , arbitrary, ordinary, alternate]) =>
+        [arbitrary, ordinary, alternate].map(cls => `${variant}${cls}`)))
+    const namedClasses = variants.flatMap(variant =>
+      finalShellGeometry.map(([, name, prefix]) => `${variant}${prefix}-${name}`))
+    const generate = async (config: typeof current, classes: string[]) =>
+      (await postcss([tailwindcss({ ...config, content: [{ raw: classes.join(' '), extension: 'html' }] })])
+        .process('@tailwind utilities;', { from: undefined })).root
+    const before = await generate(finalShellPredecessor(), oldClasses)
+    const after = await generate(current, [...oldClasses, ...namedClasses])
+    console.log('RAW FINAL SHELL BEFORE CSS\n' + before.toString())
+    console.log('RAW FINAL SHELL AFTER CSS\n' + after.toString())
+    function signature(root: Root, className: string) {
+      const matches: { selector: string; declarations: [string, string, boolean][]; context: string[] }[] = []
+      root.walkRules(rule => {
+        const selector = rule.selector.replace(/\\([\da-f]{1,6})\s?/gi,
+          (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16))).replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls(decl => { declarations.push([decl.prop, decl.value.replace(/,\s*/g, ','), Boolean(decl.important)]) })
+        const context: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') context.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        matches.push({ selector: selector.replace(className, 'ROLE'), declarations, context })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    for (const variant of variants) {
+      for (const [, name, prefix, value, arbitrary, ordinary, alternate] of finalShellGeometry) {
+        const named = `${variant}${prefix}-${name}`
+        const original = signature(before, `${variant}${arbitrary}`)
+        expect(signature(after, named)).toEqual(original)
+        expect(original).toEqual({
+          selector: '.ROLE',
+          declarations: [[prefix === 'w' ? 'width' : 'z-index', value, variant.includes('!')]],
+          context: variant.startsWith('md:') ? ['@media (min-width: 768px)'] : [],
+        })
+        for (const caller of [arbitrary, ordinary, alternate]) {
+          const old = `${variant}${caller}`
+          expect(signature(after, old)).toEqual(signature(before, old))
+          expect(signature(after, cn(named, old))).toEqual(signature(before, old))
+          expect(signature(after, cn(old, named))).toEqual(signature(after, named))
+        }
+      }
+    }
+  })
+})
 
 describe('cn — exact six workspace and command-palette geometry roles', () => {
   const variants = ['', 'sm:', 'md:', 'xl:', '@[26rem]/metric:', 'motion-reduce:', 'forced-colors:'] as const
