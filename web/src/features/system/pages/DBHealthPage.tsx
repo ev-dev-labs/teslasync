@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Database, AlertTriangle,
+  Table2, AlertTriangle,
   RefreshCw, ArrowUpDown, CheckCircle2, XCircle, ListChecks, Server,
 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
