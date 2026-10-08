@@ -20,6 +20,146 @@ function tokens(value: string): Set<string> {
   return new Set(value.split(/\s+/).filter(Boolean))
 }
 
+const resourceGeometry = [
+  ['gridTemplateColumns', 'metric-compact', 'grid-cols', 'minmax(0,1fr) minmax(0,1fr) 5rem', 'grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem]', 'grid-cols-2', 'grid-cols-[1fr_2fr]'],
+  ['minHeight', 'error-fallback', 'min-h', '400px', 'min-h-[400px]', 'min-h-0', 'min-h-[500px]'],
+  ['transitionProperty', 'width', 'transition', 'width', 'transition-[width]', 'transition-all', 'transition-[opacity]'],
+  ['width', 'command-deck-collapsed', 'w', '76px', 'w-[76px]', 'w-full', 'w-[90px]'],
+  ['width', 'command-deck-expanded', 'w', '320px', 'w-[320px]', 'w-80', 'w-[400px]'],
+  ['minWidth', 'freshness-age', 'min-w', '4.5rem', 'min-w-[4.5rem]', 'min-w-0', 'min-w-[5rem]'],
+] as const
+
+function resourcePredecessor() {
+  const current = loadConfig(resolve('tailwind.config.js'))
+  const extend = {
+    ...current.theme?.extend,
+    gridTemplateColumns: { ...current.theme?.extend?.gridTemplateColumns },
+    minHeight: { ...current.theme?.extend?.minHeight },
+    transitionProperty: { ...current.theme?.extend?.transitionProperty },
+    width: { ...current.theme?.extend?.width },
+    minWidth: { ...current.theme?.extend?.minWidth },
+  }
+  for (const [group, name, , value] of resourceGeometry) {
+    expect(extend[group]).toHaveProperty(name, value)
+    Reflect.deleteProperty(extend[group], name)
+  }
+  return { ...current, theme: { ...current.theme, extend } }
+}
+
+describe('cn — six resource geometry roles (MDC-043)', () => {
+  const variants = ['', 'sm:', 'md:', 'xl:', '@[26rem]/metric:', 'motion-reduce:'] as const
+  const reuse = ['minWidth', '24', 'min-w', '6rem', 'min-w-[6rem]', 'min-w-0', 'min-w-[8rem]'] as const
+  const pairs = [...resourceGeometry, reuse]
+
+  for (const [, name, prefix, , arbitrary, ordinary, alternate] of pairs) {
+    const named = `${prefix}-${name}`
+    for (const alternative of [arbitrary, ordinary, alternate]) {
+      it.each(variants)(`${named} and ${alternative} honor both caller orders for %s`, variant => {
+        expect(cn(`${variant}${named}`, `${variant}${alternative}`)).toBe(`${variant}${alternative}`)
+        expect(cn(`${variant}${alternative}`, `${variant}${named}`)).toBe(`${variant}${named}`)
+        expect(cn([`${variant}${named}`, false], { [`${variant}${alternative}`]: true }))
+          .toBe(`${variant}${alternative}`)
+      })
+    }
+  }
+
+  it('retains independent properties, variants, motion and actual caller override order', () => {
+    const independent = [
+      'w-command-deck-collapsed', 'min-w-freshness-age', 'max-w-md',
+      'min-h-error-fallback', 'h-full', 'grid-cols-metric-compact', 'col-start-3',
+      'transition-width', 'duration-normal', 'ease-standard', 'motion-reduce:transition-none',
+      'sm:w-command-deck-expanded', '@[26rem]/metric:grid-cols-2',
+      'outline', 'outline-2', 'outline-offset-2', 'outline-[var(--focus-ring)]',
+    ]
+    expect(tokens(cn(independent))).toEqual(new Set(independent))
+    expect(tokens(cn([...independent].reverse()))).toEqual(new Set(independent))
+    expect(cn('w-command-deck-collapsed', 'w-command-deck-expanded')).toBe('w-command-deck-expanded')
+    expect(cn('w-command-deck-expanded', 'w-command-deck-collapsed')).toBe('w-command-deck-collapsed')
+    expect(cn('min-h-error-fallback p-8 max-w-md', 'min-h-0')).toBe('p-8 max-w-md min-h-0')
+    expect(cn('@[26rem]/metric:grid-cols-metric-compact', '@[26rem]/metric:grid-cols-2'))
+      .toBe('@[26rem]/metric:grid-cols-2')
+    expect(cn('@[26rem]/metric:grid-cols-2', '@[26rem]/metric:grid-cols-metric-compact'))
+      .toBe('@[26rem]/metric:grid-cols-metric-compact')
+    expect(cn('transition-width', 'transition-none')).toBe('transition-none')
+    expect(cn('transition-none', 'transition-width')).toBe('transition-width')
+  })
+
+  it('generates exact before/after CSS using the predecessor config and real responsive/container/motion plugins', async () => {
+    const current = loadConfig(resolve('tailwind.config.js'))
+    const predecessor = resourcePredecessor()
+    const generate = async (config: typeof current, classes: string[]) =>
+      (await postcss([tailwindcss({
+        ...config, content: [{ raw: classes.join(' '), extension: 'html' }],
+      })]).process('@tailwind utilities;', { from: undefined })).root
+    const oldClasses = variants.flatMap(variant => pairs.flatMap(([, , , , arbitrary, ordinary, alternate]) =>
+      [arbitrary, ordinary, alternate].map(value => `${variant}${value}`)))
+    const newClasses = variants.flatMap(variant => pairs.map(([, name, prefix]) => `${variant}${prefix}-${name}`))
+    const before = await generate(predecessor, oldClasses)
+    const after = await generate(current, [...oldClasses, ...newClasses])
+    console.log('RAW RESOURCE GEOMETRY BEFORE CSS\n' + before.toString())
+    console.log('RAW RESOURCE GEOMETRY AFTER CSS\n' + after.toString())
+    function signature(root: Root, className: string) {
+      const matches: { declarations: [string, string, boolean][]; context: string[] }[] = []
+      root.walkRules(rule => {
+        const selector = rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls(decl => { declarations.push([decl.prop, decl.value, Boolean(decl.important)]) })
+        const context: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') context.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        matches.push({ declarations, context })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    const properties = {
+      'grid-cols': 'grid-template-columns', 'min-h': 'min-height',
+      transition: 'transition-property', w: 'width', 'min-w': 'min-width',
+    }
+    const contexts = {
+      '': [], 'sm:': ['@media (min-width: 640px)'], 'md:': ['@media (min-width: 768px)'],
+      'xl:': ['@media (min-width: 1280px)'], '@[26rem]/metric:': ['@container metric (min-width: 26rem)'],
+      'motion-reduce:': ['@media (prefers-reduced-motion: reduce)'],
+    }
+    expect(resourceGeometry).toHaveLength(6)
+    expect(resolveConfig(current).theme.minWidth['24']).toBe('6rem')
+    for (const variant of variants) {
+      for (const [, name, prefix, value, arbitrary, ordinary, alternate] of pairs) {
+        const named = `${variant}${prefix}-${name}`
+        expect(signature(after, named)).toEqual(signature(before, `${variant}${arbitrary}`))
+        expect(signature(after, named)).toEqual({
+          declarations: prefix === 'transition'
+            ? [
+                [properties[prefix], value, false],
+                ['transition-timing-function', 'cubic-bezier(0.4, 0, 0.2, 1)', false],
+                ['transition-duration', '150ms', false],
+              ]
+            : [[properties[prefix], value, false]],
+          context: contexts[variant],
+        })
+        for (const utility of [arbitrary, ordinary, alternate]) {
+          const caller = `${variant}${utility}`
+          expect(signature(after, caller)).toEqual(signature(before, caller))
+          expect(signature(after, cn(named, caller))).toEqual(signature(before, caller))
+          expect(signature(after, cn(caller, named))).toEqual(signature(after, named))
+        }
+      }
+    }
+    for (const root of [16, 20]) {
+      expect(5 * root).toBe(root === 16 ? 80 : 100)
+      expect(26 * root).toBe(root === 16 ? 416 : 520)
+      expect(4.5 * root).toBe(root === 16 ? 72 : 90)
+      expect(6 * root).toBe(root === 16 ? 96 : 120)
+    }
+  })
+})
+
 const remainingGeometry = [
   ['zIndex', 'presentation-controls', 'z', '9999', 'z-[9999]', 'z-50', 'z-[9000]'],
   ['zIndex', 'presentation-dimmer', 'z', '9998', 'z-[9998]', 'z-50', 'z-[9000]'],
@@ -46,7 +186,7 @@ describe('cn — remaining nineteen geometry roles (MDC-043)', () => {
   const variants = ['', 'sm:', 'md:', 'xl:'] as const
 
   it('adds only nineteen collision-free entries to the complete accepted first-ten config', () => {
-    const config = loadConfig(resolve('tailwind.config.js'))
+    const config = resourcePredecessor()
     const prior = {
       ...config,
       theme: {
@@ -219,7 +359,7 @@ describe('cn — approved shell overlay geometry (MDC-043)', () => {
   const variants = ['', 'sm:', 'md:', 'xl:'] as const
 
   it('adds exactly ten collision-free roles without changing previous resolved config or plugins', () => {
-    const config = loadConfig(resolve('tailwind.config.js'))
+    const config = resourcePredecessor()
     const prior = {
       ...config,
       theme: {
