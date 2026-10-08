@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
 import { OperationalBrief } from '@/components/data-display';
-import { Button } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -21,11 +21,17 @@ export function MapsOperationalBrief({ title, description, scope, metrics, sourc
   const { t } = useTranslation();
   const operationalMetrics = useOperationalMetrics(metrics);
   const states = sources.map(({ state }) => state);
-  const status = states.some((state) => state.refreshError || state.isRefreshBlocked || state.status === 'stale')
-    ? 'retained'
-    : states.some((state) => !state.hasData)
-      ? states.every((state) => !state.hasData) ? 'unavailable' : 'partial'
-      : 'available';
+  const usable = states.filter((state) => state.hasData && state.status !== 'unavailable');
+  const initialLoading = states.length > 0 && states.every((state) =>
+    !state.hasData && state.status === 'initial' && !state.isRefreshBlocked);
+  const status = usable.length === 0
+    ? 'unavailable'
+    : usable.length < states.length || states.some((state) => state.status === 'partial')
+      ? 'partial'
+      : states.some((state) => state.refreshError || state.isRefreshBlocked || state.status === 'stale')
+        ? 'retained'
+        : 'available';
+  const isLoading = loading || initialLoading;
   const labels = {
     retained: t('mapsBrief.status.retained', 'Retained source data'),
     unavailable: t('mapsBrief.status.unavailable', 'Source data unavailable'),
@@ -39,21 +45,21 @@ export function MapsOperationalBrief({ title, description, scope, metrics, sourc
       eyebrow={t('mapsBrief.eyebrow', 'Location evidence')}
       title={title}
       description={description}
-      statusLabel={loading ? t('mapsBrief.status.loading', 'Loading source data') : labels[status]}
+      statusLabel={isLoading ? t('mapsBrief.status.loading', 'Loading source data') : labels[status]}
       statusTone={status === 'retained' || status === 'partial' ? 'warning' : 'neutral'}
       metrics={operationalMetrics}
       scope={scope}
-      loading={loading}
+      loading={isLoading}
       freshness={sources.map(({ label, state }) => (
-        <span key={label}>
+        <Text as="span" key={label} size="xs" color="muted" className="min-w-0 break-words">
           {label}: {state.updatedAt != null
             ? formatDateTime(new Date(state.updatedAt).toISOString())
             : t('mapsBrief.freshness.unknown', 'Receipt time unknown')}
-        </span>
+        </Text>
       ))}
       provenance={sources.map(({ label, state }) => `${label}: ${state.provenance}`).join('; ')}
       actions={onRetry && (
-        <Button size="sm" variant="outline" onClick={onRetry}>
+        <Button size="sm" variant="outline" wrapLabel className="min-h-11 md:min-h-9" onClick={onRetry}>
           {t('common.retry', 'Retry')}
         </Button>
       )}
