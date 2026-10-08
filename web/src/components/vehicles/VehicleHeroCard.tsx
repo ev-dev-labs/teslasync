@@ -5,6 +5,7 @@ import { Gauge } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { isFiniteNumber } from '@/lib/numberFormat';
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui/Button';
 import { LinearGauge } from '@/components/charts/LinearGauge';
 import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGaugeRange';
 import { StatusBadge } from '@/components/data-display/StatusBadge';
@@ -18,6 +19,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertPowerFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import type { VehicleStatus } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { typography } from '@/lib/tokens';
 
 export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
   vehicle: {
@@ -52,6 +54,11 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
 /** Stable grid layout for the detail stat cards — hoisted so the object
  *  reference is identical across renders and never re-triggers <Grid>. */
 const STAT_GRID_COLS = { default: 2, md: 4 } as const;
+const NAV_LINK_CLASS = cn(
+  BUTTON_BASE,
+  typography.size.sm,
+  'min-h-11 min-w-11 max-w-full break-words px-4 py-2',
+);
 
 /**
  * Coerce an arbitrary state string to a known {@link VehicleStatus}.
@@ -67,7 +74,7 @@ function toStatus(state: string): VehicleStatus {
 
 export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
   ({ vehicle, vehicleState, photoUrl, className, ...props }, ref) => {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+    const { fmtInt, fmtNumber } = useNumberFormatting();
     const { t } = useTranslation();
     const { unitPrefs } = useUnits();
     const vs = vehicleState;
@@ -108,9 +115,8 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         ref={ref}
         role="group"
         aria-label={vehicle.display_name}
-        glow="cyan"
         hover
-        className={cn('p-6 space-y-6', className)}
+        className={cn('min-w-0 p-4 sm:p-6 space-y-6', className)}
         {...props}
       >
         {/* User-uploaded hero photo; absent photo preserves the gauges-only layout. */}
@@ -135,7 +141,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
               </Heading>
               <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
             </div>
-            <Text as="p" size="xs" color="muted" className="font-mono">
+            <Text as="p" size="xs" color="muted" className="break-all font-mono">
               {vehicle.vin}
             </Text>
           </div>
@@ -151,35 +157,39 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           <>
             <div className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
               <LinearGauge
+                preserveReadingAndScale
                 value={batteryReading}
                 max={100}
                 label={t('vehicleHero.gauge.battery', 'Battery')}
                 unit="%"
-                tone={batteryReading == null ? undefined : batteryReading > 20 ? 'accent' : 'danger'}
+                tone={batteryReading == null ? undefined : batteryReading > 20 ? 'info' : 'danger'}
                 size={100}
               />
               <LinearGauge
+                preserveReadingAndScale
                 value={rangeDisplay}
                 max={rangeMax}
                 label={t('vehicleHero.gauge.range', 'Range')}
                 unit={distanceLabel}
-                tone="success"
+                tone="neutral"
                 size={100}
               />
               <LinearGauge
+                preserveReadingAndScale
                 value={insideTempDisplay}
                 {...tempRange}
                 label={t('vehicleHero.gauge.inside', 'Inside')}
                 unit={temperatureLabel}
-                tone="warning"
+                tone="neutral"
                 size={100}
               />
               <LinearGauge
+                preserveReadingAndScale
                 value={outsideTempDisplay}
                 {...tempRange}
                 label={t('vehicleHero.gauge.outside', 'Outside')}
                 unit={temperatureLabel}
-                tone="purple"
+                tone="neutral"
                 size={100}
               />
             </div>
@@ -226,27 +236,21 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           <Link
             to={`/vehicles/${vehicle.id}`}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20',
+              NAV_LINK_CLASS,
+              'border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] text-[var(--semantic-info)] hover:bg-[var(--control-bg-hover)] forced-colors:border-[ButtonBorder]',
             )}
           >
             {t('vehicleHero.action.details', 'Details')}
           </Link>
           <Link
             to={`/vehicles/${vehicle.id}/commands`}
-            className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
-            )}
+            className={cn(NAV_LINK_CLASS, BUTTON_VARIANTS.secondary)}
           >
             {t('vehicleHero.action.commands', 'Commands')}
           </Link>
           <Link
             to={`/vehicles/${vehicle.id}/map`}
-            className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)]',
-            )}
+            className={cn(NAV_LINK_CLASS, BUTTON_VARIANTS.secondary)}
           >
             {t('vehicleHero.action.liveMap', 'Live map')}
           </Link>

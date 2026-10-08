@@ -33,11 +33,14 @@
  *     when there is no live vehicle state.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { createRef } from 'react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { VehicleHeroCard, type VehicleHeroCardProps } from './VehicleHeroCard';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
+import type { LinearGaugeProps } from '@/components/charts/LinearGauge';
 
 type Vehicle = VehicleHeroCardProps['vehicle'];
 type State = NonNullable<VehicleHeroCardProps['vehicleState']>;
@@ -79,19 +82,14 @@ vi.mock('react-i18next', () => ({
 // Surface the gauge props as data-attributes so the SI→display conversion,
 // gauge scaling and battery tone threshold are directly assertable.
 vi.mock('@/components/charts/LinearGauge', () => ({
-  LinearGauge: (p: {
-    value: number | null | undefined;
-    max: number;
-    label: string;
-    unit?: string;
-    tone?: string;
-    color?: string;
-  }) => (
+  LinearGauge: (p: LinearGaugeProps) => (
     <div
       data-testid="gauge"
       data-label={p.label}
       data-value={String(p.value)}
       data-max={String(p.max)}
+      data-min={String(p.min)}
+      data-preserve-reading={String(p.preserveReadingAndScale)}
       data-unit={String(p.unit)}
       data-tone={String(p.tone)}
       data-color={String(p.color)}
@@ -211,8 +209,8 @@ describe('VehicleHeroCard — gauges (SI→display conversion, scaling & tone)',
     expect(battery).toHaveAttribute('data-value', '72');
     expect(battery).toHaveAttribute('data-max', '100');
     expect(battery).toHaveAttribute('data-unit', '%');
-    expect(battery).toHaveAttribute('data-tone', 'accent'); // >20 → theme accent
-    // No raw hex is passed any more: the tone map owns the colour so warm /
+    expect(battery).toHaveAttribute('data-tone', 'info'); // >20 → restrained headline, not a health verdict
+    // No raw hex is passed: the tone map owns the colour so warm /
     // light presets re-tint the bar instead of pinning it to a fixed cyan.
     expect(battery).toHaveAttribute('data-color', 'undefined');
 
@@ -392,5 +390,108 @@ describe('VehicleHeroCard — null safety (regression guards)', () => {
     renderCard({ vehicleState: makeState({ software_version: '' }) });
     expect(screen.getByText('Firmware')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+});
+
+describe('VehicleHeroCard — restrained presentation and public contracts', () => {
+  it('preserves exact out-of-scale readings and both converted temperature bounds', () => {
+    h.units.temperature = '°F';
+    renderCard({ vehicleState: makeState({ rated_range: 700_000, inside_temp: 60, outside_temp: -30 }) });
+    expect(gauge('Range')).toHaveAttribute('data-value', '700');
+    expect(gauge('Range')).toHaveAttribute('data-max', '644');
+    expect(gauge('Inside')).toHaveAttribute('data-value', '140');
+    expect(gauge('Outside')).toHaveAttribute('data-value', '-22');
+    for (const label of ['Inside', 'Outside']) {
+      expect(gauge(label)).toHaveAttribute('data-min', '-4');
+      expect(gauge(label)).toHaveAttribute('data-max', '122');
+    }
+    for (const label of ['Battery', 'Range', 'Inside', 'Outside']) {
+      expect(gauge(label)).toHaveAttribute('data-preserve-reading', 'true');
+    }
+  });
+
+  it('keeps supporting gauges neutral without inventing success or temperature warnings', () => {
+    renderCard({ vehicleState: makeState({ inside_temp: -12, outside_temp: 0, rated_range: 0 }) });
+    for (const label of ['Range', 'Inside', 'Outside']) {
+      expect(gauge(label)).toHaveAttribute('data-tone', 'neutral');
+      expect(gauge(label)).toHaveAttribute('data-color', 'undefined');
+    }
+    expect(gauge('Inside')).toHaveAttribute('data-value', '-12');
+    expect(gauge('Outside')).toHaveAttribute('data-value', '0');
+    expect(gauge('Range')).toHaveAttribute('data-value', '0');
+  });
+
+  it('retains a neutral panel and shared keyboard, reduced-motion and forced-colors link chrome', () => {
+    renderCard();
+    const panel = screen.getByRole('group', { name: 'Garage Queen' });
+    expect(panel).toHaveClass('min-w-0', 'p-4', 'sm:p-6', 'hover:border-[var(--panel-border-hover)]');
+    expect(panel).not.toHaveClass('hover:border-[var(--semantic-info-border)]');
+    for (const link of screen.getAllByRole('link')) {
+      expect(link).toHaveClass(
+        'min-h-11', 'min-w-11', 'max-w-full', 'break-words',
+        'focus-visible:outline-2', 'focus-visible:outline-offset-2',
+        'focus-visible:outline-[var(--focus-ring)]',
+        'forced-colors:focus-visible:outline-[Highlight]',
+        'motion-reduce:transition-none',
+      );
+      expect(link).not.toHaveClass('text-cyan-400', 'bg-cyan-500/10');
+    }
+    expect(screen.getByRole('link', { name: 'Details' })).toHaveClass('text-[var(--semantic-info)]');
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveClass('bg-[var(--control-bg)]');
+    expect(screen.getByRole('link', { name: 'Live map' })).toHaveClass('bg-[var(--control-bg)]');
+  });
+
+  it('forwards its ref, caller attributes and events while retaining exact long vehicle identity and photo', () => {
+    const ref = createRef<HTMLDivElement>();
+    const onClick = vi.fn();
+    const name = 'Vehicle identity '.repeat(12);
+    const vin = 'A'.repeat(80);
+    render(
+      <MemoryRouter>
+        <VehicleHeroCard
+          ref={ref}
+          vehicle={makeVehicle({ display_name: name, vin, model: 'Actual Model Y' })}
+          vehicleState={makeState()}
+          photoUrl="https://cdn.example/actual-paint.jpg"
+          dir="rtl"
+          data-testid="caller-panel"
+          className="caller-card"
+          onClick={onClick}
+        />
+      </MemoryRouter>,
+    );
+    const panel = screen.getByTestId('caller-panel');
+    expect(ref.current).toBe(panel);
+    expect(panel).toHaveAttribute('dir', 'rtl');
+    expect(panel).toHaveClass('caller-card');
+    expect(screen.getByRole('heading')).toHaveTextContent(name.trim());
+    expect(screen.getByText(vin)).toHaveClass('break-all');
+    expect(screen.getByText('Actual Model Y')).toBeInTheDocument();
+    expect(screen.getByRole('img')).toHaveAttribute('src', 'https://cdn.example/actual-paint.jpg');
+    expect(screen.getByRole('img')).toHaveAttribute('decoding', 'async');
+    fireEvent.click(panel);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains tab order and real keyboard navigation to the vehicle details route', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/fleet']}>
+        <Routes>
+          <Route path="/fleet" element={<VehicleHeroCard vehicle={makeVehicle()} vehicleState={makeState()} />} />
+          <Route path="/vehicles/7" element={<div data-testid="details-destination" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Details' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('link', { name: 'Live map' })).toHaveFocus();
+    await user.tab({ shift: true });
+    await user.tab({ shift: true });
+    await user.keyboard('{Enter}');
+    expect(screen.getByTestId('details-destination')).toBeInTheDocument();
   });
 });
