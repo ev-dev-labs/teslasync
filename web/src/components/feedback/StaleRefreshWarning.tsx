@@ -65,12 +65,8 @@ export function StaleRefreshWarning({
       ? 'unavailable'
       : 'stale';
 
-  const defaultMessage = state.isRefreshBlocked
-    ? t(
-        'dataState.refreshBlocked.message',
-        'The device is offline, so this section is showing the last values it received.',
-      )
-    : state.refreshError != null
+  // A paused query does not prove the device is offline.
+  const defaultMessage = state.refreshError != null
       ? t(
           'dataSources.staleMessage',
           'Previously loaded data remains visible while affected sources recover.',
@@ -92,17 +88,21 @@ export function StaleRefreshWarning({
       role="status"
       aria-live="polite"
       data-testid="stale-refresh-warning"
+      data-refresh-blocked={state.isRefreshBlocked || undefined}
     >
-      <div className="space-y-2">
-        <Text as="p" variant="bodySm">{message ?? defaultMessage}</Text>
+      <div className="min-w-0 space-y-2 break-words">
+        <Text as="p" variant="bodySm" color="secondary">{message ?? defaultMessage}</Text>
         {!hideRetry && state.retry != null ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             onClick={state.retry}
             disabled={state.isRefreshing}
-            icon={<RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />}
+            aria-busy={state.isRefreshing || undefined}
+            icon={<RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
           >
             {state.isRefreshing
               ? t('freshness.updating', 'Updating…')
