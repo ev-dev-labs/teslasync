@@ -17,12 +17,12 @@ const iconBoxSize = {
 /** Semantic glyph container; historical color IDs retain their token mappings. */
 export function IconBox({ children, color = 'cyan', size = 'md', className, ...props }: IconBoxProps) {
   // Runtime inputs can bypass the union, including inherited object keys.
-  const c = Object.hasOwn(neonColorMap, color) ? neonColorMap[color] : neonColorMap.cyan
+  const c = Object.prototype.hasOwnProperty.call(neonColorMap, color) ? neonColorMap[color] : neonColorMap.cyan
   return (
     <div {...props} className={cn(
       'flex items-center justify-center ring-1 shrink-0 rounded-shape-sm',
       'forced-colors:outline forced-colors:outline-1 forced-colors:outline-current',
-      Object.hasOwn(iconBoxSize, size) ? iconBoxSize[size] : iconBoxSize.md,
+      Object.prototype.hasOwnProperty.call(iconBoxSize, size) ? iconBoxSize[size] : iconBoxSize.md,
       c.bg, c.ring, c.text,
       className,
     )}>
