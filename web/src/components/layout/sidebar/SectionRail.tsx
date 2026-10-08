@@ -18,6 +18,7 @@ import { PrefetchNavLink } from '../PrefetchLink'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import type { SidebarSectionInput } from '../sectionGroups'
 import type { SectionGroup } from '../sectionGroups'
 import { flattenSidebarItems } from './collections'
@@ -53,7 +54,7 @@ function RailBadge({ value, label }: { value: number; label: string }) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--theme-primary)] px-1 text-2xs font-semibold tabular-nums text-[var(--text-on-accent)]"
+      className={cn('inline-flex min-h-4 min-w-4 items-center justify-center rounded-full bg-[var(--surface-2)] px-1 tabular-nums', typography.role.label, typography.color.secondary)}
     >
       {value > 99 ? '99+' : value}
     </span>
@@ -109,25 +110,25 @@ function RailButton({
       aria-pressed={active}
       aria-expanded={expanded}
       className={cn(
-        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md border border-transparent px-2.5 py-2 text-sm',
+        'h-auto min-h-11 w-full gap-2.5 rounded-shape-md border border-transparent px-2.5 py-2',
+        typography.size.sm,
         collapsed ? 'justify-center px-1' : 'justify-start',
         active
-          ? 'border-[var(--theme-primary)]/35 bg-[var(--nav-active-bg)] font-semibold text-[var(--text-primary)] shadow-sm'
-          : 'font-normal text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-        'focus-visible:ring-[var(--focus-ring)]',
+          ? cn('border-[var(--border-default)] bg-[var(--nav-active-bg)]', typography.weight.semibold, typography.color.primary)
+          : cn(typography.weight.regular, typography.color.secondary, 'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'),
       )}
     >
       <span className="relative inline-flex shrink-0">
-        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? 'text-[var(--nav-active-indicator)]' : 'text-[var(--text-muted)]')} aria-hidden />
+        <Icon className={cn(collapsed ? 'h-6 w-6' : 'h-5 w-5', active ? typography.color.primary : typography.color.muted)} aria-hidden />
         {collapsed && badge && (
           <span className="absolute -end-2 -top-2">{badge}</span>
         )}
       </span>
       {!collapsed && (
         <>
-          <span className="min-w-0 flex-1 truncate text-start leading-snug">{label}</span>
+          <span className="min-w-0 flex-1 break-words text-start leading-snug">{label}</span>
           {badge}
-          {expanded && <Icons.next className="h-4 w-4 shrink-0 text-[var(--nav-active-indicator)] rtl:rotate-180" aria-hidden />}
+          {expanded && <Icons.next className={cn('h-4 w-4 shrink-0 rtl:rotate-180', typography.color.primary)} aria-hidden />}
         </>
       )}
     </Button>
@@ -210,15 +211,16 @@ export function SectionRail({
           aria-label={t('nav.deck.allPages', 'All pages')}
           {...(collapsed ? tipHandlers(t('nav.deck.allPages', 'All pages')) : {})}
           className={cn(
-            'flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 text-sm font-normal text-[var(--text-secondary)] transition-colors',
+            'flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 transition-colors duration-fast ease-standard motion-reduce:transition-none',
+            typography.role.bodySm, typography.weight.regular,
             collapsed && 'justify-center px-1',
             'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
           )}
         >
           <SIDEBAR_SHORTCUT_ICONS.allPages className={cn(collapsed ? 'h-6 w-6 shrink-0' : 'h-5 w-5 shrink-0', 'text-[var(--text-muted)]')} aria-hidden />
           {!collapsed && (
-            <span className="min-w-0 flex-1 truncate text-start leading-snug">{t('nav.deck.allPages', 'All pages')}</span>
+            <span className="min-w-0 flex-1 break-words text-start leading-snug">{t('nav.deck.allPages', 'All pages')}</span>
           )}
         </PrefetchNavLink>
 
@@ -260,14 +262,15 @@ export function SectionRail({
               alertCount > 0 ? t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' }) : undefined,
             ) : {})}
             className={cn(
-              'relative flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 text-sm text-[var(--text-secondary)] transition-colors',
+              'relative flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 transition-colors duration-fast ease-standard motion-reduce:transition-none',
+              typography.role.bodySm,
               collapsed && 'justify-center px-1',
               'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
             )}
           >
             <SIDEBAR_SHORTCUT_ICONS.alerts className={collapsed ? 'h-6 w-6' : 'h-5 w-5'} aria-hidden />
-            {!collapsed && <span className="min-w-0 flex-1 truncate text-start">{t('nav.deck.alerts', 'Alerts')}</span>}
+            {!collapsed && <span className="min-w-0 flex-1 break-words text-start">{t('nav.deck.alerts', 'Alerts')}</span>}
             {alertCount > 0 && (
               <span className={collapsed ? 'absolute -end-0.5 top-0' : 'shrink-0'}>
                 <RailBadge value={alertCount} label={t('nav.deck.alertCount', { count: alertCount, defaultValue: '{{count}} unread alerts' })} />
@@ -280,14 +283,15 @@ export function SectionRail({
             aria-label={t('nav.deck.display', 'Display')}
             {...(collapsed ? tipHandlers(t('nav.deck.display', 'Display')) : {})}
             className={cn(
-              'flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 text-sm text-[var(--text-secondary)] transition-colors',
+              'flex min-h-11 w-full items-center gap-2.5 rounded-shape-md px-2.5 py-2 transition-colors duration-fast ease-standard motion-reduce:transition-none',
+              typography.role.bodySm,
               collapsed && 'justify-center px-1',
               'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+              'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight]',
             )}
           >
             <SIDEBAR_SHORTCUT_ICONS.display className={collapsed ? 'h-6 w-6' : 'h-5 w-5'} aria-hidden />
-            {!collapsed && <span className="min-w-0 flex-1 truncate text-start">{t('nav.deck.display', 'Display')}</span>}
+            {!collapsed && <span className="min-w-0 flex-1 break-words text-start">{t('nav.deck.display', 'Display')}</span>}
           </PrefetchNavLink>
         </div>
         {showCollapseControl && <Button
@@ -304,14 +308,15 @@ export function SectionRail({
           title={collapsed ? t('nav.deck.expand', 'Expand sidebar') : t('nav.deck.collapse', 'Collapse sidebar')}
           {...tipHandlers(collapsed ? t('nav.deck.expand', 'Expand sidebar') : t('nav.deck.collapse', 'Collapse sidebar'))}
           className={cn(
-            'mt-1 min-h-11 w-full gap-2.5 rounded-shape-md text-sm text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+            'mt-1 h-auto min-h-11 w-full gap-2.5 rounded-shape-md py-2 hover:text-[var(--text-primary)]',
+            typography.size.sm, typography.color.muted,
             collapsed ? 'justify-center p-0' : 'justify-start px-2.5',
           )}
         >
           {collapsed
-            ? <Icons.sidebarPrimaryExpand className="h-5 w-5 rtl:scale-x-[-1]" aria-hidden />
-            : <Icons.sidebarPrimaryCollapse className="h-5 w-5 rtl:scale-x-[-1]" aria-hidden />}
-          {!collapsed && <span>{t('nav.deck.collapseShort', 'Collapse')}</span>}
+            ? <Icons.sidebarPrimaryExpand className="h-5 w-5 shrink-0 rtl:-scale-x-100" aria-hidden />
+            : <Icons.sidebarPrimaryCollapse className="h-5 w-5 shrink-0 rtl:-scale-x-100" aria-hidden />}
+          {!collapsed && <span className="min-w-0 break-words text-start">{t('nav.deck.collapseShort', 'Collapse')}</span>}
         </Button>}
       </div>
 
