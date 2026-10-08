@@ -2075,3 +2075,139 @@ No UI/hook/backend/tests/catalog/CSS/config edits, Git, installs, nested agents,
 application TypeScript/lint/scans/tests/build or browser/network gates run here.
 Those gates are **NOTRUN**, not implicitly green; async correctness remains
 pending separately leased implementation and genuine acceptance.
+
+## Final shell geometry names and embedded About target — MDC-024 / MDC-030 / MDC-040–043
+
+**`phase3-final-shell-geometry-contract`: additive decisions only.** Preserve
+the complete approved **152052-byte** prefix, SHA-256
+`2bc690ec400bc1925da1e7369280e6ddd0c12de96367c3b1ca2f15b8c1e3bb59`.
+The fresh dispatch baseline and its immutable snapshot were compared against
+actual current bytes. No prior heading, decision, geometry/material permission,
+failure receipt or accepted mobile height/offset contract is revised here.
+Mission §2 remains the single design API; §43 still requires actual mounted QA.
+
+### Two exact naming-only roles; no substitute geometry or layer
+
+Read-only source inspection finds HelpSegment.tsx:176 still uses
+`w-[min(92vw,260px)]` and StatusBar.tsx:130 still uses `z-[55]`.
+The inspected config/cn maps contain neither exact named role. Approve only:
+
+| Existing owner | Exact `theme.extend` addition | Exact adoption / declaration |
+| --- | --- | --- |
+| `web\src\components\layout\status-bar\HelpSegment.tsx:176`, Popover width | `width['help-menu'] = 'min(92vw,260px)'` | `w-help-menu`; `width: min(92vw,260px)` |
+| `web\src\components\layout\StatusBar.tsx:130`, footer layer | `zIndex['shell-status-bar'] = '55'` | `z-shell-status-bar`; `z-index: 55` |
+
+Register only suffix `help-menu` in existing cn group `w`, and suffix
+`shell-status-bar` in group `z`. Width is fixed by the same viewport/pixel
+minimum, not a min-width, max-width, rem conversion, growing panel or `dvw`.
+Existing `w-recent-pages` is **min(92vw,360px)**; existing
+`min-w-background-work` is **260px minimum**. Neither is equivalent.
+Existing `z-overlay` is **60**, `z-shell-panel` **80** and palette layers
+**200/201**; none replaces **55**. Retain StatusBar 55 > tab bar 50 in their
+existing contexts and existing portal/overlay ordering, pointer interception
+and shell guard. A numeric z-index does not prove cross-context precedence.
+No positioner, portal, stacking context, DOM grouping, safe-area, height,
+bottom offset, opacity, paint, focus, motion or functionality change is allowed
+by these two names. Reuse existing restrained surface/text/border/semantic
+roles; naming does not authorize renewed neon, glow or decorative gradients.
+
+### Minimum serialized token and equivalence proof
+
+`phase3-final-shell-geometry-tokens` follows this root and release of every
+prior config/cn/test lease. It owns only `web\tailwind.config.js`,
+`web\src\lib\cn.ts`, `web\src\lib\cn.test.ts` and
+`web\src\lib\__tests__\tokens.test.ts`: exactly two additive map entries and
+two existing merge-group suffixes, no new conflict engine or generic rewrite.
+No CSS owner, tokens.ts wrapper, plugin, screen, caller, catalog or scanner
+waiver is needed. Freeze the immediate accepted predecessor and preserve all
+original fingerprints/invariants, including the three hashes pinned above and
+accepted 10/19/6/six-entry accounting. Assert the two exact keys/values before
+projecting only those additions; preserve exact predecessor comparison.
+No golden reset, broad exclusion, baseline pruning or deletion of old assertions.
+The queue's accepted **930 related cases** are predecessor context, not a fresh
+run here; the implementation owner must retain them and run normal guarded proof.
+
+Generate old/new utility CSS with actual installed Tailwind/config for bare,
+`md:` and `!` forms (including `md:!`): compare property/value, selector context,
+media condition, specificity and importance after class-name substitution.
+Bare utilities remain non-important; important variants retain importance.
+Require actual exported `cn()` checks, in **both input orders**, for each named
+role against its exact old arbitrary class and ordinary alternatives
+(`w-64`, `z-50`), plus another arbitrary same-property value. Matching responsive
+and important contexts must retain last-conflicting-class-wins; different
+breakpoints and important/non-important contexts must coexist as before.
+Width versus min/max-width and layer versus positioning remain independent.
+Do not infer merge behavior from suffix registration or CSS source order.
+Record real command/output and generated declarations; proposed examples,
+static reads and historical receipts are not executed equivalence proof.
+
+### Embedded About: distinct mobile source adoption, not child CSS
+
+Help's three directly owned actions already have mobile44 and explicit md36
+minimums. Its test mocks VersionSegment; its guarded **16-pass** predecessor
+receipt therefore does not prove the real embedded About target. Actual
+`VersionSegment.tsx:93` menu branch has
+`h-auto min-h-9 w-full min-w-0 justify-start px-3 py-2`: a **2.25rem (36px
+at 16px root)** minimum, not the accepted below-md44 allocation.
+
+Separately authorize only that `variant="menu"` button to use
+`h-auto min-h-11 min-w-11 w-full justify-start px-3 py-2 md:min-h-9 md:min-w-0`.
+Below md its minimum target is **2.75rem (44px at 16px root)**; at >=md
+restore exactly the prior **min-h-9 / min-w-0**, auto height and padding.
+Do not impose fixed height or truncate/wrap away metadata. Keep existing
+`ms-auto`, `break-words`, icon, full labels/version and native button/focus
+behavior; `variant="status"` retains its current density unchanged.
+The existing RTL assertion of bare `min-w-0` may change only to test the
+explicit md restoration and mobile minimum; retain its full metadata/name
+and icon assertions. Preserve original **23 + 2 additive cases**, managed
+versus local modal state, Enter/Space, version/server/build/dev/unknown fallback,
+update/unseen precedence, uptime/provenance, release/changelog links, Escape/
+close and service behavior. Add real menu-branch mobile/md presentation tests.
+No broad descendant button selector, Help mock workaround, new query/key,
+translation, version source, service or shared Button change is authorized.
+
+### Acyclic source scopes and separate acceptance
+
+The orchestrator leases one atomic owner per exact pair, with fresh immutable
+originals/current hashes; it does not implement these decisions itself:
+
+1. **This root -> `phase3-final-shell-geometry-tokens` ->**
+   **`phase3-help-menu-geometry-adoption`**, only
+   `web\src\components\layout\status-bar\HelpSegment.tsx` and adjacent
+   `HelpSegment.test.tsx`. Substitute only the width class; retain all
+   16 predecessor cases/assertions and cumulative accepted source behavior.
+   Final Help owner waits for this pair's verified acceptance/release.
+2. **This root + `phase3-mobile-statusbar-frame-root` ->**
+   **`phase3-mobile-version-about-touch-adoption`**, only
+   `web\src\components\layout\status-bar\VersionSegment.tsx` and adjacent
+   `VersionSegment.test.tsx`. Independent of the token/Help naming chain;
+   release before offset/browser proof. The parent source-reference freeze
+   remains until the sole Resources canonical-copy root is accepted.
+3. **Token acceptance + mobile frame pair release -> separately queued
+   `phase3-status-bar-layer-adoption`**, only
+   `web\src\components\layout\StatusBar.tsx` and `StatusBar.test.tsx`.
+   Substitute only `z-[55]` with `z-shell-status-bar`; preserve all accepted
+   **24 StatusBar cases**, provider/preferences/announcer, two rows, responsive
+   branches, lazy Helix and persistent About ownership. Add exact layer
+   assertion without replacing behavior coverage. Final `phase3-status-bar`
+   remains a different lease, after this adoption and all its existing
+   prerequisites; final Layout remains downstream. No root waits on either.
+
+Existing mobile height -> frame -> touch -> offset-proof -> final composite
+ordering remains; add Version's actual menu proof to touch prerequisites,
+not a dependency on final Help/StatusBar acceptance. Serialize overlapping
+leases and keep other original prerequisites/failures intact. No cycle,
+third generic migration, attempt reset or source rewrite is approved.
+
+Naming proof is not measured geometry or mobile acceptance. Separate mounted
+QA still covers mission widths and 767/768 transitions, actual viewport/root
+font, safe areas, RTL/long text/200% text, row reachability, overlays, native
+links, keyboard/focus, dark/light/custom/forced-colors and reduced motion.
+44px and 36px above are rem arithmetic at the stated root, not browser
+rectangles. Missing authorized browser/device evidence is BLOCKED/NOTRUN.
+This item changes only this document; raw original/prefix/full hashes, real
+paths and acyclic-scope proof are in
+`.agent-status\receipts\phase3-final-shell-geometry-contract-checks.log`.
+UI/source/config/CSS/catalog/import/tkey/source-reference writes, Git, nested
+agents, installs, application tests/lint/TypeScript/build and browser gates
+are **NOTRUN** here. No docs-only gate or implementation acceptance is claimed.
