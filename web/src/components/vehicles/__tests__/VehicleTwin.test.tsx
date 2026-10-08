@@ -44,6 +44,85 @@ const baseTwinState = {
 } satisfies VehicleTwinProps;
 
 describe('VehicleTwin', () => {
+  it.each([false, true])('keeps passenger warning paths static with reduced motion=%s', async reduce => {
+    motionPreference.reduce = reduce;
+    const doors = { ...baseTwinState.doors, passengerFront: true, passengerRear: true };
+    const { container, rerender } = render(
+      <VehicleTwin {...baseTwinState} doors={doors} windowFP="open" />,
+    );
+    const paths = [
+      'M 236 116 C 290 97 340 90 390 92.5 C 420 95.5 450 103 476 112',
+      'M 306 140.5 C 276 142.5 246 144.5 218 146.2',
+      'M 434 132 C 448 130 466 122 480 113.5',
+    ];
+    const assertStatic = () => {
+      for (const d of paths) {
+        const path = container.querySelector(`path[d="${d}"]`);
+        expect(path).toBeInTheDocument();
+        expect(path).toHaveAttribute('stroke', 'var(--semantic-warning)');
+        expect(path).toHaveAttribute('fill', 'none');
+        expect(path).toHaveAttribute('stroke-width', '2');
+        expect(path).toHaveAttribute('stroke-linecap', 'round');
+        expect(path).not.toHaveAttribute('style');
+      }
+    };
+    assertStatic();
+    fireEvent.load(container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!);
+    await act(async () => {
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    assertStatic();
+    motionPreference.reduce = !reduce;
+    rerender(<VehicleTwin {...baseTwinState} doors={doors} windowRP="partial" />);
+    assertStatic();
+    rerender(<VehicleTwin {...baseTwinState} windowFP={null} windowRP="closed"
+      doors={{ ...baseTwinState.doors, passengerFront: null, passengerRear: false }} />);
+    for (const d of paths) expect(container.querySelector(`path[d="${d}"]`)).toBeNull();
+  });
+
+  it.each([false, true])('honors disclosure entrance and exit with reduced motion=%s', async reduce => {
+    motionPreference.reduce = reduce;
+    const doors = { ...baseTwinState.doors, driverFront: true, driverRear: true };
+    const { container, rerender } = render(
+      <VehicleTwin {...baseTwinState} doors={doors} frunkOpen trunkOpen />,
+    );
+    const paths = [
+      'M 48.5 183.5 C 80 158 140 146 197 144 L 190 156 C 140 154 88 168 56 194 Z',
+      'M 481 107.5 C 507 94 535 98 549 121 L 545 132 C 535 122 510 111.5 483 113 Z',
+      'M 306 141 L 220 130 L 206 232 L 299 246 Z',
+      'M 434 131 L 498 118 L 510 215 L 438 236 Z',
+    ];
+    const overlays = () => paths.map(d => container.querySelector<SVGElement>(`path[d="${d}"]`));
+    for (const overlay of overlays()) {
+      expect(overlay).toBeInTheDocument();
+      expect(overlay).toHaveAttribute('opacity', reduce ? '1' : '0');
+      if (reduce) expect(overlay?.style.transform).toBe('none');
+      else expect(overlay?.style.transform).toMatch(/translateY\(8px\)|scaleX\(0\.9\)/);
+    }
+    await waitFor(() => {
+      for (const overlay of overlays()) {
+        expect(overlay).toHaveAttribute('opacity', '1');
+        expect(overlay?.style.transform).toBe('none');
+      }
+    });
+    rerender(<VehicleTwin {...baseTwinState} />);
+    if (!reduce) for (const overlay of overlays()) expect(overlay).toBeInTheDocument();
+    await waitFor(() => {
+      for (const overlay of overlays()) expect(overlay).toBeNull();
+    });
+    motionPreference.reduce = true;
+    rerender(<VehicleTwin {...baseTwinState} doors={doors} frunkOpen trunkOpen />);
+    for (const overlay of overlays()) {
+      expect(overlay).toHaveAttribute('opacity', '1');
+      expect(overlay?.style.transform).toBe('none');
+    }
+    rerender(<VehicleTwin {...baseTwinState} frunkOpen={null} trunkOpen={null}
+      doors={{ ...baseTwinState.doors, driverFront: null, driverRear: null }} />);
+    await waitFor(() => {
+      for (const overlay of overlays()) expect(overlay).toBeNull();
+    });
+  });
+
   it.each([false, true])('keeps body and glass reflections static with reduced motion=%s', async reduce => {
     motionPreference.reduce = reduce;
     const { container, rerender } = render(<VehicleTwin {...baseTwinState} />);

@@ -474,6 +474,7 @@ function BodyShell({
   photo?: boolean;
 }) {
   const { ids, bodyAccent } = useTwinCtx();
+  const { reduce, durationMs } = useMotionPreference();
   return (
     <g>
       {!photo && (
@@ -530,10 +531,10 @@ function BodyShell({
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
-            initial={{ opacity: 0, y: 8 }}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.25 }}
+            exit={reduce ? { opacity: 0, y: 0 } : { opacity: 0, y: 8 }}
+            transition={{ duration: durationMs / 1000 }}
           />
         )}
       </AnimatePresence>
@@ -555,10 +556,10 @@ function BodyShell({
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
-            initial={{ opacity: 0, y: 8 }}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.25 }}
+            exit={reduce ? { opacity: 0, y: 0 } : { opacity: 0, y: 8 }}
+            transition={{ duration: durationMs / 1000 }}
           />
         )}
       </AnimatePresence>
@@ -780,14 +781,12 @@ function SideWindows({
       )}
 
       {passengerAlert && (
-        <motion.path
+        <path
           d="M 236 116 C 290 97 340 90 390 92.5 C 420 95.5 450 103 476 112"
           fill="none"
           stroke="var(--semantic-warning)"
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [0.35, 1, 0.35] })}
-          transition={ambientLoop({ duration: 1.4, repeat: Infinity })}
         />
       )}
       <InteractiveHotspot
@@ -826,6 +825,7 @@ function DoorOverlay({
   interactive?: boolean;
   photo?: boolean;
 }) {
+  const { reduce, durationMs } = useMotionPreference();
   const isFront = kind === 'front';
   const seam = isFront
     ? { d: 'M 306 141 C 302 176 300 210 299 243', handleX: 243, handleY: 157 }
@@ -846,10 +846,10 @@ function DoorOverlay({
             fill={C.amberFill}
             stroke={C.doorOpen}
             strokeWidth={1.4}
-            initial={{ opacity: 0, scaleX: 0.9 }}
+            initial={reduce ? false : { opacity: 0, scaleX: 0.9 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            exit={{ opacity: 0, scaleX: 0.9 }}
-            transition={{ duration: 0.25 }}
+            exit={reduce ? { opacity: 0, scaleX: 1 } : { opacity: 0, scaleX: 0.9 }}
+            transition={{ duration: durationMs / 1000 }}
           />
         )}
       </AnimatePresence>
@@ -902,25 +902,21 @@ function PassengerDoorAlerts({
   return (
     <g>
       {passengerFront && (
-        <motion.path
+        <path
           d="M 306 140.5 C 276 142.5 246 144.5 218 146.2"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
-          transition={ambientLoop({ duration: 1.2, repeat: Infinity })}
         />
       )}
       {passengerRear && (
-        <motion.path
+        <path
           d="M 434 132 C 448 130 466 122 480 113.5"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
-          transition={ambientLoop({ duration: 1.2, repeat: Infinity })}
         />
       )}
     </g>
