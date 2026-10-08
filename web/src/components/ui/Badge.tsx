@@ -47,8 +47,8 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
         // (e.g. `variant={statusVariant(status)}`). Should a value land outside
         // the union at runtime, fall back to neutral/md tokens. Own-key checks
         // also reject inherited object keys such as `constructor`.
-        Object.hasOwn(variants, variant) ? variants[variant] : variants.neutral,
-        Object.hasOwn(badgeSizes, size) ? badgeSizes[size] : badgeSizes.md,
+        Object.prototype.hasOwnProperty.call(variants, variant) ? variants[variant] : variants.neutral,
+        Object.prototype.hasOwnProperty.call(badgeSizes, size) ? badgeSizes[size] : badgeSizes.md,
         className,
       )}
       {...props}
