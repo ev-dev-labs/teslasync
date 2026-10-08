@@ -8,6 +8,7 @@ import { Modal } from './Modal';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Checkbox } from './Checkbox';
+import { Text } from './Typography';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -64,8 +65,8 @@ const iconComponents = { AlertOctagon, AlertTriangle } as const;
 const confirmButtonClasses: Record<NonNullable<ConfirmDialogProps['variant']>, string | undefined> = {
   // Button's built-in 'danger' variant covers the critical case.
   danger: undefined,
-  // Button has no 'warning' variant — override with solid amber via className.
-  warning: 'bg-amber-500 text-[var(--text-primary)] hover:bg-amber-600 focus-visible:ring-amber-500',
+  // Keep warning meaning without turning the action into saturated chrome.
+  warning: 'bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)] border-[var(--semantic-warning-border)] hover:bg-[var(--control-bg-hover)] hover:border-[var(--semantic-warning)]',
 };
 
 export function ConfirmDialog({
@@ -160,11 +161,34 @@ export function ConfirmDialog({
   }
 
   return (
-    <Modal open={open} onClose={handleModalClose} title={title} size="sm">
+    <Modal
+      open={open}
+      onClose={handleModalClose}
+      title={title}
+      size="sm"
+      footer={(
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <Button type="button" variant="secondary" wrapLabel className="min-h-11 md:min-h-10" onClick={onCancel} disabled={loading}>
+            {cancelLabel}
+          </Button>
+          <Button
+            type="button"
+            variant={variant === 'danger' ? 'danger' : 'secondary'}
+            wrapLabel
+            className={cn('min-h-11 md:min-h-10', confirmButtonClasses[variant])}
+            onClick={handleConfirmClick}
+            loading={loading}
+            disabled={confirmDisabled}
+          >
+            {confirmLabel}
+          </Button>
+        </div>
+      )}
+    >
       <div className="space-y-4">
         <div className={cn('flex items-start gap-3 rounded-lg border p-3', tokens.bg, tokens.border)}>
           {Icon && <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', tokens.fg)} aria-hidden="true" />}
-          <p className="text-sm text-[var(--text-primary)]">{message}</p>
+          <Text variant="bodySm" className="min-w-0 break-words">{message}</Text>
         </div>
         {details}
         {requireTypedConfirmation && (
@@ -189,21 +213,6 @@ export function ConfirmDialog({
             />
           </div>
         )}
-        <div className="flex items-center justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={loading}>
-            {cancelLabel}
-          </Button>
-          <Button
-            type="button"
-            variant={variant === 'danger' ? 'danger' : 'primary'}
-            className={confirmButtonClasses[variant]}
-            onClick={handleConfirmClick}
-            loading={loading}
-            disabled={confirmDisabled}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
       </div>
     </Modal>
   );

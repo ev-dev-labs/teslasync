@@ -8,7 +8,7 @@
  */
 import '@/i18n';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, fireEvent, screen, cleanup, act } from '@testing-library/react';
+import { render, fireEvent, screen, cleanup, act, waitFor } from '@testing-library/react';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { isSilenced } from '@/lib/confirmSilence';
 
@@ -51,6 +51,126 @@ describe('ConfirmDialog — silenceKey', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Resolve' }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
+  describe('ConfirmDialog — primitive preservation', () => {
+    it('uses semantic warning chrome and keeps long actions in the persistent footer', () => {
+      const confirmLabel = 'Confirm this warning after reviewing all affected resources and consequences';
+      const cancelLabel = 'Cancel and return without changing any resources';
+      render(
+        <ConfirmDialog open title="Review warning" message="A warning remains meaningful."
+          variant="warning" confirmLabel={confirmLabel} cancelLabel={cancelLabel}
+          details={<p>All affected resources are listed here.</p>}
+          onConfirm={vi.fn()} onCancel={vi.fn()} />,
+      );
+      const confirm = screen.getByRole('button', { name: confirmLabel });
+      const cancel = screen.getByRole('button', { name: cancelLabel });
+      expect(confirm).toHaveClass('bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]');
+      expect(confirm).not.toHaveClass('bg-amber-500');
+      expect(confirm).toHaveClass('whitespace-normal', 'min-h-11');
+      expect(cancel).toHaveClass('whitespace-normal', 'min-h-11');
+      expect(confirm.closest('[data-modal-footer]')).toContainElement(cancel);
+      expect(screen.getByText('All affected resources are listed here.')).toBeInTheDocument();
+      expect(screen.getByRole('dialog', { name: 'Review warning' })).toBeInTheDocument();
+    });
+
+    it('blocks loading confirmation, cancellation, close and Escape without changing silence', () => {
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+      render(
+        <ConfirmDialog open title="Discard?" message="Still processing." variant="warning"
+          silenceKey="loading-discard" loading onConfirm={onConfirm} onCancel={onCancel} />,
+      );
+      const confirm = screen.getByRole('button', { name: 'Confirm' });
+      const cancel = screen.getByRole('button', { name: 'Cancel' });
+      expect(confirm).toBeDisabled();
+      expect(confirm).toHaveAttribute('aria-busy', 'true');
+      expect(cancel).toBeDisabled();
+      expect(screen.getByRole('checkbox')).toBeDisabled();
+      fireEvent.click(confirm);
+      fireEvent.click(cancel);
+      fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+      fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+      fireEvent.keyDown(window, { key: 'Escape' });
+      expect(onConfirm).not.toHaveBeenCalled();
+      expect(onCancel).not.toHaveBeenCalled();
+      expect(isSilenced('loading-discard')).toBe(false);
+    });
+
+    it('requires exact typed text, retains caller validation and resets after reopening', () => {
+      const onConfirm = vi.fn();
+      const props = {
+        title: 'Delete?', message: 'Cannot be undone.', requireTypedConfirmation: 'DELETE',
+        typedConfirmationLabel: 'Enter the exact safety phrase', onConfirm, onCancel: vi.fn(),
+      };
+      const { rerender } = render(<ConfirmDialog {...props} open confirmDisabled />);
+      const input = screen.getByRole('textbox', { name: props.typedConfirmationLabel });
+      expect(input).toHaveAttribute('autocomplete', 'off');
+      expect(input).toHaveAttribute('spellcheck', 'false');
+      fireEvent.change(input, { target: { value: 'delete' } });
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+      fireEvent.change(input, { target: { value: 'DELETE' } });
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+      rerender(<ConfirmDialog {...props} open />);
+      fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      rerender(<ConfirmDialog {...props} open={false} />);
+      expect(screen.queryByRole('dialog')).toBeNull();
+      rerender(<ConfirmDialog {...props} open />);
+      expect(screen.getByRole('textbox', { name: props.typedConfirmationLabel })).toHaveValue('');
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('never auto-confirms a typed warning even when the action was silenced', () => {
+      localStorage.setItem('teslasync:confirm-silence:v1', JSON.stringify(['reset']));
+      const onConfirm = vi.fn();
+      render(
+        <ConfirmDialog open title="Reset?" message="Type to confirm." variant="warning"
+          requireTypedConfirmation="reset" silenceKey="reset"
+          onConfirm={onConfirm} onCancel={vi.fn()} />,
+      );
+      expect(onConfirm).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.queryByRole('checkbox')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('preserves single Escape cancellation and restores the trigger after closing', async () => {
+      const onCancel = vi.fn();
+      const props = { title: 'Delete?', message: 'Cannot be undone.', onConfirm: vi.fn(), onCancel };
+      const { rerender } = render(
+        <><button type="button">Original trigger</button><ConfirmDialog {...props} open={false} /></>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Original trigger' });
+      trigger.focus();
+      rerender(<><button type="button">Original trigger</button><ConfirmDialog {...props} open /></>);
+      expect(screen.getByRole('dialog')).toContainElement(document.activeElement);
+      fireEvent.keyDown(screen.getByRole('button', { name: 'Cancel' }), { key: 'Escape' });
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      rerender(<><button type="button">Original trigger</button><ConfirmDialog {...props} open={false} /></>);
+      await waitFor(() => expect(trigger).toHaveFocus());
+    });
+
+    it('keeps confirmation and cancellation as non-submit actions inside a caller form', () => {
+      const onSubmit = vi.fn();
+      const onConfirm = vi.fn();
+      const onCancel = vi.fn();
+      render(
+        <form onSubmit={onSubmit}>
+          <ConfirmDialog open title="Review" message="Choose an action."
+            onConfirm={onConfirm} onCancel={onCancel} />
+        </form>,
+      );
+      const confirm = screen.getByRole('button', { name: 'Confirm' });
+      const cancel = screen.getByRole('button', { name: 'Cancel' });
+      expect(confirm).toHaveAttribute('type', 'button');
+      expect(cancel).toHaveAttribute('type', 'button');
+      fireEvent.click(confirm);
+      fireEvent.click(cancel);
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
   });
 
   it('renders the checkbox when silenceKey is provided on a non-destructive prompt', () => {
