@@ -17,7 +17,7 @@ const {
   sparkles: Rocket, success: CheckCircle, clock: Clock, star: Star, charging: Zap,
   notifications: Bell, monitor: Smartphone, cpu: Brain, charger: Plug,
   security: Shield, map: Map, analytics: BarChart3, leaf: Leaf,
-  maintenance: Wrench, users: Users, layoutGrid: Layers, lightbulb: Sparkles,
+  maintenance: Wrench, users: Users, layoutGrid: Layers,
 } = Icons;
 
 /* ------------------------------------------------------------------ */
