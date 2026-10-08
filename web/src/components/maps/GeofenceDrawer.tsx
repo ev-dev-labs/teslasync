@@ -1,10 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
 import './leafletGlobal';
 import 'leaflet-draw';
 import 'leaflet-draw/dist/leaflet.draw.css';
 import { fmtNumber, fmtScientificNumber } from '@/lib/numberFormat';
+import { resolveMapRendererColor } from '@/lib/colors';
+import { EmptyState } from '@/components/feedback/EmptyState';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -46,7 +50,7 @@ export interface GeofenceDrawerProps {
   onDelete?: (id: string | number) => void;
   /** Restrict which shapes the user can draw. Default: ['circle']. */
   modes?: GeofenceMode[];
-  /** Stroke / fill color for drawn shapes. Default '#22d3ee'. */
+  /** Stroke / fill color for drawn shapes. Defaults to the theme primary role. */
   color?: string;
 }
 
@@ -55,6 +59,25 @@ export interface GeofenceDrawerProps {
 /* ------------------------------------------------------------------ */
 
 const ID_KEY = '__teslasync_fence_id';
+const DEFAULT_PAINT = 'var(--theme-primary)';
+
+interface DrawRuntime extends L.Control.Draw {
+  _toolbars?: Record<string, {
+    _modes: Record<string, { handler: { _shape?: L.Path; _poly?: L.Path } }>;
+  }>;
+}
+
+function repaintLayer(layer: L.Layer, color: string) {
+  if (!(layer instanceof L.Path)) return;
+  const options = layer.options as L.PathOptions & {
+    original?: L.PathOptions;
+    editing?: L.PathOptions;
+  };
+  // leaflet-draw restores these options when edit mode ends.
+  if (options.original) Object.assign(options.original, { color, fillColor: color });
+  if (options.editing) Object.assign(options.editing, { color, fillColor: color });
+  layer.setStyle({ color, fillColor: color });
+}
 
 interface TaggedLayer extends L.Layer {
   [ID_KEY]?: string | number;
@@ -73,9 +96,14 @@ export function GeofenceDrawer({
   onEdit,
   onDelete,
   modes = ['circle'],
-  color = '#22d3ee',
+  color = DEFAULT_PAINT,
 }: GeofenceDrawerProps) {
   const map = useMap();
+  const { t } = useTranslation();
+  const [paint, setPaint] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  const paintRef = useRef<string | null>(null);
+  const drawControlRef = useRef<DrawRuntime | null>(null);
   const featureGroupRef = useRef<L.FeatureGroup | null>(null);
   // Stable handler refs so option churn doesn't tear down the control.
   const handlersRef = useRef({ onCreate, onEdit, onDelete });
@@ -83,13 +111,46 @@ export function GeofenceDrawer({
     handlersRef.current = { onCreate, onEdit, onDelete };
   }, [onCreate, onEdit, onDelete]);
 
+  useEffect(() => {
+    const context = map.getContainer();
+    const view = context.ownerDocument.defaultView;
+    const resolve = () => {
+      const resolved = resolveMapRendererColor(color, context)
+        ?? (color === DEFAULT_PAINT ? null : resolveMapRendererColor(DEFAULT_PAINT, context));
+      paintRef.current = resolved;
+      setPaint(resolved);
+    };
+    resolve();
+    // Observe only theme ancestors, not the resolver's temporary probes.
+    const observer = view && new view.MutationObserver((records) => {
+      if (records.some(({ target }) => target instanceof Element && target.contains(context))) resolve();
+    });
+    observer?.observe(context.ownerDocument.documentElement, {
+      attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'], subtree: true,
+    });
+    const media = ['(forced-colors: active)', '(prefers-color-scheme: dark)']
+      .map((query) => view?.matchMedia?.(query)).filter((item) => item != null);
+    media.forEach((item) => item.addEventListener('change', resolve));
+    const timer = view?.setInterval(() => {
+      if (paintRef.current === null) resolve();
+    }, 1000);
+    return () => {
+      observer?.disconnect();
+      media.forEach((item) => item.removeEventListener('change', resolve));
+      if (timer != null) view?.clearInterval(timer);
+    };
+  }, [map, color, retry]);
+
+  // Availability starts the control; later paint changes never remount it.
+  const ready = paint !== null || drawControlRef.current !== null;
   /* ── Mount the FeatureGroup + Draw control once. ────────────────── */
   useEffect(() => {
+    if (!ready || paintRef.current === null) return;
     const featureGroup = new L.FeatureGroup();
     featureGroupRef.current = featureGroup;
     map.addLayer(featureGroup);
 
-    const shapeOptions = { color, weight: 2, fillOpacity: 0.15 };
+    const shapeOptions = { color: paintRef.current, fillColor: paintRef.current, weight: 2, fillOpacity: 0.08 };
     const drawOpts: L.Control.DrawOptions = {
       polyline: false,
       marker: false,
@@ -116,14 +177,35 @@ export function GeofenceDrawer({
         edit: onEdit ? undefined : false,
       },
     });
+    drawControlRef.current = drawControl;
     map.addControl(drawControl);
+    // Style the plugin's existing controls without replacing its focus/events.
+    drawControl.getContainer()?.classList.add(
+      '[&_.leaflet-bar]:!border-[var(--border-default)]',
+      '[&_.leaflet-bar]:!shadow-e2',
+      '[&_.leaflet-draw-actions_a]:!bg-[var(--surface-2)]',
+      '[&_.leaflet-draw-actions_a]:!text-[var(--text-primary)]',
+      '[&_a]:!border-[var(--border-default)]',
+      '[&_.leaflet-draw-actions_a:hover]:!bg-[var(--surface-3)]',
+      '[&_a:focus-visible]:outline',
+      '[&_a:focus-visible]:outline-2',
+      '[&_a:focus-visible]:outline-offset-2',
+      '[&_a:focus-visible]:outline-[var(--focus-ring)]',
+      '[&_.leaflet-draw-actions_a]:!text-sm',
+      '[&_.leaflet-draw-actions_a]:!font-sans',
+      'forced-colors:[&_a]:!bg-[ButtonFace]',
+      'forced-colors:[&_a]:!text-[ButtonText]',
+      'forced-colors:[&_a]:!border-[ButtonText]',
+      'forced-colors:[&_a:focus-visible]:outline-[Highlight]',
+    );
 
     /* ── Event wiring ─────────────────────────────────────────────── */
     const handleCreated = (e: L.LeafletEvent) => {
       const layer = (e as unknown as { layer: TaggedLayer; layerType: string }).layer;
       const layerType = (e as unknown as { layerType: string }).layerType;
       const geom = layerToGeometry(layer, layerType);
-      if (!geom) return;
+      if (!geom || paintRef.current === null) return;
+      repaintLayer(layer, paintRef.current);
       featureGroup.addLayer(layer);
       handlersRef.current.onCreate(geom);
     };
@@ -162,9 +244,27 @@ export function GeofenceDrawer({
       map.removeControl(drawControl);
       map.removeLayer(featureGroup);
       featureGroupRef.current = null;
+      drawControlRef.current = null;
     };
     // We intentionally remount only when the structural options change.
-  }, [map, modes.join('|'), color, !!onDelete, !!onEdit]);
+  }, [map, modes.join('|'), ready, !!onDelete, !!onEdit]);
+
+  useEffect(() => {
+    if (paint === null) return;
+    const control = drawControlRef.current;
+    const shapeOptions = { color: paint, fillColor: paint, weight: 2, fillOpacity: 0.08 };
+    control?.setDrawingOptions({
+      circle: { shapeOptions }, polygon: { shapeOptions },
+      rectangle: { shapeOptions } as unknown as L.DrawOptions.RectangleOptions,
+    });
+    for (const toolbar of Object.values(control?._toolbars ?? {})) {
+      for (const { handler } of Object.values(toolbar._modes)) {
+        if (handler._shape) repaintLayer(handler._shape, paint);
+        if (handler._poly) repaintLayer(handler._poly, paint);
+      }
+    }
+    featureGroupRef.current?.eachLayer((layer) => repaintLayer(layer, paint));
+  }, [paint, ready]);
 
   /* ── Sync persisted fences into the FeatureGroup. ───────────────── */
   useEffect(() => {
@@ -172,7 +272,8 @@ export function GeofenceDrawer({
     if (!featureGroup) return;
     featureGroup.clearLayers();
     for (const f of fences) {
-      const layer = fenceToLayer(f, color);
+      if (paintRef.current === null) return;
+      const layer = fenceToLayer(f, paintRef.current);
       if (!layer) continue;
       (layer as TaggedLayer)[ID_KEY] = f.id;
       if (f.name) {
@@ -180,9 +281,17 @@ export function GeofenceDrawer({
       }
       featureGroup.addLayer(layer);
     }
-  }, [fences, color]);
+  }, [fences, ready, modes.join('|'), !!onDelete, !!onEdit]);
 
-  return null;
+  return paint === null && typeof document !== 'undefined' ? createPortal(
+    <div className="absolute inset-x-2 top-2 z-map-control rounded-shape-lg bg-[var(--surface-1)]">
+      <EmptyState
+        message={t('systemStatus.sourceUnavailable', { label: t('nav.geofences') })}
+        action={{ label: t('common.retry'), onClick: () => setRetry((value) => value + 1) }}
+      />
+    </div>,
+    map.getContainer(),
+  ) : null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -237,7 +346,7 @@ function inferLayerType(layer: L.Layer): string {
 }
 
 function fenceToLayer(f: DrawableGeofence, color: string): L.Layer | null {
-  const opts = { color, weight: 2, fillOpacity: 0.15 };
+  const opts = { color, weight: 2, fillOpacity: 0.08 };
   if (
     typeof f.lat === 'number' &&
     typeof f.lng === 'number' &&
