@@ -25,13 +25,15 @@
 //
 // Conventions mirror AICostForecastNarration.test.tsx: react-i18next is
 // NOT mounted, so t(key, default) returns the English default (2nd
-// arg) — assertions match that copy. @testing-library/user-event is
-// intentionally not a dependency of this repo, so interactions are
-// driven with fireEvent. No network is touched: the stream handle is a
+// arg) — assertions match that copy. Native form interactions use
+// user-event; other focused interactions use fireEvent. No network is
+// touched: the stream handle is a
 // plain stub with a vi.fn() start().
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { Button } from '@/components/ui/Button'
 
 import {
   AIBadge,
@@ -352,6 +354,92 @@ describe('AIFeatureCard — interactions', () => {
 
     fireEvent.click(screen.getByRole('button'))
     expect(start).not.toHaveBeenCalled()
+  })
+})
+
+describe('AIFeatureCard — enclosing native form', () => {
+  it.each([
+    ['inline', 'mouse'],
+    ['inline', 'Enter'],
+    ['inline', 'Space'],
+    ['below', 'mouse'],
+    ['below', 'Enter'],
+    ['below', 'Space'],
+  ] as const)('starts once without submitting or losing focus (%s, %s)', async (placement, activation) => {
+    const user = userEvent.setup()
+    const start = vi.fn()
+    const onSubmit = vi.fn()
+    render(
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit() }}>
+        <AIFeatureCard
+          title="T"
+          description="D"
+          buttonLabel="Summarize"
+          buttonPlacement={placement}
+          canStart
+          stream={makeStream({ start })}
+        />
+        <Button type="submit">Save</Button>
+      </form>,
+    )
+    const button = screen.getByRole('button', { name: 'Ask Helix · Summarize' })
+    expect(button).toHaveAttribute('type', 'button')
+    await user.tab()
+    expect(button).toHaveFocus()
+    if (activation === 'mouse') await user.click(button)
+    else await user.keyboard(activation === 'Enter' ? '{Enter}' : ' ')
+    expect(start).toHaveBeenCalledTimes(1)
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(button).toHaveFocus()
+
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it('retains the action override and blocks unavailable and streaming repeats inside a form', async () => {
+    const user = userEvent.setup()
+    const start = vi.fn()
+    const onAction = vi.fn()
+    const onSubmit = vi.fn()
+    const form = (canStart: boolean, state: AIFeatureStream['state']) => (
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit() }}>
+        <AIFeatureCard
+          title="T"
+          description="D"
+          buttonLabel="Detect conflicts"
+          canStart={canStart}
+          stream={makeStream({ start, state })}
+          onAction={onAction}
+        />
+        <Button type="submit">Save</Button>
+      </form>
+    )
+    const { rerender } = render(form(false, 'idle'))
+    const button = screen.getByRole('button', { name: 'Ask Helix · Detect conflicts' })
+    expect(button).toBeDisabled()
+    await user.click(button)
+    expect(onAction).not.toHaveBeenCalled()
+    expect(start).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    rerender(form(true, 'idle'))
+    await user.click(button)
+    expect(button).toHaveFocus()
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(start).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
+
+    rerender(form(true, 'streaming'))
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-disabled', 'true')
+    expect(button).toHaveAttribute('aria-busy', 'true')
+    expect(button).toHaveTextContent('Helix is thinking…')
+    await user.dblClick(button)
+    await user.keyboard('{Enter} ')
+    expect(onAction).toHaveBeenCalledTimes(1)
+    expect(start).not.toHaveBeenCalled()
+    expect(onSubmit).not.toHaveBeenCalled()
   })
 })
 

@@ -282,6 +282,7 @@ export function AIFeatureCard({
   const thinkingLabel = t('helix.thinking', 'Helix is thinking…')
   const button = (
     <Button
+      type="button"
       variant="outline"
       size="sm"
       wrapLabel
