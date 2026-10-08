@@ -75,8 +75,8 @@ vi.mock('react-i18next', async () => {
 
 // Thin Tooltip stand-in: renders the trigger (children) plus the tooltip content
 // in a queryable container, so the two never collide in role/text lookups.
-vi.mock('@/components/ui/runtime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/ui')>()
+vi.mock('@/components/ui/Tooltip', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ui/Tooltip')>()
   return {
     ...actual,
     Tooltip: ({ content, children }: { content: ReactNode; children: ReactNode }) => (
@@ -214,8 +214,8 @@ describe('ActiveVehicleSegment — single-vehicle chip', () => {
   it('never renders "NaN" when battery / range are non-finite (hardening)', () => {
     setStateData({
       state: makeState({
-        battery_level: NaN as unknown as number,
-        rated_range: NaN as unknown as number,
+        battery_level: NaN,
+        rated_range: NaN,
       }),
     })
     render(<ActiveVehicleSegment />)
@@ -234,6 +234,16 @@ describe('ActiveVehicleSegment — single-vehicle chip', () => {
     expect(within(chip).getByText('Model 3')).toBeInTheDocument()
     // No battery percentage when there is no state — the chip degrades, not crashes.
     expect(within(chip).queryByText(/\d+%/)).toBeNull()
+  })
+
+  it('preserves measured zero and distinguishes non-finite range from zero', () => {
+    setStateData({ state: makeState({ battery_level: 0, rated_range: 0 }) })
+    const { rerender } = render(<ActiveVehicleSegment />)
+    expect(screen.getByLabelText('Active vehicle: Model 3').textContent).toContain(`0% ${DOT} 0 km`)
+
+    setStateData({ state: makeState({ battery_level: 0, rated_range: Infinity }) })
+    rerender(<ActiveVehicleSegment />)
+    expect(screen.getByLabelText('Active vehicle: Model 3').textContent).toContain(`0% ${DOT} — km`)
   })
 
   it('hides the visible label + metrics in icon-only mode but keeps the a11y name', () => {
@@ -374,6 +384,31 @@ describe('ActiveVehicleSegment — multi-vehicle switcher', () => {
 
     expect(mocks.useVehicleState).toHaveBeenCalledWith(3, { refetchInterval: 60_000 })
   })
+
+  it('keeps embedded options in the shared vehicle store and invokes onSelect once', () => {
+    const onSelect = vi.fn()
+    render(<ActiveVehicleSegment embedded onSelect={onSelect} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByText('Switch vehicle')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Model Y/ }))
+    expect(mocks.setVehicleId).toHaveBeenCalledExactlyOnceWith(2)
+    expect(onSelect).toHaveBeenCalledExactlyOnceWith()
+  })
+
+  it('wraps long RTL vehicle names and uses a neutral selected indicator', () => {
+    const name = 'سيارة طويلة '.repeat(40)
+    mocks.selected.vehicles[0] = makeVehicle({ display_name: name })
+    render(<div dir="rtl"><ActiveVehicleSegment embedded /></div>)
+
+    const selected = screen.getAllByRole('button')[0]
+    const label = within(selected).getByText(name.trim())
+    expect(label).toHaveClass('whitespace-normal', 'break-words', 'text-start')
+    expect(selected).toHaveAttribute('aria-current', 'true')
+    expect(selected).toHaveClass('min-h-11', 'md:min-h-9')
+    expect(selected.querySelector('.lucide-check')).toHaveClass('text-[var(--text-secondary)]')
+    expect(selected).not.toHaveClass('text-emerald-300')
+  })
 })
 
 // ── Label fallbacks ──────────────────────────────────────────────────────────
@@ -398,5 +433,98 @@ describe('ActiveVehicleSegment — label fallbacks', () => {
     render(<ActiveVehicleSegment />)
 
     expect(screen.getByRole('button', { name: /Switch vehicle \(VIN-XYZ\)/ })).toBeInTheDocument()
+  })
+})
+
+describe('ActiveVehicleSegment — accepted naming-only geometry', () => {
+  it('retains distinct label caps, options scroll and popover minimum across branches', () => {
+    mocks.selected.vehicle = makeVehicle()
+    mocks.selected.vehicleId = 1
+    mocks.selected.vehicles = [makeVehicle()]
+    const { rerender } = render(<ActiveVehicleSegment />)
+    expect(within(screen.getByLabelText('Active vehicle: Model 3')).getByText('Model 3'))
+      .toHaveClass('truncate', 'max-w-active-vehicle-label')
+
+    mocks.selected.vehicles = [makeVehicle(), makeVehicle({ id: 2, display_name: 'Model Y' })]
+    rerender(<ActiveVehicleSegment />)
+    const trigger = screen.getByRole('button', { name: /Switch vehicle/ })
+    expect(within(trigger).getByText('Model 3')).toHaveClass('truncate', 'max-w-active-vehicle-compact-label')
+    fireEvent.click(trigger)
+    const dialog = screen.getByRole('dialog', { name: 'Switch vehicle' })
+    expect(dialog).toHaveClass('min-w-vehicle-options')
+    expect(within(dialog).getAllByRole('button')[0].parentElement)
+      .toHaveClass('max-h-status-options', 'overflow-y-auto', 'p-1')
+
+    rerender(<ActiveVehicleSegment embedded />)
+    expect(screen.getAllByRole('button')[0].parentElement)
+      .toHaveClass('max-h-status-options', 'overflow-y-auto', 'p-1')
+  })
+
+  it('proves exact installed Tailwind CSS and bidirectional caller merge parity', async () => {
+    const { resolve } = await import('node:path')
+    const { default: postcss } = await import('postcss')
+    const { default: tailwindcss } = await import('tailwindcss')
+    const { default: loadConfig } = await import('tailwindcss/loadConfig')
+    const { cn } = await import('@/lib/cn')
+    const config = loadConfig(resolve('tailwind.config.js'))
+    const roles = [
+      { named: 'max-h-status-options', old: 'max-h-[280px]', ordinary: 'max-h-64', alternate: 'max-h-[300px]', property: 'max-height', value: '280px' },
+      { named: 'max-w-active-vehicle-label', old: 'max-w-[160px]', ordinary: 'max-w-xs', alternate: 'max-w-[180px]', property: 'max-width', value: '160px' },
+      { named: 'max-w-active-vehicle-compact-label', old: 'max-w-[140px]', ordinary: 'max-w-xs', alternate: 'max-w-[180px]', property: 'max-width', value: '140px' },
+      { named: 'min-w-vehicle-options', old: 'min-w-[220px]', ordinary: 'min-w-0', alternate: 'min-w-[240px]', property: 'min-width', value: '220px' },
+    ]
+    const variants = [
+      { prefix: '', media: [] },
+      { prefix: 'sm:', media: ['@media (min-width: 640px)'] },
+      { prefix: 'md:', media: ['@media (min-width: 768px)'] },
+      { prefix: 'xl:', media: ['@media (min-width: 1280px)'] },
+    ]
+    const classes = variants.flatMap(({ prefix }) =>
+      roles.flatMap(role => [role.named, role.old, role.ordinary, role.alternate].map(value => `${prefix}${value}`)))
+    const css = (await postcss([tailwindcss({
+      ...config, content: [{ raw: classes.join(' '), extension: 'html' }],
+    })]).process('@tailwind utilities;', { from: undefined })).root
+    console.log('RAW ACTIVE VEHICLE GENERATED CSS\n' + css.toString())
+    function signature(className: string) {
+      const matches: { declarations: [string, string, boolean][]; media: string[] }[] = []
+      css.walkRules(rule => {
+        const selector = rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        rule.walkDecls(decl => { declarations.push([decl.prop, decl.value, Boolean(decl.important)]) })
+        const media: string[] = []
+        let parent: typeof rule.parent | import('postcss').Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') media.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        matches.push({ declarations, media })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    for (const { prefix, media } of variants) {
+      for (const role of roles) {
+        const named = `${prefix}${role.named}`
+        expect(signature(named)).toEqual(signature(`${prefix}${role.old}`))
+        expect(signature(named)).toEqual({ declarations: [[role.property, role.value, false]], media })
+        for (const alternative of [role.old, role.ordinary, role.alternate]) {
+          const caller = `${prefix}${alternative}`
+          expect(cn(named, caller)).toBe(caller)
+          expect(cn(caller, named)).toBe(named)
+          expect(signature(cn(named, caller))).toEqual(signature(caller))
+          expect(signature(cn(caller, named))).toEqual(signature(named))
+        }
+      }
+    }
+    expect(cn('max-w-active-vehicle-label', 'max-w-active-vehicle-compact-label'))
+      .toBe('max-w-active-vehicle-compact-label')
+    expect(cn('max-w-active-vehicle-compact-label', 'max-w-active-vehicle-label'))
+      .toBe('max-w-active-vehicle-label')
+    const independent = ['max-h-status-options', 'max-w-active-vehicle-label', 'min-w-vehicle-options', 'w-full', 'sm:max-w-xs']
+    expect(cn(independent)).toBe(independent.join(' '))
+    expect(cn([...independent].reverse())).toBe([...independent].reverse().join(' '))
   })
 })
