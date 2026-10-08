@@ -209,7 +209,7 @@ describe('Tooltip — multiline', () => {
     const cls = screen.getByRole('tooltip').className;
     expect(cls).toContain('whitespace-normal');
     expect(cls).toContain('w-80');
-    expect(cls).toContain('max-w-[calc(100vw-1.5rem)]');
+    expect(cls).toContain('max-w-tooltip-viewport');
     expect(cls).toContain('leading-relaxed');
     expect(cls).toContain('transition-opacity');
     expect(cls).not.toContain('transition-all');

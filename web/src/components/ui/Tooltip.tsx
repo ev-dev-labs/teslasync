@@ -268,7 +268,7 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
           'pointer-events-none absolute z-50 rounded-shape-sm px-2.5 py-1.5',
           typography.size.xs, typography.weight.medium,
           multiline || boundaryRef
-            ? 'w-80 max-w-[calc(100vw-1.5rem)] whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
+            ? 'w-80 max-w-tooltip-viewport whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
             : 'whitespace-nowrap',
           'bg-[var(--text-primary)] shadow-e2',
           typography.color.inverse,
