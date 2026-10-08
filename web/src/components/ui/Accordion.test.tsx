@@ -72,6 +72,7 @@ vi.mock('framer-motion', async () => {
 })
 
 import { Accordion } from './Accordion'
+import { typography } from '@/lib/tokens'
 
 const BODY = <div data-testid="body">panel content</div>
 
@@ -252,6 +253,26 @@ describe('<Accordion /> — slots & accessibility', () => {
 })
 
 describe('<Accordion /> — styling overrides', () => {
+  it('inherits header size through the named role without removing foreground, weight or descendant roles', () => {
+    render(<Accordion title="Details" description="Instructions">{BODY}</Accordion>)
+    const toggle = screen.getByRole('button', { name: 'Details' })
+    expect(typography.size.inherit).toBe('text-size-inherit')
+    expect(toggle).toHaveClass(typography.size.inherit, 'font-normal', 'text-[var(--text-primary)]')
+    expect(toggle).not.toHaveClass('text-sm', 'text-[length:inherit]')
+    expect(screen.getByText('Details')).toHaveClass('text-sm', 'font-medium')
+    expect(screen.getByText('Instructions')).toHaveClass('text-sm', 'font-normal', 'forced-colors:text-[ButtonText]')
+  })
+
+  it.each(['text-lg', 'text-size-inherit', 'text-[length:2em]'])('preserves caller header size precedence for %s', (headerClassName) => {
+    render(<Accordion title="Details" headerClassName={headerClassName}>{BODY}</Accordion>)
+    const toggle = screen.getByRole('button')
+    expect(toggle).toHaveClass(headerClassName, 'text-[var(--text-primary)]', 'font-normal')
+    expect(toggle).not.toHaveClass('text-sm')
+    if (headerClassName !== typography.size.inherit) {
+      expect(toggle).not.toHaveClass(typography.size.inherit)
+    }
+  })
+
   it('applies className to the root and default paddings when none supplied', () => {
     const { container } = render(
       <Accordion title="Details" className="mt-4" defaultOpen>

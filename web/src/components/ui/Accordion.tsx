@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { Button } from './Button'
 import { Text } from './Typography'
+import { typography } from '@/lib/tokens'
 
 interface AccordionProps {
   title: string
@@ -78,7 +79,8 @@ export function Accordion({
         aria-labelledby={hasDescription ? titleId : undefined}
         aria-describedby={hasDescription ? descriptionId : undefined}
         className={cn(
-          'flex h-auto w-full flex-wrap items-center justify-start gap-3 rounded-none text-start text-[length:inherit] font-normal hover:bg-[var(--control-bg)] transition-colors',
+          'flex h-auto w-full flex-wrap items-center justify-start gap-3 rounded-none text-start font-normal hover:bg-[var(--control-bg)] transition-colors',
+          typography.size.inherit,
           'focus-visible:-outline-offset-2',
           'forced-colors:focus-visible:outline forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-[Highlight] forced-colors:focus-visible:-outline-offset-2',
           headerClassName ?? 'px-4 py-3',
