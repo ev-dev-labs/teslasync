@@ -48,13 +48,13 @@ export function AiSpendWatch() {
           { metricId: 'currency', occurrenceId: 'today', rawValue: data?.today_micro_cents != null ? data.today_micro_cents / 1_000_000 : null,
             label: t('systemStatus.aiSpend.todayMetric', 'Audited today (UTC)'),
             context: data ? t('systemStatus.aiSpend.today', 'Audited today (UTC): {{amount}}', { amount: money(data.today_micro_cents) }) : undefined,
-            display: { formatter: (raw) => ({ value: money(raw * 1_000_000) }) } },
+            display: { formatter: (raw) => ({ value: money(raw * 1_000_000), unit: '' }) } },
           { metricId: 'currency', occurrenceId: 'baseline', rawValue: data?.prior_daily_avg_micro_cents != null ? data.prior_daily_avg_micro_cents / 1_000_000 : null,
             label: t('systemStatus.aiSpend.baselineMetric', 'Prior 7-day daily average'),
             context: data ? t('systemStatus.aiSpend.baseline', 'Prior 7-day daily average: {{amount}}', { amount: money(data.prior_daily_avg_micro_cents) }) : undefined,
-            display: { formatter: (raw) => ({ value: money(raw * 1_000_000) }) } },
+            display: { formatter: (raw) => ({ value: money(raw * 1_000_000), unit: '' }) } },
           { metricId: 'currency', occurrenceId: 'projection', rawValue: data?.projected_today_micro_cents != null ? data.projected_today_micro_cents / 1_000_000 : null,
-            label: t('systemStatus.aiSpend.projectionMetric', 'Projected UTC midnight spend'), display: { formatter: (raw) => ({ value: money(raw * 1_000_000) }) } },
+            label: t('systemStatus.aiSpend.projectionMetric', 'Projected UTC midnight spend'), display: { formatter: (raw) => ({ value: money(raw * 1_000_000), unit: '' }) } },
         ]}
       />
       {state.status === 'initial' ? (
