@@ -651,3 +651,161 @@ exit 0. This is mathematical pair evidence only, not composed/custom-theme,
 forced-colors, CVD, visual or browser acceptance. Typecheck/build/lint/tests and
 runtime gates were NOTRUN here: this assigned item changes documentation only
 and prohibits full-repository gates.
+
+## Shell overlay geometry naming — MDC-024 / MDC-030 / MDC-034 / MDC-043
+
+**Additive decision for `phase3-shell-overlay-geometry-contract`: naming only.**
+Read-only `phase3-{theme-quick-switcher-popover,notification-bell-panel,
+connection-segment,workspace-context-control,presentation-mode-segment,
+breadcrumbs,map-layer-switcher}-crash-review.log` receipts at
+`.agent-status\receipts\` retain respectively **3/2/1/2/1/2/1** genuine
+geometry candidates, with scanner exit **1**. Repeated receipt entries are not
+additional source candidates. These findings are not waived or freshly rescanned
+here; semantic-token and forced-colors reviews, catalog/test/preservation
+unknowns and inherited notification trust/error findings remain separate.
+
+The inspected resolved config has no exact existing utility or name collision
+for the ten additions below. Reuse existing `z-overlay = 60`, modal/tooltip
+and side-panel roles where genuinely equivalent; they are **not** equivalents
+for layer 80/1000, a 1rem viewport subtraction, or these width/height constraints.
+Approve only the following additions to existing `theme.extend` in
+`web\tailwind.config.js`; use direct named utilities, as with the earlier overlay
+decision, not a new token registry, component API, positioning or layer engine.
+
+| Read-only candidate owner and region | Exact existing value / approved role | Naming-only replacement |
+| --- | --- | --- |
+| `web\src\components\layout\ThemeQuickSwitcherPopover.tsx:38` and `NotificationBellPanel.tsx:198`, `z-[80]` | `zIndex['shell-panel'] = '80'` | `z-shell-panel` at both roots |
+| `web\src\components\layout\ThemeQuickSwitcherPopover.tsx:38`, `w-[22rem]` | `width['theme-switcher'] = '22rem'` | `w-theme-switcher` |
+| Same theme root, `max-w-[calc(100vw-1rem)]` | `maxWidth['shell-panel-viewport'] = 'calc(100vw - 1rem)'` | `max-w-shell-panel-viewport` |
+| `web\src\components\layout\NotificationBellPanel.tsx:198`, `max-h-[calc(100vh-6rem)]` | `maxHeight['notification-panel'] = 'calc(100vh - 6rem)'` | `max-h-notification-panel` |
+| `web\src\components\layout\status-bar\ConnectionSegment.tsx:181`, `w-[min(92vw,320px)]` | `width['connection-diagnostics'] = 'min(92vw,320px)'` | `w-connection-diagnostics` |
+| `web\src\components\layout\status-bar\PresentationModeSegment.tsx:173`, `w-[min(92vw,340px)]` | `width['presentation-menu'] = 'min(92vw,340px)'` | `w-presentation-menu` |
+| `web\src\components\layout\WorkspaceContextControl.tsx:243`, `w-[min(92vw,27rem)]` | `width['workspace-context'] = 'min(92vw,27rem)'` | `w-workspace-context` |
+| Same workspace root, `max-h-[min(80vh,38rem)]` | `maxHeight['workspace-context'] = 'min(80vh,38rem)'` | `max-h-workspace-context` |
+| `web\src\components\layout\Breadcrumbs.tsx:66,78`, `max-w-[200px]` | `maxWidth['breadcrumb-label'] = '200px'` | `max-w-breadcrumb-label` in both branches |
+| `web\src\components\maps\MapLayerSwitcher.tsx:28`, `z-[1000]` | `zIndex['map-control'] = '1000'` | `z-map-control` |
+
+The two layer-80 roots share one role; the two breadcrumb branches share one
+cap. Connection/presentation/workspace widths share a constraint family, **not**
+one value: do not round 320px/340px to rem, replace 27rem with pixels, or
+introduce generic spacing entries. `vw`/`vh` stay viewport-based, not container
+percentages or dynamic `dvw`/`dvh`. Theme width remains 22rem; its cap subtracts
+1rem, not Tooltip's 1.5rem. Notification's existing inline width **360px** and
+inline `maxWidth: 'calc(100vw - 1rem)'` remain unchanged: equivalent cap wording
+does not authorize moving inline declarations or changing their precedence.
+
+### Position, layer and public behavior preservation
+
+Theme remains a body portal with fixed positioning, caller-provided `coords.top`
+and independently optional left/right values; preserve refs, lazy picker/loading
+geometry, close/customize actions and external positioning owner. Notification
+keeps fixed inline top/right, forwarded/dialog refs, nonmodal dialog identity,
+its existing Tab containment and external Escape/restore ownership, clipped
+flex root, independently scrolling preview and reachable header/footer.
+No shared focus-trap or modal/body-lock migration is authorized.
+
+Connection keeps Popover `side="top" align="start"`; presentation keeps
+`side="top" align="end"`; workspace keeps header bottom/status top, end alignment,
+`zIndex={70}` and independent `overflow-y-auto`. Existing
+`web\src\components\ui\Popover.tsx` retains inline zIndex default **60**, gap
+**6px**, viewport margin **8px**, optional <640px mobile-chrome bottom inset
+**80px**, measured flip/clamp, initially hidden offscreen position,
+ResizeObserver/scroll/resize recomputation, shell portal registration and focus
+restoration/outside/Escape behavior. Do not replace its numeric prop/default with
+a CSS class that loses to inline style, alter alignment for RTL, or add a trap.
+This item authorizes no Popover source adoption.
+
+Breadcrumbs retain 200px truncation and title access, caller `className` merge
+precedence, prefetch destinations, current-page ARIA, local horizontal scroll,
+<640px middle-item hiding/ellipsis and >=640px visibility, mobile target sizing
+and directional RTL chevrons. Map control stays local and absolute, with
+`bottom-6 start-2 end-2`, fit width/full cap, four columns, responsive labels,
+pressed states, existing forced-colors treatment and map interaction behavior.
+Its layer 1000 is **map-local**, not an app-wide overlay priority. Preserve
+actual stacking contexts/portals/ancestor transforms: a numeric layer cannot
+prove ordering between unrelated contexts. Layer-80 equality retains current
+DOM/portal order; do not impose a new notification-versus-theme priority.
+All props/defaults/refs/IDs/actions/settings/data/lifecycle semantics survive.
+
+### Separate implementation and adoption assignments
+
+**`phase3-shell-overlay-geometry-tokens`** owns only
+`web\tailwind.config.js`, `web\src\lib\cn.ts`,
+`web\src\lib\__tests__\tokens.test.ts` and `web\src\lib\cn.test.ts`.
+Add the ten roles without modifying previous resolved entries/plugins/screens,
+and extend existing merge groups: `z` with
+`{ z: ['shell-panel', 'map-control'] }`; `w` with
+`{ w: ['theme-switcher', 'connection-diagnostics', 'presentation-menu',
+'workspace-context'] }`; `max-w` with
+`{ 'max-w': ['shell-panel-viewport', 'breadcrumb-label'] }`; `max-h` with
+`{ 'max-h': ['notification-panel', 'workspace-context'] }`.
+Keep earlier overlay/dock/font decisions intact; no `tokens.ts`, index.css,
+scanner, catalog or test-configuration expansion is required by this decision.
+
+After that token item, assign seven independent bounded adoption items:
+`phase3-theme-quick-switcher-geometry-adoption`,
+`phase3-notification-bell-geometry-adoption`,
+`phase3-connection-geometry-adoption`,
+`phase3-workspace-context-geometry-adoption`,
+`phase3-presentation-mode-geometry-adoption`,
+`phase3-breadcrumbs-geometry-adoption` and
+`phase3-map-layer-switcher-geometry-adoption`.
+Each owns only its exact table-cited component and directly matching existing
+tests (or an explicitly reserved colocated test when missing). Substitute only
+its listed arbitrary utilities; never include the token/config/merge owners,
+positioning parents, unrelated siblings or data hooks in that adoption scope.
+Missing test ownership is **UNKNOWN** until separately reserved, not permission
+to edit another worker's files.
+
+Token acceptance requires generated CSS for every old/new utility pair to have
+identical declarations, values, importance and media conditions, apart from
+selector spelling. Include base and matching sm/md/xl variants; do not move a
+base utility behind a breakpoint. Resolve-name collision checks and comparison
+with the immediately preceding config must show only these ten additions.
+Preserve existing token fingerprint assertions; extend their additive accounting
+without deleting/loosening the frozen prior comparison. Merge tests require
+last-conflicting-class-wins in **both** orders versus ordinary and arbitrary
+z/width/max-width/max-height utilities, same responsive variants and caller
+overrides; different variants and different properties must coexist. Width and
+max-width do not conflict. No stylesheet-order reliance or `!important`.
+
+Each adoption reruns strict exact-scope lint/tests, source/API preservation and
+the unchanged scoped scanner, retaining every unrelated finding. Browser QA
+then compares pre/post bounding boxes, computed width/caps/layers, position and
+scroll ownership on the same mounted inputs at all MDC-070 mission widths,
+narrow allocated containers and both sides of 640/768/1280 transitions.
+Use 16px and 20px root sizes plus 200% text scaling and long RTL translations:
+22rem is 352/440px; 27rem is 432/540px; 38rem is 608/760px;
+fixed 200/320/340/360px values do not scale with root font size.
+Exercise short/tall viewports, mobile browser chrome, resize/scroll and delayed
+content measurement, edge anchors, all existing align/side branches and nested
+overlays/maps. Preserve unclipped keyboard focus and reachable actions, safe
+areas/chrome, reduced-motion and dark/light/custom/forced-colors behavior.
+An existing geometry defect remains a separate finding, not silently redesigned
+or declared acceptable because equivalence passes.
+
+### Intake addendum: distinct unresolved geometry
+
+Read-only `phase3-background-work-segment-crash-review.log` retains three
+candidates at `web\src\components\layout\status-bar\BackgroundWorkSegment.tsx`:
+line194 `max-w-[180px]` summary truncation; line209 `max-h-[280px]`
+scroll cap and `min-w-[260px]` Popover minimum. None is equivalent to an approved
+role above; minimum width is not connection/presentation preferred width.
+**UNKNOWN named mappings** remain for a separate bounded design/token disposition
+and BackgroundWorkSegment adoption owner. Preserve top/end positioning and all
+three exact values; do not invent roles or fold them into this token assignment.
+
+Read-only `phase3-virtualized-vehicle-grid-crash-review.log` retains two candidates
+at `web\src\components\vehicles\VirtualizedVehicleGrid.tsx:108`:
+`h-[min(72vh,56rem)]` and `min-h-[28rem]`. These belong to virtualized-list scroll
+geometry, not shell overlay/layer roles. **UNKNOWN named mappings** require a
+separate design/token and VirtualizedVehicleGrid adoption assignment preserving
+virtualizer measurement, min-height precedence, scrollbar gutter, scroll/ref,
+visible-row callbacks, computed total height/row translation and caller merge.
+No numeric or viewport family resemblance authorizes using workspace caps.
+
+This documentation adds names/ownership only. None of the nine owners' scanner
+candidates, normal tests, source-preservation unknowns or composed/browser/
+mobile/RTL/contrast/native acceptance is cleared. No UI/token implementation,
+scanner exception or runtime acceptance is claimed; MDC-040–043/060–070 and
+mission §§43–45 remain required at their implementation/QA owners.
