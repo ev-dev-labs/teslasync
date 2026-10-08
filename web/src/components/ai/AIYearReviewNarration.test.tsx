@@ -173,6 +173,7 @@ describe('AIYearReviewNarration — AI-off render gate', () => {
       screen.getByRole('heading', { name: /Helix narration/i }),
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: BUTTON_NAME })).toBeInTheDocument()
+    expect(screen.getByText(`${EXPECTED_YEAR} Year in review`)).toBeInTheDocument()
   })
 })
 
@@ -228,6 +229,42 @@ describe('AIYearReviewNarration — canStart mirrors the backend vehicle_id > 0 
 })
 
 describe('AIYearReviewNarration — on-mode SSE wiring', () => {
+  it('retains completed output within its vehicle scope and clears it when that scope changes', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const narration = 'A long vehicle-specific recap. '.repeat(100)
+    const fetchMock = vi.fn(async () => new Response(
+      makeReadableStream([
+        sseFrame('delta', { text: narration }),
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 55, out: 20 } }),
+      ]),
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+    ))
+    globalThis.fetch = fetchMock
+    const { rerender } = render(<AIYearReviewNarration vehicleId={42} />)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+    await waitFor(() => {
+      expect(screen.getByTestId(ROOT_TESTID)).toHaveTextContent(narration.trim())
+      expect(screen.getByRole('button', { name: BUTTON_NAME })).not.toBeDisabled()
+    })
+
+    rerender(<AIYearReviewNarration vehicleId={42} />)
+    expect(screen.getByTestId(ROOT_TESTID)).toHaveTextContent(narration.trim())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    rerender(<AIYearReviewNarration vehicleId={7} />)
+    expect(screen.getByTestId(ROOT_TESTID)).not.toHaveTextContent(narration.trim())
+    expect(screen.getByText(`${EXPECTED_YEAR} Year in review`)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: BUTTON_NAME })).not.toBeDisabled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    rerender(<AIYearReviewNarration />)
+    expect(screen.getByRole('button', { name: BUTTON_NAME })).toBeDisabled()
+    expect(screen.getByText(EMPTY_HINT)).toBeInTheDocument()
+  })
+
   it('POSTs once to /api/v1/ai/analytics/year-in-review/narrate with { vehicle_id, year } and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(enabled())
 
