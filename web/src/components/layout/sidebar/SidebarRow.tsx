@@ -5,7 +5,7 @@
  * trailing badge + hover pin action. Used by the Atlas panel (all four
  * tabs) so every row in the overlay behaves identically.
  *
- * Active rows get a 3px accent rail; pin/unpin actions are always
+ * Active rows get a restrained 2px accent rail; pin/unpin actions are always
  * visible on touch viewports (`lg:`-gated hover reveal) so pinning
  * never depends on a hover that touch devices don't have.
  */
@@ -15,6 +15,7 @@ import { motion } from '@/components/motion/runtime'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import type { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 
 export interface SidebarRowProps {
   to: string
@@ -71,7 +72,7 @@ export function SidebarRow({
       {active && (
         <span
           aria-hidden
-          className="absolute inset-y-0 start-0 z-10 w-[2.5px] bg-[var(--nav-active-indicator)]"
+          className="absolute inset-y-0 start-0 z-10 w-0.5 bg-[var(--nav-active-indicator)]"
         />
       )}
       <PrefetchNavLink
@@ -91,25 +92,26 @@ export function SidebarRow({
         data-tour={dataTour}
         className={cn(
           compact
-            ? 'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-md text-sm transition-colors'
-            : 'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
+            ? 'relative flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-md transition-colors duration-fast'
+            : 'flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-shape-md py-2 pe-2 ps-3 transition-colors duration-fast md:min-h-10',
+          typography.size.sm,
+          'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
           active
-            ? 'bg-[var(--nav-active-bg)] font-semibold text-[var(--text-primary)]'
-            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+            ? cn('bg-[var(--nav-active-bg)]', typography.weight.medium, typography.color.primary)
+            : cn(typography.color.secondary, 'hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'),
         )}
       >
         <Icon
           className={cn(
-            compact ? 'h-6 w-6 shrink-0 transition-colors' : 'h-4 w-4 shrink-0 transition-colors',
-            active ? 'text-[var(--nav-active-indicator)]' : 'text-[var(--text-muted)]',
+            compact ? 'h-6 w-6 shrink-0 transition-colors duration-fast' : 'h-4 w-4 shrink-0 transition-colors duration-fast',
+            active ? typography.color.primary : typography.color.muted,
           )}
           aria-hidden
         />
         {!compact && <span className="min-w-0 flex-1 whitespace-normal break-words leading-snug">
           {label}
           {context && (
-            <span className="block truncate text-xs font-normal text-[var(--text-muted)]">
+            <span className={cn('block whitespace-normal break-words', typography.role.caption, typography.weight.regular)}>
               {context}
             </span>
           )}
@@ -118,7 +120,7 @@ export function SidebarRow({
         {!compact && trailing}
       </PrefetchNavLink>
       {hoverAction && !compact && (
-        <div className={cn('ms-1 transition-opacity', !actionAlwaysVisible && 'lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100')}>
+        <div className={cn('ms-1 shrink-0 transition-opacity duration-fast', !actionAlwaysVisible && 'lg:opacity-0 lg:group-hover/sidebar-row:opacity-100 lg:focus-within:opacity-100')}>
           {hoverAction}
         </div>
       )}
@@ -131,7 +133,7 @@ export function SidebarNotificationDot({ className }: { className?: string }) {
     <span
       aria-hidden
       className={cn(
-        'inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--theme-primary)]',
+        'inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--semantic-info)]',
         className,
       )}
     />
@@ -148,7 +150,7 @@ export function SidebarCountChip({ value, label, suffix, uncapped = false, class
   return (
     <span
       aria-label={label}
-      className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 text-xs font-medium tabular-nums text-[var(--text-secondary)]', className)}
+      className={cn('inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 tabular-nums', typography.size.xs, typography.weight.medium, typography.color.secondary, className)}
     >
       {!uncapped && value > 99 ? '99+' : value}{suffix && ` ${suffix}`}
     </span>
