@@ -25,6 +25,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRef } from 'react';
 import type { CardProps } from './Card';
 import { Card, CardHeader, CardFooter } from './Card';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: vi.fn(() => ({ reduce: false, durationMs: 150 })),
+}));
 
 describe('Card', () => {
   it('renders a <div> wrapper around its children', () => {
@@ -107,6 +112,48 @@ describe('Card', () => {
     expect(className).toContain('forced-colors:bg-[Canvas]');
   });
 
+  it('keeps the shared neutral panel, print marker and bounded width', () => {
+    render(<Card data-testid="card">0</Card>);
+    const card = screen.getByTestId('card');
+    expect(card).toHaveAttribute('data-print-card', '');
+    expect(card).toHaveClass('min-w-0', 'rounded-panel', 'shadow-panel');
+    expect(card).toHaveClass('bg-[var(--panel-bg)]', 'border-[var(--panel-border)]', 'text-[var(--text-primary)]');
+    expect(card).toHaveTextContent('0');
+  });
+
+  it('restricts hover motion to fast color feedback with an OS reduced-motion safety net', () => {
+    render(<Card data-testid="card" hover>x</Card>);
+    const card = screen.getByTestId('card');
+    expect(card).toHaveClass('transition-colors', 'duration-fast', 'ease-standard', 'motion-reduce:transition-none');
+    expect(card).not.toHaveClass('transition-all', 'duration-normal');
+  });
+
+  it.each(['OS reduced motion', 'low bandwidth'])('removes transitions under the shared %s preference without removing events', () => {
+    vi.mocked(useMotionPreference).mockReturnValueOnce({ reduce: true, durationMs: 0 });
+    const onClick = vi.fn();
+    render(<Card data-testid="card" hover onClick={onClick}>x</Card>);
+    const card = screen.getByTestId('card');
+    expect(card).toHaveClass('transition-none', 'cursor-pointer', 'hover:border-[var(--panel-border-hover)]');
+    expect(card).not.toHaveClass('transition-colors');
+    fireEvent.click(card);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves numeric zero, missing children and keyboard/native focus props', () => {
+    const onKeyDown = vi.fn();
+    const { rerender } = render(
+      <Card data-testid="card" tabIndex={0} onKeyDown={onKeyDown}>{0}</Card>,
+    );
+    const card = screen.getByTestId('card');
+    expect(card).toHaveTextContent('0');
+    card.focus();
+    expect(card).toHaveFocus();
+    fireEvent.keyDown(card, { key: 'Enter' });
+    expect(onKeyDown).toHaveBeenCalledTimes(1);
+    rerender(<Card data-testid="card">{null}</Card>);
+    expect(card).toBeEmptyDOMElement();
+  });
+
   it('merges a caller className and resolves padding conflicts via cn()', () => {
     // The caller's p-8 must win over the default md (p-4) because
     // tailwind-merge keeps the last conflicting utility.
@@ -182,6 +229,37 @@ describe('CardHeader', () => {
     // Title and action coexist inside the header.
     expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Battery');
   });
+
+  it('retains full long title/subtitle and reflowing action content through translated rerenders', () => {
+    const title = 'VeryLongVehicleNameWithoutSpaces'.repeat(8);
+    const subtitle = 'Detailed historical context '.repeat(12);
+    const onClick = vi.fn();
+    const action = <a href="#details" onClick={onClick}>Read every detail of this long action</a>;
+    const { container, rerender } = render(<CardHeader title={title} subtitle={subtitle} action={action} />);
+    const heading = screen.getByRole('heading', { level: 3, name: title });
+    expect(heading.textContent).toBe(title);
+    expect(heading).toHaveClass('break-words', 'text-[var(--text-primary)]');
+    const subtitleNode = screen.getByText(subtitle.trim());
+    expect(subtitleNode.textContent).toBe(subtitle);
+    expect(subtitleNode).toHaveClass('break-words', 'text-[var(--text-secondary)]');
+    expect(container.firstElementChild).toHaveClass('flex-wrap', 'min-w-0', 'gap-3');
+    const link = screen.getByRole('link');
+    expect(link.parentElement).toHaveClass('flex-wrap', 'max-w-full', 'min-w-0');
+    link.focus();
+    rerender(<CardHeader title="Batteriezustand" subtitle={subtitle} action={action} />);
+    expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Batteriezustand');
+    expect(screen.getByRole('link')).toBe(link);
+    expect(link).toHaveFocus();
+    fireEvent.click(link);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves a numeric zero action without creating an action for missing content', () => {
+    const { container, rerender } = render(<CardHeader title="Battery" action={0} />);
+    expect(container.firstElementChild?.lastElementChild).toHaveTextContent('0');
+    rerender(<CardHeader title="Battery" />);
+    expect(container.firstElementChild?.childElementCount).toBe(1);
+  });
 });
 
 describe('CardFooter', () => {
@@ -198,5 +276,13 @@ describe('CardFooter', () => {
     expect(footer.className).toContain('justify-start');
     expect(footer.className).toContain('border-t');
     expect(footer.className).toContain('mt-4');
+  });
+
+  it('wraps all footer actions and retains its forced-colors separator', () => {
+    const { container } = render(
+      <CardFooter><a href="#first">First action</a><a href="#second">Second action</a></CardFooter>,
+    );
+    expect(container.firstElementChild).toHaveClass('flex-wrap', 'min-w-0', 'forced-colors:border-[CanvasText]');
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual(['#first', '#second']);
   });
 });
