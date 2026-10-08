@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief } from '@/components/data-display';
+import { Text } from '@/components/ui';
 import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { MetricPreferences } from '@/lib/metric-reference';
@@ -49,12 +50,14 @@ export function NestedDrivingBrief({
     : period.provenance ?? description;
   return <OperationalBrief compact metrics={values} title={title}
     eyebrow={t('driving.brief.eyebrow', 'Driving evidence')}
-    description={description} scope={scope} provenance={provenance}
-    loading={loading} testId={testId}
-    statusLabel={unavailable
-      ? t('driving.brief.unavailable', 'Source unavailable')
-      : loading ? t('driving.brief.loading', 'Loading source')
-        : retained ? t('driving.brief.retained', 'Retained source')
+    description={description}
+    scope={<Text as="span" size="xs" color="muted" className="min-w-0 break-words">{scope}</Text>}
+    provenance={provenance}
+    loading={loading && !retained} testId={testId}
+    statusLabel={retained
+      ? t('driving.brief.retained', 'Retained source')
+      : unavailable ? t('driving.brief.unavailable', 'Source unavailable')
+        : loading ? t('driving.brief.loading', 'Loading source')
           : t('driving.brief.returned', 'Returned evidence')}
-    statusTone={unavailable ? 'danger' : retained ? 'warning' : 'neutral'} />;
+    statusTone={retained ? 'warning' : unavailable ? 'danger' : 'neutral'} />;
 }

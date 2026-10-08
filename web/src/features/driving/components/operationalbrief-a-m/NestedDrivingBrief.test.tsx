@@ -1,5 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StatMetric } from '@/components/data-display/stat-reference';
@@ -134,6 +135,70 @@ describe('NestedDrivingBrief — real compact renderer and unconditional numeric
     expect(within(drawer).getByText(/exclusive end/)).toBeVisible();
     expect(within(drawer).getByText(/Returned subset/)).toBeVisible();
     expect(within(drawer).getByText('0/8')).toBeVisible();
+  });
+  it.each([
+    { loading: true, unavailable: false },
+    { loading: false, unavailable: true },
+    { loading: true, unavailable: true },
+  ])('retains usable values and warning semantics during source refresh: %j', (state) => {
+    const { container } = show(<NestedDrivingBrief {...props} {...state} retained testId="retained-driving" />);
+    expect(screen.getByTestId('retained-driving')).toBeVisible();
+    const status = screen.getByText('Retained source');
+    expect(status).toBeVisible();
+    expect(status).toHaveClass('text-[var(--semantic-warning)]');
+    expect(screen.queryByText('Source unavailable')).not.toBeInTheDocument();
+    expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('0/8')).toBeVisible();
+  });
+  it('preserves the initial and fatal source shells without manufacturing numerical readings', () => {
+    const view = show(<NestedDrivingBrief {...props} loading />);
+    expect(screen.getByText('Loading source')).toBeVisible();
+    expect(view.container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).queryByText('1.00 km')).not.toBeInTheDocument();
+    view.unmount();
+    const fatal = show(<NestedDrivingBrief {...props} metrics={metrics.map(metric => ({ ...metric, rawValue: null }))} unavailable />);
+    expect(screen.getByText('Source unavailable')).toBeVisible();
+    expect(fatal.container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(5);
+    expect(screen.getByText('Recorded distance')).toBeVisible();
+  });
+  it('preserves specialist display and effective preferences while validating the raw operand', () => {
+    const formatter = vi.fn(() => ({ value: 'specialist value', unit: 'source unit' }));
+    const preferences: MetricPreferences = {
+      units: { ...h.units, locale: 'de-DE', precision: 3 },
+      currency: { kind: 'symbol', value: '€' },
+    };
+    const { container } = show(<NestedDrivingBrief {...props} preferences={preferences} metrics={[
+      { metricId: 'number', occurrenceId: 'specialist', rawValue: -12, label: 'Specialist', display: { formatter } },
+      { metricId: 'count', occurrenceId: 'source-display', rawValue: 0, label: 'Source display', displayValue: 'Measured zero observations' },
+      { metricId: 'count', occurrenceId: 'invalid-source-display', rawValue: -1, label: 'Invalid source display', displayValue: 'Not a valid count' },
+    ]} />);
+    expect(formatter).toHaveBeenCalledWith(-12, preferences);
+    expect(screen.getByText('specialist value source unit', { selector: '[data-operational-value]' })).toBeVisible();
+    expect(screen.getByText('Measured zero observations', { selector: '[data-operational-value]' })).toBeVisible();
+    expect(container.querySelector('[data-operational-metric="invalid-source-display"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(screen.queryByText('Not a valid count')).not.toBeInTheDocument();
+    expect(captured('source-display')?.rawValue).toBe(0);
+  });
+  it('keeps long unknown-period receipts subdued and reachable through native keyboard review', async () => {
+    const user = userEvent.setup();
+    const label = 'حدود المصدر غير المعروفة '.repeat(20);
+    const reason = 'Independent source did not establish its analysis coverage.';
+    const { container } = show(<NestedDrivingBrief {...props} period={{ kind: 'unknown', label, reason }} testId="unknown-driving" />);
+    const scope = within(screen.getByTestId('unknown-driving')).getByText(label.trim());
+    expect(scope).toHaveClass('min-w-0', 'break-words', 'text-[var(--text-muted)]');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    const review = screen.getByRole('button', { name: 'Review details' });
+    review.focus();
+    await user.keyboard('{Enter}');
+    const drawer = screen.getByRole('dialog', { name: 'Returned evidence details' });
+    expect(within(drawer).getByText(reason)).toBeVisible();
+    expect(within(drawer).getByText(label.trim())).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(review).toHaveFocus();
   });
 });
 
@@ -287,6 +352,8 @@ describe('Released nested driving quantity contracts', () => {
     expect(captured('active-consumption')?.rawValue).toBe(0.17);
     expect(captured('active-drives')?.rawValue).toBe(1);
     expect(screen.getAllByText('In progress · not graded').length).toBeGreaterThan(0);
+    fireEvent.click(within(screen.getByRole('region', { name: 'Completed-week consumption' }))
+      .getByRole('button', { name: 'Review details' }));
     expect(screen.getAllByText(/target grading and streaks exclude the active week/).length).toBeGreaterThan(0);
   });
   it('does not label absent observatory reset or unknown-distance data as measured zero', () => {
