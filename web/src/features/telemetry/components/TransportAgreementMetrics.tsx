@@ -27,7 +27,7 @@ export function TransportAgreementMetrics({ data, retained = false }: TransportA
       missingReason: measured ? undefined : t('common.notAvailable', 'N/A'),
       display: { formatter: (raw) => ({ value: fmtPercent(raw), unit: '' }) },
       description: t('signalTransportAgreement.sourceTimeOnly', 'Producer time only; receipt fallbacks excluded'),
-      context: t('telemetryBrief.transportPairCounts', 'Across comparable pairs: {{agreeing}} agreeing · {{disagreeing}} disagreeing', {
+      context: t('telemetry.brief.transportPairCounts', 'Across comparable pairs: {{agreeing}} agreeing · {{disagreeing}} disagreeing', {
         agreeing: data.agreeing_pairs, disagreeing: data.disagreeing_pairs,
       }) },
     { metricId: 'count', occurrenceId: 'pairs', rawValue: data.comparable_pairs,
@@ -44,8 +44,8 @@ export function TransportAgreementMetrics({ data, retained = false }: TransportA
       label: t(labelKey, label),
       display: { formatter: (value) => ({ value: fmtInt(value), unit: '' }) },
       description: key === 'http'
-        ? t('telemetryBrief.httpRows', 'Eligible HTTP observations in the bounded producer-time evidence window.')
-        : t('telemetryBrief.mqttRows', 'Eligible MQTT observations in the bounded producer-time evidence window.'),
+        ? t('telemetry.brief.httpRows', 'Eligible HTTP observations in the bounded producer-time evidence window.')
+        : t('telemetry.brief.mqttRows', 'Eligible MQTT observations in the bounded producer-time evidence window.'),
     })),
   ];
 
@@ -75,15 +75,15 @@ export function TransportAgreementMetrics({ data, retained = false }: TransportA
         </AlertBanner>
       ) : null}
 
-      <TelemetrySummaryBrief title={t('telemetryBrief.transportTitle', 'Cross-transport evidence summary')}
+      <TelemetrySummaryBrief title={t('telemetry.brief.transportTitle', 'Cross-transport evidence summary')}
         metrics={metrics} testId="transport-agreement-summary" retained={retained}
         statusLabel={measured ? t('signalTransportAgreement.measured', 'Measured') : t('signalTransportAgreement.notMeasured', 'Not measured')}
         scope={`${data.from} → ${data.to}`}
-        freshness={t('telemetryBrief.auditGenerated', 'Audit generated: {{timestamp}}', { timestamp: data.generated_at })}
+        freshness={t('telemetry.brief.auditGenerated', 'Audit generated: {{timestamp}}', { timestamp: data.generated_at })}
         provenance={t('signalTransportAgreement.description', 'Compares only SI-normalized observations with producer timestamps from both Fleet Telemetry transports.')}
         description={data.truncated
           ? t('signalTransportAgreement.partialDescription', 'The audit reached its {{limit}}-row safety limit. Results describe only the bounded sample and do not prove full-window agreement.', { limit: fmtInt(data.row_limit) })
-          : t('telemetryBrief.transportScope', 'Agreement describes eligible producer-time evidence in this submitted window; missing overlap is unknown, not zero agreement.')} />
+          : t('telemetry.brief.transportScope', 'Agreement describes eligible producer-time evidence in this submitted window; missing overlap is unknown, not zero agreement.')} />
 
       {data.status === 'no_evidence' ? (
         <EmptyState /* no-action: eligible transport evidence is recorded automatically as telemetry arrives. */
