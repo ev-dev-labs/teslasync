@@ -23,8 +23,10 @@ import {
   waitFor,
   cleanup,
 } from '@testing-library/react'
-import type { ReactNode } from 'react'
+import { createRef, type ReactNode } from 'react'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { Button } from '../ui/Button'
+import userEvent from '@testing-library/user-event'
 
 // i18n stub — return the caller-supplied default string so CopyLinkButton's
 // labels/toasts resolve to their English fallbacks without booting i18next.
@@ -129,7 +131,7 @@ describe('PageHeader', () => {
     renderHeader(
       <PageHeader
         title="Charging"
-        actions={<button type="button">Export CSV</button>}
+        actions={<Button type="button" variant="secondary">Export CSV</Button>}
       />,
     )
     expect(
@@ -156,7 +158,7 @@ describe('PageHeader', () => {
       <PageHeader
         title="Notifications"
         copyLink
-        actions={<button type="button">New rule</button>}
+        actions={<Button type="button" variant="secondary">New rule</Button>}
       />,
     )
     expect(
@@ -170,11 +172,11 @@ describe('PageHeader', () => {
       <PageHeader
         title="Fleet"
         metadataActions={<span>Fresh</span>}
-        contextActions={<button type="button">Vehicle</button>}
-        secondaryActions={<button type="button">Compare</button>}
-        destructiveActions={<button type="button">Remove</button>}
-        overflowActions={<button type="button">More</button>}
-        primaryAction={<button type="button">Sync</button>}
+        contextActions={<Button type="button" variant="secondary">Vehicle</Button>}
+        secondaryActions={<Button type="button" variant="secondary">Compare</Button>}
+        destructiveActions={<Button type="button" variant="danger">Remove</Button>}
+        overflowActions={<Button type="button" variant="ghost">More</Button>}
+        primaryAction={<Button type="button">Sync</Button>}
       />,
     )
 
@@ -228,5 +230,71 @@ describe('PageHeader', () => {
     )
     expect(container.querySelector('header')).not.toHaveClass('rounded-panel', 'shadow-e1')
     expect(container.querySelector('.from-neon-cyan')).toBeNull()
+  })
+
+  it('keeps expanded framing neutral and the optional icon subordinate to the title', () => {
+    const { container } = renderHeader(
+      <PageHeader title="Battery" compactHeader={false} icon={<svg data-testid="neutral-icon" />} />,
+    )
+    expect(container.querySelector('header')).toHaveClass('rounded-panel', 'shadow-e1')
+    expect(container.querySelector('header')).toHaveClass('p-4', 'sm:p-6', 'flex-col', 'xl:flex-row')
+    expect(screen.getByTestId('neutral-icon').parentElement).toHaveClass(
+      'text-[var(--text-secondary)]', 'bg-[var(--surface-2)]',
+    )
+    expect(screen.getByTestId('neutral-icon').parentElement).not.toHaveClass('shadow-e1')
+    expect(container.querySelector('[class*="theme-primary"]')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 }).className).not.toContain('tracking-[')
+  })
+
+  it('retains long RTL text, route focus and ref-backed legacy and semantic actions', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<HTMLButtonElement>()
+    const onAction = vi.fn()
+    const title = 'تقرير المركبات '.repeat(20)
+    const subtitle = 'تفاصيل النطاق '.repeat(20)
+    const { container } = renderHeader(
+      <div dir="rtl">
+        <PageHeader
+          title={title}
+          subtitle={subtitle}
+          compactHeader={false}
+          actions={<Button ref={ref} onClick={onAction} variant="secondary">Legacy export</Button>}
+          secondaryActions={<Button variant="secondary">Compare</Button>}
+        />
+      </div>,
+    )
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading.textContent).toBe(title)
+    expect(heading).toHaveClass('min-w-0', 'break-words')
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true')
+    expect(heading).toHaveAttribute('tabindex', '-1')
+    heading.focus()
+    expect(heading).toHaveFocus()
+    expect(container.querySelector('[dir="rtl"]')).toContainElement(heading)
+    expect(container.querySelector('p')?.textContent).toBe(subtitle)
+    expect(container.querySelector('p')).toHaveClass('break-words')
+    expect(ref.current).toBe(screen.getByRole('button', { name: 'Legacy export' }))
+    await user.tab()
+    expect(ref.current).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onAction).toHaveBeenCalledTimes(1)
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Compare' })).toHaveFocus()
+  })
+
+  it('keeps compact help keyboard reachable with shared focus and touch sizing', async () => {
+    const user = userEvent.setup()
+    renderHeader(<PageHeader title="Drives" subtitle="Last 30 days" />)
+    const info = screen.getByRole('button', { name: 'More info: Drives' })
+    await user.tab()
+    expect(info).toHaveFocus()
+    expect(info).toHaveClass(
+      'h-11', 'w-11', 'sm:h-9', 'sm:w-9',
+      'focus-visible:outline-[var(--focus-ring)]',
+    )
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Last 30 days')
+    await user.keyboard('{Escape}')
+    expect(info).toHaveFocus()
+    expect(screen.getByRole('tooltip')).toHaveClass('!opacity-0')
   })
 })
