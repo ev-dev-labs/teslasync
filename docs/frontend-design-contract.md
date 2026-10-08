@@ -1471,3 +1471,198 @@ verifies prefix/hash and narrowly read-only source/label evidence only, in
 `.agent-status\receipts\phase3-hero-observation-contract-checks.log`.
 No UI/runtime/browser/composed acceptance, backend change, application or docs
 build, TypeScript, tests, scanner or full gates are run or claimed here.
+
+## Mobile StatusBar touch allocation — MDC-030 / MDC-040–043 addendum
+
+**Design decision only; implementation and composed acceptance remain pending.**
+This append follows the accepted **109817-byte** prefix, SHA-256
+`718ba7c82702a6902abe1302017f0d0536518d9c3ebd33db9deed717021b4a09`,
+frozen in `phase3-mobile-statusbar-contract-dispatch-baseline.json`.
+All earlier decisions and immutable failure/preservation receipts remain intact.
+
+### Actual constraint and responsive decision
+
+The actual final2 receipt
+`.agent-status\receipts\phase3-recent-pages-segment-attempt-2-checks.log`
+reports a **20px** RecentPages trigger (`h-5 min-h-0`) inside the **24px**
+fixed StatusBar (`h-6 xl:h-7`). Its normal 19-test/type/lint/scan results
+are historical scoped evidence, not mobile acceptance. A 44px child cannot
+fit that parent. Do not authorize a third generic RecentPages retry, a
+spacing exception, invisible oversized hit slop, intercepted overlay, negative
+positioning, or content under another fixed bar to evade this constraint.
+
+At **below md (768px)**, retain every existing status control and allocate
+**two real rows**, rather than squeezing all eight possible controls into one.
+The existing first group remains Connection, LiveTelemetry, HonestyMeter,
+OperationalMode and conditional Alerts; the second remains RecentPages,
+More and Helix. Preserve conditional Alerts behavior and More's existing
+background-work/presentation/help/about disclosure; this is not permission
+to remove or relocate actions into an unimplemented menu.
+
+| Band, standard presentation with status enabled | Status allocation | Arrangement |
+| --- | --- | --- |
+| <768px | **7rem (112px at 16px root)** | Two equal rows; at least **2.75rem (44px)** control height and width |
+| 768–1279px | Existing **1.5rem (24px)** | Existing single-row density/visibility |
+| >=1280px | Existing **1.75rem (28px)** | Existing desktop single row; tab bar hidden |
+
+The mobile 7rem budget includes the existing top border. Two nominal 3.5rem
+rows leave room for 44px controls plus the existing **2px outline / 2px
+offset** without clipping at the row edges. This is a design allocation,
+not a measured browser rectangle. Do not substitute 44px for the entire
+bar, which would still overcrowd the 320px composition. Keep the existing
+<1024 icon-only and <1280 More branches, user `compact`/`iconOnly` choices,
+and desktop density. No new desktop compact accessibility exemption is
+granted: the inherited >=md targets/spacing still require their own actual
+MDC-040 proof. Coarse-pointer tablet/desktop findings stay explicit; they
+are not certified by the below-md allocation or silently waived.
+
+Use existing Tailwind spacing **h-28**, **h-11 / min-h-11 / min-w-11**,
+**gap-2 (8px)** and **p-1 (4px)**, plus existing neutral surface, border,
+typography, shape and focus roles. No new size family, Button variant,
+theme token, breakpoint, or global button resize is needed. StatusBar
+height itself must consume **`--shell-status-bar-height`**, not duplicate
+`h-6 xl:h-7`; 7rem is the below-md value of that existing role.
+Decorative dividers may be absent below md, with the existing desktop
+dividers retained. Each row gets 4px internal focus clearance and an 8px
+inter-control gap. Controls do not shrink below the real 44px target;
+icon/dot/count/status/name semantics and native links remain unchanged.
+Keep compact counts, including Alerts' existing count presentation, rather
+than fabricating or dropping source values.
+
+Use the existing 12px shell gutter with physical safe-area protection:
+mobile left/right padding is respectively
+**`max(0.75rem, env(safe-area-inset-left, 0px))`** and
+**`max(0.75rem, env(safe-area-inset-right, 0px))`**, at the existing
+`[data-role="status-bar"]` CSS owner. Each row uses available width, not
+viewport-wide child widths. If safe areas, text zoom or intrinsic content
+exhaust it, that row owns a bounded horizontal scroll region with padding
+for focus, keyboard/touch reachability and its existing localized status
+name; the page must not acquire horizontal scroll. No hidden/ellipsis-only
+action, hover-only escape hatch, clipped focus or opaque scroll overlay.
+This fallback must be exercised, not inferred from source classes.
+
+### One height/offset authority; no competing workspace owner
+
+At `web\src\index.css:124–126,452–465`, preserve the existing
+`--shell-tab-bar-height = calc(3.5rem + env(safe-area-inset-bottom, 0px))`
+below xl, its xl zero, and
+`--shell-chrome-bottom = tab height + status height`. Add only the below-md
+7rem status value; retain 1.5rem at md and 1.75rem at xl. The existing
+`html[data-status-bar='off']` zero must win at every width, as must the
+tab-off override. Do not increase specificity so hidden/report/kiosk
+states reserve phantom chrome.
+
+StatusBar remains above the tab bar via
+`bottom-[var(--shell-tab-bar-height)] xl:bottom-0`; bottom safe area belongs
+to BottomTabBar, not an additional StatusBar bottom pad. At a 16px root,
+enabled mobile bottom chrome is **168px + bottom safe inset** (112 + 56),
+not 80px or double the inset. This is arithmetic, not viewport output.
+Preserve layers StatusBar 55 / tab bar 50 / existing portaled overlays and
+shell guard; do not raise chrome to intercept overlay taps.
+
+`web\src\components\layout\Layout.tsx:866–877,1498–1550` already owns
+the standard/report/kiosk datasets, reactive enabled preference and main
+`pb-[var(--shell-chrome-bottom)]`. Reuse these unchanged mechanisms.
+`BottomTabBar.tsx` already consumes the tab-height role and `safe-bottom`;
+keep its six native navigation destinations, selected state and focus.
+`web\src\components\ui\Drawer.tsx:127` and `Modal.tsx:110,129` already
+consume bottom chrome; do not paste the new height into them. Keep
+`pb-safe`, native-host behavior, print exclusions, scroll/focus restoration,
+and workspace header vehicle/range ownership. No duplicate selectors,
+dataset writer, height hook or measured-height observer is approved.
+
+### Bounded, acyclic dispatch scopes (implementation is not this append)
+
+The orchestrator queues these distinct scopes with fresh accepted hashes
+and exclusive leases. Existing final `phase3-status-bar` depends on failed
+RecentPages, and final `phase3-layout` depends on that composite. Neither
+may become a prerequisite of these roots.
+
+1. **`phase3-mobile-statusbar-height-root`** — sole source owner
+   `web\src\index.css`: existing status-height role, responsive values,
+   safe left/right gutters and off-state cascade only. Depends on this
+   design decision, not StatusBar, RecentPages, Layout or their acceptance.
+   No Tailwind/cn/token/catalog changes. Verify generated/computed CSS
+   values and override order separately; existing token tests are not
+   automatically evidence for this new geometry.
+2. **`phase3-mobile-statusbar-frame-root`** — owns only
+   `web\src\components\layout\StatusBar.tsx` and
+   `web\src\components\layout\StatusBar.test.tsx`, after height-root.
+   Replace fixed height duplication, allocate the two existing groups,
+   row scroll/focus clearance and the directly owned Helix trigger's
+   mobile target. Preserve provider/preferences/announcer/imports,
+   data hooks, lazy Helix lifecycle, labels and branch semantics. This
+   presentation slice precedes and does not claim final composite
+   acceptance; no child implementation dependency is introduced.
+3. **`phase3-mobile-statusbar-recent-touch-adoption`** — owns only
+   `web\src\components\layout\status-bar\RecentPagesSegment.tsx` and its
+   existing adjacent test, after frame-root. Replace the actual mobile
+   20px trigger allocation with the existing 44px utilities and explicit
+   >=md restoration of its prior density. Preserve the named
+   `w-recent-pages`/`max-h-alerts-preview`, all original nine cases and
+   subsequent additive coverage, links/ref/events/popover IDs/store scope,
+   five-entry preview, empty state and relative timestamps. Narrow adoption
+   of this root decision, **not attempt3** or source/provenance rewriting.
+   Resolve remaining immutable preservation diagnostics explicitly.
+4. **`phase3-mobile-statusbar-peer-touch-adoption`** — after frame-root,
+   bounded source/adjacent-existing-test pairs under
+   `web\src\components\layout\status-bar\` for **ConnectionSegment,
+   LiveTelemetrySegment, HonestyMeterSegment, OperationalModeSegment,
+   AlertsSegment and MoreSegment**. One released pair per lease/dispatch,
+   not six concurrent writers to shared files. Apply only mobile trigger
+   sizing/row-fit changes; cover every Connection admin/non-admin branch
+   and native anchor. Preserve queries/RBAC/labels/counts/state/links.
+   More's existing embedded BackgroundWorkSegment, PresentationModeSegment
+   and HelpSegment controls must each prove 44px below md; any deficient
+   embedded control gets a separately leased source/adjacent-test adoption
+   at those exact existing owners, not a broad descendant CSS selector.
+5. **`phase3-mobile-statusbar-offset-proof`** — read-only consumer proof
+   after roots and touch adoptions, at existing `Layout.tsx`/`Layout.test.tsx`,
+   `BottomTabBar.tsx`/`BottomTabBar.test.tsx`, `Modal.tsx`, `Drawer.tsx`,
+   `Popover.tsx` and `status-bar\HelixSidePanel.tsx`. Check actual callers,
+   hidden/report/kiosk/native/print behavior, main last-item reachability
+   and open overlay/footer containment against the common role. No
+   presumptive caller source rewrite. A concrete offset defect is a
+   separately bounded caller repair, never permission to restyle Layout.
+
+Dependency order is **decision -> height-root -> frame-root -> independent
+recent/peer adoptions -> offset-proof -> final StatusBar composite -> final
+Layout integration**. Existing prerequisite failures remain failures until
+the orchestrator accepts exact new corrective evidence; no attempt reset or
+historical DONE fabrication. The final composite retains all its other
+original dependencies and separately reconciles RecentPages' failed receipt
+against accepted touch adoption/preservation proof. The frame-root must
+release its StatusBar pair before the final composite can lease it.
+
+### Separate implementation proof and mounted mobile acceptance
+
+Root/adoption owners preserve frozen originals, all test intent/API/actions,
+record exact source/test hashes, run their authorized normal guarded focused
+tests/lint/typing/scans, and show CSS breakpoint/merge/override evidence.
+Unit/jsdom rectangles and historical final2 checks do not establish touch,
+viewport, safe-area, contrast or visual acceptance.
+
+After source release and consumer proof, a distinct
+**`phase3-mobile-statusbar-browser-proof`** uses the existing authorized
+app and `web\playwright.config.ts`/`web\scripts\frontend-qa.mjs` tooling.
+Check all MDC-070 widths plus **767/768,1023/1024,1279/1280** transitions;
+record actual viewport/root-font, bounding boxes and non-overlapping targets.
+At 320/375/390/430, test every enabled/disabled/compact/icon-only preference,
+maximal existing status composition, admin/non-admin branches, More and
+RecentPages open/close, pointer taps and keyboard/Escape focus restoration,
+native link destinations/modifier navigation, row scroll and final page
+content. Include RTL, 200% text, long localized names, dark/light/custom and
+forced-colors focus/contrast, reduced motion and short/tall browser chrome.
+Use real mobile/native safe-area evidence for zero/nonzero bottom and
+left/right insets, orientation and chrome changes; desktop emulation alone
+is not device safe-area acceptance. Exercise Modal/Drawer/Helix and nested
+overlays without intercepted taps or unreachable footer actions, standard
+versus report/kiosk, status-off reclamation and unchanged workspace selection.
+No production mutation or fixture injection. Authentication/unavailable
+device/browser evidence is **BLOCKED/NOTRUN**, never invented output.
+
+This architect item changes only this document. Raw scoped reads, decision,
+original/final prefix hashes, full hashes and acyclic-scope validation belong
+to `.agent-status\receipts\phase3-mobile-statusbar-contract-checks.log`.
+No UI/config/token/catalog/test changes, Git, installs, nested agents,
+TypeScript, tests, full builds or visual/runtime gates are run or claimed here.
