@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 
-import { DataSourceNotice, type DataSourceDescriptor } from './DataSourceNotice';
+import { DataSourceNotice, resolveDataSourceStatus, type DataSourceDescriptor } from './DataSourceNotice';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -22,6 +22,53 @@ function source(
 }
 
 describe('DataSourceNotice', () => {
+  it.each([
+    [{ isError: true }, 'failed'],
+    [{ data: [], isError: true }, 'refreshFailed'],
+    [{ data: [], fetchStatus: 'paused' }, 'paused'],
+    [{ fetchStatus: 'paused', isPending: true }, 'paused'],
+    [{ data: 0, isSuccess: true }, 'ready'],
+    [{ data: [], isSuccess: true }, 'ready'],
+    [{ data: null, isFetching: true }, 'refreshing'],
+    [{ isPending: true, fetchStatus: 'fetching' }, 'loading'],
+    [{}, 'pending'],
+  ] satisfies [DataSourceDescriptor['query'], string][])('preserves source distinctions for %j', (query, status) => {
+    expect(resolveDataSourceStatus(source('test', 'Source', query))).toBe(status);
+  });
+
+  it('keeps retained paused refresh visible and independently retryable', () => {
+    const pausedRefetch = vi.fn();
+    const failedRefetch = vi.fn();
+    const readyRefetch = vi.fn();
+    const label = 'Retained source with a long label that must stay fully readable';
+    render(
+      <DataSourceNotice dir="rtl" data-testid="notice" sources={[
+        source('paused', label, { data: [], fetchStatus: 'paused', refetch: pausedRefetch }),
+        source('failed', 'Failed source', { isError: true, refetch: failedRefetch }),
+        source('ready', 'Fresh source', { data: 0, refetch: readyRefetch }),
+      ]} />,
+    );
+    expect(screen.getByTestId('notice')).toHaveAttribute('dir', 'rtl');
+    expect(screen.getByText(label)).not.toHaveClass('truncate');
+    expect(screen.getByText('Paused offline')).toBeInTheDocument();
+    expect(screen.getByText('Ready')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: `Retry unavailable sources: ${label}` }));
+    expect(pausedRefetch).toHaveBeenCalledTimes(1);
+    expect(failedRefetch).not.toHaveBeenCalled();
+    expect(readyRefetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+    expect(pausedRefetch).toHaveBeenCalledTimes(2);
+    expect(failedRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a retained paused source as stale rather than healthy or fatal', () => {
+    render(<DataSourceNotice sources={[
+      source('paused', 'Retained source', { data: [], fetchStatus: 'paused' }),
+    ]} />);
+    expect(screen.getByRole('status')).toHaveAttribute('data-data-state', 'stale');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('stays hidden when every enabled source is ready', () => {
     const { container } = render(
       <DataSourceNotice
