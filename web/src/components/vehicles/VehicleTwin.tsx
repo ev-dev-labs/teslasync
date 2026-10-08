@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from '@/components/motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Tooltip } from '@/components/ui';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
 import {
   FALLBACK_PAINT,
@@ -1252,29 +1252,21 @@ function PhotoWheelSpinner({
     <div
       aria-hidden="true"
       data-wheel-spinner={wheel}
+      className="pointer-events-none absolute overflow-hidden rounded-full"
       style={{
-        position: 'absolute',
         left,
         top,
         width: size,
         height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
         maskImage: edgeMask,
         WebkitMaskImage: edgeMask,
         maskRepeat: 'no-repeat',
         WebkitMaskRepeat: 'no-repeat',
-        pointerEvents: 'none',
       }}
     >
       <motion.div
         data-wheel-rotor={wheel}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-          transformOrigin: '50% 50%',
-        }}
+        className="absolute inset-0 origin-center overflow-hidden"
         initial={shouldSpin ? { rotate: 0 } : false}
         animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
         transition={
@@ -1291,8 +1283,8 @@ function PhotoWheelSpinner({
           src={photoUrl}
           alt=""
           draggable={false}
+          className="absolute"
           style={{
-            position: 'absolute',
             maxWidth: 'none',
             width: imgWidth,
             left: imgLeft - left,
@@ -1495,7 +1487,7 @@ export function VehicleTwin({
     left: imgLeft,
     top: imgTop,
     opacity: photoOn ? 1 : 0,
-    transition: 'opacity 200ms ease',
+    transition: reduce ? 'none' : 'opacity 200ms ease',
   };
 
   // Per-instance gradient ids — prevents <defs> id collisions when two

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { VehicleTwin } from '../VehicleTwin';
+import type { VehicleTwinProps } from '../VehicleTwin';
 
 const motionPreference = vi.hoisted(() => ({ reduce: false }));
 vi.mock('@/hooks/useMotionPreference', () => ({
@@ -20,11 +21,13 @@ const baseTwinState = {
     driverRear: false,
     passengerFront: false,
     passengerRear: false,
+    trunkFront: false,
+    trunkRear: false,
   },
-  windowFD: false,
-  windowFP: false,
-  windowRD: false,
-  windowRP: false,
+  windowFD: null,
+  windowFP: null,
+  windowRD: null,
+  windowRP: null,
   frunkOpen: false,
   trunkOpen: false,
   chargePortOpen: false,
@@ -36,7 +39,9 @@ const baseTwinState = {
   hazards: false,
   turnSignal: 'off' as const,
   driverSeatOccupied: false,
-};
+  vehicleColor: '',
+  lastUpdated: null,
+} satisfies VehicleTwinProps;
 
 describe('VehicleTwin', () => {
   it('rescales photo and wheel calibration to the actual container and can expand again', async () => {
@@ -89,6 +94,7 @@ describe('VehicleTwin', () => {
     motionPreference.reduce = true;
     const { container } = render(<VehicleTwin {...baseTwinState} isDriving driveIn />);
     const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    expect(photo.style.transition).toBe('none');
     if (variant === 'photo') fireEvent.load(photo);
     else fireEvent.error(photo);
     const selector = variant === 'photo' ? '[data-wheel-rotor]' : '[data-svg-wheel-rotor]';
@@ -160,6 +166,8 @@ describe('VehicleTwin', () => {
 
     const basePhoto = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]');
     expect(basePhoto).not.toBeNull();
+    expect(basePhoto!.style.maxWidth).toBe('none');
+    expect(basePhoto!.style.transition).toBe('opacity 200ms ease');
     fireEvent.load(basePhoto!);
 
     await waitFor(() => {
@@ -171,13 +179,22 @@ describe('VehicleTwin', () => {
       const rotor = container.querySelector<HTMLElement>(`[data-wheel-rotor="${wheel}"]`);
       expect(spinner).not.toBeNull();
       expect(rotor).not.toBeNull();
+      expect(spinner).toHaveClass('pointer-events-none', 'absolute', 'overflow-hidden', 'rounded-full');
+      expect(rotor).toHaveClass('absolute', 'inset-0', 'origin-center', 'overflow-hidden');
+      const crop = rotor!.querySelector<HTMLImageElement>('img')!;
+      expect(crop).toHaveClass('absolute');
+      expect(crop.style.maxWidth).toBe('none');
+      expect(crop.style.width).toBe(basePhoto!.style.width);
+      expect(Number.parseFloat(crop.style.left) + Number.parseFloat(spinner!.style.left))
+        .toBeCloseTo(Number.parseFloat(basePhoto!.style.left));
+      expect(Number.parseFloat(crop.style.top) + Number.parseFloat(spinner!.style.top))
+        .toBeCloseTo(Number.parseFloat(basePhoto!.style.top));
       return {
         x: Number.parseFloat(spinner!.style.left) + Number.parseFloat(spinner!.style.width) / 2,
         y: Number.parseFloat(spinner!.style.top) + Number.parseFloat(spinner!.style.height) / 2,
         width: Number.parseFloat(spinner!.style.width),
         maskImage: spinner!.style.maskImage,
         webkitMaskImage: spinner!.style.webkitMaskImage,
-        transformOrigin: rotor!.style.transformOrigin,
       };
     };
 
@@ -192,7 +209,6 @@ describe('VehicleTwin', () => {
     expect(front.maskImage).toContain('92.59%');
     expect(front.maskImage).toContain('transparent 100%');
     expect(front.webkitMaskImage).toBe(front.maskImage);
-    expect(front.transformOrigin).toBe('50% 50%');
 
     const rear = cropCenter('rear');
     expect(rear.x).toBeCloseTo(464.33, 2);
@@ -200,6 +216,5 @@ describe('VehicleTwin', () => {
     expect(rear.width).toBeCloseTo(67.48, 2);
     expect(rear.maskImage).toBe(front.maskImage);
     expect(rear.webkitMaskImage).toBe(front.maskImage);
-    expect(rear.transformOrigin).toBe('50% 50%');
   });
 });
