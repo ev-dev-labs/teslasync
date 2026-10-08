@@ -70,7 +70,7 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
         scope={<span>{hint} · {t('admin.operationalBrief.periodUnknown', 'Observation time and complete analysis bounds are not supplied by this source.')}</span>} loading={isLoading && !retained}
         freshness={retained ? t('admin.operationalBrief.retained', 'Retained evidence') : undefined}
         provenance={hint} />
-      {state.error && <QueryError error={state.error} onRetry={state.onRetry}
+      {Boolean(state.error) && <QueryError error={state.error} onRetry={state.onRetry}
         resourceName={t('admin.schemaDrift.pageTitle', 'Schema drift')} />}
     </section>
   );
