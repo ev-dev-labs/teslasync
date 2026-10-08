@@ -29,9 +29,10 @@ export function DiagnosticEvidenceBrief({
 }: DiagnosticEvidenceBriefProps) {
   const { t } = useTranslation();
   const briefMetrics = useOperationalMetrics(metrics);
-  const retained = state.refreshError != null || state.isRefreshBlocked
-    || (sources?.some(({ state: source }) => source.hasData
-      && (source.refreshError != null || source.isRefreshBlocked || source.status === 'stale')) ?? false);
+  const retained = sources?.length
+    ? sources.some(({ state: source }) => source.hasData
+      && (source.refreshError != null || source.isRefreshBlocked || source.status === 'stale'))
+    : state.refreshError != null || state.isRefreshBlocked;
   const partial = state.status === 'partial'
     || (sources?.some(({ state: source }) => !source.hasData
       || source.status === 'unavailable' || source.status === 'partial') ?? false);
