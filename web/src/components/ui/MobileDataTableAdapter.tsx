@@ -82,19 +82,21 @@ export function MobileDataTableAdapter<T>({
   const showRows = state.kind === 'ready' || (state.kind === 'error' && state.retained)
   const close = () => setDetailKey(null)
   return (
-    <div className="mgr-mobile min-w-0 [&_button]:min-h-11 [&_button]:min-w-11" data-mobile-table="" aria-label={label}>
+    <div className="mgr-mobile min-w-0 [&_button]:min-h-11 [&_button]:min-w-11" data-mobile-table="" role="group" aria-label={label}>
       <div className="flex flex-wrap items-center gap-2 py-2">{controls}</div>
-      {selectable && <Button size="sm" variant="secondary" className="min-h-11"
-        aria-pressed={selectionMode} onClick={() => setSelectionMode(previous => !previous)}>
-        {selectionMode ? t('common.cancel', 'Cancel') : t('developerReference.mobileGrid.selection.enter', 'Select')}
-      </Button>}
-      {selectable && selectionMode && multiSelect && (
-        <Checkbox className="min-h-11" checked={allSelected} indeterminate={someSelected}
-          onChange={onToggleAll} aria-label={allSelected
-            ? t('table.selection.deselectAll', 'Deselect all rows')
-            : t('table.selection.selectAll', 'Select all rows')} />
-      )}
-      <div className="mgr-group overflow-clip bg-[var(--surface-1)]">
+      {selectable && <div className="flex flex-wrap items-center gap-2 pb-3">
+        <Button size="sm" variant="secondary" className="min-h-11" wrapLabel
+          aria-pressed={selectionMode} onClick={() => setSelectionMode(previous => !previous)}>
+          {selectionMode ? t('common.cancel', 'Cancel') : t('developerReference.mobileGrid.selection.enter', 'Select')}
+        </Button>
+        {selectionMode && multiSelect && (
+          <Checkbox className="min-h-11 min-w-11" checked={allSelected} indeterminate={someSelected}
+            onChange={onToggleAll} aria-label={allSelected
+              ? t('table.selection.deselectAll', 'Deselect all rows')
+              : t('table.selection.selectAll', 'Select all rows')} />
+        )}
+      </div>}
+      <div className="mgr-group bg-[var(--surface-1)]">
         <MobileReferenceState production state={state} callbacks={{
           onRetry: presentation.onRetry, onClear,
         }} />
@@ -103,7 +105,7 @@ export function MobileDataTableAdapter<T>({
           const mobileRow = buildMobileTableRow(row, key, columns, presentation, label)
           const humanLabel = rowLabel?.(row) ?? mobileRow.title
           return <div key={`${typeof key}:${key}`}>
-            <div className="flex min-w-0 items-center">
+            <div className="flex min-w-0 flex-col">
               <div className="min-w-0 flex-1">
                 <MobileReferenceRow
                   row={mobileRow}
@@ -117,15 +119,15 @@ export function MobileDataTableAdapter<T>({
                   onSelectionEvent={event => onToggle(key, event)}
                 />
               </div>
-              <div data-mobile-row-actions="" className="flex shrink-0 flex-col gap-1 p-2">
+              <div data-mobile-row-actions="" className="flex w-full min-w-0 flex-wrap items-center gap-2 px-3 pb-3 [&_button]:max-w-full [&_button]:whitespace-normal [&_button]:break-words">
                 {presentation.inlineActions?.(row)}
                 {rowActions?.(row)}
-                {onToggleExpanded && <Button size="sm" variant="ghost"
+                {onToggleExpanded && <Button size="sm" variant="ghost" wrapLabel
                   aria-expanded={expandedKeys?.has(key) ?? false}
                   onClick={() => onToggleExpanded(key)}>
                   {expandedKeys?.has(key) ? t('table.expand.collapse', 'Collapse row') : t('table.expand.expand', 'Expand row')}
                 </Button>}
-                <Button size="sm" variant="ghost" className="min-h-11 min-w-11"
+                <Button size="sm" variant="ghost" className="min-h-11 min-w-11" wrapLabel
                   aria-label={t('common.quickView', 'Quick view')}
                   onClick={() => setDetailKey(key)}>{t('common.quickView', 'Quick view')}</Button>
               </div>
@@ -134,29 +136,29 @@ export function MobileDataTableAdapter<T>({
           </div>
         })}
       </div>
-      <div className="space-y-2 py-3">
+      <div className="min-w-0 space-y-2 break-words py-3">
         {count}
-        {onLoadMore && showRows && <Button className="min-h-11 w-full" variant="secondary"
+        {onLoadMore && showRows && <Button className="min-h-11 w-full" variant="secondary" wrapLabel
           onClick={onLoadMore}>{t('developerReference.mobileGrid.footer.loadMore', 'Load {{count}} more', { count: nextCount })}</Button>}
       </div>
       <Modal open={detailRow != null} onClose={close}
         title={detailRow != null ? rowLabel?.(detailRow) ?? label : label} size="lg"
-        footer={<Button className="min-h-11 min-w-11" onClick={close}>{t('common.close', 'Close')}</Button>}>
-        {detailRow != null && <div className="space-y-3">
+        footer={<Button className="min-h-11 min-w-11" wrapLabel onClick={close}>{t('common.close', 'Close')}</Button>}>
+        {detailRow != null && <dl className="min-w-0 space-y-3">
           {allColumns.filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => (
-            <div key={column.key} className="min-w-0 break-words">
-              <Text size="sm" color="muted">{column.header}</Text>
-              <div className={column.align === 'right' ? 'tabular-nums' : undefined}>{column.render(detailRow) ?? '—'}</div>
+            <div key={column.key} className="min-w-0 space-y-1 break-words">
+              <Text as="dt" variant="caption">{column.header}</Text>
+              <Text as="dd" variant="body" className={column.align === 'right' ? 'tabular-nums' : undefined}>{column.render(detailRow) ?? '—'}</Text>
             </div>
           ))}
           {presentation.allDetails?.(detailRow).filter(field =>
             presentation.canShowField?.(field.key, detailRow) !== false).map(field => (
-            <div key={field.key} className="min-w-0 break-words">
-              <Text size="sm" color="muted">{field.label}</Text>
-              <div>{field.value ?? '—'}</div>
+            <div key={field.key} className="min-w-0 space-y-1 break-words">
+              <Text as="dt" variant="caption">{field.label}</Text>
+              <Text as="dd" variant="body">{field.value ?? '—'}</Text>
             </div>
           ))}
-        </div>}
+        </dl>}
       </Modal>
     </div>
   )
