@@ -13,7 +13,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Filter, Plus, RefreshCw, X } from 'lucide-react';
+import { ArrowUpDown, Filter, Plus, RefreshCw, X } from 'lucide-react';
 
 import { GlassPanel, Badge, Button, Input, DataTable, Text, Code, SectionTitle, type Column } from '@/components/ui';
 import { TimeStamp, type StatMetric } from '@/components/data-display';
