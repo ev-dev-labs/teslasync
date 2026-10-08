@@ -168,10 +168,10 @@ export default function SignalEntropyPage() {
           metrics={metrics} testId="signal-entropy-summary" loading={isLoading}
           unavailable={isError} unknown={!hasData} sourceStatus={historyState.status}
           retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
-          scope={t('telemetryBrief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
+          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
           sourceBounds={signalName ? [{ signal: signalName, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
-          provenance={t('telemetryBrief.historyProvenance', 'Selected signal history; numeric samples only')}
-          description={t('telemetryBrief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+          provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
+          description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
         {isError && <QueryError error={error} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
