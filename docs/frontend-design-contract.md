@@ -1666,3 +1666,202 @@ original/final prefix hashes, full hashes and acyclic-scope validation belong
 to `.agent-status\receipts\phase3-mobile-statusbar-contract-checks.log`.
 No UI/config/token/catalog/test changes, Git, installs, nested agents,
 TypeScript, tests, full builds or visual/runtime gates are run or claimed here.
+
+## New geometry and caller-specific material decisions — MDC-010 / MDC-024 / MDC-034 / MDC-043
+
+**`phase3-new-geometry-and-material-contract`: append-only design decision.**
+Preserve the entire accepted **122260-byte** prefix, SHA-256
+`690de46c35135a846d08938cf79b7c85d4a045e0e1df607f2c20b8148b7c122b`,
+identified by the dispatch baseline. This addendum supersedes only the mistaken
+permissions/claims identified below; all other APIs, preservation requirements,
+failure receipts and prior decisions remain. No implementation or acceptance
+is performed by this document.
+
+### Six missing geometry names; exact DOM behavior
+
+Current sources/tests and original/final receipts were inspected, not merely
+their disposition labels. `phase3-workspace-header-checks.log` retains **two**
+geometry candidates and two token reviews; its six tests do not clear scan1.
+`phase3-command-palette-frame-checks.log` and final
+`phase3-command-palette-frame-attempt-2-checks.log` retain **four frame geometry**
+candidates within ten total candidates/53 token reviews. Final2's 85 tests,
+lint and scoped typing do not clear scanner failure or other owners' findings.
+Read-only installed config resolution proves all six names and exact equivalents
+absent; dock-header minimum height is not fixed workspace-header height.
+
+Approve precisely these additions to `web\tailwind.config.js` `theme.extend`:
+
+| Exact current owner/site | Map key = exact value | Replacement and generated declaration |
+| --- | --- | --- |
+| `web\src\components\layout\WorkspaceHeader.tsx:42`, `h-[4.5rem]` | `height['workspace-header'] = '4.5rem'` | `h-workspace-header`; `height: 4.5rem` |
+| Same :42 balanced tracks | `gridTemplateColumns['workspace-header'] = 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)'` | `grid-cols-workspace-header`; exactly that `grid-template-columns` |
+| `web\src\components\ui\CommandPalette.tsx:1224`, backdrop | `zIndex['command-palette-backdrop'] = '200'` | `z-command-palette-backdrop`; `z-index: 200` |
+| Same :1241, positioner | `zIndex['command-palette-positioner'] = '201'` | `z-command-palette-positioner`; `z-index: 201` |
+| Same :1241, vertical padding | `padding['command-palette-viewport'] = 'max(2rem,8vh)'` | `py-command-palette-viewport`; only `padding-top` and `padding-bottom: max(2rem,8vh)` |
+| Same :1257, dialog cap | `maxHeight['command-palette'] = '84vh'` | `max-h-command-palette`; `max-height: 84vh` |
+
+Register suffixes at existing `web\src\lib\cn.ts` groups `h`, `grid-cols`,
+`z`, `py` and `max-h`, respectively; add both layer suffixes to `z`.
+No generic spacing role, `tokens.ts` wrapper, CSS variable or breakpoint is needed.
+Prove both-order last-conflict-wins with ordinary/arbitrary same-property classes
+and matching variants; `py` must retain existing directional padding conflict
+semantics against `p`/`pt`/`pb`, not erase horizontal padding. Distinct properties
+and variants coexist. Generate no extra declaration or importance.
+
+WorkspaceHeader remains hidden below xl, a balanced three-track grid at xl,
+with existing equal side tracks, bounded search, range/vehicle ownership,
+breadcrumbs/utilities, gutters and caption. Height stays fixed rem-based
+(72/90px at 16/20px roots), not a growing minimum or doubled font scale.
+CommandPalette keeps its current viewport-centered, top-anchored positioner,
+backdrop click-out, pointer-events split, independent overflow, 84vh dialog cap,
+focus/combobox/listbox/Escape semantics and reduced-motion branches. Keep `vh`,
+not `dvh`; keep both padding bounds and layer ordering 200 < 201 in existing
+stacking contexts. Do not migrate it to Modal or imply cross-context priority.
+
+### RoutePlayback: data identity, not vehicle material or health
+
+`phase3-route-playback-checks.log` retains scanner1 and six exact current tuples:
+**173:17 `#22d3ee`, 174:18 `#00b4d8`, 373:25 and 374:29 `#10b981`,
+385:25 and 386:29 `#ef4444`**. The raw original receipt uses defaults at
+:176–177 and endpoints :375–376/:387–388; current coordinates are not originals.
+The first pair initializes `trailColor`/`markerColor`; the next pairs are
+start/end `CircleMarker` stroke/fill, not success/failure telemetry. The trail
+is a historical route path, not physical vehicle paint. Explicit caller paint
+still overrides defaults. Approve an intentional default presentation change,
+not an assertion that old and new colors are identical:
+
+| Existing source use | Reuse exact existing role | Intended renderer |
+| --- | --- | --- |
+| Trail default and Polyline :366 | `chartTokens.series[0]` = `light-dark(#385e7e, #91b4d2)` | Leaflet path: current default SVG; concrete resolved paint also required for Canvas |
+| Playback-position default passed to AnimatedMarker :396 | `var(--semantic-info)` | AnimatedMarker's actual DOM DivIcon background; replay position, never confirmed live/online |
+| Start stroke/fill :373–374 | `chartTokens.series[1]` = `light-dark(#38614f, #91b9a5)` | SVG/Canvas endpoint identity, not success |
+| End stroke/fill :385–386 | `chartTokens.series[3]` = `light-dark(#83464e, #d6a0a5)` | SVG/Canvas endpoint identity, not danger/failure |
+
+Reuse `web\src\lib\tokens.ts`'s actual series, not legacy `COLOR.GOOD/BAD/CYAN`,
+new map hex constants or a second palette. Do not introduce a chart-palette
+subscription: RoutePlayback currently has none. Theme resolution changes paint
+only; points/timestamps/ordering, finite-coordinate filtering, index callbacks,
+heading, speed/SOC/power, source trust, timing, seeking and camera remain true.
+MapOverviewPage :179–198 derives replay from history and :466 supplies no color
+overrides; a replay marker is not the separate current live vehicle marker.
+Never color this path by speed, infer health from endpoints, interpolate new
+telemetry or turn absent speed/SOC into zero. Preserve SI `formatSpeed` display
+and raw callback values. Existing summaries/labels remain; color alone cannot
+be accepted as an endpoint distinction.
+
+### Shared browser resolution boundary; no unresolved Canvas paint
+
+RoutePlayback's path paint and GeofenceDrawer's `shapeOptions`/persisted layers
+are now two inspected independent consumers. This narrowly supersedes the prior
+**“no new shared color helper/token root now”** restriction: approve a pure
+browser-boundary helper at existing `web\src\lib\colors.ts`, named
+`resolveMapRendererColor(input: string, context: HTMLElement): string | null`,
+with directly reserved tests at `web\src\lib\__tests__\mapRendererColor.test.ts`.
+It adds no color role, settings/provider, Leaflet dependency or import-time DOM
+access. Return a validated concrete computed CSS color or explicit null.
+Use the actual mounted map theme context and safe style assignment, never HTML
+interpolation. Resolve nested variables and `light-dark()` through the browser;
+detect missing/cyclic references and invalid input, rather than accepting an
+inherited/default probe color as success. SSR, detached/unavailable context,
+absent/throwing computed-style access are unresolved. No black, previous Canvas
+paint, hardcoded compatibility color or first-series fallback inside this helper.
+
+Each caller owns fallback intent: valid explicit colors retain their appearance;
+an invalid/unresolved override tries only its declared default role. If that
+also fails, retain source/controls and expose existing unresolved feedback,
+defer paint initialization and retry on mounted theme availability. No hidden
+geometry/data failure or fabricated callback. Route resolves its path roles;
+Geofence resolves existing `var(--theme-primary)` for draft and persisted shapes.
+Theme/custom/mode/forced-colors changes update paint without resetting playback,
+drawing/edit state, IDs, handlers or focus. Preserve geofence 2px/0.08 and replay
+4px/0.8 trail, 7px endpoint radius/2px outline/full fill. Do not force SVG to
+evade Canvas. DOM/SVG variable support alone cannot prove Canvas compatibility.
+AnimatedMarker's existing bloom/pulse/white border remains separate source work,
+not an authentic-material exception or cleared by passing a restrained color.
+
+### VehicleTwin: split the actual warning caller, not physical turn lamps
+
+The diagnosis's pinned scanner hash
+`628d37320b5d98f968edce6d4cd71dd4a9c40b2a2ea1f43af1140944da60cbd8`
+matches all **103 tuples**, with **three token reviews** separate. But the
+old “99 physical” declaration partition is not a physical-only use permission.
+**220:11 `rgba(251,191,36,0.78)` defines `C.amber`**. SideWindows :668 derives
+`passengerAlert` from front/rear passenger windows being open/partial; :788 uses
+`stroke={C.amber}` on its warning path, including photo mode. This is semantic
+warning paint, not amber lens material. Assign **only that caller's stroke**
+to existing **`var(--semantic-warning)`**, SVG presentation attribute, while
+retaining its predicate/path/width/photo visibility and null/unknown distinctions.
+Leave `C.amber` and its physical fill/strokes **:996/:1027/:1043** unchanged,
+including existing turn/hazard/entry predicates. Never globally recolor the
+constant to repair this warning. Pulse removal remains the separately serialized
+body-window-door-feedback scope; warning-role adoption does not authorize it.
+
+Supersede only the physical-only classification of that mixed declaration:
+**98 other material-declaration candidates + one mixed C.amber declaration +
+one alpha mask + two nonexempt charging paints + one identifier = 103**.
+This is accounting, not 98/99/103 renderer acceptance. Preserve every exact
+tuple and review its actual caller/branch; no unused material declaration proves
+rendered physical use. :521/:546/:876 fallback paint also runs for null, not
+only confirmed closed; null must not be labeled closed. The :1245:69 `#000`
+mask belongs to **PhotoWheelSpinner**, consumed at :1261/:1262, not PhotoOverlay.
+`headlightsActive` is at :947 (`on === true || driveIn`), not source-confirmed
+headlights-on for every entry; ChargingUnderglow's actual caller is :1573.
+These narrow corrections supersede the earlier misleading owner/state wording.
+Reflection sweeps, active-light bloom, :334/:339 underglow, glow-filter consumers
+and security rings remain their named successor scopes; optical stops and
+physical paint/photo choices stay intact. No blanket waiver or scanner edit.
+
+### Acyclic leases and evidence; failures remain failures
+
+1. **`phase3-new-geometry-tokens`**: after this decision and prior config/test
+   lease release, only `web\tailwind.config.js`, `web\src\lib\cn.ts`,
+   `web\src\lib\cn.test.ts`, `web\src\lib\__tests__\tokens.test.ts`.
+   Exactly six additive entries. Freeze the immediate accepted predecessor;
+   preserve every original fingerprint expectation and all accepted 10/19/6
+   accounting. Assert exact keys/values before projecting only those additions;
+   no hash reset, broad exclusion, deletion or weakened ratchet. Prove generated
+   CSS equivalence and merge/variant behavior. No caller prerequisite.
+2. After that root, independent **`phase3-workspace-header-geometry-adoption`**
+   leases only WorkspaceHeader.tsx/WorkspaceHeader.test.tsx at their existing
+   layout owner; **`phase3-command-palette-frame-geometry-adoption`** leases only
+   ui\CommandPalette.tsx/ui\__tests__\CommandPalette.test.tsx. Each substitutes
+   only its table entries and retains original assertions' behavior intent.
+3. Independent **`phase3-map-renderer-color-root`** leases only colors.ts and
+   the explicitly reserved mapRendererColor.test.ts after confirming absence
+   and prior color-owner release. Then separate **`phase3-route-playback-paint-adoption`**
+   leases only maps\RoutePlayback.tsx/maps\__tests__\RoutePlayback.test.tsx;
+   existing **`phase3-geofence-canvas-paint-correction`** leases only
+   maps\GeofenceDrawer.tsx/maps\__tests__\GeofenceDrawer.test.tsx. Neither waits
+   on the other. A resolver root never waits on consumer acceptance.
+4. Independent **`phase3-twin-passenger-warning-role-adoption`** leases only
+   vehicles\VehicleTwin.tsx/vehicles\__tests__\VehicleTwin.test.tsx, restricted
+   to the :788 ink plus additive branch/physical-preservation tests. After its
+   verified proof/release, read-only original-ink reconciliation can proceed;
+   keep the existing serialized reflection -> body-window-door -> light ->
+   charge/security chain, never simultaneous source or matching-test writers.
+5. Separate read-only **`phase3-new-geometry-browser-proof`** follows geometry
+   adoptions; **`phase3-map-renderer-browser-canvas-proof`** follows resolver
+   and map adoptions; **`phase3-twin-warning-browser-contrast-proof`** follows
+   warning adoption. Each owns evidence only, not source or scanner. Verify
+   actual composed tiles/path/marker/endpoint contrast, resolved SVG and real
+   Canvas rendering/theme refresh, and warning/photo-versus-lamp distinctions.
+   Record mounted geometry/scroll/focus at mission widths, 16/20px roots,
+   200% text, RTL, dark/light/custom/forced-colors and reduced motion.
+
+All roots/adoptions need exact fresh hashes, immutable originals, authorized
+guarded scoped tests/lint/typing/preservation and unchanged scanners retaining
+all findings. Original final2 and other failed deliveries stay **FAILED** until
+true post-root verification and orchestrator reconciliation; not a generic
+third attempt, renewed whole-file migration or historical status rewrite.
+Static review, mathematical contrast, jsdom map stubs/canvas mocks and test
+counts are not browser/Canvas/device/native acceptance. Missing authorized
+runtime evidence is BLOCKED/NOTRUN, never invented. No dependency points back
+from a root to its caller or to final composite acceptance.
+
+Raw commands, original/current hashes, role declarations, failure recovery and
+missing evidence are recorded in
+`.agent-status\receipts\phase3-new-geometry-and-material-contract-checks.log`.
+This docs-only append runs no UI changes, scanner changes, application TypeScript,
+tests/lint/build, docs build, browser/device/backend gates, installs or Git.
+Only prefix/document/source evidence is verified here; implementation and actual
+composed acceptance remain pending.
