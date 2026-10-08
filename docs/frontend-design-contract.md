@@ -1865,3 +1865,213 @@ This docs-only append runs no UI changes, scanner changes, application TypeScrip
 tests/lint/build, docs build, browser/device/backend gates, installs or Git.
 Only prefix/document/source evidence is verified here; implementation and actual
 composed acceptance remain pending.
+
+## Annotation create retention and completion ownership — MDC-024 / MDC-026 / MDC-034
+
+**`phase3-annotation-create-retention-contract`: append-only lifecycle decision.**
+Preserve the accepted **136562-byte** prefix, SHA-256
+`3ca4d611f5764ed77245f2c2825c490f1dc740cc40504c858b8735b96738f146`,
+from `phase3-annotation-create-retention-contract-dispatch-baseline.json`.
+Prior documentation ownership is released/accepted at **8f10b35583**.
+This does not reopen that geometry/material decision, migrate presentation again,
+or claim asynchronous correctness from a styling/test-oracle acceptance.
+
+### Actual defect; a toast is not draft recovery
+
+Bounded source inspection shows `AddAnnotationPopover.tsx:86–89` validates time,
+calls void `onAdd`, then immediately clears label and resets category.
+`ChartContainer.tsx:379–396` uses `createMutation.mutate` at :384–391 and closes
+at **:392**, before network success. `useAnnotations.ts:115–128` already owns
+the real POST `/annotations`, success invalidation/broadcast and deferred
+success/error toast. Its error toast cannot restore a discarded form.
+The accepted popover source/oracle (`5df8b2d602`, Escape target `c45ab96610`)
+preserves original synchronous behavior; neither accepts failed-create retention,
+parent-controlled dismissal or composed focus restoration. Keep those historical
+receipts and original cases intact; add lifecycle cases, not replacement oracles.
+
+### Smallest backward-safe public contract
+
+Extend the existing popover **in place**, retaining the positional arguments and
+their types/defaults: `onAdd(...) => void | Promise<void>`. Add only optional
+`onAdded?: () => void`, a success notification, not a second mutation callback.
+The popover owns its local pending/error state and draft; the caller owns actual
+creation, contextual identity and controlled open/close. No new overlay engine,
+generic mutation wrapper, annotation store, public pending prop or hook is needed.
+This corrects an existing create lifecycle, not a speculative component family.
+
+- A nonthrowing synchronous `void` callback remains immediate local acceptance:
+  preserve its existing validation, argument trimming/defaults and reset behavior,
+  then notify `onAdded` once if supplied. Existing synchronous callers need not
+  adopt the optional notification. A synchronous throw is failure, not acceptance.
+- A promise-returning callback is pending until it fulfills. For ChartContainer,
+  it must be an `async` adapter awaiting **`createMutation.mutateAsync(input)`**
+  and returning void afterward. Do not return `mutate`, detach the promise,
+  catch-and-resolve, or translate network rejection into successful void.
+  Invalid/missing capability, config or occurred-at must reject before mutation,
+  not return a success-shaped no-op. Keep the existing form validation first.
+- Only fulfillment for the current live attempt permits clearing label,
+  description, category/date defaults as originally applicable and calling
+  `onAdded`. ChartContainer closes through that notification, never at dispatch
+  or in `finally`; explicit idle Cancel remains a separate discard action.
+  Local completion callbacks are not network operations: a notification exception
+  cannot relabel an already confirmed save as a rejected create or cause retry.
+- Catch a genuine rejection at the form boundary, release pending and keep the
+  visible draft byte-for-byte as entered (including whitespace), original chosen
+  category, optional description and manual date/time. Retry uses current edited
+  fields after existing validation. Never reset fields in catch/finally.
+  The submitted trimmed payload is separate from the retained editable draft.
+- Show persistent standard localized operation-error/retry feedback associated
+  with the form; announce it once and leave the real controls editable.
+  Retain the hook's actual standard deferred error toast and success-only
+  invalidation/broadcast. Do not swallow, replace or duplicate its global toast.
+  Inline recovery feedback is not another toast, fake success or invented row.
+
+### Pending, dismissal, focus and identity races
+
+Set a synchronous in-flight latch **before** invoking `onAdd`; React rendering
+alone does not prevent rapid click/Enter duplication. Exactly one call per form
+attempt; no automatic UI retry, optimistic annotation or offline queue.
+While pending, keep the draft visible, announce busy through existing Button/form
+semantics and disable Add and field changes so success cannot erase newer edits.
+After rejection, all fields become editable again without leaving the dialog.
+
+Pending Cancel, Escape, backdrop and close requests are intentionally blocked:
+they neither discard the draft nor claim to cancel an in-flight POST. Keep the
+controls' disabled/busy semantics and explanatory localized feedback reachable;
+consume Escape through the real focused mounted-dialog path without leaking it
+to an outer overlay. Preserve Tab/Shift+Tab behavior and avoid a new focus trap.
+When idle/rejected, Cancel/Escape retain their existing explicit discard/reset
+and single onCancel behavior; no onAdd/onAdded occurs. Distinguish explicit
+discard from unsuccessful persistence, including accessible wording.
+No new confirmation dialog or backend abort capability is assumed.
+
+Focus stays within the current form while pending/rejected; do not restore the
+chart trigger on failure or steal focus on every retry. Success or explicit
+idle dismissal restores the existing trigger once through the current overlay
+owner, only if it is still connected and in the same chart/context. A removed
+trigger uses the existing safe focus fallback. Never focus a disposed element
+or a newly opened popover on an old attempt's completion.
+
+Each attempt captures immutable vehicle ID (including existing null semantics),
+annotation scope, occurred-at and chart/popover instance identity. Use a local
+monotonic generation/ref and disposal guard, not timestamps as identity or a
+new persisted annotation ID. Compare the captured identity before every local
+settlement/reset/close/focus effect. A changed vehicle/scope invalidates the old
+completion's authority over current UI, not its actual server/cache outcome.
+Do not retarget a submitted payload or silently submit its draft to the new scope.
+
+Keep an open form's original context and draft across an external vehicle/scope
+change; do not key-remount or clear it. If pending, await settlement but do not
+close/clear on stale completion; show the real outcome for the original target.
+If that outcome is confirmed success, mark the original attempt saved and disable
+resubmission of that payload: offer explicit dismissal/start-new-context instead
+of a duplicate retry. On rejection retain the original draft and editable fields;
+retry is enabled only after the original target/capability is current again.
+Existing context labels identify the original target without exposing new data.
+No target change happens merely because a range, vehicle or hook object rerenders.
+
+A request to open another popover while this one is pending is deferred/refused,
+not an implicit cancellation; the current visible draft remains. After settlement,
+starting a new instance requires explicit dismissal of the retained old form.
+An old promise can never release a new instance's latch, clear its error/draft,
+call its onAdded, close it or move its focus. Actual server success still uses
+the existing cache/broadcast/toast policy for the original target.
+
+Unmount disposes local completion/focus authority without firing discard/reset
+or claiming request abortion. Ordinary rerenders and context changes must not
+unmount the retained form. Forced full chart/route teardown ends volatile local
+form ownership; this API does **not** promise persistence across navigation,
+reload or process death. Do not describe such teardown as successful saving or
+recovered draft. If mounted-flow acceptance requires recovery across full
+teardown, report a precise separately owned navigation/draft-retention blocker;
+do not add storage, change shell/routing or fabricate that guarantee here.
+
+### Separately leased roots and exact integration order
+
+| Proposed item / role | Exclusive write scope | Exact prerequisites and limits |
+| --- | --- | --- |
+| `phase3-annotation-popover-async-lifecycle` / shared root | `web\src\components\charts\AddAnnotationPopover.tsx`; `web\src\components\charts\AddAnnotationPopover.test.tsx` | This contract; accepted `phase3-add-annotation-popover` and `phase3-annotation-escape-test-target`; verified release of both files. Extend callback/optional success notification, latch/error/retention and pending dismissal only. No ChartContainer/hook/catalog writes and no dependency on consumer acceptance. |
+| `phase3-annotation-create-retention-integration` / caller integration | `web\src\components\charts\ChartContainer.tsx`; `web\src\components\charts\__tests__\ChartContainer.test.tsx`; `web\src\components\charts\__tests__\ChartContainer.a11y.test.tsx` | Accepted/released async popover root and this contract; preserve all existing `phase3-chart-container` prerequisites listed below. Wire mutateAsync, guarded success-only close and contextual lifecycle; lease this exact source/test trio separately, never concurrently with final ChartContainer migration. |
+| `phase3-annotation-create-retention-browser-proof` / evidence only | Own receipt/heartbeat only; existing authorized QA tools read-only | Accepted/released root and caller integration. Mounted real error/success/dismissal/focus/context proof; no production mutation or source changes. Lack of authorized safe test environment is BLOCKED/NOTRUN. |
+
+The existing ChartContainer prerequisite set remains exactly:
+`phase3-add-annotation-popover`, `phase3-annotation-list`,
+`phase3-chart-export-menu`, `phase3-chart-hidden-series-context`,
+`phase3-empty-state`, `phase3-query-error`, `phase3-section-error-boundary`,
+`phase3-table`, `primitive-button`, `primitive-typography`.
+Keep its actual HeaderFilter/SectionErrorBoundary failure/reconciliation evidence;
+queue labels or old source-ready receipts cannot silently unblock it.
+Add the async root to final ChartContainer dependencies. If the lifecycle trio
+is leased before final modernization, verify it and release all three files
+before final dispatch; final integration must preserve its accepted behavior.
+No cycle from the root back to ChartContainer or browser acceptance is permitted.
+
+**No hook/API root is currently needed:** the inspected hook is already a
+TanStack mutation and exports the real request/error/success lifecycle.
+`mutateAsync` is the existing mutation API, not a backend or hook expansion.
+If a future bounded test proves a necessary hook defect, reserve a distinct
+`phase3-annotation-create-hook-lifecycle` lease only at
+`web\src\api\hooks\useAnnotations.ts` plus an explicitly confirmed/reserved matching
+hook test; then add its acceptance before caller integration. Preserve endpoint,
+input/response types, error rejection, keys, invalidation/broadcast and toast
+ownership. No router/backend/type/config expansion is authorized by this decision.
+
+Reuse actual existing add/cancel/category/date/success/error labels and standard
+pending/error feedback owners. A labels/catalog root is conditional on proving
+a genuinely missing key for this exact lifecycle: separately lease canonical
+`web\src\i18n\en.json` and only its established generated namespace outputs,
+with exact keys/output paths frozen before dispatch; never mass-edit catalogs.
+Only a consumer requiring those keys depends on that accepted root. No assumed
+missing label, generator repair, fallback-only localization or tests silencing
+real catalog startup failures. This document supplies no catalog permissions.
+
+### Concrete acceptance cases; negative results stay negative
+
+Popover tests retain every original synchronous case and genuine focused-input
+Escape oracle. Add controlled deferred-promise cases: pending fields unchanged,
+busy/disabled semantics, rapid click plus Enter invokes once, no onAdded before
+settlement; rejection retains every field/category/date and visible real error;
+edited valid retry sends the new normalized arguments and clears/notifies once
+only after fulfillment. Synchronous throw retains fields; synchronous void
+retains immediate valid legacy reset; empty label/invalid time never submits.
+Pending Cancel/Escape/backdrop cannot discard; rejected idle dismissal resets,
+calls onCancel once, never calls onAdded. Test successful completion separately
+from explicit cancellation, including notification failure without a second POST.
+
+Caller tests must exercise the actual promise-returning adapter and real hook
+error path using the existing bounded request-test interception, not mocked
+`mutate` acceptance. Assert rejected POST leaves the mounted form open/editable,
+no success toast/clear/close, standard error feedback, no fabricated list row
+or success invalidation; successful POST sends the exact original vehicle,
+scope/title/category/description/occurred-at payload, closes once after response,
+and preserves real success invalidation/broadcast/toast and list reconciliation.
+Include missing capability/config rejection, double submit, pending dismissals,
+rejection then edited retry, scope/vehicle change during pending/rejected state,
+stale success shown as saved without duplicate retry, refused new-popover request,
+unmount/remount before resolve/reject and no stale local reset/close/focus effects.
+Verify actual existing trigger focus on valid success/idle cancel and retained
+form focus on failure. Do not dispatch Escape to document outside the supported
+dialog path or replace the real network error with a resolved fake promise.
+
+Preserve manual add, click-derived and manual timestamps, existing normalization/
+timezone behavior, IDs/preferences, source/user state and annotation filters.
+All source series/points/axes/gaps/zoom/brush/legend/export/fullscreen/accessibility
+alternatives remain. Preserve SI disk/wire/cache and display-only conversions;
+no telemetry repair, synthetic timestamp/measurement, scope broadening, new route
+or Phase-48 migration-order change belongs to this work.
+
+Implementation owners record exact fresh source/test fingerprints, immutable
+original preservation, authorized normal focused tests, strict owned lint,
+scoped typing and unchanged scanners with every remaining finding. Test failures,
+catalog startup failures and unsupported runtime are FAILED/BLOCKED, not a passed
+suite. Mock/jsdom results do not establish browser focus, network, contrast or
+mobile acceptance. Browser proof uses MDC-040–043/060–070 widths/themes/RTL/text
+scaling/reduced motion and reachable pending/error actions on actual mounted UI.
+
+This item ships **only this document**. Prefix/full hashes, dependency and role
+proofs and actual bounded commands are in
+`.agent-status\receipts\phase3-annotation-create-retention-contract-checks.log`.
+No UI/hook/backend/tests/catalog/CSS/config edits, Git, installs, nested agents,
+application TypeScript/lint/scans/tests/build or browser/network gates run here.
+Those gates are **NOTRUN**, not implicitly green; async correctness remains
+pending separately leased implementation and genuine acceptance.
