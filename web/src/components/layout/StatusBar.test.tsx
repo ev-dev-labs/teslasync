@@ -236,7 +236,7 @@ describe('StatusBar :: visibility & accessibility', () => {
     expect(bar.className).toContain('bottom-[var(--shell-tab-bar-height)]');
     expect(bar.className).toContain('xl:bottom-0');
     expect(bar.className).not.toContain('lg:bottom-0');
-    expect(bar.className).toContain('xl:h-7');
+    expect(bar.className).toContain('h-[var(--shell-status-bar-height)]');
   });
 
   it('renders all wide-screen status segments without More', () => {
@@ -308,6 +308,50 @@ describe('StatusBar :: icon-only propagation', () => {
     for (const id of SEGMENT_TESTIDS) {
       expect(iconOnlyOf(id)).toBe('false');
     }
+  });
+
+  describe('StatusBar :: bounded mobile frame', () => {
+    it('allocates the existing groups to independently reachable scroll rows', () => {
+      patchMatchMedia((query) => query.includes('1023') || query.includes('1279'));
+      render(<StatusBar />);
+      const bar = screen.getByRole('contentinfo', { name: 'Application status' });
+      expect(bar).toHaveClass('flex-col', 'md:flex-row', 'h-[var(--shell-status-bar-height)]');
+      expect(bar).not.toHaveClass('h-6', 'xl:h-7');
+      const rows = screen.getAllByRole('group', { name: 'Application status' });
+      expect(rows).toHaveLength(2);
+      for (const row of rows) {
+        expect(row).not.toHaveAttribute('tabindex');
+        expect(row).toHaveClass('min-w-0', 'flex-1', 'overflow-x-auto', 'md:overflow-visible');
+        expect(row.firstElementChild).toHaveClass('min-w-max', 'gap-2', 'p-1', 'md:gap-1', 'md:p-0');
+      }
+      expect(rows[0]).toContainElement(screen.getByTestId('seg-connection'));
+      expect(rows[0]).toContainElement(screen.getByTestId('seg-alerts'));
+      expect(rows[1]).toContainElement(screen.getByTestId('seg-recent'));
+      expect(rows[1]).toContainElement(screen.getByTestId('seg-more'));
+      const helix = screen.getByRole('button', { name: 'Open Helix chat' });
+      expect(rows[1]).toContainElement(helix);
+      expect(helix).toHaveClass('h-11', 'min-h-11', 'min-w-11', 'shrink-0');
+      expect(helix).toHaveAttribute('aria-expanded', 'false');
+    });
+
+    it('restores compact desktop geometry without changing the group membership', () => {
+      patchMatchMedia(() => false);
+      const { container } = render(<StatusBar />);
+      const helix = screen.getByRole('button', { name: 'Open Helix chat' });
+      expect(helix).toHaveClass('md:h-5', 'md:min-h-0', 'md:min-w-0');
+      for (const row of screen.getAllByRole('group', { name: 'Application status' })) {
+        expect(row).not.toHaveAttribute('tabindex');
+        expect(row).toHaveClass('md:flex-initial', 'md:overflow-visible');
+      }
+      container.querySelectorAll('span.w-px').forEach((divider) => {
+        expect(divider).toHaveClass('hidden', 'md:block');
+        expect(divider).toHaveAttribute('aria-hidden');
+      });
+      for (const id of SEGMENT_TESTIDS) {
+        expect(screen.getByTestId(id)).toBeInTheDocument();
+      }
+      expect(screen.queryByTestId('seg-more')).toBeNull();
+    });
   });
 
   it('forces every segment to icon-only when compact is set', () => {
