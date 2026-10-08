@@ -36,11 +36,12 @@ export function AnalysisBrief({
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const state = useDataState(query ?? {});
   const operationalMetrics = useOperationalMetrics(metrics);
-  const retained = query ? state.hasData && state.status === 'stale' : hasResult && error != null;
-  const refreshing = hasResult && (query ? state.isRefreshing : pending);
-  const failure = query ? state.fatalError : !hasResult ? error : null;
+  const paused = query?.fetchStatus === 'paused';
+  const retained = hasResult && (query ? state.status === 'stale' || state.fatalError != null : error != null);
+  const refreshing = hasResult && !paused && (query ? state.isRefreshing || query.fetchStatus === 'fetching' : pending);
+  const failure = !hasResult ? query ? state.fatalError : error : null;
   const loading = failure == null && vehicleId != null && !hasResult
-    && (query ? query.isLoading || query.fetchStatus === 'fetching' : pending);
+    && !paused && (query ? query.isLoading || query.isFetching || query.fetchStatus === 'fetching' : pending);
   const qualityLabel = quality?.status === 'sufficient'
     ? t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence')
     : quality?.status === 'limited'
@@ -54,13 +55,15 @@ export function AnalysisBrief({
       ? t('advancedIntelligence.brief.retained', 'Retained result')
       : failure
         ? t('advancedIntelligence.brief.failed', 'Source unavailable')
-        : loading
+        : paused
+          ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
+          : loading
           ? t('advancedIntelligence.brief.loading', 'Awaiting result')
           : refreshing
             ? t('advancedIntelligence.brief.refreshing', 'Updating result')
             : hasResult
               ? qualityLabel
-              : query
+              : query?.isPending
                 ? t('advancedIntelligence.brief.unresolved', 'Source unresolved')
                 : t('advancedIntelligence.brief.notCalculated', 'Not calculated');
   const window = quality?.window_start || quality?.window_end
@@ -73,13 +76,15 @@ export function AnalysisBrief({
     ? t('advancedIntelligence.brief.vehicleUnknown', 'Vehicle scope not selected')
     : t('advancedIntelligence.brief.vehicle', 'Vehicle #{{id}}', { id: vehicleId });
   const noResultMessage = query
-    ? query.fetchStatus === 'paused'
+    ? paused
       ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
-      : t('advancedIntelligence.panel.unresolved', 'Evidence availability has not resolved yet.')
+      : query.isPending
+        ? t('advancedIntelligence.panel.unresolved', 'Evidence availability has not resolved yet.')
+        : emptyMessage
     : emptyMessage;
 
   return (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-4">
       {retained && (
         <AlertBanner variant="warning" role="status">
           {t('advancedIntelligence.brief.retainedNotice', 'Previously loaded data remains visible while affected sources recover.')}
@@ -103,12 +108,12 @@ export function AnalysisBrief({
         title={title}
         description={description}
         statusLabel={statusLabel}
-        statusTone={retained || quality?.status === 'limited' ? 'warning'
+        statusTone={retained || paused || quality?.status === 'limited' ? 'warning'
           : failure || quality?.status === 'insufficient' ? 'danger' : 'neutral'}
         metrics={operationalMetrics}
         loading={Boolean(loading)}
-        scope={<Text as="span" variant="caption">{sourceScope} · {window}</Text>}
-        freshness={<Text as="span" variant="caption">
+        scope={<Text as="span" variant="caption" color="muted">{sourceScope} · {window}</Text>}
+        freshness={<Text as="span" variant="caption" color="muted">
           {generatedAt
             ? t('advancedIntelligence.brief.generated', 'Result generated: {{date}}', { date: formatDateTime(generatedAt) })
             : t('advancedIntelligence.brief.generatedUnknown', 'Result generation time not supplied')}
