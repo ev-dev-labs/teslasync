@@ -1862,6 +1862,7 @@
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
-    }
+    },
+    "pageTitle": "{{year}} Year in review"
   }
 }

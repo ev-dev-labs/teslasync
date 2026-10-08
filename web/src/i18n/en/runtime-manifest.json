@@ -144,55 +144,6 @@
     "watchFaceNL"
   ],
   "grouped": {
-    "explore": [
-      "explore"
-    ],
-    "system": [
-      "commandHistory",
-      "commandReliability",
-      "dataExport",
-      "dataRepair",
-      "dbHealth",
-      "debugger",
-      "incidentTimeline",
-      "roadmap",
-      "statusApi",
-      "system",
-      "systemStatus",
-      "teslaUsage"
-    ],
-    "notifications": [
-      "alertFatigue",
-      "alertPacks",
-      "alertRules",
-      "audit",
-      "notificationBurnRate",
-      "notificationHealth",
-      "notificationLatency",
-      "notificationSounds",
-      "severity",
-      "webhookChannels",
-      "webpush"
-    ],
-    "telemetry": [
-      "liveMonitor",
-      "mqtt",
-      "signalChangePoints",
-      "signalChart",
-      "signalDeadband",
-      "signalDiff",
-      "signalEntropy",
-      "signalExplorer",
-      "signalGap",
-      "signalHistory",
-      "signalLog",
-      "signalMutualInformation",
-      "signalStats",
-      "signalTransportAgreement",
-      "signalTrend",
-      "signalsWorkspace",
-      "telemetry"
-    ],
     "unreferenced": [
       "AC",
       "AEB",
@@ -454,6 +405,7 @@
       "days",
       "distance",
       "enabled",
+      "errorBoundary",
       "events",
       "fahrenheit",
       "found",
@@ -488,6 +440,55 @@
       "vampire",
       "visits",
       "workspaceContext"
+    ],
+    "explore": [
+      "explore"
+    ],
+    "system": [
+      "commandHistory",
+      "commandReliability",
+      "dataExport",
+      "dataRepair",
+      "dbHealth",
+      "debugger",
+      "incidentTimeline",
+      "roadmap",
+      "statusApi",
+      "system",
+      "systemStatus",
+      "teslaUsage"
+    ],
+    "notifications": [
+      "alertFatigue",
+      "alertPacks",
+      "alertRules",
+      "audit",
+      "notificationBurnRate",
+      "notificationHealth",
+      "notificationLatency",
+      "notificationSounds",
+      "severity",
+      "webhookChannels",
+      "webpush"
+    ],
+    "telemetry": [
+      "liveMonitor",
+      "mqtt",
+      "signalChangePoints",
+      "signalChart",
+      "signalDeadband",
+      "signalDiff",
+      "signalEntropy",
+      "signalExplorer",
+      "signalGap",
+      "signalHistory",
+      "signalLog",
+      "signalMutualInformation",
+      "signalStats",
+      "signalTransportAgreement",
+      "signalTrend",
+      "signalsWorkspace",
+      "telemetry"
     ],
     "battery": [
       "batteryCare",
@@ -949,6 +950,7 @@
     "/year-review/:year": "analytics"
   },
   "composed": {
+    "unreferenced": [],
     "explore": [
       "achievements",
       "activity",
@@ -1219,7 +1221,6 @@
       "watchFaceNL",
       "yearReview"
     ],
-    "unreferenced": [],
     "battery": [
       "achievements",
       "activity",

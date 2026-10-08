@@ -1,6 +1,7 @@
 {
   "namespaceToBundle": {
     "demoData": "shell",
+    "errorBoundary": "unreferenced",
     "explore": "explore",
     "teslaUsage": "system",
     "alertPacks": "notifications",
@@ -703,107 +704,6 @@
       "vehiclePicker",
       "workspace"
     ],
-    "explore": [
-      "explore"
-    ],
-    "system": [
-      "commandHistory",
-      "commandReliability",
-      "dataExport",
-      "dataRepair",
-      "dbHealth",
-      "debugger",
-      "incidentTimeline",
-      "roadmap",
-      "statusApi",
-      "system",
-      "systemStatus",
-      "teslaUsage"
-    ],
-    "notifications": [
-      "alertFatigue",
-      "alertPacks",
-      "alertRules",
-      "audit",
-      "notificationBurnRate",
-      "notificationHealth",
-      "notificationLatency",
-      "notificationSounds",
-      "severity",
-      "webhookChannels",
-      "webpush"
-    ],
-    "telemetry": [
-      "liveMonitor",
-      "mqtt",
-      "signalChangePoints",
-      "signalChart",
-      "signalDeadband",
-      "signalDiff",
-      "signalEntropy",
-      "signalExplorer",
-      "signalGap",
-      "signalHistory",
-      "signalLog",
-      "signalMutualInformation",
-      "signalStats",
-      "signalTransportAgreement",
-      "signalTrend",
-      "signalsWorkspace",
-      "telemetry"
-    ],
-    "shared": [
-      "achievements",
-      "activity",
-      "apiLogs",
-      "avatar",
-      "battery",
-      "bulk",
-      "calculationDetails",
-      "chatbot",
-      "commands",
-      "delta",
-      "diagnostic",
-      "driveScore",
-      "editConflict",
-      "emptyState",
-      "entityContext",
-      "export",
-      "exports",
-      "feedback",
-      "filters",
-      "helix",
-      "kiosk",
-      "live",
-      "liveLogs",
-      "maps",
-      "metricCard",
-      "mobile",
-      "mqttSseInspector",
-      "onboarding",
-      "operations",
-      "paint",
-      "polling",
-      "productPreferences",
-      "requiresAuth",
-      "route",
-      "savedViews",
-      "settings",
-      "signalQuery",
-      "sortControl",
-      "sourceLayer",
-      "statCard",
-      "stateMachineDebugger",
-      "sudo",
-      "tagInput",
-      "timeline",
-      "vehicle",
-      "vehicleHero",
-      "vehicleSelect",
-      "voiceMode",
-      "watch",
-      "watchFaceNL"
-    ],
     "unreferenced": [
       "AC",
       "AEB",
@@ -1065,6 +965,7 @@
       "days",
       "distance",
       "enabled",
+      "errorBoundary",
       "events",
       "fahrenheit",
       "found",
@@ -1099,6 +1000,107 @@
       "vampire",
       "visits",
       "workspaceContext"
+    ],
+    "explore": [
+      "explore"
+    ],
+    "system": [
+      "commandHistory",
+      "commandReliability",
+      "dataExport",
+      "dataRepair",
+      "dbHealth",
+      "debugger",
+      "incidentTimeline",
+      "roadmap",
+      "statusApi",
+      "system",
+      "systemStatus",
+      "teslaUsage"
+    ],
+    "notifications": [
+      "alertFatigue",
+      "alertPacks",
+      "alertRules",
+      "audit",
+      "notificationBurnRate",
+      "notificationHealth",
+      "notificationLatency",
+      "notificationSounds",
+      "severity",
+      "webhookChannels",
+      "webpush"
+    ],
+    "telemetry": [
+      "liveMonitor",
+      "mqtt",
+      "signalChangePoints",
+      "signalChart",
+      "signalDeadband",
+      "signalDiff",
+      "signalEntropy",
+      "signalExplorer",
+      "signalGap",
+      "signalHistory",
+      "signalLog",
+      "signalMutualInformation",
+      "signalStats",
+      "signalTransportAgreement",
+      "signalTrend",
+      "signalsWorkspace",
+      "telemetry"
+    ],
+    "shared": [
+      "achievements",
+      "activity",
+      "apiLogs",
+      "avatar",
+      "battery",
+      "bulk",
+      "calculationDetails",
+      "chatbot",
+      "commands",
+      "delta",
+      "diagnostic",
+      "driveScore",
+      "editConflict",
+      "emptyState",
+      "entityContext",
+      "export",
+      "exports",
+      "feedback",
+      "filters",
+      "helix",
+      "kiosk",
+      "live",
+      "liveLogs",
+      "maps",
+      "metricCard",
+      "mobile",
+      "mqttSseInspector",
+      "onboarding",
+      "operations",
+      "paint",
+      "polling",
+      "productPreferences",
+      "requiresAuth",
+      "route",
+      "savedViews",
+      "settings",
+      "signalQuery",
+      "sortControl",
+      "sourceLayer",
+      "statCard",
+      "stateMachineDebugger",
+      "sudo",
+      "tagInput",
+      "timeline",
+      "vehicle",
+      "vehicleHero",
+      "vehicleSelect",
+      "voiceMode",
+      "watch",
+      "watchFaceNL"
     ],
     "battery": [
       "batteryCare",
@@ -3045,6 +3047,7 @@
     "days",
     "distance",
     "enabled",
+    "errorBoundary",
     "events",
     "fahrenheit",
     "found",
@@ -3082,6 +3085,7 @@
   ],
   "namespaceFallbackBundles": {
     "demoData": "detail-demoData",
+    "errorBoundary": "unreferenced",
     "explore": "explore",
     "teslaUsage": "system",
     "alertPacks": "notifications",
@@ -8964,7 +8968,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "notifications": [
       "a11y.breadcrumb",
@@ -11703,7 +11708,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "telemetry": [
       "a11y.breadcrumb",
@@ -13991,7 +13997,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "battery": [
       "a11y.breadcrumb",
@@ -17853,7 +17860,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "driving": [
       "a11y.breadcrumb",
@@ -23142,7 +23150,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "analytics": [
       "a11y.breadcrumb",
@@ -28443,7 +28452,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "vehicles": [
       "a11y.breadcrumb",
@@ -32041,7 +32051,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "dashboard": [
       "a11y.breadcrumb",
@@ -35536,7 +35547,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "charging": [
       "a11y.breadcrumb",
@@ -38641,7 +38653,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "settings": [
       "a11y.breadcrumb",
@@ -41310,7 +41323,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "admin": [
       "a11y.breadcrumb",
@@ -44645,7 +44659,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "automations": [
       "a11y.breadcrumb",
@@ -46790,7 +46805,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "vehicle-systems": [
       "a11y.breadcrumb",
@@ -50009,7 +50025,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "diagnostics": [
       "a11y.breadcrumb",
@@ -51935,7 +51952,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "maps": [
       "a11y.breadcrumb",
@@ -54178,7 +54196,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "trips": [
       "a11y.breadcrumb",
@@ -56205,7 +56224,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "exports": [
       "a11y.breadcrumb",
@@ -57973,7 +57993,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ],
     "benchmarks": [
       "a11y.breadcrumb",
@@ -76463,7 +76484,8 @@
       "yearReview.aiNarration.badge",
       "yearReview.aiNarration.description",
       "yearReview.aiNarration.generateButton",
-      "yearReview.aiNarration.title"
+      "yearReview.aiNarration.title",
+      "yearReview.pageTitle"
     ]
   },
   "routeBundles": {
@@ -77974,6 +77996,7 @@
     "table.selection.selectRowNamed"
   ],
   "composedNamespaces": {
+    "unreferenced": [],
     "explore": [
       "achievements",
       "activity",
@@ -78244,7 +78267,6 @@
       "watchFaceNL",
       "yearReview"
     ],
-    "unreferenced": [],
     "battery": [
       "achievements",
       "activity",
