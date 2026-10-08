@@ -247,8 +247,8 @@ export default function SignalExplorerPage() {
       label: isLive ? t('signalExplorer.kpi.liveEvents', 'Live events') : t('signalExplorer.kpi.records', 'Records'),
       display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
       description: isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded'),
-      context: isLive ? t('telemetryBrief.liveEventCount', 'Selected-signal SSE points received since the last reset; the chart retains a separate rolling 5-minute window.')
-        : t('telemetryBrief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.') },
+      context: isLive ? t('telemetry.brief.liveEventCount', 'Selected-signal SSE points received since the last reset; the chart retains a separate rolling 5-minute window.')
+        : t('telemetry.brief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.') },
     isLive
       ? { metricId: 'status', occurrenceId: 'span', rawValue: t('signalExplorer.kpi.live', 'Live'),
         label: t('signalExplorer.kpi.timeSpan', 'Time span'),
@@ -257,7 +257,7 @@ export default function SignalExplorerPage() {
         label: t('signalExplorer.kpi.timeSpan', 'Time span'),
         display: { formatter: (raw) => ({ value: t('signalExplorer.kpi.days', '{{count}}d', { count: raw / 86_400 }), unit: '' }) },
         description: start && end ? `${start} → ${end}` : t('signalExplorer.kpi.noRange', 'No range set'),
-        context: t('telemetryBrief.configuredRange', 'Configured inclusive day range; loaded rows may belong to the previously executed query until Explore is pressed.') },
+        context: t('telemetry.brief.configuredRange', 'Configured inclusive day range; loaded rows may belong to the previously executed query until Explore is pressed.') },
     { metricId: 'status', occurrenceId: 'status', rawValue: statusLabel,
       label: t('signalExplorer.kpi.status', 'Status'),
       description: historyUnavailable ? '—' : t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount }) },
@@ -304,10 +304,10 @@ export default function SignalExplorerPage() {
               unknown={!isLive && !hasHistorical} statusLabel={statusLabel} sourceStatus={!isLive && hasHistorical ? historicalState.status : undefined}
               retained={!isLive && historicalState.hasData && (historicalState.isRefreshing || historicalState.status === 'stale' || historicalState.refreshError != null)}
               scope={isLive ? t('signalExplorer.kpi.rollingWindow', '5-min window') : `${start || '—'} → ${end || '—'}`}
-              provenance={isLive ? t('telemetryBrief.chartProvenance', 'Selected-signal client SSE chart and accumulated numeric statistics')
+              provenance={isLive ? t('telemetry.brief.chartProvenance', 'Selected-signal client SSE chart and accumulated numeric statistics')
                 : t('signalLog.subtitle', 'Query signal history from Postgres')}
-              description={isLive ? t('telemetryBrief.explorerLive', 'The chart retains five minutes; event counts and numeric statistics accumulate since reset. These are independent of the history query and tail buffer.')
-                : t('telemetryBrief.explorerDescription', 'Selected signals and configured dates are local controls; record and statistics counts cover only the bounded loaded result, not all history.')} />
+              description={isLive ? t('telemetry.brief.explorerLive', 'The chart retains five minutes; event counts and numeric statistics accumulate since reset. These are independent of the history query and tail buffer.')
+                : t('telemetry.brief.explorerDescription', 'Selected signals and configured dates are local controls; record and statistics counts cover only the bounded loaded result, not all history.')} />
           </FadeIn>
 
           {/* 2 — Controls: signal picker, per-page, explore / live */}
