@@ -14,9 +14,8 @@ interface InnerSectionProps {
 
 function InnerSection({ vehicleId }: InnerSectionProps) {
   const { t } = useTranslation()
-  // Default analysis window: the last 30 days. Matches the dashboard's
-  // default detector window so the AI narration explains the same set
-  // the deterministic table is already showing.
+  // Independent narration window: 30 days, not the detector's 7-day
+  // window or the learned baseline's 14-day training window.
   const body = useMemo(
     () => ({ vehicle_id: vehicleId ?? 0, days: 30 }),
     [vehicleId],
@@ -36,13 +35,13 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
   // (undefined) OR a placeholder 0/negative id keeps the button
   // disabled instead of firing a request that is guaranteed to fail.
   const haveInputs = vehicleId != null && vehicleId > 0
-    return (
+  return (
     <AIFeatureCard
       title={t('anomaly.aiExplanation.title', 'Helix explanation')}
       description={t(
-                'anomaly.aiExplanation.description',
-                'Get a plain-language explanation of the anomalies the detector has already identified above.',
-              )}
+        'anomaly.aiExplanation.description',
+        'Get a plain-language explanation of the anomalies the detector has already identified above.',
+      )}
       buttonLabel={t('anomaly.aiExplanation.generateButton', 'Generate explanation')}
       badgeLabel={t('anomaly.aiExplanation.badge', 'Helix')}
       emptyHint={
