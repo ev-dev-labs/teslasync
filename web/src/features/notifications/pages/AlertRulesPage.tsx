@@ -565,12 +565,12 @@ export default function AlertRulesPage() {
             eyebrow={t('alertRules.kpis', 'Alert rule metrics')}
             title={t('alertRules.brief.title', 'Rule configuration and current snoozes')}
             description={ruleProvenance} metrics={operationalMetrics}
-            statusLabel={isLoading ? t('common.loading', 'Loading…') : rulesState.status === 'stale'
-              ? t('dataState.stale.title', 'Data may be stale')
-              : rulesState.status === 'offline' ? t('dataState.offline.title', 'Offline')
+            statusLabel={isLoading ? t('common.loading', 'Loading…') : rulesState.isRefreshBlocked
+              ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+              : rulesState.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
                 : isError ? t('alertRules.brief.unavailable', 'Rules unavailable')
                   : t('alertRules.brief.available', 'Rule set loaded')}
-            statusTone={isError || rulesState.status === 'stale' || rulesState.status === 'offline' ? 'warning' : 'neutral'}
+            statusTone={isError || rulesState.status === 'stale' || rulesState.isRefreshBlocked ? 'warning' : 'neutral'}
             scope={t('alertRules.brief.scope', 'All loaded rules · before filters')}
             freshness={<DataProvenanceBadge provenance={rulesState.provenance} status={rulesState.status} updatedAt={rulesState.updatedAt} />}
             provenance={ruleProvenance} />
