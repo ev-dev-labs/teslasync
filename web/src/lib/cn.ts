@@ -65,6 +65,9 @@ const twMerge = extendTailwindMerge({
       'shadow': [{ shadow: ['e1', 'e2', 'e3', 'panel', 'panel-hover'] }],
       'duration': [{ duration: ['fast', 'normal', 'slow'] }],
       'ease': [{ ease: ['standard', 'accelerate', 'decelerate'] }],
+      w: [{ w: ['side-panel'] }],
+      'max-w': [{ 'max-w': ['side-panel-viewport'] }],
+      'min-h': [{ 'min-h': ['side-panel-header'] }],
     },
   },
 })

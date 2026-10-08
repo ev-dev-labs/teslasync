@@ -10,9 +10,13 @@ export default {
       zIndex: {
         overlay: '60',
       },
+      width: {
+        'side-panel': '420px',
+      },
       maxWidth: {
         'modal-full': 'min(96vw,1100px)',
         'tooltip-viewport': 'calc(100vw - 1.5rem)',
+        'side-panel-viewport': '40vw',
       },
       maxHeight: {
         modal: '90vh',
@@ -203,6 +207,7 @@ export default {
         'd-row': 'var(--density-row-h)',
       },
       minHeight: {
+        'side-panel-header': '4.5rem',
         // Density-aware row height.
         // Use `min-h-d-row` on table rows / list items so the height
         // adapts to the user's density preference.

@@ -111,4 +111,36 @@ describe('cn — tailwind-merge conflict resolution (last wins)', () => {
       expect(cn(base, override)).toBe(override)
     })
   })
+
+  describe('docked side-panel geometry resolves last-wins', () => {
+    const geometry = [
+      ['w-side-panel', ['w-80', 'w-full', 'w-[420px]', 'w-[50vw]']],
+      ['max-w-side-panel-viewport', ['max-w-sm', 'max-w-none', 'max-w-[40vw]', 'max-w-[500px]']],
+      ['min-h-side-panel-header', ['min-h-16', 'min-h-full', 'min-h-[4.5rem]', 'min-h-[100px]']],
+    ] as const
+
+    for (const [named, alternatives] of geometry) {
+      for (const alternative of alternatives) {
+        it.each(['', 'sm:', 'xl:', '2xl:'])(
+          `${named} and ${alternative} honor both orders with variant %s`,
+          (variant) => {
+            expect(cn(`${variant}${named}`, `${variant}${alternative}`)).toBe(`${variant}${alternative}`)
+            expect(cn(`${variant}${alternative}`, `${variant}${named}`)).toBe(`${variant}${named}`)
+          },
+        )
+      }
+    }
+
+    it('keeps independent dimensions, unrelated utilities and distinct variants', () => {
+      const classes = [
+        'w-side-panel', 'max-w-side-panel-viewport', 'min-h-side-panel-header',
+        'min-w-0', 'h-full', 'shrink-0', 'pb-7',
+        'sm:w-80', 'xl:w-side-panel', '2xl:w-[500px]',
+        'sm:max-w-sm', 'xl:max-w-side-panel-viewport',
+        'sm:min-h-16', 'xl:min-h-side-panel-header',
+      ]
+      expect(tokens(cn(classes))).toEqual(new Set(classes))
+      expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+    })
+  })
 })

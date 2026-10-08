@@ -24,6 +24,11 @@ describe('restrained foundation presentation', () => {
       'h-dvh', 'h-[100dvh]', 'max-h-dvh', 'max-h-[100dvh]',
       'max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]',
       'max-w-none', 'sm:max-w-sm', 'sm:max-w-lg', 'sm:max-w-2xl',
+      ...['', 'sm:', 'xl:', '2xl:'].flatMap((variant) => [
+        `${variant}w-side-panel`, `${variant}w-[420px]`,
+        `${variant}max-w-side-panel-viewport`, `${variant}max-w-[40vw]`,
+        `${variant}min-h-side-panel-header`, `${variant}min-h-[4.5rem]`,
+      ]),
     ];
     let css: Root;
 
@@ -39,7 +44,9 @@ describe('restrained foundation presentation', () => {
     function ruleFor(className: string): Rule {
       const matches: Rule[] = [];
       css.walkRules((rule) => {
-        const unescaped = rule.selector.replace(/\\2c /g, ',').replace(/\\(.)/g, '$1');
+        const unescaped = rule.selector
+          .replace(/\\([\da-f]{1,6})\s?/gi, (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+          .replace(/\\(.)/g, '$1');
         if (unescaped === `.${className}`) matches.push(rule);
       });
       expect(matches, className).toHaveLength(1);
@@ -65,12 +72,18 @@ describe('restrained foundation presentation', () => {
           zIndex: { ...resolved.theme.zIndex },
           maxWidth: { ...resolved.theme.maxWidth },
           maxHeight: { ...resolved.theme.maxHeight },
+          width: { ...resolved.theme.width },
+          minHeight: { ...resolved.theme.minHeight },
         },
       };
       Reflect.deleteProperty(previous.theme.zIndex, 'overlay');
       delete previous.theme.maxWidth['modal-full'];
       delete previous.theme.maxWidth['tooltip-viewport'];
       delete previous.theme.maxHeight.modal;
+      // Strip only this later approved additive geometry before the frozen overlay fingerprint.
+      delete previous.theme.width['side-panel'];
+      delete previous.theme.maxWidth['side-panel-viewport'];
+      delete previous.theme.minHeight['side-panel-header'];
 
       // Captured before this additive change: includes plugins, screens and all tokens.
       const canonical = JSON.stringify(previous, (_, value: unknown) => {
@@ -83,6 +96,91 @@ describe('restrained foundation presentation', () => {
       });
       expect(createHash('sha256').update(canonical).digest('hex'))
         .toBe('63d006e08dcb1f52224d56d3f7d7d1525736932525b32c951702ae968f7dc503');
+    });
+
+    it('adds only the three docked geometry names without prior resolved-name collisions', () => {
+      const priorConfig = {
+        ...config,
+        theme: {
+          ...config.theme,
+          extend: {
+            ...config.theme?.extend,
+            width: { ...config.theme?.extend?.width },
+            maxWidth: { ...config.theme?.extend?.maxWidth },
+            minHeight: { ...config.theme?.extend?.minHeight },
+          },
+        },
+      };
+      Reflect.deleteProperty(priorConfig.theme.extend.width, 'side-panel');
+      Reflect.deleteProperty(priorConfig.theme.extend.maxWidth, 'side-panel-viewport');
+      Reflect.deleteProperty(priorConfig.theme.extend.minHeight, 'side-panel-header');
+      const prior = resolveConfig(priorConfig);
+      expect(prior.theme.width).not.toHaveProperty('side-panel');
+      expect(prior.theme.maxWidth).not.toHaveProperty('side-panel-viewport');
+      expect(prior.theme.minHeight).not.toHaveProperty('side-panel-header');
+      expect(resolved).toEqual({
+        ...prior,
+        theme: {
+          ...prior.theme,
+          width: { ...prior.theme.width, 'side-panel': '420px' },
+          maxWidth: { ...prior.theme.maxWidth, 'side-panel-viewport': '40vw' },
+          minHeight: { ...prior.theme.minHeight, 'side-panel-header': '4.5rem' },
+        },
+      });
+      const canonical = JSON.stringify(prior, (_, value: unknown) => {
+        if (typeof value === 'function') return value.toString();
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          const entries = value as Record<string, unknown>;
+          return Object.fromEntries(Object.keys(entries).sort().map((key) => [key, entries[key]]));
+        }
+        return value;
+      });
+      // Full dispatch fingerprint, including the previously accepted overlay additions/plugins.
+      expect(createHash('sha256').update(canonical).digest('hex'))
+        .toBe('9da0b97a5e67e5717e4c1767411cad4b7d682bd8048016e0a4447c2164e016ba');
+    });
+
+    it.each([
+      ['', null], ['sm:', resolved.theme.screens.sm],
+      ['xl:', resolved.theme.screens.xl], ['2xl:', resolved.theme.screens['2xl']],
+    ])(
+      'generates exactly source-equivalent docked geometry declarations for variant %s',
+      (variant, breakpoint) => {
+        for (const [named, original, property, value] of [
+          ['w-side-panel', 'w-[420px]', 'width', '420px'],
+          ['max-w-side-panel-viewport', 'max-w-[40vw]', 'max-width', '40vw'],
+          ['min-h-side-panel-header', 'min-h-[4.5rem]', 'min-height', '4.5rem'],
+        ]) {
+          const namedRule = ruleFor(`${variant}${named}`);
+          const originalRule = ruleFor(`${variant}${original}`);
+          expect(declarations(namedRule)).toEqual({ [property]: value });
+          expect(declarations(namedRule)).toEqual(declarations(originalRule));
+          if (variant) {
+            expect(namedRule.parent).toMatchObject({
+              name: 'media', params: `(min-width: ${breakpoint})`,
+            });
+            expect(originalRule.parent).toMatchObject({
+              name: 'media', params: `(min-width: ${breakpoint})`,
+            });
+          } else {
+            expect(namedRule.parent?.type).toBe('root');
+            expect(originalRule.parent?.type).toBe('root');
+          }
+        }
+      },
+    );
+
+    it('retains pixel width, viewport cap and growing rem-based header minimum numerically', () => {
+      const width = Number.parseFloat(declarations(ruleFor('w-side-panel')).width);
+      const cap = Number.parseFloat(declarations(ruleFor('max-w-side-panel-viewport'))['max-width']);
+      const header = Number.parseFloat(declarations(ruleFor('min-h-side-panel-header'))['min-height']);
+      for (const viewport of [1280, 1440, 1920, 2560]) {
+        expect(Math.min(width, viewport * cap / 100)).toBe(420);
+      }
+      expect(Math.min(width, 1000 * cap / 100)).toBe(400);
+      expect(header * 16).toBe(72);
+      expect(header * 20).toBe(90);
+      expect(declarations(ruleFor('min-h-side-panel-header'))).not.toHaveProperty('height');
     });
 
     it.each([
