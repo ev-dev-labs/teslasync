@@ -167,6 +167,9 @@ describe('AIAnomalyExplanations — AI-off render gate', () => {
     // The Helix title + Generate button prove the InnerSection body
     // actually mounted (not just the gate wrapper).
     expect(screen.getByText('Helix explanation')).toBeInTheDocument()
+    expect(screen.getByText(
+      'Generate independent, inferred narration for the selected vehicle over 30 days, not an explanation of the detector’s 7-day results or the baseline’s 14-day training data.',
+    )).toBeInTheDocument()
     expect(screen.getByRole('button', { name: BUTTON_NAME })).toBeInTheDocument()
   })
 })
