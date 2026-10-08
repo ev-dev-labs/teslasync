@@ -3,12 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { MapPin, Flag } from 'lucide-react';
 
 import { GlassPanel } from '@/components/ui/GlassPanel';
+import { Text } from '@/components/ui/Typography';
 import { PlaybackControls } from '@/components/data-display/PlaybackControls';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useA11ySummary } from '@/hooks/useA11ySummary';
 import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { cn } from '@/lib/cn';
+import { useUnits } from '@/hooks/useUnits';
+import { chartTokens } from '@/lib/tokens';
+import { resolveMapRendererColor } from '@/lib/colors';
 
 
 import {
@@ -21,7 +25,6 @@ import {
   AnimatedMarker,
   latLngBounds,
   useMap,
-  type LatLngExpression,
   type MapStyle,
 } from './index';
 import type { ReplaySpeed } from '@/hooks/useTripReplay';
@@ -36,7 +39,7 @@ export interface PlaybackPoint {
   lng: number;
   /** ISO-8601 timestamp. */
   timestamp: string;
-  /** Optional metric values surfaced via onPositionChange. */
+  /** Optional SI speed (m/s), state of charge (%), and power (W), surfaced unchanged via onPositionChange. */
   speed?: number;
   soc?: number;
   power?: number;
@@ -60,9 +63,9 @@ export interface RoutePlaybackProps {
   showLayerSwitcher?: boolean;
   /** Render the inline playback controls below the map. Default true. */
   showControls?: boolean;
-  /** Trail polyline color. Default '#22d3ee'. */
+  /** Trail polyline color. Defaults to the first existing chart series. */
   trailColor?: string;
-  /** Animated marker color. Default '#00b4d8'. */
+  /** Animated DOM marker color. Defaults to the semantic info role. */
   markerColor?: string;
   /** aria-label for the map application landmark. */
   ariaLabel?: string;
@@ -129,7 +132,7 @@ function fmtDuration(ms: number): string {
 /*  Internal map fitter                                                */
 /* ------------------------------------------------------------------ */
 
-function FitTrail({ trail }: { trail: LatLngExpression[] }) {
+function FitTrail({ trail }: { trail: [number, number][] }) {
   const map = useMap();
   // A11Y-08: Leaflet's `fitBounds` / `setView` animate the camera by
   // default. A pan-and-zoom across a whole drive is exactly the kind of
@@ -140,17 +143,21 @@ function FitTrail({ trail }: { trail: LatLngExpression[] }) {
   useEffect(() => {
     const options = reduce ? { animate: false, duration: 0 } : {};
     if (trail.length > 1) {
-      const bounds = latLngBounds(
-        trail.map((p) =>
-          Array.isArray(p) ? ([p[0] as number, p[1] as number] as [number, number]) : ([0, 0] as [number, number]),
-        ),
-      );
+      const bounds = latLngBounds(trail);
       if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30], ...options });
     } else if (trail.length === 1) {
-      map.setView(trail[0] as [number, number], 15, options);
+      map.setView(trail[0], 15, options);
     }
     // Only re-fit when the trail length actually changes.
   }, [map, trail.length, reduce]);
+  return null;
+}
+
+function MapPaintContext({ onContext }: { onContext: (context: HTMLElement) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    onContext(map.getContainer());
+  }, [map, onContext]);
   return null;
 }
 
@@ -173,31 +180,69 @@ export function RoutePlayback({
   initialMapStyle = 'dark',
   showLayerSwitcher = true,
   showControls = true,
-  trailColor = '#22d3ee',
-  markerColor = '#00b4d8',
+  trailColor = chartTokens.series[0],
+  markerColor = 'var(--semantic-info)',
   ariaLabel,
   className,
   emptyMessage,
 }: RoutePlaybackProps) {
   const { fmtNumber } = useNumberFormatting();
+  const { formatSpeed } = useUnits();
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
   const { describeRoute } = useA11ySummary();
   const routeSummaryId = useId();
   const [mapStyle, setMapStyle] = useState<MapStyle>(initialMapStyle);
+  const [paintContext, setPaintContext] = useState<HTMLElement | null>(null);
+  const [paint, setPaint] = useState<{
+    trail: string | null; start: string | null; end: string | null;
+  }>({ trail: null, start: null, end: null });
+
+  useEffect(() => {
+    if (!paintContext) return;
+    const refresh = () => {
+      const resolve = (input: string, fallback: string) =>
+        resolveMapRendererColor(input, paintContext) ??
+        (input !== fallback ? resolveMapRendererColor(fallback, paintContext) : null);
+      const next = {
+        trail: resolve(trailColor, chartTokens.series[0]),
+        start: resolveMapRendererColor(chartTokens.series[1], paintContext),
+        end: resolveMapRendererColor(chartTokens.series[3], paintContext),
+      };
+      setPaint((previous) =>
+        previous.trail === next.trail && previous.start === next.start && previous.end === next.end
+          ? previous : next);
+    };
+    refresh();
+    const view = paintContext.ownerDocument.defaultView;
+    const observer = view?.MutationObserver ? new view.MutationObserver(refresh) : null;
+    // Observe inherited theme roles, not probe children or Leaflet transforms.
+    for (let node: HTMLElement | null = paintContext; node; node = node.parentElement) {
+      observer?.observe(node, {
+        attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-mode'],
+      });
+    }
+    const media = ['(prefers-color-scheme: dark)', '(forced-colors: active)']
+      .map((query) => view?.matchMedia?.(query));
+    media.forEach((query) => query?.addEventListener('change', refresh));
+    return () => {
+      observer?.disconnect();
+      media.forEach((query) => query?.removeEventListener('change', refresh));
+    };
+  }, [paintContext, trailColor]);
 
   /* ── Memoized derived data ────────────────────────────────────── */
   const offsets = useMemo(() => buildOffsets(points), [points]);
   const totalMs = offsets.length > 0 ? offsets[offsets.length - 1] : 0;
-  const trail = useMemo<LatLngExpression[]>(
+  const trail = useMemo<[number, number][]>(
     () =>
       points
         .filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lng))
-        .map((p) => [p.lat, p.lng] as [number, number]),
+        .map((p): [number, number] => [p.lat, p.lng]),
     [points],
   );
-  const startPos = trail[0] as [number, number] | undefined;
-  const endPos = trail.length > 1 ? (trail[trail.length - 1] as [number, number]) : undefined;
+  const startPos = trail[0];
+  const endPos = trail.length > 1 ? trail[trail.length - 1] : undefined;
   const centerPos: [number, number] = startPos ?? [0, 0];
 
   /* ── Playback state ───────────────────────────────────────────── */
@@ -363,29 +408,30 @@ export function RoutePlayback({
           <MapTileLayer style={mapStyle} />
           <MapInvalidator />
           <FitTrail trail={trail} />
-          <Polyline
+          <MapPaintContext onContext={setPaintContext} />
+          {paint.trail && <Polyline
             positions={trail}
-            pathOptions={{ color: trailColor, weight: 4, opacity: 0.8 }}
-          />
-          {startPos && (
+            pathOptions={{ color: paint.trail, weight: 4, opacity: 0.8 }}
+          />}
+          {startPos && paint.start && (
             <CircleMarker
               center={startPos}
               radius={7}
               pathOptions={{
-                color: '#10b981',
-                fillColor: '#10b981',
+                color: paint.start,
+                fillColor: paint.start,
                 fillOpacity: 1,
                 weight: 2,
               }}
             />
           )}
-          {endPos && (
+          {endPos && paint.end && (
             <CircleMarker
               center={endPos}
               radius={7}
               pathOptions={{
-                color: '#ef4444',
-                fillColor: '#ef4444',
+                color: paint.end,
+                fillColor: paint.end,
                 fillOpacity: 1,
                 weight: 2,
               }}
@@ -399,27 +445,35 @@ export function RoutePlayback({
             />
           )}
         </MapContainer>
+        {(!paint.trail || !paint.start || (endPos && !paint.end)) && (
+          <div role="status" data-map-paint="unresolved" className="absolute bottom-2 left-2 z-map-control rounded-lg bg-[var(--panel-bg)] px-3 py-1.5">
+            <Text variant="caption">
+              {t('maps.routePlayback.mapLabel', 'Route playback map')}: {t('common.unavailable', 'Unavailable')}
+            </Text>
+          </div>
+        )}
 
         {/* Inline metric chip — top-right. */}
         {cp && (
-          <div className="pointer-events-none absolute right-2 top-2 z-[1000] flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-3 py-1.5 text-xs font-mono text-[var(--text-primary)] backdrop-blur-md shadow-lg">
-            <Flag className="h-3 w-3 text-cyan-300" />
-            <span>
+          <div className="pointer-events-none absolute right-2 top-2 z-map-control flex items-center gap-2 rounded-lg border border-[var(--border-default)] bg-[var(--panel-bg)] px-3 py-1.5">
+            <Flag className="h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
+            <Text variant="caption" mono>
               {currentIndex + 1}/{points.length}
-            </span>
+            </Text>
             {cp.speed != null && (
-              <span className="text-[var(--text-secondary)]">{fmtNumber(cp.speed)} km/h</span>
+              <Text variant="caption" mono>{formatSpeed(cp.speed)}</Text>
             )}
             {cp.soc != null && (
-              <span className="text-emerald-300">{fmtNumber(cp.soc)}%</span>
+              <Text variant="caption" mono>{fmtNumber(cp.soc)}%</Text>
             )}
           </div>
         )}
       </div>
 
       {showControls && (
-        <div className="border-t border-white/[0.06] bg-[var(--surface-overlay)] p-3">
+        <div className="border-t border-[var(--border-default)] p-3">
           <PlaybackControls
+            framed={false}
             isPlaying={isPlaying}
             speed={speed}
             progress={progress}
