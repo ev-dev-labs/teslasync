@@ -82,7 +82,7 @@ export function AiOutputPanel({
       className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
       data-testid="ai-output-panel"
     >
-      {state === 'error' ? (
+      {state === 'error' && (
         <Text as="p" variant="body" role="alert" className="flex items-start gap-2 text-[var(--semantic-danger)]">
           <HelixMark
             className="h-4 w-4 shrink-0 mt-0.5"
@@ -93,13 +93,18 @@ export function AiOutputPanel({
             {error ?? t('ai.common.errorUnknown', 'unknown')}
           </span>
         </Text>
-      ) : text.length === 0 && state === 'streaming' ? (
+      )}
+      {/* Failed-stream deltas remain readable, not a completed or verified answer.
+          The error stays first; no success/freshness metadata is inferred. */}
+      {text.length > 0 ? (
+        <Text as="p" variant="body" className="whitespace-pre-wrap break-words leading-relaxed">{text}</Text>
+      ) : state === 'error' ? null : state === 'streaming' ? (
         pendingChild === undefined ? (
           <AIThinkingIndicator />
         ) : (
           pendingChild
         )
-      ) : text.length === 0 ? (
+      ) : (
         // Reachable only when state === 'done' with no accumulated text
         // (idle / paused-confirm without text return null above, streaming
         // and error are handled by the branches above). Show a placeholder
@@ -107,8 +112,6 @@ export function AiOutputPanel({
         <Text as="p" variant="bodySm" className="break-words">
           {t('ai.common.noOutput', 'No output was generated.')}
         </Text>
-      ) : (
-        <Text as="p" variant="body" className="whitespace-pre-wrap break-words leading-relaxed">{text}</Text>
       )}
       <HelixEvidenceTrail activity={activity} state={state} usage={usage} />
     </div>

@@ -13,10 +13,11 @@
 // when no provider is mounted, so — like the sibling AI component
 // tests — no i18n setup is required.
 
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 
 import { AiOutputPanel, type AiOutputPanelProps } from './AiOutputPanel'
+import { AIFeatureCard, type AIFeatureStream } from './AIFeatureCard'
 
 const PANEL = 'ai-output-panel'
 const THINKING = 'ai-thinking-indicator'
@@ -105,11 +106,88 @@ describe('AiOutputPanel', () => {
       expect(screen.getByRole('alert')).toHaveTextContent(/Helix error:\s*unknown/i)
     })
 
-    it('prefers the error over any accumulated text', () => {
+    it('prioritizes the error while keeping incomplete accumulated text readable', () => {
       renderPanel({ state: 'error', error: 'boom', text: 'half-written answer' })
       const alert = screen.getByRole('alert')
       expect(alert).toHaveTextContent('boom')
-      expect(screen.getByTestId(PANEL)).not.toHaveTextContent('half-written answer')
+      const narrative = screen.getByText('half-written answer')
+      expect(narrative).toBeVisible()
+      expect(alert.compareDocumentPosition(narrative) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(alert).not.toHaveTextContent('half-written answer')
+      expect(screen.queryByTestId(THINKING)).toBeNull()
+      expect(screen.queryByText(/no output|successful|verified/i)).toBeNull()
+    })
+
+    it('does not fabricate a narrative or completion summary for an empty failed stream', () => {
+      renderPanel({ state: 'error', error: 'connection interrupted', text: '' })
+      expect(screen.getByRole('alert')).toHaveTextContent('connection interrupted')
+      expect(screen.getByTestId(PANEL).querySelectorAll('p')).toHaveLength(1)
+      expect(screen.queryByText(/no output|successful|tokens/i)).toBeNull()
+      expect(screen.queryByTestId(THINKING)).toBeNull()
+    })
+
+    it('retains the literal string zero and unknown failure without inventing freshness', () => {
+      renderPanel({ state: 'error', error: null, text: '0' })
+      expect(screen.getByText('0')).toBeVisible()
+      expect(screen.getByRole('alert')).toHaveTextContent(/Helix error:\s*unknown/i)
+      expect(screen.queryByTestId('helix-evidence-trail')).toBeNull()
+      expect(screen.queryByText(/successful|verified|last success|updated|no output/i)).toBeNull()
+      expect(screen.getByTestId(PANEL).querySelector('time')).toBeNull()
+    })
+
+    it('keeps partial prose selectable verbatim alongside failed evidence without a done summary', () => {
+      const text = 'مرحبا\n\n0 <script>literal</script>'
+      renderPanel({
+        state: 'error',
+        error: 'interrupted',
+        text,
+        activity: [{ id: 'failed-source', name: 'query_battery_status', status: 'failed' }],
+        usage: { in: 20, out: 10 },
+      })
+      const paragraph = screen.getByTestId(PANEL).querySelectorAll('p')[1]
+      expect(paragraph).toHaveClass('whitespace-pre-wrap', 'break-words')
+      expect(paragraph.textContent).toBe(text)
+      const selection = window.getSelection()
+      const range = document.createRange()
+      range.selectNodeContents(paragraph)
+      selection?.removeAllRanges()
+      selection?.addRange(range)
+      expect(selection?.toString()).toBe(text)
+      selection?.removeAllRanges()
+      expect(screen.getByRole('alert')).toHaveTextContent('interrupted')
+      const trail = screen.getByTestId('helix-evidence-trail')
+      expect(trail).toHaveTextContent('Limited evidence')
+      expect(trail).toHaveTextContent('Unavailable')
+      expect(trail).not.toHaveTextContent(/successful|tokens|Grounded in/)
+      expect(screen.getByTestId(PANEL).querySelector('script')).toBeNull()
+    })
+
+    it('keeps the real feature retry available and preserves streaming, paused and done phases', () => {
+      const start = vi.fn()
+      const stream: AIFeatureStream = {
+        state: 'error', text: 'partial answer', error: 'interrupted', start,
+      }
+      const card = (current: AIFeatureStream) => (
+        <AIFeatureCard title="Answer" description="Source context" buttonLabel="Explain" canStart stream={current} />
+      )
+      const { rerender } = render(card(stream))
+      expect(screen.getByText('partial answer')).toBeVisible()
+      expect(screen.getByRole('alert')).toHaveTextContent('interrupted')
+      const retry = screen.getByRole('button', { name: /Explain/ })
+      expect(retry).toBeEnabled()
+      fireEvent.click(retry)
+      expect(start).toHaveBeenCalledTimes(1)
+
+      rerender(card({ ...stream, state: 'streaming', text: 'new delta', error: null }))
+      expect(screen.getByText('new delta')).toBeVisible()
+      expect(screen.queryByRole('alert')).toBeNull()
+      expect(screen.getByRole('button', { name: /Explain/ })).toBeDisabled()
+      rerender(card({ ...stream, state: 'paused-confirm', error: null }))
+      expect(screen.getByText('partial answer')).toBeVisible()
+      expect(screen.queryByRole('alert')).toBeNull()
+      rerender(card({ ...stream, state: 'done', text: 'completed narrative', error: null }))
+      expect(screen.getByText('completed narrative')).toBeVisible()
+      expect(screen.queryByRole('alert')).toBeNull()
     })
 
     it('marks the decorative brand mark aria-hidden so the alert reads cleanly', () => {
