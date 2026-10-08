@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { transitions } from '@/lib/tokens'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { useDialogFocus } from '@/hooks/useDialogFocus'
 import { Button } from './Button'
@@ -73,7 +74,7 @@ export function Drawer({
   ariaLabel,
 }: DrawerProps) {
   const { t } = useTranslation()
-  const { reduce } = useMotionPreference()
+  const { reduce, durationMs } = useMotionPreference()
   const drawerRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -111,8 +112,8 @@ export function Drawer({
         initial={reduce ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={reduce ? { duration: 0 } : undefined}
-        className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
+        transition={{ duration: durationMs / 1000, ease: transitions.ease.ease }}
+        className="absolute inset-0 bg-[var(--surface-overlay)]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -120,18 +121,18 @@ export function Drawer({
         initial={reduce ? false : { x: side === 'right' ? '100%' : '-100%' }}
         animate={{ x: 0 }}
         exit={reduce ? { opacity: 0 } : { x: side === 'right' ? '100%' : '-100%' }}
-        transition={reduce ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 300 }}
+        transition={{ duration: durationMs / 1000, ease: transitions.ease.ease }}
         data-drawer-panel
         data-drawer-size={size}
         className={cn(
-          'absolute top-0 bottom-[var(--shell-chrome-bottom)] flex w-full max-w-none flex-col glass-panel rounded-none border-0',
+          'absolute top-0 bottom-[var(--shell-chrome-bottom)] flex w-full max-w-none flex-col glass-panel rounded-none border-0 shadow-e3',
           DRAWER_WIDTHS[size],
-          side === 'right' ? 'right-0 border-l border-white/[0.06]' : 'left-0 border-r border-white/[0.06]',
+          side === 'right' ? 'right-0 border-l border-[var(--border-default)]' : 'left-0 border-r border-[var(--border-default)]',
           className,
         )}
       >
         <div
-          className="shrink-0 border-b border-white/[0.06] px-4 py-4 sm:px-6"
+          className="shrink-0 border-b border-[var(--border-default)] px-4 py-4 sm:px-6"
           data-drawer-header
         >
           <div className="flex items-start justify-between gap-4">
@@ -179,13 +180,13 @@ export function Drawer({
         </div>
         {tabs && (
           <div
-            className="shrink-0 border-b border-white/[0.06] px-4 pt-1 sm:px-6"
+            className="shrink-0 border-b border-[var(--border-default)] px-4 pt-1 sm:px-6"
             data-drawer-tabs
           >
             {tabs}
           </div>
         )}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6" data-drawer-body>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6" data-drawer-body>
           {children}
         </div>
         {footer !== null && (
