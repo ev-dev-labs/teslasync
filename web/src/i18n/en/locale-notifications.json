@@ -793,11 +793,6 @@
       "achievement": "Achievements"
     }
   },
-  "severity": {
-    "info": "Info",
-    "warn": "Warning",
-    "critical": "Critical"
-  },
   "webhookChannels": {
     "title": "Webhook channels",
     "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",

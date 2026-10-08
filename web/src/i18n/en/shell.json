@@ -2054,9 +2054,20 @@
       "dismiss": "Dismiss"
     }
   },
+  "resourcesPanel": {
+    "emptyText": "No resource metrics available",
+    "healthyWorkersBarLabel": "{{label}} health",
+    "title": "Resources",
+    "utilizationBarLabel": "{{label}} usage"
+  },
   "route": {
     "noLocationData": "No location data",
     "roundTrip": "round trip"
+  },
+  "severity": {
+    "info": "Info",
+    "warn": "Warning",
+    "critical": "Critical"
   },
   "signalQuery": {
     "from": "From",
