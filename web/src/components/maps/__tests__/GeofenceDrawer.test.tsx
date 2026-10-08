@@ -9,6 +9,7 @@
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type * as Leaflet from 'leaflet';
 
 const shared = vi.hoisted(() => {
   return {
@@ -477,6 +478,75 @@ describe('GeofenceDrawer', () => {
       unmount();
       if (descriptor) Object.defineProperty(window, 'matchMedia', descriptor);
       else Reflect.deleteProperty(window, 'matchMedia');
+    }
+  });
+
+  it('passes enabled and disabled edit options through the installed real draw toolbar', async () => {
+    const actual = await vi.importActual<{ default: typeof Leaflet }>('leaflet');
+    const realL = actual.default;
+    const previousWindow = window.L;
+    const previousGlobal = (globalThis as unknown as { L?: typeof realL }).L;
+    window.L = realL;
+    (globalThis as unknown as { L?: typeof realL }).L = realL;
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    let realMap: Leaflet.Map | undefined;
+    try {
+      await vi.importActual('leaflet-draw');
+      realMap = realL.map(container).setView([1, 2], 10);
+      const onEdit = vi.fn();
+      const nextEdit = vi.fn();
+      const fences = [{ id: 'home', lat: 1, lng: 2, radius: 100 }];
+      const { rerender, unmount } = render(
+        <GeofenceDrawer fences={fences} onCreate={() => {}} onEdit={onEdit} />,
+      );
+      const control = shared.map!.controls[0] as { opts: Leaflet.Control.DrawConstructorOptions };
+      const group = shared.map!.layers[0] as { layers: unknown[] };
+      expect(control.opts.edit?.featureGroup).toBe(group);
+      expect(control.opts.edit?.edit).toEqual({});
+      expect(group.layers).toHaveLength(1);
+      const persisted = group.layers[0];
+      expect(persisted).toMatchObject({ __teslasync_fence_id: 'home' });
+
+      // Exercise the installed plugin, not a mock of its default-merging logic.
+      const realGroup = realL.featureGroup([realL.circle([1, 2], { radius: 100 })]);
+      const installed = new realL.Control.Draw({
+        ...control.opts,
+        edit: { ...control.opts.edit, featureGroup: realGroup },
+      });
+      expect(() => installed.addTo(realMap!)).not.toThrow();
+      expect(installed.getContainer()?.querySelector('.leaflet-draw-edit-edit')).not.toBeNull();
+      expect(realGroup.getLayers()).toHaveLength(1);
+      installed.remove();
+
+      rerender(<GeofenceDrawer fences={fences} onCreate={() => {}} onEdit={nextEdit} />);
+      expect(shared.map!.controls[0]).toBe(control);
+      expect(group.layers[0]).toBe(persisted);
+      shared.map!.emit('draw:edited', { layers: { eachLayer: (fn: (layer: unknown) => void) => fn(persisted) } });
+      expect(nextEdit).toHaveBeenCalledWith('home', { shape: 'circle', lat: 1, lng: 2, radius: 100 });
+      expect(onEdit).not.toHaveBeenCalled();
+
+      rerender(<GeofenceDrawer fences={fences} onCreate={() => {}} />);
+      const disabled = shared.map!.controls[0] as { opts: Leaflet.Control.DrawConstructorOptions };
+      expect(disabled.opts.edit?.edit).toBe(false);
+      expect(disabled.opts.edit?.featureGroup).toBe(shared.map!.layers[0]);
+      expect(shared.map!.layers[0]).toMatchObject({ layers: [{ __teslasync_fence_id: 'home' }] });
+      const installedDisabled = new realL.Control.Draw({
+        ...disabled.opts,
+        edit: { ...disabled.opts.edit, featureGroup: realGroup },
+      });
+      expect(() => installedDisabled.addTo(realMap!)).not.toThrow();
+      expect(installedDisabled.getContainer()?.querySelector('.leaflet-draw-edit-edit')).toBeNull();
+      installedDisabled.remove();
+      unmount();
+      expect(shared.map!.controls).toHaveLength(0);
+      expect(shared.map!.layers).toHaveLength(0);
+    } finally {
+      realMap?.remove();
+      container.remove();
+      window.L = previousWindow;
+      if (previousGlobal) (globalThis as unknown as { L?: typeof realL }).L = previousGlobal;
+      else Reflect.deleteProperty(globalThis, 'L');
     }
   });
 });

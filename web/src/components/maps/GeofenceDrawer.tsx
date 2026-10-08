@@ -174,7 +174,7 @@ export function GeofenceDrawer({
       edit: {
         featureGroup,
         remove: !!onDelete,
-        edit: onEdit ? undefined : false,
+        edit: onEdit ? {} : false,
       },
     });
     drawControlRef.current = drawControl;
