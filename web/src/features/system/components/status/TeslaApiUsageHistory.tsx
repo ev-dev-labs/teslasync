@@ -110,7 +110,7 @@ export function TeslaApiUsageHistory() {
           { metricId: 'currency', occurrenceId: 'estimate', rawValue: invalid ? null : totals?.estimated_usd,
             label: t('teslaUsage.selectedEstimate', 'Selected range estimate'),
             context: t('teslaUsage.observedBuckets', '{{count}} observed buckets', { count: points.length }),
-            display: { formatter: (raw) => ({ value: formatCurrency(raw) }) } },
+            display: { formatter: (raw) => ({ value: formatCurrency(raw), unit: '' }) } },
           { metricId: 'count', occurrenceId: 'signals', rawValue: invalid ? null : totals?.signals,
             label: labels.signals, context: totals ? formatCurrency(categoryCost(totals, 'signals')) : stateMessage },
           { metricId: 'count', occurrenceId: 'api-requests', rawValue: totals && !invalid ? totals.commands + totals.data_requests + totals.wakes : null,
