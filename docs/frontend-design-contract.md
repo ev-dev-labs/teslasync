@@ -875,3 +875,189 @@ Authentic supplied vehicle paint is not decorative chrome. `phase3-vehicle-icon-
 retains public `web\src\components\maps\vehicleIcon.ts:8` fallback `#00f0ff`: separate semantic/
 color-renderer decision must preserve caller paint and public-default compatibility; geometry
 does not resolve that color finding. No UI/browser/contrast pass, scanner waiver or full gate here.
+
+## Resource semantics and bounded geometry addendum — MDC-026 / MDC-033 / MDC-043
+
+**`phase3-resource-and-geometry-addendum`: decisions only, append-only.**
+The accepted remaining-19 decision (`9564fe1fdd`) and all first-29 shell/remaining
+roles above are unchanged. Immutable dispatch prefix SHA-256:
+`06328a1991676ac58da8ef80f065f885e754f166c14c2feb1683437f93d76220`.
+Read-only receipts in `.agent-status\receipts\` are evidence of unresolved
+findings, not fresh tests or implementation acceptance:
+`phase3-metric-card-reboot-review-checks.log`,
+`phase3-base-error-boundary-fallback-checks.log`,
+`phase3-combobox-multi-focus-role-checks.log`,
+`phase3-command-deck-checks.log` and
+`phase3-data-freshness-post-root-review-checks.log` each retain scanner exit 1.
+The last records 29 passing tests and corrected fixture diagnostics 0; neither
+those receipts nor this document clear its minimum-width finding.
+
+### Exact naming-only geometry and merge contracts
+
+Approve only these equivalents at existing Tailwind owners. The installed
+normal config loader/resolver found the five initial proposed extension names
+absent, and the late freshness name absent. It found **existing `minWidth.24 =
+'6rem'`**: reuse `min-w-24` rather than inventing a competing Combobox role.
+
+| Exact source region / literal | Existing equivalent or approved `theme.extend` entry | Adoption |
+| --- | --- | --- |
+| `web\src\components\data-display\MetricCard.tsx:77`, `grid-cols-[minmax(0,1fr)_minmax(0,1fr)_5rem]` | `gridTemplateColumns['metric-compact'] = 'minmax(0,1fr) minmax(0,1fr) 5rem'` | `@[26rem]/metric:grid-cols-metric-compact` |
+| `web\src\components\feedback\ErrorBoundary.tsx:169`, default `min-h-[400px]` | `minHeight['error-fallback'] = '400px'` | `min-h-error-fallback` |
+| `web\src\components\forms\ComboboxMulti.tsx:500`, `min-w-[6rem]` | Reuse resolved `minWidth.24 = '6rem'`; no addition | `min-w-24` |
+| `web\src\components\layout\sidebar\CommandDeck.tsx:233`, `transition-[width]` | `transitionProperty.width = 'width'` | `transition-width` |
+| Same CommandDeck region, `w-[76px]` / `w-[320px]` | `width['command-deck-collapsed'] = '76px'`; `width['command-deck-expanded'] = '320px'` | `w-command-deck-collapsed` / `w-command-deck-expanded` |
+| `web\src\components\data-display\DataFreshness.tsx:231`, `min-w-[4.5rem]` | `minWidth['freshness-age'] = '4.5rem'` | `min-w-freshness-age` |
+
+Exactly **six extensions**, plus one reused built-in; no `tokens.ts`, spacing,
+breakpoint, color, layer or scanner additions. Names are approved targets, not
+implemented utilities. Register in existing cn merge groups: `grid-cols` with
+`{ 'grid-cols': ['metric-compact'] }`, `min-h` with
+`{ 'min-h': ['error-fallback'] }`, `w` with
+`{ w: ['command-deck-collapsed', 'command-deck-expanded'] }`, `transition` with
+`{ transition: ['width'] }`, and `min-w` with
+`{ 'min-w': ['freshness-age'] }`. Built-in `min-w-24` uses existing recognition.
+Require both-order last-conflict-wins against ordinary/arbitrary same-property
+utilities, actual caller overrides and matching responsive/container/motion
+variants. Different properties and variants coexist; do not conflate width
+with minimum/maximum width, transition property with duration/easing, or grid
+columns with placement. No CSS-order dependency, `!important` or waiver.
+
+Generated declarations, values, importance, selectors' variant conditions and
+media/container context must match old/new pairs exactly except utility spelling.
+MetricCard retains named `@container/metric` and the **26rem container** threshold,
+not viewport `sm`: two equal `minmax(0,1fr)` tracks plus an always-reserved 5rem
+comparison track, including when no delta exists. Keep placement, wrapping,
+compact/default branches, icon/help/subtitle and caller merge order. Track width
+is 80/100px at 16/20px roots; the threshold is 416/520px. Default ErrorBoundary
+keeps a growing 400px **minimum**, p-8/max-w-md centering, inline/caller-fallback
+branches, catch/report/reset/chunk reload/retry/route/public semantics. Naming
+does not resolve its independent localization or fixture-type blockers.
+
+Combobox retains flex-1/native input/ref, labels/ARIA/IDs, chip selection,
+keyboard/focus/value/disabled/max-count/loading and original offsets. Its minimum
+is 96/120px at 16/20px roots. DataFreshness keeps the noncompact age label's
+inline-block, wrapping, text-start and tabular numbers; 4.5rem is 72/90px at those
+roots, a growing minimum rather than fixed width. Preserve compact omission,
+source/freshness distinctions, timestamp/relative-time/localization, refresh
+button versus static branch, announcements, disabled/fetching and motion.
+Do not multiply these rem dimensions by `--font-scale`.
+
+CommandDeck preserves the >=1280px desktop rail/secondary panel and <1280px
+mobile drill/Back visibility, panelOpen/panelCollapsed state, overflow-visible,
+shrink-0, physical pixel widths, logical RTL origin/enter direction and existing
+duration-normal/ease-standard. Width transition remains **width only**; retain
+`motion-reduce:transition-none` and JS `useMotionPreference()` suppression,
+including low bandwidth, without introducing entrance/exit lag. Preserve all
+navigation/pins/collections/route/ref/focus callbacks. These substitutions
+change no z-index, portal, stacking context, positioning or layer ordering.
+
+### ResourcesPanel: utilization is not worker health
+
+The exact final `phase3-resources-panel-attempt2-checks.log` reports **FAILED**
+for missing semantics, despite 24 passing tests: no source/test writes in that
+attempt. `web\src\components\status\ResourcesPanel.tsx:19–28,73–95` exposes only
+presentation and percent and treats >=90 as critical. The real sole production
+caller, `web\src\features\system\pages\SystemStatusPage.tsx:377–384,721–725`,
+passes `healthy_count / total * 100`. Its worker status at :320–328 already
+distinguishes all healthy / some healthy / none healthy / no workers. Do not
+reverse all percent thresholds or infer meaning from translated label/metaText.
+This is an explicitly approved bounded correction at these existing owners,
+not a universal metric engine or an invented second consumer.
+
+Approve an additive discriminated ResourceRow API retaining existing
+label/valueText/metaText/icon and panel title/emptyText/footnote/id/className:
+default/omitted `metricKind: 'utilization'` retains optional `percent` with
+existing finite clamping, neutral below 70, warning >=70, danger >=90, including
+valid measured zero. Explicit `metricKind: 'healthy-workers'` instead requires
+raw `healthyCount: number | null` and `totalCount: number | null`; disallow a
+caller percent in that branch. Never parse valueText, synthesize counts, coerce
+missing values to zero, or accept a localized-label heuristic.
+
+Validate health counts as finite nonnegative safe integers, total >0 and
+healthyCount <= total before deriving the ratio. All healthy = success; some
+healthy but fewer than total = degraded/warning; measured healthyCount=0 with
+positive valid total = real outage/danger **with a measured zero bar**.
+Thus 95/100 is degraded, never utilization danger; 100/100 is healthy/success.
+Missing/invalid count, inconsistent numerator, total=0/no configured workers,
+negative/noninteger/nonfinite/unsafe counts = explicit unknown, **no bar**.
+No denominator clamping or invented backend capacity. Plain non-percent
+resource rows remain plain readings, not newly classified outages.
+
+Add optional per-row `sourceState?: DataState<unknown>` using the existing
+`web\src\api\dataState.ts` type, without duplicating payload/query state or
+creating another trust model. Domain outcome and trust are orthogonal:
+retained data remains visible on refresh error/stale/paused/offline, with
+existing nonblocking trust/retry presentation; a retained healthy ratio is not
+fresh confirmed health. Only fatalError with no retained data may replace that
+source's row content; initial loading must not fabricate zero/outage, and no
+one-source failure blanks neighboring resources. Use existing feedback APIs
+with concrete internal imports, no new query/error provider inside the panel.
+Keep status text/icon and localized accessible bar naming alongside color:
+approve optional `barAriaLabel`/`statusText` presentation strings for the caller's
+localized worker-health versus utilization descriptions. Preserve defaults'
+intent through canonical localization, never concatenated translated “usage”.
+Any absent canonical copy is a separately assigned catalog prerequisite,
+not permission for this component/caller to write catalogs or undeclared keys.
+
+SystemStatusPage adoption passes actual workers counts and workersState into
+the health branch, retaining workers' unknown row when unresolved; DB pool
+retains utilization and extendedState. Other rows retain their actual backing
+backupStatsState/versionState/extendedState as appropriate. Reuse current
+useDataState at :154–163, source retry/timestamps/fatal-versus-refresh semantics
+and all existing sections. Pass the existing translated resources heading.
+Do not guess CPU/disk capacity, change endpoints/hooks/server types, or replace
+raw payloads with formatted fake measurements. Tests must cover utilization
+70/90 boundaries; health 95/100,100/100,0/positive; missing/invalid/no workers;
+initial/fatal, retained refresh error and independent neighbor recovery.
+
+### Atomic assignments, serialization and frozen accounting
+
+The already queued **first-ten test-only accounting** item owns only its
+explicitly reserved `web\src\lib\__tests__\tokens.test.ts` scope; shell-token
+acceptance waits for it, not vice versa. It need not wait for component adoption.
+After first-ten owner release/accounting/acceptance, serialize the existing
+`phase3-remaining-geometry-tokens` (19 entries), then separate
+**`phase3-resource-geometry-tokens`** (six entries above). The latter owns only
+`web\tailwind.config.js`, `web\src\lib\cn.ts`, matching `cn.test.ts` and explicitly
+reserved `__tests__\tokens.test.ts`. Freeze each immediate accepted baseline;
+no overlapping token/test leases, no component dependencies at token owners.
+
+For every future token owner preserve **all three original expected resolved
+fingerprints** in tokens.test.ts: `63d006e08dcb1f52224d56d3f7d7d1525736932525b32c951702ae968f7dc503`,
+`9da0b97a5e67e5717e4c1767411cad4b7d682bd8048016e0a4447c2164e016ba`,
+`14fb24118b45d5c77912cb0e86a20e10572577a76f8a9453027e6dc6f797caf4`.
+Explicitly assert exact approved property/key/value additions before excluding
+only those accounted additions from each historical projection; retain exact
+immediate-predecessor comparison too. Unknown entries/value mutations/plugins/
+screens must still fail. No hash reset, ratchet pruning, broad suffix/property
+deletion, baseline regeneration or deletion of original expectations. Each
+serialized scope accounts for its actual accepted predecessors and only its
+own new set, not speculative future additions; test-only accounting changes
+neither config nor cn and never waits on downstream adoption.
+
+After corresponding token acceptance, five independent geometry adoptions own
+only their cited source plus matching reserved tests: **`phase3-metric-card-geometry-adoption`**
+(MetricCard.test.tsx), **`phase3-error-fallback-geometry-adoption`**
+(ErrorBoundary.test.tsx and __tests__\ErrorBoundary.routeReset.test.tsx),
+**`phase3-combobox-multi-geometry-adoption`** (forms\__tests__\ComboboxMulti.test.tsx),
+**`phase3-command-deck-geometry-adoption`** (sidebar\CommandDeck.test.tsx), and
+**`phase3-data-freshness-geometry-adoption`** (data-display\__tests__\DataFreshness.test.tsx).
+Combobox's built-in substitution needs no new token; dispatch its separately
+owned adoption only after the serialized equivalence/merge proof. Coordinate
+ErrorBoundary's localization owner without overlapping source leases.
+
+Independently assign **`phase3-resources-panel-semantic-api`** only ResourcesPanel
+and status\__tests__\ResourcesPanel.test.tsx after any required copy owner, then
+**`phase3-system-status-resource-adoption`** only SystemStatusPage and its matching
+SystemStatusPage.test.tsx after API acceptance. Neither depends on geometry
+adoptions; the API owner never waits on its caller. These are separate bounded
+assignments, **not a third ResourcesPanel migration retry**. No ownership of
+catalog/config/backend/routing/scanners is implied for either.
+
+All implementation owners rerun exact scoped tests/lint/type/preservation and
+unchanged scanner; retain unrelated findings. QA compares old/new computed
+geometry and merge/selector behavior at MDC-070 widths, narrow containers,
+26rem container and 1279/1280 transitions, 16/20px roots, 200% text, long RTL
+labels, themes/forced-colors and reduced motion, preserving reachable focus,
+scroll/actions and layer contexts. This DOC scope runs no UI/browser/full gates
+and claims no fresh runtime, contrast, native, backend or application acceptance.
