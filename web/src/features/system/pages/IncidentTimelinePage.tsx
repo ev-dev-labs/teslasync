@@ -90,7 +90,7 @@ export default function IncidentTimelinePage() {
       metrics={[
         { metricId: 'duration', occurrenceId: 'duration', rawValue: incident
           ? (Date.parse(incident.resolved_at ?? new Date().toISOString()) - Date.parse(incident.started_at)) / 1000 : null,
-          label: t('incidentTimeline.kpi.duration', 'Duration'), display: { formatter: () => ({ value: durationLabel || '—' }) } },
+          label: t('incidentTimeline.kpi.duration', 'Duration'), display: { formatter: () => ({ value: durationLabel || '—', unit: '' }) } },
         { metricId: 'count', occurrenceId: 'updates', rawValue: incident ? updates.length : null, label: t('incidentTimeline.kpi.updates', 'Updates') },
         { metricId: 'count', occurrenceId: 'affected', rawValue: incident ? affected.length : null, label: t('incidentTimeline.kpi.affected', 'Affected') },
       ]}
