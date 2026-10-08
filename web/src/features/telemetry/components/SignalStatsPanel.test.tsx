@@ -25,6 +25,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 // Interpolating i18n stub: supports `t(key)`, `t(key, 'Default')` and
 // `t(key, 'Hide empty ({{count}})', { count })` — the three shapes the panel
@@ -73,7 +74,7 @@ const SELECTED = ['battery_level', 'range_added', 'cabin_temp', 'phantom'];
 
 function renderPanel(props?: Partial<SignalStatsPanelProps>) {
   const merged: SignalStatsPanelProps = { stats: STATS, ...props };
-  return render(<SignalStatsPanel {...merged} />);
+  return render(<SignalStatsPanel {...merged} />, { wrapper: MemoryRouter });
 }
 
 // The signal-name column is the only place a signal string renders; hop up to
@@ -83,6 +84,12 @@ function rowFor(signal: string): HTMLElement {
   const tr = cell.closest('tr');
   if (!tr) throw new Error(`no <tr> found for signal "${signal}"`);
   return tr as HTMLElement;
+}
+
+function swatchFor(signal: string): HTMLElement {
+  const swatch = screen.getByText(signal).previousElementSibling;
+  if (!(swatch instanceof HTMLElement)) throw new Error(`no swatch found for "${signal}"`);
+  return swatch;
 }
 
 beforeEach(() => {
@@ -176,7 +183,13 @@ describe('SignalStatsPanel — populated', () => {
 describe('SignalStatsPanel — loading', () => {
   it('shows four skeletons and no table while loading', () => {
     const { container } = renderPanel({ loading: true });
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    const skeletons = container.querySelectorAll('[aria-hidden="true"].h-20');
+    expect(skeletons).toHaveLength(4);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText('1.00')).toBeNull();
   });
@@ -285,8 +298,8 @@ describe('SignalStatsPanel — styling & colour', () => {
 
   it('assigns distinct series colours to distinct signals by position', () => {
     renderPanel();
-    const first = screen.getByText('battery_level').style.color;
-    const second = screen.getByText('cabin_temp').style.color;
+    const first = swatchFor('battery_level').style.backgroundColor;
+    const second = swatchFor('cabin_temp').style.backgroundColor;
     expect(first).not.toBe('');
     expect(second).not.toBe('');
     expect(first).not.toBe(second);
@@ -294,12 +307,58 @@ describe('SignalStatsPanel — styling & colour', () => {
 
   it('respects an explicit signalIndex over the positional colour', () => {
     const { rerender } = render(<SignalStatsPanel stats={STATS} />);
-    const positional = screen.getByText('battery_level').style.color; // CHART_COLORS[0]
+    const positional = swatchFor('battery_level').style.backgroundColor; // CHART_COLORS[0]
     rerender(<SignalStatsPanel stats={STATS} signalIndex={{ battery_level: 1 }} />);
-    const indexed = screen.getByText('battery_level').style.color; // CHART_COLORS[1]
+    const indexed = swatchFor('battery_level').style.backgroundColor; // CHART_COLORS[1]
     expect(indexed).not.toBe(positional);
     // Sanity: the two palette entries the test relies on really do differ.
     expect(CHART_COLORS[0]).not.toBe(CHART_COLORS[1]);
+  });
+
+  it('bounds palette identity to decorative swatches while keeping full identifiers neutral', () => {
+    renderPanel({ selectedSignals: SELECTED });
+    for (const signal of SELECTED) {
+      expect(screen.getByText(signal)).toHaveClass('text-[var(--text-secondary)]');
+      expect(screen.getByText(signal).style.color).toBe('');
+      expect(swatchFor(signal)).toHaveAttribute('aria-hidden', 'true');
+      expect(swatchFor(signal)).toHaveClass('h-2', 'w-2', 'shrink-0');
+    }
+  });
+
+  it('retains selected order and swatch identity after hiding empty rows', () => {
+    renderPanel({ selectedSignals: SELECTED });
+    const before = swatchFor('cabin_temp').style.backgroundColor;
+    fireEvent.click(screen.getByRole('switch'));
+    expect(swatchFor('cabin_temp').style.backgroundColor).toBe(before);
+    expect(screen.getByText('battery_level').compareDocumentPosition(screen.getByText('cabin_temp')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('SignalStatsPanel — fatal recovery boundary', () => {
+  it('keeps the shell and retry visible for a caller-classified initial failure', () => {
+    const onRetry = vi.fn();
+    renderPanel({ stats: [], error: new Error('initial failure'), onRetry });
+    expect(screen.getByRole('heading', { name: 'Stats summary' })).toBeInTheDocument();
+    expect(screen.getByText('Failed to load data')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Retry/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByText('50.50')).toBeNull();
+  });
+
+  it('keeps retained raw statistics visible when callers omit refresh errors as contracted', () => {
+    const onRetry = vi.fn();
+    renderPanel({ error: null, onRetry });
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(within(rowFor('battery_level')).getByText('1.00')).toBeInTheDocument();
+    expect(within(rowFor('battery_level')).getByText('100.00')).toBeInTheDocument();
+    expect(within(rowFor('battery_level')).getByText('50.50')).toBeInTheDocument();
+    expect(within(rowFor('battery_level')).getByText('10')).toBeInTheDocument();
+    expect(rowFor('cabin_temp')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load data')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Retry/i })).toBeNull();
+    expect(onRetry).not.toHaveBeenCalled();
   });
 });
 

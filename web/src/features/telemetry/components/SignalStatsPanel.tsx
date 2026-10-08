@@ -113,9 +113,9 @@ export function SignalStatsPanel({
   // so the em-dash isn't announced as literal punctuation. Finite values go
   // through the shared locale formatter.
   const renderNumeric = useCallback(
-    (n: number, valueClassName: string) =>
+    (n: number, emphasis: 'primary' | 'secondary') =>
       Number.isFinite(n) ? (
-        <Text mono size="xs" className={valueClassName}>{fmtNumber(n)}</Text>
+        <Text mono size="xs" color={emphasis}>{fmtNumber(n)}</Text>
       ) : (
         <Caption
           aria-label={t('signalStats.noData', 'No data')}
@@ -137,9 +137,12 @@ export function SignalStatsPanel({
         const color = CHART_COLORS[Math.max(0, idx) % CHART_COLORS.length];
         return (
           <div className="flex min-w-0 flex-col gap-0.5">
-            <Text mono size="xs" weight="medium" className="break-words [overflow-wrap:anywhere]" style={{ color }}>
-              {s.signal}
-            </Text>
+            <div className="flex min-w-0 items-start gap-2">
+              <span aria-hidden="true" className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <Text mono size="xs" weight="medium" color="secondary" className="break-words [overflow-wrap:anywhere]">
+                {s.signal}
+              </Text>
+            </div>
             {isEmptyStat(s) && (
               <Caption>
                 {t('signalStats.noDataInRange', 'No data in range')}
@@ -149,9 +152,9 @@ export function SignalStatsPanel({
         );
       },
     },
-    { key: 'min', header: t('signalStats.min', 'Min'), align: 'right', groupStart: true, filterValue: (s) => Number.isFinite(s.min) ? s.min : null, filterValueLabel: (_value, s) => Number.isFinite(s.min) ? fmtNumber(s.min) : '—', render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
-    { key: 'max', header: t('signalStats.max', 'Max'), align: 'right', filterValue: (s) => Number.isFinite(s.max) ? s.max : null, filterValueLabel: (_value, s) => Number.isFinite(s.max) ? fmtNumber(s.max) : '—', render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
-    { key: 'avg', header: t('signalStats.avg', 'Avg'), align: 'right', filterValue: (s) => Number.isFinite(s.avg) ? s.avg : null, filterValueLabel: (_value, s) => Number.isFinite(s.avg) ? fmtNumber(s.avg) : '—', render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
+    { key: 'min', header: t('signalStats.min', 'Min'), align: 'right', groupStart: true, filterValue: (s) => Number.isFinite(s.min) ? s.min : null, filterValueLabel: (_value, s) => Number.isFinite(s.min) ? fmtNumber(s.min) : '—', render: (s) => renderNumeric(s.min, 'secondary') },
+    { key: 'max', header: t('signalStats.max', 'Max'), align: 'right', filterValue: (s) => Number.isFinite(s.max) ? s.max : null, filterValueLabel: (_value, s) => Number.isFinite(s.max) ? fmtNumber(s.max) : '—', render: (s) => renderNumeric(s.max, 'secondary') },
+    { key: 'avg', header: t('signalStats.avg', 'Avg'), align: 'right', filterValue: (s) => Number.isFinite(s.avg) ? s.avg : null, filterValueLabel: (_value, s) => Number.isFinite(s.avg) ? fmtNumber(s.avg) : '—', render: (s) => renderNumeric(s.avg, 'primary') },
     {
       key: 'count',
       header: t('signalStats.count', 'Count'),
