@@ -41,7 +41,7 @@ import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useTimezone } from '@/lib/timezone';
 import {
-  CheckCircle, XCircle, Terminal,
+  CheckCircle, XCircle, Terminal, History,
   Search, Gamepad2, ListChecks, BarChart3, ShieldCheck,
 } from 'lucide-react';
 import { commandHistoryMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
