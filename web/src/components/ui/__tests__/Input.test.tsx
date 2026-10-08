@@ -3,7 +3,8 @@
  * screen-reader text, native required attribute, and accessible name.
  */
 
-import { render, screen } from '@testing-library/react';
+import { createRef } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('react-i18next', () => ({
@@ -135,5 +136,108 @@ describe('Input — feedback association', () => {
   it('announces validation errors through an alert role', () => {
     render(<Input label="Threshold" error="Out of range" />);
     expect(screen.getByRole('alert')).toHaveTextContent('Out of range');
+  });
+});
+
+describe('Input — primitive contract', () => {
+  it('retains implicit identity and focused value across translated labels and feedback', () => {
+    const { rerender } = render(<Input label="Email" hint="Optional address" defaultValue="saved" />);
+    const input = screen.getByRole('textbox', { name: 'Email' });
+    const id = input.id;
+    input.focus();
+    rerender(<Input label="Adresse électronique" error="Adresse invalide" defaultValue="saved" />);
+    expect(screen.getByRole('textbox', { name: 'Adresse électronique' })).toBe(input);
+    expect(input.id).toBe(id);
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('saved');
+    expect(input).toHaveAttribute('aria-describedby', `${id}-error`);
+    expect(document.getElementById(`${id}-hint`)).toBeNull();
+  });
+
+  it('preserves explicit identity, descriptions and native ref/form/type/events', () => {
+    const ref = createRef<HTMLInputElement>();
+    const onChange = vi.fn();
+    render(
+      <>
+        <form id="settings-form" />
+        <span id="external-note">External instructions</span>
+        <Input ref={ref} id="saved-email" label="Email" name="email" type="email"
+          form="settings-form" required aria-describedby="external-note"
+          hint="Use your account address" onChange={onChange} />
+      </>,
+    );
+    const input = screen.getByRole('textbox', { name: /Email/ });
+    expect(ref.current).toBe(input);
+    expect(input).toHaveAttribute('id', 'saved-email');
+    expect(input).toHaveAttribute('type', 'email');
+    expect(input).toHaveAttribute('name', 'email');
+    expect(ref.current?.form?.id).toBe('settings-form');
+    expect(input).toBeRequired();
+    expect(input).toHaveAttribute('aria-describedby', 'external-note saved-email-hint');
+    fireEvent.change(input, { target: { value: 'driver@example.com' } });
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(input).toHaveValue('driver@example.com');
+  });
+
+  it('uses restrained semantic validation and focus tokens without hiding error text', () => {
+    render(<Input label="Threshold" error="Out of range" hint="Hidden hint" aria-invalid={false} />);
+    const input = screen.getByRole('textbox', { name: 'Threshold' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.className).toContain('border-[var(--semantic-danger)]');
+    expect(input.className).toContain('focus-visible:ring-[var(--focus-ring)]');
+    expect(input.className).toContain('focus-visible:ring-offset-2');
+    expect(input.className).not.toMatch(/rose-|theme-primary|neon|text-white/);
+    expect(screen.getByRole('alert').className).toContain('text-[var(--semantic-danger)]');
+    expect(screen.queryByText('Hidden hint')).toBeNull();
+  });
+
+  it('honors external invalid state even without generated error feedback', () => {
+    const { rerender } = render(<Input label="Value" aria-invalid="grammar" />);
+    const input = screen.getByRole('textbox', { name: 'Value' });
+    expect(input).toHaveAttribute('aria-invalid', 'grammar');
+    expect(input.className).toContain('border-[var(--semantic-danger)]');
+    expect(input).not.toHaveAttribute('aria-describedby');
+    rerender(<Input label="Value" aria-invalid={false} />);
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+    expect(input.className).not.toContain('border-[var(--semantic-danger)]');
+    expect(input.className).toContain('enabled:hover:border-[var(--control-border-hover)]');
+  });
+
+  it.each([
+    ['sm', 'min-h-9 px-3 py-1.5 text-sm'],
+    ['md', 'min-h-10 px-3 py-2 text-sm'],
+    ['lg', 'min-h-12 px-4 py-2.5 text-base'],
+    ['auto', 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row'],
+  ] as const)('preserves %s density and native focus with long wrapping labels', (size, sizing) => {
+    const label = 'A long translated account label '.repeat(12);
+    render(<Input label={label} size={size} />);
+    const input = screen.getByRole('textbox', { name: label.trim() });
+    expect(input.className).toContain(sizing);
+    expect(input.className).toContain('rounded-shape-sm');
+    const pairedLabel = screen.getByText(label.trim()).closest('label');
+    expect(pairedLabel).toHaveAttribute('for', input.id);
+    expect(pairedLabel?.className).toContain('break-words');
+    input.focus();
+    expect(input).toHaveFocus();
+    expect(input.className).toContain('motion-reduce:transition-none');
+    expect(input.className).toContain('duration-fast');
+  });
+
+  it('keeps zero values, unique field identities, adornments and caller classes', () => {
+    render(
+      <>
+        <Input label="Value" value={0} readOnly icon={<span>Icon</span>} suffix="W" className="custom-field" />
+        <Input label="Value" />
+      </>,
+    );
+    const fields = screen.getAllByRole('textbox', { name: 'Value' });
+    expect(fields[0]).toHaveValue('0');
+    expect(fields[0]?.id).not.toBe(fields[1]?.id);
+    expect(fields[0]?.className).toContain('pl-10');
+    expect(fields[0]?.className).toContain('pr-10');
+    expect(fields[0]?.className).toContain('custom-field');
+    expect(screen.getByText('Icon')).toBeVisible();
+    expect(screen.getByText('W')).toBeVisible();
+    expect(fields[1]).toHaveValue('');
   });
 });
