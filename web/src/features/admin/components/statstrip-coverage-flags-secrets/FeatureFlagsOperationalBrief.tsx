@@ -19,7 +19,7 @@ export function featureFlagMetrics(
     typeCounts[kind] = flags?.filter(flag => classifyFlagValue(flag.value) === kind).length ?? null;
   }
   const flagsContext = flags ? FLAG_VALUE_KINDS.map(kind =>
-    t(`admin.flags.statstrip.type.${kind}`, '{{count}} {{kind}} values', { count: typeCounts[kind], kind })).join(' · ')
+    t(`admin.flags.statstrip.type.${kind}`, '{{count}} {{kind}} values', { count: flags.filter(flag => classifyFlagValue(flag.value) === kind).length, kind })).join(' · ')
     : t('admin.flags.statstrip.registryMissing', 'Registry snapshot not supplied');
   const auditContext = t('admin.flags.statstrip.auditContext', 'Returned recent audit rows only (limit 50); not lifetime totals or a selected date range.');
   const values = [
