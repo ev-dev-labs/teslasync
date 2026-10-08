@@ -10,6 +10,8 @@ import { useTranslation } from 'react-i18next'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import type { TFunction } from 'i18next'
 import { Input } from './Input'
+import { Button } from './Button'
+import { Text } from './Typography'
 import { cn } from '@/lib/cn'
 import { navSections } from '@/components/layout/Layout'
 import { navSearchKeywords } from '@/components/layout/navSearchKeywords'
@@ -1131,6 +1133,16 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     })
   }, [open])
 
+  // Only mode transitions transfer focus; opening retains its delayed timer.
+  const previousModeRef = useRef(mode)
+  useEffect(() => {
+    const previousMode = previousModeRef.current
+    previousModeRef.current = mode
+    if (!open || previousMode === mode) return
+    if (mode === 'search') inputRef.current?.focus()
+    else listRef.current?.focus()
+  }, [mode, open])
+
   // Keyboard nav within palette
   function handleInputKey(e: React.KeyboardEvent) {
     const maxIndex = displayItems.length - 1
@@ -1255,52 +1267,56 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 className="flex max-h-command-palette flex-col overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3"
               >
               {/* Search input / contextual selection header */}
-              <div className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
+              <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-3 border-b border-[var(--border-default)] px-4 py-4 sm:px-5">
                 {mode !== 'search' ? (
                   <>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
                       onClick={goBack}
                       aria-label={t('palette.back', 'Back')}
-                      className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                      className="min-h-11 min-w-11 shrink-0 p-1.5 md:min-h-9 md:min-w-9"
                     >
                       <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    <div className="flex-1 flex items-center gap-2">
+                    </Button>
+                    <div className="flex min-w-0 flex-1 items-start gap-2">
                       {mode === 'vehicle-select'
                         ? <Zap className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />
                         : <BellRing className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />}
-                      <span className="text-sm text-[var(--text-secondary)]">
+                      <Text variant="bodySm" className="min-w-0 break-words">
                         {mode === 'vehicle-select'
                           ? t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: `Send "${pendingCommandLabel}" to…` })
                           : t('palette.acknowledgeAlert.select', 'Choose an open alert to acknowledge')}
-                      </span>
+                      </Text>
                     </div>
                   </>
                 ) : (
                   <>
                     <Search className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
                     {activeScope !== null && (
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        wrapLabel
                         onClick={() => {
                           setQuery('')
                           setSelectedIndex(0)
                           inputRef.current?.focus()
                         }}
                         aria-label={t('palette.clearScope', { scope: getScopeMeta(activeScope).label, defaultValue: `Clear ${getScopeMeta(activeScope).label} filter` })}
-                        className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[rgba(var(--theme-primary-rgb),0.25)] bg-[rgba(var(--theme-primary-rgb),0.10)] px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-[rgba(var(--theme-primary-rgb),0.18)] transition-colors"
+                        className="min-h-11 min-w-11 max-w-full gap-1.5 border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1 md:min-h-9"
                         data-palette-scope-chip={activeScope}
                       >
                         <span className="font-mono">{getScopeMeta(activeScope).prefix}</span>
-                        <span>{t(`palette.scope.${activeScope}`, getScopeMeta(activeScope).label)}</span>
+                        <span className="min-w-0 break-words">{t(`palette.scope.${activeScope}`, getScopeMeta(activeScope).label)}</span>
                         <X className="h-3 w-3 opacity-70" aria-hidden />
-                      </button>
+                      </Button>
                     )}
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1 basis-40">
                       <Input
                         ref={inputRef}
                         role="combobox"
+                        aria-label={t('search.input.label', 'Search query')}
                         aria-expanded
                         aria-controls={PALETTE_LISTBOX_ID}
                         aria-autocomplete="list"
@@ -1326,7 +1342,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                             ? t(`palette.placeholder.${activeScope}`, getScopeMeta(activeScope).placeholder)
                             : t('palette.placeholder', 'Search pages, commands…')
                         }
-                        className="!rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] !shadow-none !ring-0 placeholder:text-[var(--text-muted)]"
+                        className="min-h-11 !rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] md:min-h-10"
                       />
                     </div>
                     <kbd className="hidden items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-2xs text-[var(--text-muted)] sm:flex">
@@ -1343,7 +1359,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 role="listbox"
                 tabIndex={-1}
                 aria-label={t('palette.resultsLabel', 'Results')}
-                className="max-h-80 min-h-0 overflow-y-auto px-2 py-2"
+                aria-activedescendant={mode !== 'search' && displayItems.length > 0 ? paletteRowId(effectiveSelectedIndex) : undefined}
+                className="max-h-80 min-h-0 overflow-y-auto px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                 onKeyDown={mode !== 'search' ? handleInputKey : undefined}
               >
                 {displayItems.length === 0 ? (

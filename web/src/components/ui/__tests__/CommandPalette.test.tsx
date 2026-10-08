@@ -2060,6 +2060,69 @@ describe('CommandPalette latest-callback commit semantics', () => {
     expect(second).toHaveBeenCalledTimes(1)
   })
 
+  describe('CommandPalette header focus handoff', () => {
+    it('uses the canonical localized search name and retains visible focus styles', async () => {
+      locale.translations['search.input.label'] = 'Consulta de búsqueda'
+      render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+      const input = screen.getByRole('combobox', { name: 'Consulta de búsqueda' })
+      await waitFor(() => expect(input).toHaveFocus())
+      expect(input.className).toContain('focus-visible:ring-2')
+      expect(input.className).not.toContain('!ring-0')
+      expect(input.className).not.toContain('!shadow-none')
+      expect(input.className).toContain('min-h-11')
+    })
+
+    it('hands vehicle selection to the actual list for Arrow, Enter and Back', async () => {
+      requestMock.mockResolvedValue({ success: true, result: 'success' })
+      render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+      let input = screen.getByRole('combobox')
+      await waitFor(() => expect(input).toHaveFocus())
+      fireEvent.change(input, { target: { value: 'wake' } })
+      fireEvent.click(await screen.findByRole('option', { name: /Wake Up Vehicle/i }))
+      let list = screen.getByRole('listbox')
+      expect(list).toHaveFocus()
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+      expect(screen.getByRole('option', { name: /Model Y/i })).toHaveAttribute('aria-selected', 'true')
+      expect(list).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: /Model Y/i }).id)
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+      input = screen.getByRole('combobox')
+      expect(input).toHaveFocus()
+      fireEvent.change(input, { target: { value: 'wake' } })
+      fireEvent.click(await screen.findByRole('option', { name: /Wake Up Vehicle/i }))
+      list = screen.getByRole('listbox')
+      expect(list).toHaveFocus()
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+      fireEvent.keyDown(document.activeElement!, { key: 'Enter' })
+      await waitFor(() => expect(requestMock).toHaveBeenCalledWith(
+        '/vehicles/2/command', expect.objectContaining({ method: 'POST' }),
+      ))
+    })
+
+    it('hands alert selection to the actual list and restores search with Backspace', async () => {
+      const second = makeAlert({ id: 10, title: 'Second open alert' })
+      requestMock.mockResolvedValue({ ...second, acknowledged_at: '2026-08-24T17:00:00Z', events: [] })
+      render(<CommandPalette initialOpen />, {
+        wrapper: makeWrapper(makeVehicles(), [], { acknowledge: { query: 'acknowledge', hits: [] } }, [makeAlert(), second]),
+      })
+      const enterAlerts = async () => {
+        const input = screen.getByRole('combobox')
+        fireEvent.change(input, { target: { value: 'acknowledge' } })
+        fireEvent.click(await screen.findByRole('option', { name: /Acknowledge an alert/i }))
+        expect(screen.getByRole('listbox')).toHaveFocus()
+      }
+      await enterAlerts()
+      fireEvent.keyDown(document.activeElement!, { key: 'Backspace' })
+      expect(screen.getByRole('combobox')).toHaveFocus()
+      await enterAlerts()
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+      expect(screen.getByRole('option', { name: /Second open alert/i })).toHaveAttribute('aria-selected', 'true')
+      fireEvent.keyDown(document.activeElement!, { key: 'Enter' })
+      await waitFor(() => expect(requestMock).toHaveBeenCalledWith(
+        '/alerts/10/acknowledge', expect.objectContaining({ method: 'POST' }),
+      ))
+    })
+  })
+
   it('tolerates the callback being removed between commits', async () => {
     const onOpen = vi.fn()
     const Wrapper = makeWrapper(makeVehicles())
