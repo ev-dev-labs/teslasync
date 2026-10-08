@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import type { SignalHistoryPoint } from '@/api/types';
 import {
   useSignalEvidenceBundle,
   useSignals,
@@ -8,6 +9,7 @@ import {
   analyzeRootCause,
   isAnalysisDefensible,
   selectRelatedSignals,
+  type RawSignalPoint,
   type RelatedSignalCandidate,
   type RootCauseAnalysisResult,
 } from '../lib/rootCauseIntelligence';
@@ -46,6 +48,13 @@ export const ROOT_CAUSE_WINDOW_HOUR_PRESETS = [24, 72, 168, 720] as const;
 export type RootCauseWindowHours = (typeof ROOT_CAUSE_WINDOW_HOUR_PRESETS)[number];
 
 const DEFAULT_WINDOW_HOURS: RootCauseWindowHours = 72;
+
+function toAnalysisPoint(point: SignalHistoryPoint): RawSignalPoint {
+  return {
+    ts: point.ts,
+    value: typeof point.value === 'boolean' ? null : point.value,
+  };
+}
 
 export interface RootCauseWorkspace {
   /** Full signal-name catalog for the vehicle (empty while loading/absent). */
@@ -95,11 +104,11 @@ export function useRootCauseWorkspace(vehicleId: number | null): RootCauseWorksp
     const focalEntry = bundleData.find((d) => d.signal === focalSignal);
     const relatedSeries = bundleData
       .filter((d) => d.signal !== focalSignal)
-      .map((d) => ({ signal: d.signal, points: d.response.data ?? [] }));
+      .map((d) => ({ signal: d.signal, points: (d.response.data ?? []).map(toAnalysisPoint) }));
     return analyzeRootCause({
       focalSignal,
       catalog,
-      focalPoints: focalEntry?.response.data ?? [],
+      focalPoints: (focalEntry?.response.data ?? []).map(toAnalysisPoint),
       relatedSeries,
     });
   }, [evidenceBundle.data, focalSignal, catalog]);
