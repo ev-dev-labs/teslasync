@@ -22,6 +22,7 @@ export function BatteryEvidenceBrief({
 }: Props) {
   const { t } = useTranslation();
   const scopeReason = period.kind === 'unknown' ? period.reason : period.provenance;
+  const initialLoading = loading && !retained;
   const evidence = useOperationalMetrics(metrics.map(metric => ({
     ...metric,
     description: metric.description === metric.label || metric.description === metric.context
@@ -30,14 +31,14 @@ export function BatteryEvidenceBrief({
   })));
   const hasReadings = evidence.some(metric => metric.valueState === 'value');
   return (
-    <div id={id}>
+    <div id={id} className="min-w-0 break-words">
     <OperationalBrief
       compact
       testId={id}
       eyebrow={t('battery.brief.eyebrow', 'Battery and energy evidence')}
       title={title}
       description={[description ?? scopeReason ?? period.label, secondary].filter(Boolean).join(' ')}
-      statusLabel={loading
+      statusLabel={initialLoading
         ? t('battery.brief.loading', 'Loading source evidence')
         : retained
           ? t('battery.brief.retained', 'Retained source evidence')
@@ -45,7 +46,7 @@ export function BatteryEvidenceBrief({
             ? t('battery.brief.available', 'Available source readings')
             : t('battery.brief.unavailable', 'Source readings unavailable')}
       statusTone={retained ? 'warning' : 'neutral'}
-      loading={loading}
+      loading={initialLoading}
       metrics={evidence}
       scope={<Caption data-battery-period>{period.label}</Caption>}
       freshness={period.kind === 'snapshot' && period.observedAt

@@ -82,4 +82,69 @@ describe('battery source evidence through the real OperationalBrief and bridge',
     expect(within(screen.getByRole('dialog')).getAllByText(/synthesized from brick extrema/).length).toBeGreaterThan(0);
     expect(within(screen.getByRole('dialog')).getAllByText(/reported values alone do not establish health/).length).toBeGreaterThan(0);
   });
+
+  it('keeps retained measurements and specialist diagnostics visible during a refresh', () => {
+    const formatter = vi.fn((raw: number) => ({ value: raw.toFixed(3), unit: 'V' }));
+    const view = render(<BatteryEvidenceBrief id="retained-battery" title="Retained readings"
+      description="Qualified pack snapshot" secondary="Refresh failed; showing the last source snapshot."
+      loading retained metrics={[
+        { metricId: 'number', rawValue: 0, label: 'Voltage', display: { formatter },
+          context: 'Measured zero, not an inferred pack health assessment' },
+        { metricId: 'energy', rawValue: null, label: 'Capacity', missingReason: 'Estimate unavailable' },
+      ]} period={{ kind: 'snapshot', label: 'Last source snapshot', observedAt: null,
+        provenance: 'Independent pack source' }} />, { wrapper: Provider });
+    expect(view.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
+    expect(screen.getByText('Retained source evidence')).toBeVisible();
+    expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
+    expect(view.container.querySelector('[data-operational-value]')).toHaveTextContent('0.000 V');
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(formatter).toHaveBeenCalledWith(0, expect.anything());
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = within(screen.getByRole('dialog'));
+    expect(drawer.getByText('0.000 V')).toBeVisible();
+    expect(drawer.getByText('Measured zero, not an inferred pack health assessment')).toBeVisible();
+    expect(drawer.getByText('Estimate unavailable')).toBeVisible();
+    expect(drawer.getAllByText(/Refresh failed; showing the last source snapshot/).length).toBeGreaterThan(0);
+    expect(drawer.getByText('Independent pack source')).toBeVisible();
+  });
+
+  it.each(['Refresh paused by the source policy', 'Offline; no source snapshot available'])(
+    'preserves unavailable source explanations without inventing readings: %s',
+    secondary => {
+      const view = render(<BatteryEvidenceBrief title="Unavailable evidence" secondary={secondary}
+        metrics={[{ metricId: 'energy', label: 'Capacity', rawValue: undefined }]}
+        period={{ kind: 'unknown', label: 'Unknown source window', reason: 'No qualified source window' }} />,
+      { wrapper: Provider });
+      expect(screen.getByText('Source readings unavailable')).toBeVisible();
+      expect(screen.getByText(secondary, { exact: false })).toBeVisible();
+      expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(1);
+      expect(view.container.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+      expect(screen.queryByText('0 kWh')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getAllByText(/No qualified source window/).length).toBeGreaterThan(0);
+    },
+  );
+
+  it('preserves partial readings, long RTL context and the compact review action', () => {
+    const context = 'مصدر مستقل — '.repeat(40);
+    const view = render(<div dir="rtl"><BatteryEvidenceBrief title="Partial battery evidence"
+      description="Only the returned measurements are available" secondary="Other sources have not reported"
+      metrics={[
+        { metricId: 'count', label: 'Sessions', rawValue: 0, context },
+        { metricId: 'energy', label: 'Capacity', rawValue: null },
+      ]} period={{ kind: 'unknown', label: 'Returned window', reason: 'Mixed source bounds' }} /></div>,
+    { wrapper: Provider });
+    expect(screen.getByText('Available source readings')).toBeVisible();
+    expect(view.container.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
+    expect(view.container.querySelectorAll('[data-value-state="value"]')).toHaveLength(1);
+    expect(view.container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(view.container.querySelector('[data-battery-detail-context]')?.textContent).toBe(context);
+    expect(view.container.querySelector('[data-operational-brief] [role="list"]')).toHaveClass('grid-cols-1');
+    const review = screen.getByRole('button', { name: 'Review details' });
+    expect(review).toHaveClass('min-h-11');
+    fireEvent.click(review);
+    expect(within(screen.getByRole('dialog')).getByText(context.trim())).toBeVisible();
+    expect(within(screen.getByRole('dialog')).getAllByText(/Mixed source bounds/).length).toBeGreaterThan(0);
+  });
 });
