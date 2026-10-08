@@ -211,7 +211,7 @@ describe('Tooltip — multiline', () => {
     expect(cls).toContain('w-80');
     expect(cls).toContain('max-w-[calc(100vw-1.5rem)]');
     expect(cls).toContain('leading-relaxed');
-    expect(cls).toContain('transition-[opacity,transform]');
+    expect(cls).toContain('transition-opacity');
     expect(cls).not.toContain('transition-all');
   });
 
@@ -397,5 +397,52 @@ describe('Tooltip — typed props surface', () => {
     const tip = screen.getByRole('tooltip');
     expect(tip).toHaveTextContent('Typed tip');
     expect(tip.className).toContain('whitespace-normal');
+  });
+
+  describe('Tooltip — restrained motion and dismissal', () => {
+    it('dismisses focused help with Escape without replacing the trigger or its descriptions', () => {
+      const { rerender } = render(
+        <Tooltip content="Complete help"><button aria-describedby="external-hint">Info</button></Tooltip>,
+      );
+      const trigger = screen.getByRole('button', { name: 'Info' });
+      const tip = screen.getByRole('tooltip');
+      act(() => trigger.focus());
+      expect(document.activeElement).toBe(trigger);
+      fireEvent.keyDown(trigger, { key: 'Escape' });
+      expect(tip).toHaveClass('!opacity-0');
+      expect(trigger).toHaveAttribute('aria-describedby', `external-hint ${tip.id}`);
+      rerender(
+        <Tooltip content="Translated complete help"><button aria-describedby="external-hint">Information</button></Tooltip>,
+      );
+      expect(screen.getByRole('button', { name: 'Information' })).toBe(trigger);
+      expect(document.activeElement).toBe(trigger);
+      expect(screen.getByRole('tooltip')).toBe(tip);
+      expect(tip).toHaveTextContent('Translated complete help');
+      fireEvent.blur(trigger);
+      fireEvent.focus(trigger);
+      expect(tip).not.toHaveClass('!opacity-0');
+    });
+
+    it('dismisses hovered help on Escape and allows a new hover to reveal it', () => {
+      render(<Tooltip content="Hover help"><button>Info</button></Tooltip>);
+      const wrapper = screen.getByRole('button').parentElement!;
+      const tip = screen.getByRole('tooltip');
+      fireEvent.mouseEnter(wrapper);
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(tip).toHaveClass('!opacity-0');
+      fireEvent.mouseLeave(wrapper);
+      fireEvent.mouseEnter(wrapper);
+      expect(tip).not.toHaveClass('!opacity-0');
+    });
+
+    it('keeps long content complete and uses only opacity feedback with a reduced-motion safety net', () => {
+      const content = 'Full contextual explanation, including its final instruction. '.repeat(30);
+      render(<Tooltip content={content} multiline><button>Info</button></Tooltip>);
+      const tip = screen.getByRole('tooltip');
+      expect(tip.textContent).toBe(content);
+      expect(tip).toHaveClass('whitespace-normal', 'break-words', 'motion-reduce:transition-none');
+      expect(tip.className).not.toMatch(/scale-|truncate|line-clamp/);
+      expect(tip).toHaveClass('bg-[var(--text-primary)]', 'shadow-e2', 'rounded-shape-sm');
+    });
   });
 });

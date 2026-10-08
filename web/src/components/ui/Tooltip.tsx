@@ -13,6 +13,8 @@ import {
   type RefObject,
 } from 'react';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 export interface TooltipProps {
   /**
@@ -108,8 +110,8 @@ const sideClasses = {
  * Hover/focus tooltip.
  *
  * Visual contract — inverted surface:
- *   - dark mode  → light card (`bg-gray-100`) with dark `--text-inverse` text
- *   - light mode → dark  card (`bg-gray-900`) with light `--text-inverse` text
+ *   - `--text-primary` supplies the mode-aware inverted surface.
+ *   - `--text-inverse` supplies its contrasting foreground.
  *
  * The inversion gives high contrast against the page background in both
  * themes (matches Linear / GitHub / modern tooltip UX).
@@ -138,15 +140,28 @@ const sideClasses = {
  *   tap. Tapping outside blurs the trigger and dismisses the tooltip.
  *
  * Reduced motion:
- * - The reveal transition is disabled globally via the `motion-reduce`
- *   variant when the user has `prefers-reduced-motion: reduce`.
+ * - The reveal respects reduced motion and low bandwidth without moving
+ *   the content or animating viewport corrections.
  */
 export function Tooltip({ content, side = 'top', multiline, boundaryRef, children }: TooltipProps) {
+  const { reduce } = useMotionPreference();
   const tooltipId = useId();
   const triggerRef = useRef<HTMLSpanElement>(null);
   const tooltipRef = useRef<HTMLSpanElement>(null);
   const [horizontalOffset, setHorizontalOffset] = useState(0);
   const [maxWidth, setMaxWidth] = useState<number>();
+  const [dismissed, setDismissed] = useState(false);
+  const hoveredRef = useRef(false);
+
+  useEffect(() => {
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && (
+        hoveredRef.current || triggerRef.current?.contains(document.activeElement)
+      )) setDismissed(true);
+    };
+    document.addEventListener('keydown', dismiss);
+    return () => document.removeEventListener('keydown', dismiss);
+  }, []);
 
   const updatePosition = useCallback(() => {
     const trigger = triggerRef.current;
@@ -229,8 +244,16 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
     <span
       ref={triggerRef}
       className="relative inline-flex group/tip"
-      onMouseEnter={updatePosition}
-      onFocus={updatePosition}
+      onMouseEnter={() => {
+        hoveredRef.current = true;
+        setDismissed(false);
+        updatePosition();
+      }}
+      onMouseLeave={() => { hoveredRef.current = false; }}
+      onFocus={() => {
+        setDismissed(false);
+        updatePosition();
+      }}
     >
       {enrichedChild}
       <span
@@ -242,11 +265,13 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
           ...(maxWidth !== undefined ? { maxWidth } : {}),
         }}
         className={cn(
-          'pointer-events-none absolute z-50 rounded-lg px-2.5 py-1.5 text-xs font-medium',
+          'pointer-events-none absolute z-50 rounded-shape-sm px-2.5 py-1.5',
+          typography.size.xs, typography.weight.medium,
           multiline || boundaryRef
             ? 'w-80 max-w-[calc(100vw-1.5rem)] whitespace-normal break-words px-4 py-3 text-sm font-normal leading-relaxed'
             : 'whitespace-nowrap',
-          'bg-gray-900 text-[var(--text-inverse)] shadow-lg dark:bg-gray-100',
+          'bg-[var(--text-primary)] shadow-e2',
+          typography.color.inverse,
           // Forced-colors mode suppresses
           // box-shadow and remaps the bg-gray to Canvas, so the tooltip
           // body would otherwise blend into surrounding panels. Pin a
@@ -255,9 +280,10 @@ export function Tooltip({ content, side = 'top', multiline, boundaryRef, childre
           // Windows High Contrast.
           'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
           // Viewport corrections must not animate with the hover/focus reveal.
-          'opacity-0 scale-95 transition-[opacity,transform] duration-fast motion-reduce:transition-none',
-          'group-hover/tip:opacity-100 group-hover/tip:scale-100',
-          'group-focus-within/tip:opacity-100 group-focus-within/tip:scale-100',
+          'opacity-0 transition-opacity duration-fast ease-standard motion-reduce:transition-none',
+          'group-hover/tip:opacity-100 group-focus-within/tip:opacity-100',
+          reduce && 'transition-none',
+          dismissed && '!opacity-0',
           sideClasses[side],
         )}
       >
