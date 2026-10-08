@@ -46,22 +46,25 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, renderHook, screen, fireEvent, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // i18n echo mock: returns the fallback string (or key when none), interpolating
-// {{var}} tokens from the options object so assertions target rendered English.
+// {{var}} tokens from replace or the options object, as i18next does.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fb?: unknown, opts?: unknown) => {
-      const options = (opts && typeof opts === 'object' ? opts : undefined) as
-        | Record<string, unknown>
-        | undefined;
-      let base = typeof fb === 'string' ? fb : key;
-      if (options) {
+    t: (key: string, fb?: string | Record<string, unknown>, opts?: Record<string, unknown>) => {
+      const options = opts ?? (typeof fb === 'object' ? fb : undefined);
+      let base = typeof fb === 'string' ? fb
+        : typeof options?.defaultValue === 'string' ? options.defaultValue : key;
+      const replacements = options?.replace !== null && typeof options?.replace === 'object'
+        ? Object.fromEntries(Object.entries(options.replace))
+        : options;
+      if (replacements) {
         base = base.replace(/{{\s*(\w+)\s*}}/g, (_m, n: string) =>
-          n in options && options[n] != null ? String(options[n]) : `{{${n}}}`,
+          n in replacements && replacements[n] != null ? String(replacements[n]) : `{{${n}}}`,
         );
       }
       return base;
@@ -71,6 +74,21 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children?: unknown }) => <>{children as never}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
+
+describe('SafetyHistoryWidget translation mock', () => {
+  it('honors fallback, defaultValue and replacement operands without coercing missing values', () => {
+    const { result } = renderHook(() => useTranslation());
+    const { t } = result.current;
+    expect(t('test.fallback', 'Returned: {{count}}', { replace: { count: 1 } }))
+      .toBe('Returned: 1');
+    expect(t('test.defaultValue', { defaultValue: 'Returned: {{count}}', replace: { count: 0 } }))
+      .toBe('Returned: 0');
+    expect(t('test.operands', {
+      defaultValue: '{{active}} / {{missing}}',
+      replace: { active: false, missing: null },
+    })).toBe('false / {{missing}}');
+  });
+});
 
 // The two data hooks are mocked so the widget's inputs are deterministic.
 vi.mock('@/api/hooks/useVehicleSystems', async (importActual) => {
