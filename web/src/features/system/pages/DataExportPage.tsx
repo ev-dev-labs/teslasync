@@ -467,7 +467,7 @@ function StatsRow({
         { metricId: 'bytes', occurrenceId: 'total-size', rawValue: jobs == null ? null : totalSize,
           label: t('dataExport.totalSize', 'Total size'),
           context: t('dataExport.brief.bytesContext', 'Sum of recorded file sizes; jobs without a file size contribute no recorded bytes.'),
-          display: { formatter: (raw) => ({ value: formatBytes(raw, { zeroAsEmpty: false }) }) } },
+          display: { formatter: (raw) => ({ value: formatBytes(raw, { zeroAsEmpty: false }), unit: '' }) } },
       ]}
       textMetrics={[
         { key: 'most-exported', label: t('dataExport.mostExported', 'Most exported'), value: mostExportedType,
