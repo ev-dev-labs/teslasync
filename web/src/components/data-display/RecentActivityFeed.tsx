@@ -22,7 +22,7 @@ import { getActivityVisual } from '@/lib/activityIcons';
 import type { UserActivityEntry } from '@/types/admin';
 
 export interface RecentActivityFeedProps {
-  entries: UserActivityEntry[];
+  entries: UserActivityEntry[] | null | undefined;
   className?: string;
   /** Override the empty-state message (i18n-translated by the caller). */
   emptyMessage?: string;
@@ -61,17 +61,12 @@ function entityHref(entityType: string | null, entityId: string | null): string 
 export function RecentActivityFeed({ entries, className, emptyMessage }: RecentActivityFeedProps) {
   const { t } = useTranslation();
 
-  // Callers are typed to pass an array, but a TanStack Query can hand us
-  // `undefined` before it resolves. Normalise up-front so neither `.length`
-  // nor `.map` below can throw on a not-yet-loaded feed.
-  const rows = entries ?? [];
-
   // The per-entry mapping resolves an icon/title/href and builds JSX for every
   // row; memoise it so a parent re-render (hover, polling) that leaves the same
   // entries + translator untouched doesn't rebuild N timeline items.
   const items = useMemo(
     () =>
-      rows.map((entry) => {
+      (entries ?? []).map((entry) => {
         const visual = getActivityVisual(entry.action);
         const Icon = visual.icon;
         const title = t(visual.i18nKey, visual.fallback);
@@ -103,7 +98,7 @@ export function RecentActivityFeed({ entries, className, emptyMessage }: RecentA
             // visually anchored.
             <Link
               to={href}
-              className="text-cyan-300 underline-offset-2 hover:underline focus:underline focus:outline-none"
+              className="break-words text-[var(--semantic-info)] underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:text-[LinkText] forced-colors:focus-visible:outline-[Highlight]"
             >
               {title}
             </Link>
@@ -115,10 +110,10 @@ export function RecentActivityFeed({ entries, className, emptyMessage }: RecentA
           color: undefined,
         };
       }),
-    [rows, t],
+    [entries, t],
   );
 
-  if (rows.length === 0) {
+  if (items.length === 0) {
     return (
       <EmptyState
         icon={<Icons.history className="h-8 w-8" />}
