@@ -2644,8 +2644,28 @@
     }
   },
   "digitalTwin": {
+    "brief": {
+      "title": "Physical-state summary"
+    },
+    "chargePort": "Charge port",
+    "doorDriverFront": "Driver front",
+    "doorDriverRear": "Driver rear",
+    "doorPassengerFront": "Passenger front",
+    "doorPassengerRear": "Passenger rear",
+    "driverSeat": "Driver seat",
+    "driving": "Driving",
+    "empty": "Empty",
     "frunk": "Frunk",
+    "hazards": "Hazards",
+    "headlights": "Headlights",
+    "occupied": "Occupied",
+    "sentryMode": "Sentry Mode",
+    "title": "Digital twin",
     "trunk": "Trunk",
+    "turnBoth": "Both",
+    "turnLeft": "Left",
+    "turnRight": "Right",
+    "turnSignal": "Turn signal",
     "windowFD": "Front driver",
     "windowFP": "Front passenger",
     "windowRD": "Rear driver",
@@ -2808,6 +2828,9 @@
       "suggestButton": "Suggest geofence",
       "title": "Suggest a geofence for this location"
     }
+  },
+  "guard": {
+    "sentryActive": "Sentry mode active"
   },
   "helix": {
     "ariaLabel": "Helix",

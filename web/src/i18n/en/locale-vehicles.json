@@ -2316,6 +2316,9 @@
       "title": "Suggest a geofence for this location"
     }
   },
+  "guard": {
+    "sentryActive": "Sentry mode active"
+  },
   "helix": {
     "ariaLabel": "Helix",
     "badge": "Helix",
