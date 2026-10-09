@@ -427,7 +427,7 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     // Motor
     expect(screen.getByText('320.00 Nm')).toBeInTheDocument();
     expect(screen.getByText('45.00°C')).toBeInTheDocument();
-    expect(screen.getByText('D').className).toContain('green'); // gear → success badge
+    expect(screen.getByText('D')).toHaveClass('text-[var(--semantic-success)]'); // gear → success badge
     // Media
     expect(screen.getByText('Bohemian Rhapsody')).toBeInTheDocument();
     expect(screen.getByText('Playing')).toBeInTheDocument();
@@ -449,7 +449,19 @@ describe('Motor/Climate/Security/Tire/Media/Location (via <LiveTelemetry>)', () 
     expect(screen.getByRole('heading', { name: 'Drivetrain' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Navigation' })).toBeInTheDocument();
     // Loading state: skeletons present, no concrete value or progressbar leaks.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const panels = container.querySelectorAll('[data-print-card]');
+    expect(panels).toHaveLength(6);
+    for (const name of ['Drivetrain', 'Climate', 'Security', 'Tire pressure', 'Media', 'Navigation']) {
+      expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+    }
+    const selector = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(selector)).toHaveLength(24);
+    for (const panel of panels) {
+      const skeletons = panel.querySelectorAll(selector);
+      expect(skeletons).toHaveLength(4);
+      for (const skeleton of skeletons) expect(skeleton).toHaveClass('h-5', 'w-full', 'rounded');
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     expect(screen.queryByText('320.00 Nm')).toBeNull();
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
