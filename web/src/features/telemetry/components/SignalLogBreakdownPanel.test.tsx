@@ -96,8 +96,11 @@ afterEach(() => {
 // ── loading ──────────────────────────────────────────────────────────────
 describe('SignalLogBreakdownPanel — loading', () => {
   it('renders three skeletons and no bars/empty copy while loading', () => {
-    const { container } = renderPanel({ loading: true });
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
+    renderPanel({ loading: true });
+    const panel = screen.getByRole('heading', { name: /Value composition/ }).closest('[data-print-card]')!;
+    const skeletons = panel.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons).toHaveLength(3);
+    skeletons.forEach((skeleton) => expect(skeleton).toHaveClass('h-9', 'w-full'));
     expect(screen.queryByText('Numeric')).toBeNull();
     expect(screen.queryByText('Run a query to see the value-type breakdown.')).toBeNull();
   });

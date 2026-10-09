@@ -235,7 +235,12 @@ describe('SignalCatalogPanel — loading & empty', () => {
   it('shows skeletons (no table, no empty copy) while loading', () => {
     h.gaps.isLoading = true;
     const { container } = renderPanel();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const catalog = screen.getByLabelText('Filter signals').closest('[data-print-card]')!;
+    const skeletons = catalog.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(skeletons).toHaveLength(8);
+    skeletons.forEach((skeleton) => expect(skeleton).toHaveClass('h-12', 'w-full'));
+    expect(container.querySelector('table')).toBeNull();
     expect(screen.queryByText('vehicle_speed')).toBeNull();
     expect(screen.queryByText('No signal data available')).toBeNull();
   });
