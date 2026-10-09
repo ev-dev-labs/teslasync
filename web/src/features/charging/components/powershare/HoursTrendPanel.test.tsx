@@ -263,11 +263,19 @@ describe('HoursTrendPanel — empty', () => {
 
 describe('HoursTrendPanel — loading', () => {
   it('shows the skeleton and withholds both the chart and the empty state while isLoading', () => {
-    const { container } = renderPanel({ points: TREND, isLoading: true });
+    const { container } = renderPanel({ points: TREND, isLoading: true, error: new Error('stale') });
 
-    // The <Skeleton> is a pulsing placeholder — loading beats data.
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    // The existing chart double renders the real static Skeleton at 220px.
+    const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
     expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('line-chart-data')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('line-series')).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // Neither the empty state (status) nor an error (alert) shows while loading.
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
