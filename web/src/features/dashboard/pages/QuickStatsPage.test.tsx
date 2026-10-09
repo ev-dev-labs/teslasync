@@ -432,7 +432,12 @@ describe('QuickStatsPage', () => {
     const page = renderPage();
     const spotlight = screen.getByRole('region', { name: 'Vehicle spotlight' });
 
-    expect(spotlight.querySelectorAll('.animate-pulse[aria-hidden="true"]')).toHaveLength(1);
+    const placeholders = spotlight.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders).toHaveLength(1);
+    expect(placeholders[0]).toHaveAttribute('aria-hidden', 'true');
+    expect(placeholders[0]).toHaveClass('h-4', 'w-full', 'rounded');
+    expect(placeholders[0]).toHaveStyle({ height: '300px' });
+    expect(placeholders[0]).not.toHaveClass('animate-pulse');
     expect(within(spotlight).queryByTestId('vehicle-hero')).not.toBeInTheDocument();
     expect(within(spotlight).queryByText('No vehicle found')).not.toBeInTheDocument();
     expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
@@ -451,6 +456,7 @@ describe('QuickStatsPage', () => {
     expect(captured.hero.vehicle).toMatchObject({ id: 1, display_name: 'Model Y' });
     expect(captured.hero.vehicleState).toEqual(STATE);
     expect(cachedSpotlight.querySelector('.animate-pulse')).toBeNull();
+    expect(cachedSpotlight.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(within(cachedSpotlight).queryByText('No vehicle found')).not.toBeInTheDocument();
   });
 

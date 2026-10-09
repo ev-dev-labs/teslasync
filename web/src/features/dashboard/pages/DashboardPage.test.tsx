@@ -519,10 +519,30 @@ describe('DashboardPage — data states', () => {
   it('shows the loading skeleton while vehicles load', () => {
     h.vehicles = makeQuery({ data: undefined, isLoading: true });
     const { container } = renderPage();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const loading = screen.getByRole('status', { name: 'Loading command center' });
+    expect(loading).toBe(screen.getByTestId('dashboard-loading-skeleton'));
+    expect(within(loading).getByText('Loading command center')).toBeInTheDocument();
+    const placeholders = loading.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders).toHaveLength(11);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).not.toHaveClass('animate-pulse');
+    }
+    expect(placeholders[0]).toHaveClass('h-10', 'w-full', 'sm:w-72', 'rounded-shape-lg');
+    expect(placeholders[1]).toHaveClass('h-10', 'w-40', 'rounded-shape-lg');
+    for (const placeholder of Array.from(placeholders).slice(2, 6)) {
+      expect(placeholder).toHaveClass('h-28', 'rounded-panel');
+    }
+    expect(placeholders[6]).toHaveClass('h-64', 'rounded-panel', 'xl:col-span-8');
+    expect(placeholders[7]).toHaveClass('h-64', 'rounded-panel', 'xl:col-span-4');
+    for (const placeholder of Array.from(placeholders).slice(8)) {
+      expect(placeholder).toHaveClass('h-52', 'rounded-panel', 'xl:col-span-4');
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
     expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
     expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Dashboard widgets' })).toBeNull();
   });
 
   it('shows onboarding with a connect link when unauthenticated and no vehicles', () => {
