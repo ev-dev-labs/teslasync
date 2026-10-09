@@ -14,6 +14,8 @@ import {
 } from '@/lib/unitConversion';
 import { usePublicOperationalMetrics } from './usePublicOperationalMetrics';
 
+vi.unmock('react-i18next');
+
 const authenticated = vi.hoisted(() => ({
   settings: vi.fn(() => { throw new Error('Public preference rendering subscribed to authenticated settings'); }),
   apiSettings: vi.fn(() => { throw new Error('Public preference rendering requested API settings'); }),
@@ -152,7 +154,8 @@ function expectPreserved(result: PublicMetrics, preferences: ExplicitPreferences
   expect(screen.getByTestId('canonical-comparison')).toHaveTextContent('Comparison operand: 1200 m');
   const comparison = fmtNumber(convertDistanceFromSI(1200, preferences.units.distance),
     preferences.units.precision, preferences.units.locale);
-  expect(screen.getByText(`Published comparison: +${comparison} ${preferences.units.distance}; Source comparison window; Unbounded public report`))
+  expect(screen.getByText(`Published comparison: +${comparison} ${preferences.units.distance}; Source comparison window; Unbounded public report`,
+    { normalizer: text => text }))
     .toBeInTheDocument();
   details.unmount();
   expectPublicIsolation();
