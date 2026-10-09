@@ -34,6 +34,35 @@ describe('OperationalBrief', () => {
       expect(within(drawer).getByText('Retained')).toBeVisible();
     },
   );
+  it('isolates primitive scope and freshness as distinct unstyled elements in the summary and drawer header', () => {
+    const scope = 'Period A: Last 30 days · Period B: Last 90 days';
+    const freshness = 'Last confirmed at 2026-01-02T04:05:06Z';
+    render(<OperationalBrief eyebrow="Evidence" title="Primitive context"
+      description="Independent metadata fields." statusLabel="Retained"
+      scope={scope} freshness={freshness} metrics={[]} />);
+    const checkMetadata = (surface: HTMLElement) => {
+      const scopeElement = within(surface).getByText(scope, { exact: true });
+      const freshnessElement = within(surface).getByText(freshness, { exact: true });
+      expect(scopeElement).not.toBe(freshnessElement);
+      expect(scopeElement.tagName).toBe('SPAN');
+      expect(freshnessElement.tagName).toBe('SPAN');
+      expect(scopeElement.attributes).toHaveLength(0);
+      expect(freshnessElement.attributes).toHaveLength(0);
+      expect(scopeElement.textContent).toBe(scope);
+      expect(freshnessElement.textContent).toBe(freshness);
+      expect(scopeElement).toBeVisible();
+      expect(freshnessElement).toBeVisible();
+    };
+    const summary = screen.getByRole('region', { name: 'Primitive context' });
+    checkMetadata(summary);
+    fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Primitive context details' });
+    const header = drawer.querySelector<HTMLElement>('[data-drawer-header]');
+    expect(header).toBeVisible();
+    if (!header) throw new Error('Drawer header missing');
+    checkMetadata(header);
+  });
+
   it('retains exact rich source bounds and freshness in both the summary and real drawer', () => {
     render(
       <OperationalBrief

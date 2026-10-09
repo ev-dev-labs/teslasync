@@ -393,14 +393,15 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
 
     // Once the vehicle list resolves the (pending) stats queries turn loading.
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0),
     );
     // The chart panel is still mounted (title present) — only its body is a skeleton.
     expect(
       screen.getByRole('heading', { level: 3, name: 'Change vs period B (%)' }),
     ).toBeInTheDocument();
-    // No KPI card content leaks while loading.
-    expect(screen.queryByText(/Total distance/)).toBeNull();
+    // Metric labels remain visible, but measured KPI values do not.
+    expect(within(screen.getByTestId('period-compare-summary')).getByText(/Total distance/)).toBeInTheDocument();
+    expect(screen.getByTestId('period-compare-summary').querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('renders per-section error states with a working Retry that refetches both feeds', async () => {

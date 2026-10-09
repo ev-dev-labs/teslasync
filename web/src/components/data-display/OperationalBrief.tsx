@@ -75,6 +75,12 @@ const METRIC_COLUMNS: Record<NonNullable<OperationalBriefProps['metricColumns']>
   4: 'md:grid-cols-4',
 }
 
+function renderMetadata(value: ReactNode): ReactNode {
+  return typeof value === 'number' || (typeof value === 'string' && value !== '')
+    ? <span>{value}</span>
+    : value
+}
+
 export function OperationalBrief({
   eyebrow,
   title,
@@ -137,8 +143,8 @@ export function OperationalBrief({
                   <Badge variant={statusTone} size="sm" dot>
                     {statusLabel}
                   </Badge>
-                  {scope}
-                  {freshness}
+                  {renderMetadata(scope)}
+                  {renderMetadata(freshness)}
                 </div>
                 <PanelTitle id={titleId} className={compact ? 'mt-1 text-base' : undefined}>{title}</PanelTitle>
                 <Text as="p" variant="bodySm" className={cn('mt-1', compact ? 'basis-full text-xs leading-snug' : 'max-w-2xl')}>
@@ -242,8 +248,8 @@ export function OperationalBrief({
         headerMeta={
           <>
             <Badge variant={statusTone} dot>{statusLabel}</Badge>
-            {scope}
-            {freshness}
+            {renderMetadata(scope)}
+            {renderMetadata(freshness)}
           </>
         }
       >
