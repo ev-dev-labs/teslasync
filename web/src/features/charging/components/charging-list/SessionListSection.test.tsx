@@ -200,11 +200,22 @@ describe('SessionListSection — loading', () => {
   it('renders skeletons and withholds the search/list chrome while loading', () => {
     const { container } = renderSection({ isLoading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    const placeholders = container.querySelectorAll(
+      '.space-y-3 > [class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders).toHaveLength(5);
+    placeholders.forEach((placeholder) => {
+      expect(placeholder).toHaveClass('h-20', 'w-full', 'rounded');
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+    });
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     // None of the populated chrome mounts during load.
     expect(screen.queryByPlaceholderText(SEARCH_PLACEHOLDER)).toBeNull();
     expect(screen.queryByText('All Sessions')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByTestId('session-card-101')).toBeNull();
+    expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /CSV/ })).toBeNull();
   });
 });
 
