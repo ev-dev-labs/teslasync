@@ -5,6 +5,7 @@ import type { VehicleTwinProps } from '../VehicleTwin';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import english from '@/i18n/en.json';
+import userEvent from '@testing-library/user-event';
 
 vi.unmock('react-i18next');
 
@@ -98,6 +99,77 @@ const baseTwinState = {
   vehicleColor: '',
   lastUpdated: null,
 } satisfies VehicleTwinProps;
+
+describe('VehicleTwin source-derived inspection', () => {
+  async function localizedTwin(props: Partial<VehicleTwinProps>) {
+    const i18n = createInstance();
+    await i18n.init({ lng: 'en', resources: { en: { translation: english } } });
+    return render(<I18nextProvider i18n={i18n}><VehicleTwin {...baseTwinState} {...props} /></I18nextProvider>);
+  }
+
+  it.each(['photo', 'svg'] as const)('keeps all null states unknown and image semantics in %s mode', async variant => {
+    const { container } = await localizedTwin({
+      doors: { driverFront: null, driverRear: null, passengerFront: null, passengerRear: null, trunkFront: null, trunkRear: null },
+      frunkOpen: null, trunkOpen: null, chargePortOpen: null,
+      locked: null, sentryMode: null, headlights: null, hazards: null, turnSignal: null, driverSeatOccupied: null,
+    });
+    const image = container.querySelector('[role="img"]')!;
+    expect(image).toHaveAttribute('aria-label', 'Digital twin');
+    const summary = document.getElementById(image.getAttribute('aria-describedby')!)!;
+    expect(summary.textContent?.match(/Unknown/g)).toHaveLength(17);
+    expect(summary).toHaveTextContent('Driver front Door: Unknown');
+    expect(summary).toHaveTextContent('Driver seat: Unknown');
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+    const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    if (variant === 'photo') fireEvent.load(photo);
+    else fireEvent.error(photo);
+    expect(summary.textContent?.match(/Unknown/g)).toHaveLength(17);
+    expect(container.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
+  });
+
+  it('exposes the same explicit values outside the clipped art with keyboard, click and touch focus', async () => {
+    const user = userEvent.setup();
+    const { container } = await localizedTwin({
+      interactive: true, windowFD: 'partial', windowFP: 'open', windowRD: 'closed', windowRP: null,
+      frunkOpen: true, locked: false, isCharging: true, turnSignal: 'left',
+    });
+    const root = container.firstElementChild!;
+    expect(root).toHaveAttribute('role', 'group');
+    const summary = document.getElementById(root.getAttribute('aria-describedby')!)!;
+    for (const value of ['Driver front Door: Closed', 'Frunk: Open', 'Front driver Window: Partially open',
+      'Front passenger Window: Open', 'Rear driver Window: Closed', 'Rear passenger Window: Unknown',
+      'Locked: Unlocked', 'Charging: Charging', 'Turn signal: Left', 'Driving: Off', 'Driver seat: Empty']) {
+      expect(summary).toHaveTextContent(value);
+    }
+    const rail = container.querySelector('[role="group"][aria-label="Physical-state summary"]')!;
+    expect(rail).toHaveClass('flex-wrap');
+    expect(rail.closest('.overflow-hidden')).toBeNull();
+    const buttons = Array.from(rail.querySelectorAll('button'));
+    expect(buttons).toHaveLength(19);
+    for (const button of buttons) {
+      expect(button).toHaveClass('min-h-touch11', 'min-w-touch11');
+      expect(button).toHaveAttribute('type', 'button');
+      const tooltip = document.getElementById(button.getAttribute('aria-describedby')!)!;
+      expect(tooltip).toHaveTextContent(button.textContent!);
+    }
+    buttons[0].focus();
+    await user.tab();
+    expect(buttons[1]).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(buttons[1]).toHaveFocus();
+    await user.keyboard(' ');
+    expect(buttons[1]).toHaveFocus();
+    await user.click(buttons[2]);
+    expect(buttons[2]).toHaveFocus();
+    fireEvent.pointerDown(buttons[3], { pointerType: 'touch' });
+    fireEvent.pointerUp(buttons[3], { pointerType: 'touch' });
+    fireEvent.click(buttons[3]);
+    expect(buttons[3]).toHaveFocus();
+    const hotspot = container.querySelector('foreignObject[x="44"][y="140"] button')!;
+    expect(hotspot).toHaveAttribute('aria-label', 'Frunk: Open');
+    expect(container.querySelector('[aria-live], [role="status"], [role="alert"]')).toBeNull();
+  });
+});
 
 describe('VehicleTwin', () => {
   it.each([false, true])('keeps actual charge and sentry feedback finite and static with reduced motion=%s', async reduce => {
