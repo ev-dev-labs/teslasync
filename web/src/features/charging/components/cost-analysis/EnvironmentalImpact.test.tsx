@@ -162,8 +162,15 @@ describe('EnvironmentalImpact — loading / empty / error states', () => {
     expect(
       screen.getByRole('heading', { name: /environmental impact/i }),
     ).toBeInTheDocument();
-    // The skeleton block animates; the metric labels are suppressed.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The decorative static block preserves the section's loading geometry.
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveStyle('height: 200px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    for (const label of LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
     expect(screen.queryByText('kg CO₂ saved')).toBeNull();
     expect(screen.queryByText('88.87')).toBeNull();
     // Loading is not the empty or error branch.

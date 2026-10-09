@@ -164,9 +164,23 @@ describe('CostSummaryCards — state priority', () => {
   it('renders the skeleton grid (aria-hidden, no tiles) while loading with no stats yet', () => {
     const { container } = renderCards({ coreStats: null, isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelectorAll('[data-print-card] > [aria-hidden="true"]')).toHaveLength(18);
     const grid = container.querySelector('[aria-hidden="true"]');
     expect(grid).not.toBeNull();
+    expect(grid).toHaveClass('grid', 'grid-cols-2', 'gap-3', 'sm:gap-4', 'lg:grid-cols-3', 'xl:grid-cols-6');
+    const panels = grid?.querySelectorAll('[data-print-card]') ?? [];
+    expect(panels).toHaveLength(6);
+    for (const panel of panels) {
+      const placeholders = panel.querySelectorAll('[aria-hidden="true"]');
+      expect(placeholders).toHaveLength(3);
+      expect(placeholders[0]).toHaveStyle('height: 12px; width: 60%');
+      expect(placeholders[1]).toHaveStyle('height: 24px; width: 80%');
+      expect(placeholders[2]).toHaveStyle('height: 10px; width: 40%');
+      for (const placeholder of placeholders) {
+        expect(placeholder).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+      }
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     // Loading strictly precedes the empty / data branches.
     expect(screen.queryByText('Total Cost')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();

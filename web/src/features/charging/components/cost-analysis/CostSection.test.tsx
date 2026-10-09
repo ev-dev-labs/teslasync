@@ -181,9 +181,11 @@ describe('CostSection — loading branch', () => {
       children: <div data-testid="body" />,
     });
 
-    const skeleton = container.querySelector('.animate-pulse');
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
     expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
     expect(skeleton).toHaveStyle('height: 220px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByTestId('body')).toBeNull();
     // Never a blank panel: the header persists through the loading state.
     expect(heading()).toBeInTheDocument();
@@ -191,7 +193,10 @@ describe('CostSection — loading branch', () => {
 
   it('honours a custom skeletonHeight', () => {
     const { container } = renderSection({ isLoading: true, skeletonHeight: 300 });
-    expect(container.querySelector('.animate-pulse')).toHaveStyle('height: 300px');
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
+    expect(skeleton).toHaveStyle('height: 300px');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
   });
 
   it('gives loading precedence over error (skeleton wins, no QueryError)', () => {
@@ -199,7 +204,13 @@ describe('CostSection — loading branch', () => {
       isLoading: true,
       error: new ApiError('boom', 500),
     });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveStyle('height: 220px');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByTestId('body')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
   });
 });

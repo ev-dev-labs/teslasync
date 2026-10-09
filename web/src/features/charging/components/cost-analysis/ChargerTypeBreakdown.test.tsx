@@ -211,10 +211,16 @@ describe('ChargerTypeBreakdown — CostSection states', () => {
       totalCost: 100,
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveStyle('height: 280px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.getByRole('heading', { level: 3, name: HEADING })).toBeInTheDocument();
     // Loading strictly precedes the data / empty / error branches.
     expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByText('Supercharger')).toBeNull();
+    expect(container.querySelector('div.transition-all')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
