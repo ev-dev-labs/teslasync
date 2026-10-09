@@ -238,7 +238,7 @@ describe('IngestXRayPage', () => {
     const drawer = screen.getByRole('dialog', { name: 'Ingest summary metrics details' });
     expect(within(drawer).getByText('within selected window')).toBeInTheDocument();
     expect(within(drawer).getByText('mean per interval')).toBeInTheDocument();
-    expect(within(drawer).getByText('Exact query bounds are not supplied')).toBeInTheDocument();
+    expect(within(within(drawer).getByRole('region', { name: 'How this was calculated' })).getByText('Exact query bounds are not supplied')).toBeInTheDocument();
     expect(within(drawer).getByText('4,096')).toBeInTheDocument();
     expect(screen.getByLabelText('Vehicle')).toHaveValue('1');
     expect(screen.getByLabelText('Window')).toHaveValue('1h');
