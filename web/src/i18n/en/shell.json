@@ -37,13 +37,15 @@
       "upgrade": "Upgrade"
     },
     "category": "Category",
+    "contextChanged": "This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.",
     "date": "Date",
     "descPlaceholder": "Optional description...",
     "description": "Description",
     "label": "Label",
     "labelPlaceholder": "e.g., battery replaced",
     "listTitle": "Annotations",
-    "removeNamed": "Remove annotation: {{label}}"
+    "removeNamed": "Remove annotation: {{label}}",
+    "savedStale": "Annotation saved for {{target}}. The chart context changed. This form is retained for reference; close it before adding another annotation."
   },
   "annotations": {
     "add": "Add annotation",
