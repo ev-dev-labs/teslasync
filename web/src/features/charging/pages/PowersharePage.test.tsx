@@ -346,8 +346,25 @@ describe('PowersharePage', () => {
     // KPI band degrades to "—" placeholders for all four metrics (never blank).
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
 
-    // One or more skeletons per panel — the animate-pulse marker.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1);
+    // Three static panel placeholders; each trend owns seven chart-shaped bars.
+    const skeleton = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(skeleton).length).toBeGreaterThanOrEqual(1);
+    expect(container.querySelectorAll(skeleton)).toHaveLength(3);
+    for (const [title, height] of [['Live Session', 220], ['Stop Reason', 64], ['Signal Snapshot', 200]] as const) {
+      const card = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(card?.querySelectorAll(skeleton)).toHaveLength(1);
+      expect(card?.querySelector(skeleton)).toHaveStyle({ height: `${height}px` });
+    }
+    for (const title of ['Output Power Trend', 'Remaining Runtime Trend']) {
+      const card = screen.getAllByRole('heading', { name: title, exact: true })[0].closest('[data-card]');
+      const chart = card?.querySelector('[data-chart-state="loading"]');
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      const placeholder = chart?.querySelector('[data-testid="chart-skeleton"]');
+      expect(placeholder).toHaveAttribute('role', 'status');
+      expect(placeholder).toHaveAttribute('aria-busy', 'true');
+      expect(placeholder?.querySelectorAll(':scope > [aria-hidden="true"][class~="rounded-t"]'))
+        .toHaveLength(7);
+    }
 
     // No resolved values and no error copy leak while loading.
     expect(screen.queryByText('3.25 kW')).not.toBeInTheDocument();

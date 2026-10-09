@@ -410,9 +410,21 @@ describe('ChargingListPage — responsive evidence adoption', () => {
     expect(captured.toDistanceDisplay).toBeNull();
     expect(table.querySelector('th[data-column-key="energy"]')).toBeInTheDocument();
     expect(table.querySelector('th[data-column-key="batteryEnd"]')).toBeInTheDocument();
-    expect(screen.getByTestId('charging-overview'))
-      .toHaveTextContent('Search, collections, and exports cover up to 500 loaded sessions in this range.');
     expect(screen.getByTestId('charging-export')).toBeInTheDocument();
+
+    // This overview derives from the capped session query, not a full-range aggregate.
+    const overview = screen.getByTestId('charging-overview');
+    fireEvent.click(within(overview).getByRole('button', { name: 'Review details' }));
+    const details = await screen.findByRole('dialog', { name: 'Overview details' });
+    const narrative = within(details).getByRole('region', { name: 'Decision narrative' });
+    const limitations = within(narrative).getByText('Limitations').parentElement;
+    if (!limitations) throw new Error('Overview limitations disclosure is missing');
+    const scope = 'Search, collections, and exports cover up to 500 loaded sessions in this range.';
+    expect(within(limitations).getAllByText(scope)).toHaveLength(1);
+    const calculation = within(narrative).getByRole('region', { name: 'How this was calculated' });
+    const source = within(calculation).getByText('Data sources').closest('div');
+    if (!source) throw new Error('Overview calculation source is missing');
+    expect(within(source).getAllByText(scope)).toHaveLength(1);
   });
 
   it('keeps the grid and reset action available when desktop search matches no sessions', async () => {
@@ -699,7 +711,21 @@ describe('ChargingListPage — non-happy states', () => {
     mockSessions.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderPage();
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const skeleton = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(skeleton).length).toBeGreaterThan(0);
+    expect(container.querySelectorAll(skeleton)).toHaveLength(7);
+    expect(screen.getByRole('region', { name: 'Charging over time' })
+      .querySelectorAll(`${skeleton}[class~="h-52"]`)).toHaveLength(1);
+    expect(screen.getByRole('region', { name: 'All charging sessions' })
+      .querySelectorAll(`${skeleton}[class~="h-20"]`)).toHaveLength(5);
+    expect(screen.getByRole('region', { name: 'Charging insights' })
+      .querySelectorAll(`${skeleton}[class~="h-40"]`)).toHaveLength(1);
+    const overview = screen.getByTestId('charging-overview');
+    expect(overview).toHaveAttribute('aria-busy', 'true');
+    expect(overview.querySelectorAll(
+      '[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]',
+    )).toHaveLength(6);
+    expect(overview.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(sessionCard(1)).not.toBeInTheDocument();
     expect(trendChart()).not.toBeInTheDocument();
   });
@@ -711,8 +737,16 @@ describe('ChargingListPage — non-happy states', () => {
     );
     renderPage();
 
-    const summary = within(screen.getByRole('region', { name: 'Overview' }));
+    const overview = screen.getByTestId('charging-overview');
+    const source = overview.parentElement?.closest('section');
+    if (!source) throw new Error('Overview source section is missing');
+    expect(source).toHaveAccessibleName('Overview');
+    const summary = within(source);
+    expect(summary.getAllByRole('region', { name: 'Overview' })).toHaveLength(1);
+    expect(summary.getByRole('region', { name: 'Overview' })).toBe(overview);
+    expect(overview.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(await summary.findByText("Can't reach server")).toBeInTheDocument();
+    expect(summary.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
     fireEvent.click(summary.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
   });

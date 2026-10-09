@@ -441,10 +441,19 @@ describe('ChargingCurvePage', () => {
     expect(screen.queryByTestId('charger-type-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('ttc-section')).not.toBeInTheDocument();
 
-    // Per-section skeletons render across the page.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(5);
-    for (const title of sourceTitles)
-      expect(sourceCard(title).querySelector('.animate-pulse')).toBeInTheDocument();
+    // Six source-shaped static placeholders plus six pending summary readings.
+    const skeleton = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(skeleton).length).toBeGreaterThanOrEqual(5);
+    expect(container.querySelectorAll(skeleton)).toHaveLength(6);
+    const heights = [320, 320, 300, 280, 280, 320];
+    sourceTitles.forEach((title, index) => {
+      expect(sourceCard(title).querySelector(skeleton)).toBeInTheDocument();
+      expect(sourceCard(title).querySelectorAll(skeleton)).toHaveLength(1);
+      expect(sourceCard(title).querySelector(skeleton)).toHaveStyle({ height: `${heights[index]}px` });
+    });
+    expect(stats.querySelectorAll(
+      '[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]',
+    )).toHaveLength(6);
   });
 
   it('surfaces QueryError in every section including the KPI band and wires Retry to refetch', () => {
@@ -480,7 +489,10 @@ describe('ChargingCurvePage', () => {
 
     // Zero returned sessions is known; absent measurements are not zero.
     const stats = screen.getByTestId('charging-curve-summary');
-    expect(stats.querySelector('[data-operational-metric="charge.sessions:0"] [data-operational-value]'))
+    const sessionCount = stats.querySelector('[data-operational-metric="totalSessions"]');
+    expect(stats.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(sessionCount).toHaveAttribute('data-value-state', 'value');
+    expect(sessionCount?.querySelector('[data-operational-value]'))
       .toHaveTextContent('0');
     expect(stats.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
     expect(stats).not.toHaveAttribute('aria-busy', 'true');
