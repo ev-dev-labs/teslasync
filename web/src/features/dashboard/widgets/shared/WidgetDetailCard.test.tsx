@@ -150,8 +150,8 @@ describe('WidgetDetailCard — badges', () => {
     render(<WidgetDetailCard entries={entries} />);
 
     // `error` must resolve to the danger palette, `success` to the success one.
-    expect(screen.getByText('Critical').className).toContain('bg-red-100');
-    expect(screen.getByText('Good').className).toContain('bg-green-100');
+    expect(screen.getByText('Critical').className).toContain('bg-[var(--semantic-danger-bg)]');
+    expect(screen.getByText('Good').className).toContain('bg-[var(--semantic-success-bg)]');
   });
 
   it('renders no badge when an entry omits one', () => {

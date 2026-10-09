@@ -173,10 +173,10 @@ describe('TirePressureSection — badge severity variants', () => {
 
     // Badge variant classes come from the shared <Badge> component:
     // success → green, warning → yellow, danger → red.
-    expect(screen.getByText('Normal').className).toContain('bg-green-100')
-    expect(screen.getByText('Low').className).toContain('bg-yellow-100')
-    expect(screen.getByText('High').className).toContain('bg-yellow-100')
-    expect(screen.getByText('Critical').className).toContain('bg-red-100')
+    expect(screen.getByText('Normal').className).toContain('bg-[var(--semantic-success-bg)]')
+    expect(screen.getByText('Low').className).toContain('bg-[var(--semantic-warning-bg)]')
+    expect(screen.getByText('High').className).toContain('bg-[var(--semantic-warning-bg)]')
+    expect(screen.getByText('Critical').className).toContain('bg-[var(--semantic-danger-bg)]')
   })
 })
 

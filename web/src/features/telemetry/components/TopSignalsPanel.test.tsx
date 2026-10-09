@@ -193,21 +193,21 @@ describe('TopSignalsPanel — value-type mapping', () => {
     render(<TopSignalsPanel signals={SIGNALS} />);
 
     // number → info badge (blue) + series[5] bar.
-    expect(screen.getByText(`1,234${TIMES}`)).toHaveClass('bg-blue-100');
+    expect(screen.getByText(`1,234${TIMES}`)).toHaveClass('bg-[var(--semantic-info-bg)]');
     expect(within(rowFor('vehicle_speed')).getByTestId('metric-bar')).toHaveAttribute(
       'data-color',
       chartTokens.series[5],
     );
 
     // string → success badge (green) + series[1] bar.
-    expect(screen.getByText(`87${TIMES}`)).toHaveClass('bg-green-100');
+    expect(screen.getByText(`87${TIMES}`)).toHaveClass('bg-[var(--semantic-success-bg)]');
     expect(within(rowFor('charging_state')).getByTestId('metric-bar')).toHaveAttribute(
       'data-color',
       chartTokens.series[1],
     );
 
     // boolean → warning badge (yellow) + series[2] bar.
-    expect(screen.getByText(`12${TIMES}`)).toHaveClass('bg-yellow-100');
+    expect(screen.getByText(`12${TIMES}`)).toHaveClass('bg-[var(--semantic-warning-bg)]');
     expect(within(rowFor('sentry_mode')).getByTestId('metric-bar')).toHaveAttribute(
       'data-color',
       chartTokens.series[2],
@@ -223,7 +223,7 @@ describe('TopSignalsPanel — value-type mapping', () => {
     // neutral badge → gray, not the info/success/warning palettes.
     const badge = screen.getByText(`5${TIMES}`);
     expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
-    expect(badge).not.toHaveClass('bg-blue-100');
+    expect(badge).not.toHaveClass('bg-[var(--semantic-info-bg)]');
     // colour falls through to the first series entry.
     expect(within(rowFor('mystery')).getByTestId('metric-bar')).toHaveAttribute(
       'data-color',

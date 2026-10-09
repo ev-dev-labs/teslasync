@@ -253,7 +253,7 @@ describe('TotpStatusHero — null-safety & hardening', () => {
 describe('TotpStatusHero — variant mapping & module surface', () => {
   it('flips the pill variant with the activated flag', () => {
     const { unmount } = renderHero({ activated: true })
-    expect(screen.getByTestId('totp-status-pill')).toHaveClass('bg-green-100')
+    expect(screen.getByTestId('totp-status-pill')).toHaveClass('bg-[var(--semantic-success-bg)]')
     unmount()
 
     renderHero({ activated: false })

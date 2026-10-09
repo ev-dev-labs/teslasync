@@ -197,10 +197,10 @@ describe('WidgetRankedList', () => {
       />,
     );
 
-    expect(screen.getByText('Good')).toHaveClass('bg-green-100');
-    expect(screen.getByText('Warn')).toHaveClass('bg-yellow-100');
+    expect(screen.getByText('Good')).toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(screen.getByText('Warn')).toHaveClass('bg-[var(--semantic-warning-bg)]');
     // 'error' → the Badge's `danger` variant (red).
-    expect(screen.getByText('Bad')).toHaveClass('bg-red-100');
+    expect(screen.getByText('Bad')).toHaveClass('bg-[var(--semantic-danger-bg)]');
     expect(screen.getByText('Meh')).toHaveClass(BADGE_VARIANTS.neutral);
   });
 

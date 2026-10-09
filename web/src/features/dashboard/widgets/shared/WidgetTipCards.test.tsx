@@ -220,8 +220,8 @@ describe('WidgetTipCards — impact badge', () => {
     );
 
     // high → success, medium → warning, low → neutral (Badge variant classes).
-    expect(screen.getByText('H')).toHaveClass('bg-green-100');
-    expect(screen.getByText('M')).toHaveClass('bg-yellow-100');
+    expect(screen.getByText('H')).toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(screen.getByText('M')).toHaveClass('bg-[var(--semantic-warning-bg)]');
     expect(screen.getByText('L')).toHaveClass(BADGE_VARIANTS.neutral);
   });
 
