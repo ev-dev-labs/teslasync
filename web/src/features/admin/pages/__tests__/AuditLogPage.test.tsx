@@ -130,7 +130,7 @@ function lastAuditParams(): any {
 
 // Read the canonical tile value without depending on typography wrappers.
 function metricValue(label: string): string {
-  const labelSpan = screen.getByText(label);
+  const labelSpan = within(screen.getByTestId('admin-audit-summary')).getByText(label);
   const valueEl = labelSpan.closest('[data-operational-metric]')?.querySelector('[data-operational-value]');
   return valueEl?.textContent ?? '';
 }
