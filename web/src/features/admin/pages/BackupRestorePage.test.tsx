@@ -298,12 +298,21 @@ function renderPage() {
   return { ...result, client };
 }
 
-// Wait until both queries have resolved and the KPI band replaced its skeleton.
-async function waitForLoaded() {
+// Wait for each source's expected metric state and settled cold-error recovery.
+async function waitForLoaded({
+  configs = 'value',
+  backups = 'value',
+}: {
+  configs?: 'value' | 'missing';
+  backups?: 'value' | 'missing';
+} = {}) {
   await waitFor(() => {
     const summary = screen.getByTestId('backup-restore-summary');
-    expect(summary.querySelector('[data-operational-metric="configs"]')).toHaveAttribute('data-value-state', 'value');
-    expect(summary.querySelector('[data-operational-metric="backups"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summary.querySelector('[data-operational-metric="configs"]')).toHaveAttribute('data-value-state', configs);
+    expect(summary.querySelector('[data-operational-metric="backups"]')).toHaveAttribute('data-value-state', backups);
+    if (configs === 'missing' || backups === 'missing') {
+      expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeInTheDocument();
+    }
   });
   expect(screen.getByText('Total configs')).toBeInTheDocument();
   expect(screen.getByText('Total backups')).toBeInTheDocument();
@@ -404,7 +413,7 @@ describe('BackupRestorePage — data rendering', () => {
   it('surfaces the QueryError recovery UI when the configs query fails', async () => {
     configureRoutes({ configsError: new Error('boom') });
     renderPage();
-    await waitForLoaded();
+    await waitForLoaded({ configs: 'missing', backups: 'value' });
 
     expect(await screen.findByText('Partial data')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Backup configurations' })).toBeInTheDocument();
@@ -445,7 +454,7 @@ describe('BackupRestorePage — data rendering', () => {
   it('keeps the known config count while failed run-source metrics remain unknown', async () => {
     configureRoutes({ runsError: new Error('runs unavailable') });
     renderPage();
-    await waitForLoaded();
+    await waitForLoaded({ configs: 'value', backups: 'missing' });
     const band = screen.getByRole('region', { name: 'Backup overview' });
     expect(within(band).getByText('2')).toBeInTheDocument();
     expect(within(band).getAllByText('—')).toHaveLength(5);
