@@ -97,15 +97,32 @@ beforeEach(() => {
 describe('HeroGauges', () => {
   describe('loading', () => {
     it('renders a skeleton band (no KPI data, no currency call) while the query loads', () => {
-      const { container } = render(<HeroGauges query={makeQuery(undefined, true)} />);
+      const { container } = render(<HeroGauges query={makeQuery(makeData(), true)} />);
 
-      // Two shimmer bars per tile × six tiles.
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(6);
+      // Two static, decorative value slots per tile × six tiles.
+      expect(container.querySelectorAll('[aria-hidden="true"] > [aria-hidden="true"].rounded').length).toBeGreaterThanOrEqual(6);
       // No real labels or values leak through during the first load.
       expect(screen.queryByText('Distance')).not.toBeInTheDocument();
       expect(screen.queryByText(DASH)).not.toBeInTheDocument();
       // The expensive currency derive is never computed on the loading path.
       expect(h.formatCurrency).not.toHaveBeenCalled();
+      const grid = container.querySelector('.grid');
+      expect(grid).toHaveAttribute('aria-hidden', 'true');
+      expect(grid?.children).toHaveLength(6);
+      expect(container.querySelector('.animate-pulse')).toBeNull();
+      for (const tile of Array.from(grid?.children ?? [])) {
+        expect(tile).toHaveAttribute('aria-hidden', 'true');
+        const placeholders = tile.querySelectorAll('[aria-hidden="true"].rounded');
+        expect(placeholders).toHaveLength(2);
+        expect(placeholders[0]).toHaveStyle({ width: '60%', height: '12px' });
+        expect(placeholders[1]).toHaveStyle({ width: '40%', height: '24px' });
+      }
+      for (const label of ALL_LABELS) {
+        expect(screen.queryByText(label)).not.toBeInTheDocument();
+      }
+      for (const value of ['2,000.00', '128', '250.00', '150.00', '$200.00', '240.00']) {
+        expect(screen.queryByText(value)).not.toBeInTheDocument();
+      }
     });
   });
 

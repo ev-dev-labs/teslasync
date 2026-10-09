@@ -235,14 +235,34 @@ describe('DrivingTemperatureStats — partial data', () => {
 
 describe('DrivingTemperatureStats — loading', () => {
   it('renders a skeleton under the heading and leaks no values while loading', () => {
-    const { container } = renderPanel(makeQuery({ isLoading: true, data: FULL }));
+    const { container } = renderPanel(makeQuery({
+      isLoading: true,
+      data: FULL,
+      isError: true,
+      error: new ApiError('pending temperature feed', 500),
+    }));
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[role="status"] > [aria-hidden="true"].rounded').length).toBeGreaterThan(0);
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Temperature stats' }),
+      screen.getByRole('heading', { level: 3, name: 'Observed temperature measurements' }),
     ).toBeInTheDocument();
     // Data must not bleed through the skeleton.
     expect(screen.queryByText('18.40')).toBeNull();
+    const status = screen.getByRole('status', { name: 'Loading Observed temperature measurements' });
+    expect(status.querySelector('[aria-hidden="true"]')).toHaveStyle({ height: '120px' });
+    expect(status.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
+    expect(screen.queryByText('18.40°C')).toBeNull();
+    expect(screen.queryByText('21.70°C')).toBeNull();
+    expect(screen.queryByText('25.90°C')).toBeNull();
+    expect(screen.queryByText('-5.30°C')).toBeNull();
+    expect(screen.queryByText('12.60°C')).toBeNull();
+    expect(screen.queryByText('30.10°C')).toBeNull();
+    expect(screen.queryByText('Inside min')).toBeNull();
+    expect(screen.queryByText('No temperature stats')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Server error')).toBeNull();
   });
 });
 

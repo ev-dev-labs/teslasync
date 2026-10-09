@@ -183,10 +183,16 @@ function renderTab(query: FleetAnalyticsQuery) {
 
 describe('ChargingTab — loading', () => {
   it('renders skeletons for the KPI band and every chart panel, with no KPI labels or state leakage', () => {
-    const { container } = renderTab(makeQuery({ isLoading: true }));
+    const { container } = renderTab(makeQuery({
+      isLoading: true,
+      isError: true,
+      error: new Error('pending charging analytics'),
+    }));
 
-    // Skeletons paint while the first payload loads.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The pending KPI band keeps six static value slots, not pulse classes.
+    const region = screen.getByRole('region', { name: SUMMARY_REGION });
+    expect(region.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20').length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelector('.animate-pulse')).toBeNull();
 
     // Panel shells (titles) are always present, even mid-load.
     for (const title of PANEL_TITLES) {
@@ -199,6 +205,25 @@ describe('ChargingTab — loading', () => {
     expect(within(screen.getByRole('region', { name: SUMMARY_REGION })).getByText('Sessions')).toBeInTheDocument();
     expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(region.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(within(region).queryByText('128')).toBeNull();
+    expect(within(region).queryByText('543.20 kWh')).toBeNull();
+    expect(within(region).queryByText('$87.50')).toBeNull();
+    expect(screen.queryByText('No charger type data')).toBeNull();
+    expect(screen.queryByText('No battery distribution data')).toBeNull();
+    expect(screen.queryByText('No hourly data')).toBeNull();
+    expect(screen.queryByText('Supercharger')).toBeNull();
+    expect(screen.queryByText('Home')).toBeNull();
+    expect(container.querySelector('[data-chart-state="ready"]')).toBeNull();
+    expect(container.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(3);
+    for (const status of screen.getAllByRole('status')) {
+      expect(status).toHaveAttribute('aria-busy', 'true');
+      expect(status).toHaveAttribute('aria-label', 'Loading chart…');
+      expect(status.querySelectorAll('[aria-hidden="true"]')).toHaveLength(7);
+      expect(status.querySelector('[aria-hidden="true"]')).toHaveStyle({ height: '50%' });
+      expect(status.closest('[data-chart-state="loading"]')).toHaveAttribute('aria-busy', 'true');
+    }
+    expect(screen.getByTestId('charging-detail')).toHaveTextContent('detail:loading');
   });
 });
 
