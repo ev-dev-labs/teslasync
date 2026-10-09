@@ -192,7 +192,7 @@ afterEach(() => {
 describe('MyActivityPage — Project Apex elevation', () => {
   it('renders panel shells + skeletons while the feed query is pending', () => {
     pending = true;
-    const { container } = renderPage();
+    renderPage();
 
     // The page header + every panel title mount immediately (never gated on
     // data), while the KPI numbers stay hidden behind their skeletons.
@@ -201,16 +201,46 @@ describe('MyActivityPage — Project Apex elevation', () => {
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
     expect(screen.getByText('Total actions')).toBeInTheDocument();
     expect(kpiCard('Total actions').querySelector('[data-operational-value]')).toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const summary = screen.getByRole('region', { name: 'Activity summary' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    const metrics = summary.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--surface-3)]"][class~="h-5"][class~="w-20"]');
+    expect(metrics.length).toBeGreaterThan(0);
+    expect(metrics).toHaveLength(5);
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
+    for (const title of ['Top actions', 'By category']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-print-card]');
+      expect(panel).not.toBeNull();
+      const pending = panel!.querySelector('[aria-busy="true"]');
+      expect(pending).not.toBeNull();
+      expect(within(pending as HTMLElement).getByRole('status')).toHaveTextContent(/loading/i);
+      const lines = pending!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+      expect(lines).toHaveLength(5);
+      lines.forEach(line => expect(line).toHaveStyle({ height: '28px' }));
+      expect(panel!.querySelector('[data-testid="activity-breakdown-list"]')).toBeNull();
+    }
+    const feed = screen.getByRole('status', { name: 'Loading activity feed' });
+    expect(feed).toHaveAttribute('aria-busy', 'true');
+    const feedLines = feed.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(feedLines).toHaveLength(6);
+    feedLines.forEach(line => expect(line).toHaveStyle({ height: '40px' }));
+    for (const title of ['Activity over time', 'By hour of day']) {
+      const chart = screen.getByRole('figure', { name: title });
+      expect(within(chart).getByRole('heading', { name: title })).toBeInTheDocument();
+      expect(chart).toHaveAttribute('data-chart-state', 'loading');
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      const placeholder = within(chart).getByRole('status', { name: 'Loading chart…' });
+      expect(placeholder.querySelectorAll('[aria-hidden="true"][class~="bg-white/[0.04]"]')).toHaveLength(7);
+      expect(within(chart).queryByRole('img')).not.toBeInTheDocument();
+    }
   });
 
   it('derives the KPI band from the single activity payload', async () => {
     renderPage();
 
-    // Gate on the KPI band leaving its loading skeletons.
+    // Labels persist during loading; await the resolved value in its own card.
     expect(await screen.findByText('Total actions')).toBeInTheDocument();
 
-    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
     expect(within(kpiCard('Active days')).getByText('3')).toBeInTheDocument();
     expect(within(kpiCard('Action types')).getByText('5')).toBeInTheDocument();
     expect(within(kpiCard('Entities touched')).getByText('4')).toBeInTheDocument();
@@ -229,7 +259,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     // auth.login is the modal action (2 of 6 = 33%); its i18n label resolves
     // to the English fallback under the stubbed translator.
     const topActions = screen.getByText('Top actions').closest('div')?.parentElement as HTMLElement;
-    expect(within(topActions).getByText('Signed in')).toBeInTheDocument();
+    expect(await within(topActions).findByText('Signed in')).toBeInTheDocument();
     expect(within(topActions).getByText(/33%/)).toBeInTheDocument();
 
     // vehicle dominates the category split (3 of 6 = 50%), humanised from the
@@ -244,13 +274,14 @@ describe('MyActivityPage — Project Apex elevation', () => {
     await screen.findByText('Total actions');
 
     // Both auth.login rows link to /vehicles/10 (entity_type=vehicle).
-    const vehicleLinks = screen
-      .getAllByRole('link')
+    const feed = screen.getByRole('heading', { name: 'Activity feed' }).closest('[data-print-card]');
+    expect(feed).not.toBeNull();
+    const vehicleLinks = (await within(feed as HTMLElement).findAllByRole('link'))
       .filter((a) => a.getAttribute('href') === '/vehicles/10');
     expect(vehicleLinks).toHaveLength(2);
 
     // The data-export row surfaces its detail in the subtitle.
-    expect(screen.getByText(/drives dataset/)).toBeInTheDocument();
+    expect(within(feed as HTMLElement).getByText(/drives dataset/)).toBeInTheDocument();
   });
 
   it('shows per-section empty states and zeroed KPIs when there is no activity', async () => {

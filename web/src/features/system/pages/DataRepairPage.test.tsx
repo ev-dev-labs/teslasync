@@ -290,10 +290,21 @@ describe('DataRepairPage', () => {
 
   it('shows loading skeletons for the suggestion sections while the diagnosis is in flight', async () => {
     mockRequest.mockReturnValue(new Promise<never>(() => {}));
-    const { container } = renderPage();
+    renderPage();
     await openDiagnostics();
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    for (const title of ['Drive boundaries', 'Charging boundaries']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-print-card]');
+      expect(panel).not.toBeNull();
+      const placeholder = panel!.querySelector('[aria-hidden="true"].space-y-2');
+      expect(placeholder).not.toBeNull();
+      const lines = placeholder!.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]');
+      expect(lines.length).toBeGreaterThan(0);
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toHaveStyle({ height: '120px', width: '100%' });
+      expect(lines[1]).toHaveStyle({ height: '120px', width: '60%' });
+      expect(panel!.querySelector('[data-testid^="repair-suggestion-"]')).toBeNull();
+    }
     // Panel scaffolding is visible during load — never a blank page.
     expect(screen.getByRole('heading', { name: /Drive boundaries/ })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Charging boundaries/ })).toBeInTheDocument();
@@ -434,7 +445,13 @@ describe('DataRepairPage', () => {
     mockApi(buildReport({ truncated: true }), EMPTY_STALE);
     renderPage();
     await openDiagnostics();
-    expect(await screen.findByText(/hit its per-request limit/i)).toBeInTheDocument();
+    const disclosure = await screen.findByText(
+      'The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.',
+      { selector: '[role="status"] > span' },
+    );
+    const notice = disclosure.closest('[role="status"]');
+    expect(notice).not.toBeNull();
+    expect(within(notice as HTMLElement).getByText(/hit its per-request limit/i)).toBeInTheDocument();
   });
 
   it('still renders the stale worklist with SI metrics converted at the display boundary', async () => {

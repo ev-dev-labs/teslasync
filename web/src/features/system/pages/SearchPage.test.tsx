@@ -225,7 +225,22 @@ describe('SearchPage', () => {
     expect(screen.getByText('Total results')).toBeInTheDocument();
     expect(metricCard('Total results').querySelector('[data-operational-value]')).toBeNull();
     expect(screen.getByRole('region', { name: 'Search summary' })).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
+    const summary = screen.getByRole('region', { name: 'Search summary' });
+    expect(summary.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--surface-3)]"][class~="h-5"][class~="w-20"]')).toHaveLength(4);
+    const heading = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][class~="w-1/3"]');
+    expect(heading).toHaveClass('h-4');
+    const results = heading!.closest('[data-print-card]');
+    expect(results).not.toBeNull();
+    const placeholders = results!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders.length).toBeGreaterThanOrEqual(4);
+    expect(placeholders).toHaveLength(6);
+    const rows = results!.querySelectorAll('.space-y-2 > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(rows).toHaveLength(5);
+    rows.forEach(row => {
+      expect(row).toHaveStyle({ height: '48px' });
+      expect(row).toHaveClass('w-full');
+    });
+    expect(screen.queryByRole('region', { name: 'Search results' })).not.toBeInTheDocument();
   });
 
   it('groups hits into ALL_TYPES order and derives the KPI band from the hit set', async () => {

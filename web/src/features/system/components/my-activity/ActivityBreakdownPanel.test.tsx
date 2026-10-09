@@ -78,7 +78,14 @@ describe('ActivityBreakdownPanel', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent(/loading/i);
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    const pending = status.closest('[aria-busy="true"]');
+    expect(pending).not.toBeNull();
+    const lines = pending!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(lines).toHaveLength(5);
+    lines.forEach(line => {
+      expect(line).toHaveStyle({ height: '28px' });
+      expect(line).toHaveClass('w-full', 'rounded');
+    });
     // Loading must win over the list / empty branches.
     expect(screen.queryByRole('list')).toBeNull();
   });
