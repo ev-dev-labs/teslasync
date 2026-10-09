@@ -404,6 +404,7 @@ export default function TripReplayPage() {
   return (
     <PageLayout
       title={t('replay.title', 'Trip Replay')}
+      subtitle={t('help.replay.power', 'Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.')}
       metadataActions={drive
         ? (
           <Text variant="bodySm" className="max-w-full [overflow-wrap:anywhere]">

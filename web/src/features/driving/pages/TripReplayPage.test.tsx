@@ -37,6 +37,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, act, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
 
 /* ── react-i18next: deterministic English-fallback rendering ─────────────── */
@@ -232,7 +233,16 @@ vi.mock('@/components/data-display/PlaybackControls', () => ({
   },
 }));
 
-import TripReplayPage from './TripReplayPage';
+import TripReplayPage from '@/features/trips/pages/TripReplayPage';
+
+it('offers keyboard-accessible power sign help in the canonical replay header', () => {
+  renderPage();
+  const help = screen.getByRole('button', { name: 'More info: Trip Replay' });
+  act(() => help.focus());
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.help.replay.power);
+  expect(screen.getByTestId('trip-replay-map')).toBeInTheDocument();
+});
 
 /* ── Fixtures ────────────────────────────────────────────────────────────── */
 function makePos(overrides: Partial<DrivePosition> = {}): DrivePosition {
