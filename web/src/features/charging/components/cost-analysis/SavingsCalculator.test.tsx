@@ -207,14 +207,35 @@ describe('SavingsCalculator — empty comparison', () => {
 
 describe('SavingsCalculator — loading', () => {
   it('renders a skeleton, marks the comparison region busy, and hides cards + empty', () => {
-    const { container } = renderCalc({ isLoading: true });
+    const { container } = renderCalc({ isLoading: true, error: new Error('stale') });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-busy="true"] > [aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle('height: 160px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(skeleton?.parentElement).toHaveClass('space-y-3', 'xl:col-span-2');
+    expect(screen.getByRole('heading', { name: 'Comparison' }).parentElement).toBe(skeleton?.parentElement);
+    expect(screen.getByRole('heading', { name: 'Gas vs Electric Savings Calculator' })).toBeInTheDocument();
     expect(screen.queryByText('$1,200.50')).toBeNull();
+    expect(screen.queryByText('$320.75')).toBeNull();
+    expect(screen.queryByText('$879.75')).toBeNull();
+    expect(screen.queryByText('$73.31')).toBeNull();
+    expect(screen.queryByText('Gas Cost (equivalent)')).toBeNull();
+    expect(screen.queryByText('EV Cost (actual)')).toBeNull();
+    expect(screen.queryByText('Total Savings')).toBeNull();
+    expect(screen.queryByText('Monthly Savings')).toBeNull();
     expect(screen.queryByText('Not enough data for comparison')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
     // Inputs stay editable while data loads.
     expect(screen.getByLabelText(/Gas Price/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Gas Price/i)).toBeEnabled();
+    expect(screen.getByLabelText(/Gas Car MPG/i)).toBeEnabled();
+    expect(screen.getByLabelText(/Electricity Rate/i)).toBeEnabled();
   });
 
   it('lets loading take precedence over an already-present comparison', () => {

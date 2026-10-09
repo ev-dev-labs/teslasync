@@ -216,13 +216,20 @@ describe('LifetimeSummary — loading', () => {
   it('renders the section skeleton at the 200px height this band requests and hides the tiles', () => {
     const { container } = renderSummary({ isLoading: true });
 
-    const skeleton = container.querySelector('.animate-pulse');
+    const skeleton = container.querySelector('[aria-hidden="true"][style]');
     expect(skeleton).not.toBeNull();
     expect(skeleton).toHaveStyle('height: 200px');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
 
     // Never a blank panel: the header persists, but no tile renders.
     expect(heading()).toHaveAccessibleName('Lifetime Summary');
     expect(screen.queryByText('Total Spent')).toBeNull();
+    expect(screen.queryByText('$1,234.50')).toBeNull();
+    expect(screen.queryByText('456.70 kWh')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 
   it('gives loading precedence over error (skeleton wins, no QueryError)', () => {
@@ -230,8 +237,18 @@ describe('LifetimeSummary — loading', () => {
       isLoading: true,
       error: new ApiError('boom', 500),
     });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"][style]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveStyle('height: 200px');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
+    expect(heading()).toHaveAccessibleName('Lifetime Summary');
+    expect(screen.queryByText('Total Spent')).toBeNull();
+    expect(screen.queryByText('$1,234.50')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
   });
 });
 

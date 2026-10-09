@@ -212,17 +212,25 @@ describe('MonthlyCostTable — sorting', () => {
 
 describe('MonthlyCostTable — loading / error / empty chrome', () => {
   it('shows the skeleton (never rows) while loading, keeping the heading', () => {
-    const { container } = renderTable({ isLoading: true });
+    const { container } = renderTable({ isLoading: true, error: new Error('stale') });
 
     expect(
       screen.getByRole('heading', { name: /monthly cost breakdown/i }),
     ).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"][style]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle('height: 200px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     // No table headers/rows and no empty/error chrome while loading.
     expect(screen.queryByRole('button', { name: 'Sessions' })).toBeNull();
     expect(container.querySelector('tbody tr')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('40.00 kWh')).toBeNull();
+    expect(screen.queryByText('$10.50')).toBeNull();
+    expect(screen.queryByText('No monthly data available')).toBeNull();
   });
 
   it('renders a labelled empty state instead of a blank panel for an empty dataset', () => {
