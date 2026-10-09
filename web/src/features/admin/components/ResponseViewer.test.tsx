@@ -125,8 +125,8 @@ describe('ResponseViewer', () => {
     );
     // The section title is always present.
     expect(screen.getByText('Response')).toBeInTheDocument();
-    // A pulsing skeleton stands in for the response.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The shared static skeleton stands in for the response.
+    expect(container.querySelector('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
     // The empty prompt and the body region are both suppressed.
     expect(screen.queryByText('Send a request to see the response')).toBeNull();
     expect(screen.queryByRole('region', RESPONSE_BODY)).toBeNull();

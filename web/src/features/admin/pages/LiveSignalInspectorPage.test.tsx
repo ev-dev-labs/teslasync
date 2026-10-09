@@ -308,7 +308,7 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     renderPage();
     selectVehicle('1');
 
-    expect(document.querySelector('.animate-pulse')).toBeTruthy();
+    expect(screen.getByRole('status', { name: 'Loading Live snapshot' }).querySelector('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toBeTruthy();
     expect(screen.getByRole('status', { name: 'Loading Source layers' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading Signal kinds' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading Live snapshot' })).toBeInTheDocument();

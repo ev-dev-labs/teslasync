@@ -121,7 +121,7 @@ describe('FleetComparisonPanel', () => {
     // Panel title (shell) is always present — never a blank panel.
     expect(screen.getByText(/fleet comparison/i)).toBeInTheDocument()
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
-    expect(container.querySelector('.animate-pulse')).toBeTruthy()
+    expect(container.querySelector('[aria-busy="true"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toBeTruthy()
     // The panel announces its busy state to assistive tech.
     expect(container.querySelector('[aria-busy="true"]')).toBeTruthy()
   })
