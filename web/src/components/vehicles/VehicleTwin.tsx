@@ -323,24 +323,15 @@ function GroundShadow() {
 }
 
 function ChargingUnderglow() {
-  const { ids } = useTwinCtx();
   return (
     <g pointerEvents="none">
-      <motion.g
-        animate={ambientFrames({ opacity: [0.2, 0.55, 0.2], scaleX: [160 / 190, 205 / 190, 160 / 190] })}
-        transition={ambientLoop({ duration: 2.4, repeat: Infinity, ease: 'easeInOut' })}
-      >
-        <ellipse cx={298} cy={255} rx={190} ry={16}
-          fill="rgba(34,197,94,0.18)" filter={`url(#${ids.glow})`} />
-      </motion.g>
-      <motion.path
+      <path
         d="M 152 246 C 240 253 360 253 446 244"
         fill="none"
-        stroke="rgba(34,197,94,0.38)"
+        stroke={C.chargeGreen}
         strokeWidth={2}
         strokeLinecap="round"
-        animate={ambientFrames({ opacity: [0.18, 0.75, 0.18] })}
-        transition={ambientLoop({ duration: 1.8, repeat: Infinity, ease: 'easeInOut' })}
+        opacity={0.45}
       />
     </g>
   );
@@ -1089,21 +1080,15 @@ function ChargePortIndicator({
       )}
       {charging && (
         <>
-          <motion.circle
+          <circle
             cx={cx}
             cy={cy}
             r={5}
             fill={C.chargeGreen}
-            animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
-            transition={ambientLoop({ duration: 1.2, repeat: Infinity, ease: 'easeInOut' })}
+            opacity={0.65}
           />
-          <motion.g
-            animate={ambientFrames({ opacity: [0.75, 0, 0.75], scale: [0.8, 1.8, 0.8] })}
-            transition={ambientLoop({ duration: 1.5, repeat: Infinity, ease: 'easeInOut' })}
-          >
-            <circle cx={cx} cy={cy} r={10} fill="none" vectorEffect="non-scaling-stroke"
-              stroke={C.chargeGreen} strokeWidth={1} />
-          </motion.g>
+          <circle cx={cx} cy={cy} r={10} fill="none" vectorEffect="non-scaling-stroke"
+            stroke={C.chargeGreen} strokeWidth={1} opacity={0.65} />
           <path
             d="M 532 129.5 L 526.5 138 L 532 138 L 529 144.5 L 538.5 134 L 533 134 Z"
             fill={C.chargeGreen}
@@ -1143,24 +1128,17 @@ function SecurityOverlay({
   return (
     <g>
       {sentryMode && (
-        <motion.g
-          animate={ambientFrames({ opacity: [0.65, 0.18, 0.65], scaleX: [13 / 16, 21 / 16, 13 / 16] })}
-          transition={ambientLoop({ duration: 2, repeat: Infinity })}
-        >
-          <ellipse cx={cx} cy={sentryY} rx={16} ry={7} fill="none" vectorEffect="non-scaling-stroke"
-            stroke={C.sentryGlow} strokeWidth={1.2} />
-        </motion.g>
+        <ellipse cx={cx} cy={sentryY} rx={16} ry={7} fill="none" vectorEffect="non-scaling-stroke"
+          stroke={C.sentryGlow} strokeWidth={1.2} opacity={0.65} />
       )}
       {sentryMode && (
         <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
           <Tooltip content="Sentry mode active" side="top">
-            <motion.span
+            <span
               className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]"
-              animate={ambientFrames({ opacity: [1, 0.45, 1] })}
-              transition={ambientLoop({ duration: 2, repeat: Infinity })}
             >
               <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />
-            </motion.span>
+            </span>
           </Tooltip>
         </foreignObject>
       )}

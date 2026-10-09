@@ -44,6 +44,57 @@ const baseTwinState = {
 } satisfies VehicleTwinProps;
 
 describe('VehicleTwin', () => {
+  it.each([false, true])('keeps actual charge and sentry feedback finite and static with reduced motion=%s', async reduce => {
+    motionPreference.reduce = reduce;
+    const { container, rerender } = render(
+      <VehicleTwin {...baseTwinState} isCharging chargePortOpen sentryMode />,
+    );
+    const selectors = [
+      ['path[d="M 152 246 C 240 253 360 253 446 244"]', '0.45'],
+      ['circle[cx="532"][cy="136"][r="5"]', '0.65'],
+      ['circle[cx="532"][cy="136"][r="10"]', '0.65'],
+      ['ellipse[cx="320"][cy="91"][rx="16"][ry="7"]', '0.65'],
+    ] as const;
+    const assertStatic = () => {
+      for (const [selector, opacity] of selectors) {
+        const indicator = container.querySelector(selector);
+        expect(indicator).toHaveAttribute('opacity', opacity);
+        expect(indicator).not.toHaveAttribute('filter');
+        expect(indicator).not.toHaveAttribute('style');
+        expect(indicator?.parentElement).not.toHaveAttribute('style');
+        for (const attribute of ['cx', 'cy', 'r', 'rx', 'ry']) {
+          const value = indicator?.getAttribute(attribute);
+          if (value != null) expect(Number.isFinite(Number(value))).toBe(true);
+        }
+      }
+      expect(container.querySelector('ellipse[cx="298"][cy="255"]')).toBeNull();
+      expect(container.querySelector('.lucide-shield')?.parentElement).not.toHaveAttribute('style');
+      expect(container.querySelector('rect[x="527"][y="132"]')).toHaveAttribute('width', '10');
+      expect(container.querySelector('path[d="M 532 129.5 L 526.5 138 L 532 138 L 529 144.5 L 538.5 134 L 533 134 Z"]'))
+        .toHaveAttribute('fill', 'var(--semantic-info)');
+    };
+    assertStatic();
+    fireEvent.load(container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!);
+    await act(async () => {
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    });
+    assertStatic();
+    motionPreference.reduce = !reduce;
+    rerender(<VehicleTwin {...baseTwinState} isCharging chargePortOpen sentryMode locked={false} />);
+    assertStatic();
+    expect(container.querySelector('.lucide-lock-open')).toBeInTheDocument();
+    rerender(<VehicleTwin {...baseTwinState} chargePortOpen />);
+    expect(container.querySelector('circle[cx="532"][cy="136"][r="9"]')).toBeInTheDocument();
+    for (const [selector] of selectors) expect(container.querySelector(selector)).toBeNull();
+    for (const state of [false, null] as const) {
+      rerender(<VehicleTwin {...baseTwinState} chargePortOpen={state} sentryMode={state} locked={null} />);
+      for (const [selector] of selectors) expect(container.querySelector(selector)).toBeNull();
+      expect(container.querySelector('.lucide-shield')).toBeNull();
+      expect(container.querySelector('.lucide-lock')).toBeNull();
+      expect(container.querySelector('.lucide-lock-open')).toBeNull();
+    }
+  });
+
   it.each([false, true])('keeps light emission bounded and static with reduced motion=%s', async reduce => {
     motionPreference.reduce = reduce;
     const { container, rerender } = render(<VehicleTwin {...baseTwinState} headlights driveIn />);
