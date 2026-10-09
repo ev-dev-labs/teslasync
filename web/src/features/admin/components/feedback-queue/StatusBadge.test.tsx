@@ -57,31 +57,31 @@ describe('StatusBadge', () => {
     const { chip } = renderBadge('new')
     expect(chip).not.toBeNull()
     expect(chip?.textContent?.trim()).toBe('New')
-    expect(chip?.className).toContain('bg-yellow-100')
-    expect(chip?.className).toContain('text-yellow-800')
+    expect(chip?.className).toContain('bg-[var(--semantic-warning-bg)]')
+    expect(chip?.className).toContain('text-[var(--semantic-warning)]')
   })
 
   it('renders a triaged item as a green success chip', () => {
     const { chip } = renderBadge('triaged')
     expect(chip?.textContent?.trim()).toBe('Triaged')
-    expect(chip?.className).toContain('bg-green-100')
-    expect(chip?.className).toContain('text-green-800')
-    expect(chip?.className).not.toContain('bg-yellow-100')
+    expect(chip?.className).toContain('bg-[var(--semantic-success-bg)]')
+    expect(chip?.className).toContain('text-[var(--semantic-success)]')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-warning-bg)]')
   })
 
   it('renders a closed item as a neutral grey chip', () => {
     const { chip } = renderBadge('closed')
     expect(chip?.textContent?.trim()).toBe('Closed')
     expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
-    expect(chip?.className).not.toContain('bg-green-100')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-success-bg)]')
   })
 
   it('assigns a distinct variant colour per known status', () => {
     const knew = classFor('new')
     const triaged = classFor('triaged')
     const closed = classFor('closed')
-    expect(knew).toContain('bg-yellow-100')
-    expect(triaged).toContain('bg-green-100')
+    expect(knew).toContain('bg-[var(--semantic-warning-bg)]')
+    expect(triaged).toContain('bg-[var(--semantic-success-bg)]')
     expect(closed).toContain(BADGE_VARIANTS.neutral)
     expect(knew).not.toEqual(triaged)
     expect(triaged).not.toEqual(closed)
@@ -105,8 +105,8 @@ describe('StatusBadge', () => {
     expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
     // A still-active-but-unrecognised status must not be coloured as an active
     // (warning/success) state...
-    expect(chip?.className).not.toContain('bg-yellow-100')
-    expect(chip?.className).not.toContain('bg-green-100')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-warning-bg)]')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-success-bg)]')
     // ...nor masked as the terminal "Closed" label.
     expect(chip?.textContent?.trim()).not.toBe('Closed')
   })
