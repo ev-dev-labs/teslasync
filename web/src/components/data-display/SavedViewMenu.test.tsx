@@ -191,7 +191,15 @@ describe('SavedViewMenu — trigger + popover', () => {
     for (const name of ['Set as default', 'Pin', 'Rename view', 'Delete']) {
       const action = within(menu).getByRole('button', { name, exact: true });
       expect(action).toHaveAttribute('type', 'button');
-      expect(action).toHaveClass('focus-visible:ring-2', 'opacity-100', '[@media(hover:none)]:opacity-100');
+      expect(action).toHaveClass(
+        'focus-visible:outline',
+        'focus-visible:outline-2',
+        'focus-visible:outline-offset-2',
+        'focus-visible:outline-[var(--focus-ring)]',
+        'forced-colors:focus-visible:outline-[Highlight]',
+        'opacity-100',
+        '[@media(hover:none)]:opacity-100',
+      );
       expect(action).not.toHaveClass('opacity-0');
     }
   });
@@ -204,7 +212,13 @@ describe('SavedViewMenu — trigger + popover', () => {
     const dialog = screen.getByRole('dialog', { name: 'Manage views' });
     for (const name of ['Set as default', 'Pin', 'Rename view', 'Delete']) {
       expect(within(dialog).getByRole('button', { name, exact: true }))
-        .toHaveClass('focus-visible:ring-2');
+        .toHaveClass(
+          'focus-visible:outline',
+          'focus-visible:outline-2',
+          'focus-visible:outline-offset-2',
+          'focus-visible:outline-[var(--focus-ring)]',
+          'forced-colors:focus-visible:outline-[Highlight]',
+        );
     }
   });
 
