@@ -181,7 +181,13 @@ describe('WeekdaySelect', () => {
     expect(button).not.toHaveAttribute('role');
     expect(button).not.toHaveAttribute('tabindex');
     expect(button).not.toHaveAttribute('aria-checked');
-    expect(button).toHaveClass('focus-visible:ring-2', 'focus-visible:ring-[var(--focus-ring)]');
+    expect(button).toHaveClass(
+      'focus-visible:outline',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+    );
     button.focus();
     expect(button).toHaveFocus();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
