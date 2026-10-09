@@ -257,7 +257,7 @@ describe('ApiPlaygroundPage', () => {
     expect(history).toHaveTextContent('not server-wide traffic')
     fireEvent.click(within(spec).getByRole('button', { name: 'Review details' }))
     expect(screen.getByRole('dialog')).toHaveTextContent('loaded API specification')
-    expect(screen.getByRole('region', { name: 'Endpoint explorer' })).toBeInTheDocument()
+    expect(screen.getByRole('complementary', { name: 'Endpoint explorer' })).toBeInTheDocument()
   })
 
   it('renders skeletons with retained KPI labels while the spec query is loading', async () => {
@@ -289,6 +289,9 @@ describe('ApiPlaygroundPage', () => {
     mockedRequest.mockResolvedValueOnce(SPEC_YAML)
 
     renderPage()
+
+    const spec = screen.getByTestId('api-playground-spec-summary')
+    await waitFor(() => expect(spec.querySelectorAll('[data-value-state="value"]')).toHaveLength(4))
 
     await waitFor(() =>
       expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
@@ -416,6 +419,9 @@ describe('ApiPlaygroundPage', () => {
     mockedRequest.mockResolvedValue(SPEC_YAML)
 
     renderPage()
+
+    const spec = screen.getByTestId('api-playground-spec-summary')
+    await waitFor(() => expect(spec.querySelectorAll('[data-value-state="value"]')).toHaveLength(4))
 
     await waitFor(() =>
       expect(within(kpiRegion()).getByText('Total endpoints')).toBeInTheDocument(),
