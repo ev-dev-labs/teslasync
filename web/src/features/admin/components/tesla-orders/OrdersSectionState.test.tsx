@@ -70,18 +70,38 @@ describe('OrdersSectionState', () => {
       const { container, queryByTestId } = renderState('loading', {
         skeletonHeight: 320,
       });
-      const skeleton = container.querySelector('.animate-pulse');
+      const placeholders = container.querySelectorAll(
+        ':scope > [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+      );
+      expect(placeholders).toHaveLength(1);
+      const [skeleton] = placeholders;
       expect(skeleton).not.toBeNull();
       expect((skeleton as HTMLElement).style.height).toBe('320px');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+      expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
       // No affordance from other branches leaks in.
       expect(queryByTestId('ready-body')).toBeNull();
       expect(screen.queryByRole('status')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.queryByText('orders board')).toBeNull();
     });
 
     it('falls back to the default skeleton height (220) when none is supplied', () => {
       const { container } = renderState('loading');
-      const skeleton = container.querySelector('.animate-pulse') as HTMLElement;
-      expect(skeleton.style.height).toBe('220px');
+      const placeholders = container.querySelectorAll(
+        ':scope > [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+      );
+      expect(placeholders).toHaveLength(1);
+      const [skeleton] = placeholders;
+      expect((skeleton as HTMLElement).style.height).toBe('220px');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+      expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+      expect(screen.queryByTestId('ready-body')).toBeNull();
+      expect(screen.queryByText('orders board')).toBeNull();
     });
   });
 

@@ -120,12 +120,30 @@ describe('OrderStatusBreakdown — loading', () => {
   it('renders a skeleton placeholder and withholds the bar + stat grid', () => {
     const { container } = renderPanel({ status: 'loading' });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByRole('heading', { name: /Order status/i })
+      .closest('[data-print-card]');
+    expect(panel).not.toBeNull();
+    const placeholders = panel!.querySelectorAll(
+      ':scope > [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders).toHaveLength(1);
+    const [placeholder] = placeholders;
+    expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+    expect(placeholder).toHaveStyle({ height: '180px' });
+    expect(placeholder).toBeEmptyDOMElement();
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     // Neither the proportion bar nor any bucket badge should be present.
     expect(
       screen.queryByRole('img', { name: /distribution/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Delivered')).toBeNull();
+    expect(panel!.querySelectorAll('.grid')).toHaveLength(0);
+    for (const label of ['In progress', 'Ready · in transit', 'Cancelled', 'Other']) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText('40%')).toBeNull();
+    expect(screen.queryByText('4')).toBeNull();
   });
 });
 

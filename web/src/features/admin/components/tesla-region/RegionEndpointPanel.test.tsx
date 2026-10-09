@@ -144,14 +144,41 @@ describe('RegionEndpointPanel — header & state precedence', () => {
   it('renders only skeletons in the loading branch (no error/content leak)', () => {
     const { container } = renderPanel({ isLoading: true })
 
-    // Skeleton(height=64) → 1 pulse; Skeleton(lines=5) → 5 pulses = 6 total.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6)
+    const panel = screen.getByRole('heading', { name: 'Fleet API endpoint' })
+      .closest('[data-print-card]')
+    expect(panel).not.toBeNull()
+    const loadingRegions = panel!.querySelectorAll(':scope > .space-y-3')
+    expect(loadingRegions).toHaveLength(1)
+    const [loadingRegion] = loadingRegions
+    // The 64px hero and five 16px rows remain static decorative geometry.
+    const placeholders = loadingRegion.querySelectorAll(
+      '[class*="bg-[var(--skeleton-bg)]"]',
+    )
+    expect(placeholders).toHaveLength(6)
+    placeholders.forEach((placeholder, index) => {
+      expect(placeholder).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]')
+      expect(placeholder.closest('[aria-hidden="true"]')).not.toBeNull()
+      expect(placeholder).toHaveStyle({ height: index === 0 ? '64px' : '16px' })
+      if (index === 0) {
+        expect(placeholder).toHaveClass('w-full')
+        expect(placeholder).toHaveAttribute('aria-hidden', 'true')
+      } else {
+        expect(placeholder).toHaveStyle({ width: index === 5 ? '60%' : '100%' })
+      }
+      expect(placeholder).toBeEmptyDOMElement()
+    })
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
     // Content-only affordances must be absent while loading.
     expect(screen.queryByText('Fleet API base URL')).not.toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Copy Fleet API base URL' }),
     ).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText(NA_ZONE)).not.toBeInTheDocument()
+    expect(screen.queryByText(NA_URL)).not.toBeInTheDocument()
+    expect(screen.queryByText(NA_HOST)).not.toBeInTheDocument()
+    expect(panel!.querySelectorAll('dl, code')).toHaveLength(0)
   })
 
   it('gives the loading branch precedence over a simultaneous error flag', () => {
@@ -161,8 +188,40 @@ describe('RegionEndpointPanel — header & state precedence', () => {
       error: new Error('boom'),
     })
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    const panel = screen.getByRole('heading', { name: 'Fleet API endpoint' })
+      .closest('[data-print-card]')
+    expect(panel).not.toBeNull()
+    const loadingRegions = panel!.querySelectorAll(':scope > .space-y-3')
+    expect(loadingRegions).toHaveLength(1)
+    const [loadingRegion] = loadingRegions
+    const placeholders = loadingRegion.querySelectorAll(
+      '[class*="bg-[var(--skeleton-bg)]"]',
+    )
+    expect(placeholders.length).toBeGreaterThan(0)
+    expect(placeholders).toHaveLength(6)
+    placeholders.forEach((placeholder, index) => {
+      expect(placeholder).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]')
+      expect(placeholder.closest('[aria-hidden="true"]')).not.toBeNull()
+      expect(placeholder).toHaveStyle({ height: index === 0 ? '64px' : '16px' })
+      if (index === 0) {
+        expect(placeholder).toHaveClass('w-full')
+        expect(placeholder).toHaveAttribute('aria-hidden', 'true')
+      } else {
+        expect(placeholder).toHaveStyle({ width: index === 5 ? '60%' : '100%' })
+      }
+      expect(placeholder).toBeEmptyDOMElement()
+    })
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByText('Fleet API base URL')).not.toBeInTheDocument()
+    expect(screen.queryByText(NA_ZONE)).not.toBeInTheDocument()
+    expect(screen.queryByText(NA_URL)).not.toBeInTheDocument()
+    expect(screen.queryByText(NA_HOST)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Copy Fleet API base URL' }),
+    ).not.toBeInTheDocument()
+    expect(panel!.querySelectorAll('dl, code')).toHaveLength(0)
   })
 })
 
