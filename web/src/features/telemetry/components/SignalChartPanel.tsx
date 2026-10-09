@@ -3,7 +3,7 @@
  *
  * Owns no data fetching; consumers pass `data` (sorted ascending by
  * timestamp) and `selectedSignals`. When `isLive` is true the panel uses
- * the "live" visual treatment (red pulse, event/point counters, no
+ * the "live" visual treatment (static mode indicator, event/point counters, no
  * series animation) but the underlying chart structure is identical.
  *
  * The `chartMode` prop controls layout:
@@ -11,7 +11,7 @@
  *   - 'grid'    — SmallMultiplesChart, one cell per series
  *   - 'auto'    — overlay until `gridAutoThreshold` is exceeded, then grid
  *
- * The grid mode keeps the panel header and (for live mode) the pulse
+ * The grid mode keeps the panel header and (for live mode) the static
  * indicator, only the chart body swaps. This lets the workspace page
  * stay legible when the user pins many signals at once without forcing
  * them to manage display modes themselves.
@@ -47,6 +47,7 @@ import { CHART_COLORS } from '@/lib/colors';
 
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
+import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -172,14 +173,14 @@ export function SignalChartPanel({
       <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
         <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2">
           {isLive ? (
-            <Radio className="h-4 w-4 text-red-500 animate-pulse" aria-hidden="true" />
+            <Radio className={cn('h-4 w-4', typography.color.secondary)} aria-hidden="true" />
           ) : (
-            <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <BarChart3 className={cn('h-4 w-4', typography.color.secondary)} aria-hidden="true" />
           )}
           <SectionTitle className="min-w-0 break-words">{resolvedTitle}</SectionTitle>
           {isLive ? (
-            <Caption className="ms-auto flex flex-wrap items-center gap-1.5 text-red-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" aria-hidden="true" />
+            <Caption className="ms-auto flex flex-wrap items-center gap-1.5">
+              <span className={cn('h-1.5 w-1.5 rounded-full', neonColorMap.cyan.dot)} aria-hidden="true" />
               {fmtInt(liveEventCount ?? 0)} {t('events')} · {fmtInt(data.length)} {t('points')}
             </Caption>
           ) : data.length > 0 && pointsLoaded != null ? (
@@ -233,18 +234,18 @@ export function SignalChartPanel({
             {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height={height}>
                 <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
                   <XAxis
                     dataKey="timestampMs"
                     type="number"
                     allowDuplicatedCategory={false}
                     domain={['dataMin', 'dataMax']}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tick={{ fill: chartTokens.axisStroke, fontSize: 10 }}
                     tickFormatter={(value: number) => formatTime(new Date(value))}
                   />
-                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  <YAxis yAxisId="left" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                   {useRightAxis ? (
-                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                   ) : null}
                   <Tooltip
                     content={(
@@ -265,9 +266,9 @@ export function SignalChartPanel({
                       type="monotone"
                       dataKey={sig}
                       stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                       data={overlaySeries.get(sig)?.rows}
-                      dot={overlaySeries.get(sig)?.showDots ? { r: 2, strokeWidth: 0 } : false}
+                      dot={overlaySeries.get(sig)?.showDots ? { r: 3, strokeWidth: 0 } : false}
                       name={sig}
                       yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
                       connectNulls={false}
