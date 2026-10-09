@@ -95,9 +95,15 @@ describe('FlagStatsBand — loading', () => {
   it('renders a 6-cell aria-hidden skeleton grid while loading with no data', () => {
     const { container } = renderBand({ loading: true, flags: [] });
 
-    const skeletonGrid = container.querySelector('[aria-hidden="true"]');
+    const skeletonGrid = container.querySelector(':scope > div[aria-hidden="true"].grid');
     expect(skeletonGrid).not.toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(6);
+    const cells = skeletonGrid?.querySelectorAll(':scope > div[aria-hidden="true"]');
+    expect(cells).toHaveLength(6);
+    cells?.forEach((cell) => {
+      expect(cell).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveStyle({ height: '78px' });
+      expect(cell).not.toHaveClass('animate-pulse');
+    });
     // The KPI cards must not render yet.
     expect(screen.queryByText('Total flags')).toBeNull();
   });

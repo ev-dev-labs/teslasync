@@ -111,8 +111,16 @@ describe('FlagCompositionPanel — states', () => {
   it('renders the skeleton while loading with no flags yet', () => {
     const { container } = renderPanel({ loading: true, flags: [] });
 
-    // Skeleton(lines=5) renders five animated placeholder rows.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    // Skeleton(lines=5) retains five static, decorative source-shaped rows.
+    const skeleton = container.querySelector(':scope > div[aria-hidden="true"].space-y-2');
+    expect(skeleton).not.toBeNull();
+    const rows = skeleton?.querySelectorAll(':scope > div.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(rows).toHaveLength(5);
+    rows?.forEach((row, index) => {
+      expect(row).toHaveClass('h-4', 'rounded');
+      expect(row).toHaveStyle({ height: '16px', width: index === 4 ? '60%' : '100%' });
+      expect(row).not.toHaveClass('animate-pulse');
+    });
     expect(screen.queryByRole('list')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
