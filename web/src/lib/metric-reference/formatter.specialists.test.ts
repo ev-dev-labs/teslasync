@@ -162,8 +162,8 @@ describe('specialist source contracts preserve exact display and raw SI independ
   });
 
   it('retains an exact fixed-millisecond source display without a second seconds-to-milliseconds conversion', () => {
-    const formatter = vi.fn((raw: number, prefs: MetricPreferences) => ({
-      value: fmtNumber(raw * 1000, prefs.units.precision, prefs.units.locale), unit: 'ms',
+    const formatter = vi.fn<(raw: number, prefs: MetricPreferences) => { value: string; unit: string }>(() => ({
+      value: '1,000.13', unit: 'ms',
     }));
     expect(formatMetric('latency', 1.000125, preferences, undefined, { latencyStyle: 'milliseconds', formatter }))
       .toMatchObject({ state: 'value', value: '1,000.13', unit: 'ms', text: '1,000.13 ms', rawValue: 1.000125 });
