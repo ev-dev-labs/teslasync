@@ -174,6 +174,95 @@ beforeEach(() => {
   requestMock.mockResolvedValue({})
 })
 
+describe('CommandPalette independent source trust', () => {
+  it('shows filtered no-match for a nonempty vehicle source without claiming an empty fleet', () => {
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '@ zzzunmatchedvehicle' } })
+    expect(screen.getByText('No results for "zzzunmatchedvehicle"')).toBeInTheDocument()
+    expect(screen.queryByText('No vehicles available')).not.toBeInTheDocument()
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('shows filtered no-match with a nonempty open-alert source without claiming no open alerts', async () => {
+    const query = 'zzzunmatchedalert'
+    requestMock.mockImplementation((path: string) => path === `/search?q=${query}&limit=5`
+      ? Promise.resolve({ query, hits: [] } satisfies SearchResponse) : Promise.resolve({}))
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles(), [], {}, [makeAlert()]) })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })
+    expect(await screen.findByText(`No results for "${query}"`)).toBeInTheDocument()
+    expect(screen.queryByText('No open alerts to acknowledge')).not.toBeInTheDocument()
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  function mountSources(qc: QueryClient) {
+    render(
+      <QueryClientProvider client={qc}><CommandPalette initialOpen /><LocationProbe /></QueryClientProvider>,
+      { wrapper: makeWrapper(makeVehicles()) },
+    )
+  }
+
+  function sourceClient() {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+    qc.setQueryData(vehicleKeys.all, makeVehicles())
+    qc.setQueryData(alertKeys.alerts, [])
+    return qc
+  }
+
+  it('keeps navigation and vehicles usable when saved views fail and retries only that real source', async () => {
+    const qc = sourceClient()
+    requestMock.mockImplementation((path: string) => path === '/saved-views'
+      ? Promise.reject(new Error('Saved views unavailable')) : Promise.resolve({}))
+    mountSources(qc)
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Switch to Model Y/ })).toBeInTheDocument()
+    const before = requestMock.mock.calls.filter(([path]) => path === '/saved-views').length
+    requestMock.mockImplementation((path: string) => path === '/saved-views' ? Promise.resolve([]) : Promise.resolve({}))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await screen.findByText('No saved views yet')
+    expect(requestMock.mock.calls.filter(([path]) => path === '/saved-views')).toHaveLength(before + 1)
+    expect(requestMock.mock.calls.some(([path]) => path === '/vehicles' || path === '/alerts')).toBe(false)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '/ drives' } })
+    fireEvent.click(screen.getByRole('option', { name: /^Drives/ }))
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives'))
+  })
+
+  it('retains open alert actions on refresh failure and refreshes only the alert query', async () => {
+    const qc = sourceClient()
+    qc.setQueryData(savedViewsKeys.allList, [])
+    qc.setQueryData(alertKeys.alerts, [makeAlert()])
+    qc.setQueryData(searchKeys.global('acknowledge', undefined, 5), { query: 'acknowledge', hits: [] } satisfies SearchResponse)
+    mountSources(qc)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acknowledge' } })
+    fireEvent.click(screen.getByRole('option', { name: /Acknowledge an alert/ }))
+    requestMock.mockRejectedValueOnce(new Error('Alert refresh unavailable'))
+    await act(async () => { await qc.invalidateQueries({ queryKey: alertKeys.alerts }) })
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent('Open alerts may be out of date')
+    expect(screen.getByRole('option', { name: /Battery critically low/ })).toBeInTheDocument()
+    const before = requestMock.mock.calls.filter(([path]) => path === '/alerts').length
+    requestMock.mockResolvedValue([makeAlert()])
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(requestMock.mock.calls.filter(([path]) => path === '/alerts')).toHaveLength(before + 1)
+    expect(screen.getByRole('option', { name: /Battery critically low/ })).toBeInTheDocument()
+  })
+
+  it('distinguishes vehicle initial loading from the authoritative empty fleet', async () => {
+    const qc = sourceClient()
+    qc.removeQueries({ queryKey: vehicleKeys.all })
+    qc.setQueryData(savedViewsKeys.allList, [])
+    let resolveVehicles!: (vehicles: Vehicle[]) => void
+    requestMock.mockImplementation((path: string) => path === '/vehicles'
+      ? new Promise<Vehicle[]>(resolve => { resolveVehicles = resolve }) : Promise.resolve({}))
+    mountSources(qc)
+    expect(screen.getByRole('status', { name: 'Loading Vehicles' })).toBeInTheDocument()
+    expect(screen.queryByText('No vehicles available')).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /^Drives/ })).toBeInTheDocument()
+    await act(async () => resolveVehicles([]))
+    expect(await screen.findByText('No vehicles available')).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument()
+  })
+})
+
 describe('CommandPalette remote search trust', () => {
   it('keeps static rows during initial search and does not claim no matches until the response resolves', async () => {
     let resolveSearch!: (response: SearchResponse) => void

@@ -13,6 +13,9 @@ import type { TFunction } from 'i18next'
 import { Input } from './Input'
 import { Button } from './Button'
 import { Text } from './Typography'
+import { SourceContent } from '@/components/layout/layout-reference/SourceContent'
+import { Skeleton } from '@/components/feedback/Skeleton'
+import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning'
 import { cn } from '@/lib/cn'
 import { navSections } from '@/components/layout/Layout'
 import { navSearchKeywords } from '@/components/layout/navSearchKeywords'
@@ -373,11 +376,14 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   const navigate = useNavigate()
   const location = useLocation()
 
-  const { data: vehicles } = useVehicles()
-  const vehicleList = vehicles ?? []
-  const { data: savedViews } = useAllSavedViews()
-  const savedViewList = savedViews ?? []
+  const vehiclesQuery = useVehicles()
+  const vehiclesState = useDataState(vehiclesQuery)
+  const vehicleList = vehiclesState.data ?? []
+  const savedViewsQuery = useAllSavedViews()
+  const savedViewsState = useDataState(savedViewsQuery)
+  const savedViewList = savedViewsState.data ?? []
   const alertsQuery = useAlerts()
+  const alertsState = useDataState(alertsQuery)
   const openAlertList = useMemo(
     () => (alertsQuery.data ?? []).filter((alert) => !alert.acknowledged_at),
     [alertsQuery.data],
@@ -1388,6 +1394,34 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                   )}
                 </div>
               )}
+              {[
+                { id: 'vehicles', state: vehiclesState, count: vehicleList.length,
+                  visible: mode === 'vehicle-select' || (mode === 'search' && (activeScope === null || activeScope === 'vehicle-switch')),
+                  label: t('palette.section.vehicles', 'Vehicles'), empty: t('palette.noVehicles', 'No vehicles available') },
+                { id: 'saved-views', state: savedViewsState, count: savedViewList.length,
+                  visible: mode === 'search' && (activeScope === null || activeScope === 'navigate'),
+                  label: t('palette.section.savedViews', 'Saved views'), empty: t('savedViews.empty', 'No saved views yet') },
+                { id: 'alerts', state: alertsState, count: openAlertList.length, visible: mode === 'alert-select',
+                  label: t('palette.section.openAlerts', 'Open alerts'), empty: t('palette.acknowledgeAlert.empty', 'No open alerts to acknowledge') },
+              ].map(({ id, state, count, visible, label, empty }) => visible && (
+                state.status !== 'ok' || (count === 0 && (mode !== 'search' || !scopedTerm))
+              ) ? (
+                <section key={id} aria-label={label} className="min-w-0 px-4 py-2">
+                  <Text variant="label" color="secondary">{label}</Text>
+                  <SourceContent
+                    state={state.fatalError ? 'error' : !state.hasData ? 'loading' : count === 0 && state.status === 'ok' ? 'empty' : 'ready'}
+                    label={label} emptyMessage={empty}
+                    errorMessage={id === 'alerts'
+                      ? t('palette.acknowledgeAlert.error', 'Open alerts are unavailable right now')
+                      : t('dataState.unavailable.message', 'A required service is unavailable. This section will recover when the dependency returns.')}
+                    error={state.fatalError}
+                    errorRecovery={{ onRetry: state.retry ?? undefined }}
+                    loadingContent={<Skeleton className="h-11 w-full" />}
+                  >
+                    <StaleRefreshWarning state={state} label={label} />
+                  </SourceContent>
+                </section>
+              ) : null)}
               {/* Results */}
               <div
                 ref={listRef}
@@ -1399,17 +1433,11 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 className="max-h-80 min-h-0 overflow-y-auto px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                 onKeyDown={mode !== 'search' ? handleInputKey : undefined}
               >
-                {displayItems.length === 0 ? remoteUnresolved ? null : (
+                {displayItems.length === 0 ? remoteUnresolved
+                  || (mode === 'vehicle-select' && (vehiclesState.status !== 'ok' || vehicleList.length === 0))
+                  || (mode === 'alert-select' && (alertsState.status !== 'ok' || openAlertList.length === 0)) ? null : (
                   <Text as="div" variant="bodySm" className="break-words py-8 text-center text-[var(--text-muted)]">
-                    {mode === 'vehicle-select'
-                      ? t('palette.noVehicles', 'No vehicles available')
-                      : mode === 'alert-select'
-                        ? alertsQuery.isLoading
-                          ? t('palette.acknowledgeAlert.loading', 'Loading open alerts…')
-                          : alertsQuery.isError
-                            ? t('palette.acknowledgeAlert.error', 'Open alerts are unavailable right now')
-                            : t('palette.acknowledgeAlert.empty', 'No open alerts to acknowledge')
-                      : activeScope !== null && !scopedTerm
+                    {activeScope !== null && !scopedTerm
                         ? t(`palette.scope.${activeScope}.empty`, {
                             scope: getScopeMeta(activeScope).label,
                             defaultValue: `No ${getScopeMeta(activeScope).label.toLowerCase()} available`,
