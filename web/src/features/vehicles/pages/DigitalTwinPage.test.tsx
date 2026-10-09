@@ -358,11 +358,25 @@ describe('DigitalTwinPage', () => {
     h.state = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
     h.charging = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
 
-    const { container } = renderPage();
+    renderPage();
 
     expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
-    // Four panels → at least four skeletons; no KV rows leaked.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
+    const components = screen.getByRole('region', { name: 'Component state' });
+    const skeletons = components.querySelectorAll(
+      '[aria-busy="true"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    // Count only the four independent component panels, not overview metrics.
+    expect(skeletons.length).toBeGreaterThanOrEqual(4);
+    for (const title of ['Doors & openings', 'Windows', 'Security & status', 'Lights & signals']) {
+      const pending = within(components).getByRole('status', { name: `Loading ${title}` });
+      expect(pending.parentElement).toHaveAttribute('aria-busy', 'true');
+      const skeleton = pending.querySelector(
+        '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      );
+      expect(skeleton).toHaveStyle({ height: '132px' });
+      expect(skeleton).toHaveClass('w-full');
+      expect(skeleton).not.toHaveClass('animate-pulse');
+    }
     expect(screen.queryByText('Driver front')).not.toBeInTheDocument();
     expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
   });

@@ -123,9 +123,17 @@ describe('AccessOverviewPanel', () => {
     const live = screen.getByRole('status');
     expect(live).toHaveTextContent(/loading/i);
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector(
+      '[aria-busy="true"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(skeleton).toHaveClass('w-full');
+    expect(skeleton).not.toHaveClass('animate-pulse');
     // Loading replaces the content — the section subheads must not render.
     expect(screen.queryByText('Invitation status')).toBeNull();
+    expect(screen.queryByText('Driver roles')).toBeNull();
+    expect(screen.queryByText('Pending')).toBeNull();
   });
 
   it('prioritises the loading state over the error and empty flags', () => {

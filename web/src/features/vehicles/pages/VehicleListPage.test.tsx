@@ -435,8 +435,13 @@ describe('VehicleListPage — happy path', () => {
     fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Charging / live state')).toBeInTheDocument();
-    expect(within(drawer).getByText('1 / 2')).toBeInTheDocument();
-    expect(within(drawer).getByText(/no common observation timestamp/)).toBeInTheDocument();
+    expect(within(drawer).getByText('1/2')).toBeInTheDocument();
+    expect(drawer).toHaveAccessibleName('Current verified fleet readings details');
+    const fleetEvidence = within(drawer).getByText('Total vehicles').parentElement?.parentElement;
+    if (!(fleetEvidence instanceof HTMLElement)) throw new Error('Missing fleet source evidence metric');
+    expect(within(fleetEvidence).getByText(
+      'Current field coverage differs by measurement; no common observation timestamp is supplied',
+    )).toBeInTheDocument();
   });
 
   it('renders the shell, the fleet KPI band, and a card per vehicle', async () => {
@@ -456,7 +461,7 @@ describe('VehicleListPage — happy path', () => {
     expect(within(summary).getByText('Avg battery')).toBeInTheDocument();
     expect(within(summary).getByText('Total range (km)')).toBeInTheDocument();
     // 1 charging (V1) of 2 vehicles reporting live state (V1, V2).
-    expect(within(summary).getByText('1 / 2')).toBeInTheDocument();
+    expect(within(summary).getByText('1/2')).toBeInTheDocument();
 
     const posture = screen.getByTestId('fleet-operational-brief');
     const readinessMetric = within(posture)
@@ -944,7 +949,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
 
   it('shows fleet-states skeletons while keeping every card visible', () => {
     mockFleetStates.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
-    const { container } = renderPage();
+    renderPage();
 
     // Pending live state stays neutral instead of briefly classifying every
     // registered vehicle as offline or reporting zero-valued fleet KPIs.
@@ -953,7 +958,27 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.queryByText('0 / 0')).not.toBeInTheDocument();
     // Every card still renders, each with the null-safe no-live-data placeholder.
     expect(screen.getAllByText('No live data')).toHaveLength(3);
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const skeletons = screen.getByTestId('fleet-status-skeleton').querySelectorAll(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(skeletons).toHaveLength(3);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('h-8', 'w-full', 'rounded-lg');
+      expect(skeleton).not.toHaveClass('animate-pulse');
+    }
+    const summary = screen.getByRole('region', { name: 'Fleet summary' });
+    const pending = within(summary).getByRole('status', { name: 'Loading stat cards' });
+    expect(pending).toHaveAttribute('aria-busy', 'true');
+    const summarySkeletons = pending.querySelectorAll(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(summarySkeletons).toHaveLength(4);
+    for (const skeleton of summarySkeletons) {
+      expect(skeleton).toHaveClass('h-24', 'w-full', 'rounded-xl');
+      expect(skeleton).not.toHaveClass('animate-pulse');
+    }
+    expect(summary.querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('does NOT paint the whole fleet as offline while live state is still loading', () => {
