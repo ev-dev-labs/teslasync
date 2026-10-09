@@ -67,7 +67,7 @@ describe('FsdSection', () => {
   it('keeps the heading while loading', () => {
     renderSection({ isLoading: true });
     expect(screen.getByText('Supervised driving')).toBeInTheDocument();
-    expect(screen.getByTestId('fsd-weekly-section').querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.getByTestId('fsd-weekly-section').querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
   });
 
   it('surfaces a retriable error before empty or data', () => {
