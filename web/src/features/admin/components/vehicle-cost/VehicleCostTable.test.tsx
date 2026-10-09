@@ -245,14 +245,14 @@ describe('VehicleCostTable — async states', () => {
     expect(screen.queryByText('No vehicle cost data')).not.toBeInTheDocument();
     // The title still anchors the section even mid-load.
     expect(screen.getByRole('heading', PANEL_TITLE)).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 240px;"]')).not.toBeNull();
   });
 
   it('keeps the table visible during a background refetch (loading with existing rows)', () => {
     const { container } = renderTable({ loading: true, vehicles: [makeRow()] });
     expect(screen.getByRole('table')).toBeInTheDocument();
     // Not the skeleton branch — data stays on screen so the panel never flickers.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
   });
 
   it('renders an EmptyState (not a skeleton) when settled with zero rows', () => {

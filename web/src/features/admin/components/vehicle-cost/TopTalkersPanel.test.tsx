@@ -36,6 +36,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
 import type { VehicleCostBar } from './helpers';
+import { chartTokens } from '@/lib/tokens';
 
 // ── i18n: resolve the English fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
@@ -83,7 +84,7 @@ import { TopTalkersPanel } from './TopTalkersPanel';
 
 // The colour-blind-safe series palette the component cycles through
 // (chartTokens.series). Kept here so the colour assertions are self-documenting.
-const SERIES = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+const SERIES = chartTokens.series;
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -168,8 +169,8 @@ describe('TopTalkersPanel — loading', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-busy', 'true');
     expect(status).toHaveAccessibleName('Loading');
-    // One pulsing Skeleton per placeholder row, and no bars yet.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    // Five static, decorative rows retain the source's placeholder geometry.
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 40px;"]')).toHaveLength(5);
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 
@@ -181,7 +182,7 @@ describe('TopTalkersPanel — loading', () => {
     });
 
     // items.length > 0 → the `loading && empty` skeleton guard is skipped.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.getByTestId('metric-bar')).toBeInTheDocument();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -213,7 +214,7 @@ describe('TopTalkersPanel — error', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 });
@@ -285,6 +286,8 @@ describe('TopTalkersPanel — derivation', () => {
 
     const bars = readBars();
     expect(bars).toHaveLength(9);
+    expect(SERIES).toHaveLength(8);
+    expect(SERIES[0]).toBe('light-dark(#385e7e, #91b4d2)');
     expect(bars[0].color).toBe(SERIES[0]);
     expect(bars[1].color).toBe(SERIES[1]);
     // series[8 % 8] === series[0] — the palette wraps.

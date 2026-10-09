@@ -9,7 +9,7 @@
  *     regression guard for the "1,234,567.00" bug this file fixed (counts used
  *     to flow through `fmtNumber`, which honours the global 2-dp setting);
  *   - the DLQ card flips cyan → red only when failures > 0;
- *   - the loading branch shows six skeletons (role=status) and no data;
+ *    - the loading branch shows six static skeletons inside a busy status and no data;
  *   - a background refetch (loading + cached totals) keeps showing data;
  *   - the error branch renders QueryError inside a panel, wires Retry, and
  *     takes precedence over loading — the section is never left blank;
@@ -160,7 +160,7 @@ describe('FleetCostKpis', () => {
 
       const status = screen.getByRole('status');
       expect(status).toHaveAttribute('aria-busy', 'true');
-      expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+      expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 88px;"]')).toHaveLength(6);
 
       // No data + no region while the first load is in flight.
       expect(screen.queryByText('Total rows')).not.toBeInTheDocument();
@@ -173,7 +173,7 @@ describe('FleetCostKpis', () => {
       const { container } = renderKpis({ loading: true, totals: TOTALS });
 
       // loading && totals → the band shows stale data instead of blanking.
-      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
       expect(screen.getByText('Total rows')).toBeInTheDocument();
       expect(screen.getByText('1,234,567')).toBeInTheDocument();
     });
@@ -204,7 +204,7 @@ describe('FleetCostKpis', () => {
       });
 
       // Error is checked before loading — no skeletons, a real message instead.
-      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
       expect(screen.getByText('Server error')).toBeInTheDocument();
     });
   });

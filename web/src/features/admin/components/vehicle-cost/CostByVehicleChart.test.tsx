@@ -133,7 +133,7 @@ describe('CostByVehicleChart — loading', () => {
   it('renders a skeleton and no chart / empty / error while loading with no data', () => {
     const { container } = renderChart({ loading: true, bars: [] });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 220px;"]')).not.toBeNull();
     // Loading-with-no-data strictly precedes the empty and data branches.
     expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
@@ -148,7 +148,7 @@ describe('CostByVehicleChart — loading', () => {
       bars: [makeBar()],
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(
       screen.getByRole('img', { name: CHART_LABEL }),
     ).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe('CostByVehicleChart — error', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The error branch is evaluated first, so no skeleton paints underneath it.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
   });
 });
 
@@ -235,7 +235,7 @@ describe('CostByVehicleChart — null-safety', () => {
       bars: null as unknown as VehicleCostBar[],
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 220px;"]')).not.toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
 });
