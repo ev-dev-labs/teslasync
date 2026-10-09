@@ -45,7 +45,9 @@
     "labelPlaceholder": "e.g., battery replaced",
     "listTitle": "Annotations",
     "removeNamed": "Remove annotation: {{label}}",
-    "savedStale": "Annotation saved for {{target}}. The chart context changed. This form is retained for reference; close it before adding another annotation."
+    "savedStale": "Annotation saved for {{target}}. The chart context changed. This form is retained for reference; close it before adding another annotation.",
+    "targetFleet": "{{chart}} — fleet-wide — scope {{scope}}",
+    "targetVehicle": "{{chart}} — vehicle {{vehicleId}} — scope {{scope}}"
   },
   "annotations": {
     "add": "Add annotation",

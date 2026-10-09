@@ -2478,6 +2478,11 @@
       "trigger": "Date range"
     }
   },
+  "dayLog": {
+    "windowStates": {
+      "partial": "Partially open"
+    }
+  },
   "delta": {
     "noComparison": "No comparison data",
     "title": "{{current}} vs {{previous}}"
@@ -2637,6 +2642,14 @@
         "value": "value"
       }
     }
+  },
+  "digitalTwin": {
+    "frunk": "Frunk",
+    "trunk": "Trunk",
+    "windowFD": "Front driver",
+    "windowFP": "Front passenger",
+    "windowRD": "Rear driver",
+    "windowRP": "Rear passenger"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -3330,6 +3343,10 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "teslaOnly": {
+    "door": "Door",
+    "window": "Window"
   },
   "theme": {
     "firstRunBody": "Pick a color theme that fits your style.",

@@ -8334,6 +8334,7 @@
       "message": "No matches for \"{{query}}\". Try fewer characters or open the command palette."
     },
     "palette": {
+      "retainedQuery": "Showing results for \"{{previousQuery}}\" while search for \"{{query}}\" is pending.",
       "viewAll": "View all results for \"{{query}}\""
     },
     "section": {
