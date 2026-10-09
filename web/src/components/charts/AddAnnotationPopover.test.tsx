@@ -14,6 +14,7 @@ import '@/i18n';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 
 import {
   AddAnnotationPopover,
@@ -76,6 +77,76 @@ function typeInto(el: HTMLInputElement, value: string) {
 
 beforeEach(() => {
   cleanup();
+});
+
+describe('AddAnnotationPopover — explicit return forwarding', () => {
+  it.each([false, true])('restores real activation on cancel and reopen independent of createAuthority (managed=%s)', async (managed) => {
+    const user = userEvent.setup();
+    const getter = vi.fn(() => screen.getByText('Original annotation activation'));
+    function ReturnHarness() {
+      const [open, setOpen] = useState(false);
+      return <>
+        <button onClick={() => setOpen(true)}>Original annotation activation</button>
+        <AddAnnotationPopover open={open} timestamp={TS} onAdd={vi.fn()} onCancel={() => setOpen(false)}
+          getReturnFocusTarget={getter}
+          createAuthority={managed ? { targetLabel: 'Captured chart', canSubmit: true, getSettlementAuthority: () => 'current' } : undefined} />
+      </>;
+    }
+    render(<ReturnHarness />);
+    await user.click(screen.getByText('Original annotation activation'));
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement);
+    expect(getter).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).not.toHaveAttribute('getReturnFocusTarget');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Original annotation activation')).toHaveFocus();
+    await user.click(screen.getByText('Original annotation activation'));
+    await user.keyboard('{Escape}');
+    expect(getter).toHaveBeenCalledTimes(2);
+    expect(screen.getByText('Original annotation activation')).toHaveFocus();
+  });
+
+  it('uses the latest getter only on close, never draft updates or create settlement', async () => {
+    const user = userEvent.setup();
+    const first = vi.fn(() => screen.getByText('First annotation return'));
+    const latest = vi.fn(() => screen.getByText('Latest annotation return'));
+    const onAdd = vi.fn();
+    const content = (open: boolean, getter: typeof first) => <>
+      <button>First annotation return</button><button>Latest annotation return</button>
+      <AddAnnotationPopover open={open} timestamp={TS} onAdd={onAdd} onCancel={vi.fn()} getReturnFocusTarget={getter} />
+    </>;
+    const view = render(content(false, first));
+    await user.click(screen.getByText('First annotation return'));
+    view.rerender(content(true, first));
+    await user.type(labelInput(), 'Explicit target draft');
+    view.rerender(content(true, latest));
+    expect(labelInput()).toHaveValue('Explicit target draft');
+    expect(labelInput()).toHaveFocus();
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Add Annotation' }));
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(latest).not.toHaveBeenCalled();
+    view.rerender(content(false, latest));
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Latest annotation return')).toHaveFocus();
+  });
+
+  it('keeps a null explicit target separate from createAuthority and falls back on unmount', async () => {
+    const user = userEvent.setup();
+    const outside = render(<><main id="main-content" tabIndex={-1}>Annotation safe fallback</main><button>Replacement annotation activation</button></>);
+    await user.click(screen.getByText('Replacement annotation activation'));
+    const getter = vi.fn(() => null);
+    const view = render(<AddAnnotationPopover open timestamp={TS} onAdd={vi.fn()} onCancel={vi.fn()} getReturnFocusTarget={getter}
+      createAuthority={{ targetLabel: 'Stale chart', canSubmit: false, getSettlementAuthority: () => 'stale' }} />);
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement as HTMLElement);
+    expect(getter).not.toHaveBeenCalled();
+    view.unmount();
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Annotation safe fallback')).toHaveFocus();
+    outside.unmount();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────

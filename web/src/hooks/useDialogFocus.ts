@@ -82,6 +82,8 @@ export interface UseDialogFocusOptions {
   fallbackRef?: RefObject<HTMLElement | null>;
   /** Set false to keep Escape from closing (e.g. a blocking re-auth). */
   closeOnEscape?: boolean;
+  /** Explicit return intent, resolved only when this open lifecycle owns cleanup. */
+  getReturnFocusTarget?: () => HTMLElement | null;
 }
 
 /** True when `el` can still receive focus (attached and not hidden). */
@@ -114,13 +116,16 @@ export function isFocusRestorable(el: Element | null | undefined): el is HTMLEle
 }
 
 /** First element in the fallback chain that can take focus. */
-function resolveFallback(fallbackRef?: RefObject<HTMLElement | null>): HTMLElement | null {
-  if (isFocusRestorable(fallbackRef?.current)) return fallbackRef!.current!;
+function resolveFallback(
+  fallbackRef?: RefObject<HTMLElement | null>,
+  canRestore = isFocusRestorable,
+): HTMLElement | null {
+  if (canRestore(fallbackRef?.current)) return fallbackRef!.current!;
   if (typeof document === 'undefined') return null;
   const routeHeading = document.querySelector<HTMLElement>(ROUTE_FOCUS_TARGET_SELECTOR);
-  if (isFocusRestorable(routeHeading)) return routeHeading;
+  if (canRestore(routeHeading)) return routeHeading;
   const main = document.querySelector<HTMLElement>(ROUTE_FOCUS_FALLBACK_SELECTOR);
-  return isFocusRestorable(main) ? main : null;
+  return canRestore(main) ? main : null;
 }
 
 export function useDialogFocus({
@@ -129,6 +134,7 @@ export function useDialogFocus({
   onClose,
   fallbackRef,
   closeOnEscape = true,
+  getReturnFocusTarget,
 }: UseDialogFocusOptions): void {
   // Callers routinely pass an inline arrow for `onClose`, so a new
   // reference arrives on every parent render. Depending on it here made
@@ -140,6 +146,8 @@ export function useDialogFocus({
   closeOnEscapeRef.current = closeOnEscape;
   const fallbackRefRef = useRef(fallbackRef);
   fallbackRefRef.current = fallbackRef;
+  const returnFocusTargetRef = useRef(getReturnFocusTarget);
+  returnFocusTargetRef.current = getReturnFocusTarget;
 
   useEffect(() => {
     if (!open) return;
@@ -147,6 +155,7 @@ export function useDialogFocus({
     if (!container) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
+    const explicitReturnFocus = returnFocusTargetRef.current !== undefined;
 
     const autofocus = container.querySelector<HTMLElement>(
       `[${DIALOG_AUTOFOCUS_ATTR}]`,
@@ -218,6 +227,35 @@ export function useDialogFocus({
         active === document.body ||
         container.contains(active);
       if (!dialogStillOwnsFocus) return;
+
+      if (explicitReturnFocus) {
+        // Body recovery must not take focus outside another still-live owner.
+        const liveDialogs = Array.from(
+          document.querySelectorAll<HTMLElement>('[role="dialog"], [role="alertdialog"]'),
+        ).filter((dialog) => dialog !== container && !container.contains(dialog));
+        const liveTopmost = active == null || active === document.body
+          ? liveDialogs[liveDialogs.length - 1]
+          : undefined;
+        const canReturn = (target: Element | null | undefined): target is HTMLElement =>
+          isFocusRestorable(target) &&
+          target !== document.body &&
+          !container.contains(target) &&
+          (!liveTopmost || liveTopmost.contains(target));
+        let target: HTMLElement | null = null;
+        try {
+          target = returnFocusTargetRef.current?.() ?? null;
+        } catch {
+          // Do not log caller errors or DOM objects: either may contain private data.
+          console.error('Dialog return-focus target getter failed');
+        }
+        if (canReturn(target)) {
+          target.focus();
+          return;
+        }
+        const fallback = resolveFallback(fallbackRefRef.current, canReturn);
+        if (canReturn(fallback)) fallback.focus();
+        return;
+      }
 
       if (isFocusRestorable(previouslyFocused) && previouslyFocused !== document.body) {
         previouslyFocused.focus();

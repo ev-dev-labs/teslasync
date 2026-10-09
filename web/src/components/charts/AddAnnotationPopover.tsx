@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
-import { Modal } from '@/components/ui/Modal';
+import { Modal, type ModalProps } from '@/components/ui/Modal';
 import { ErrorText, HelperText, Text } from '@/components/ui/Typography';
 import { Icon } from '@/components/ui/Icon';
 import type { AnnotationCategory } from '@/types/annotations';
@@ -52,6 +52,7 @@ interface AddAnnotationPopoverProps {
    *  Used by the new managed `<ChartContainer annotations>` flow where the
    *  user picks the date from the header rather than clicking the chart. */
   editableDate?: boolean;
+  getReturnFocusTarget?: ModalProps['getReturnFocusTarget'];
 }
 
 const CATEGORY_OPTIONS: ReadonlyArray<{
@@ -75,6 +76,7 @@ export function AddAnnotationPopover({
   createAuthority,
   onCancel,
   editableDate = false,
+  getReturnFocusTarget,
 }: AddAnnotationPopoverProps) {
   const { t } = useTranslation();
   const categoryLabelId = useId();
@@ -253,6 +255,7 @@ export function AddAnnotationPopover({
       ref={dialogRef}
       open={open}
       onClose={handleClose}
+      getReturnFocusTarget={getReturnFocusTarget}
       title={t('annotation.addTitle', 'Add Annotation')}
       size="sm"
       onKeyDownCapture={(e) => {

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { useDialogFocus } from '@/hooks/useDialogFocus';
+import { useDialogFocus, type UseDialogFocusOptions } from '@/hooks/useDialogFocus';
 import { PanelTitle } from './Typography';
 
 export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
@@ -23,6 +23,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
    * ARIA when the dialog has no visible heading.
    */
   ariaLabel?: string;
+  getReturnFocusTarget?: UseDialogFocusOptions['getReturnFocusTarget'];
 }
 
 /**
@@ -53,7 +54,7 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
-  ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, ...props }, ref) => {
+  ({ open, onClose, title, size = 'md', className, children, footer, ariaLabel, getReturnFocusTarget, ...props }, ref) => {
     const { t } = useTranslation();
     const fullscreen = size === 'fullscreen';
     const dialogRef = useRef<HTMLDivElement | null>(null);
@@ -68,7 +69,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
     // Shared focus contract (A11Y-04): initial focus, Tab trap, Escape,
     // and trigger restore with a resilient fallback when the trigger was
     // removed while the dialog was open.
-    useDialogFocus({ open, containerRef: dialogRef, onClose });
+    useDialogFocus({ open, containerRef: dialogRef, onClose, getReturnFocusTarget });
 
     if (!open) return null;
 

@@ -25,6 +25,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { createRef, useState } from 'react';
+import userEvent from '@testing-library/user-event';
 
 // i18n stub so the Close button's `t('modal.close', 'Close')` resolves to its
 // fallback string without needing a provider. Returns the fallback (2nd arg)
@@ -39,6 +40,57 @@ import { Modal } from './Modal';
 
 afterEach(() => {
   cleanup();
+});
+
+describe('Modal — explicit return forwarding', () => {
+  it('forwards the latest getter to the real owner, keeps the exact ref, and never leaks it to DOM', async () => {
+    const user = userEvent.setup();
+    const ref = createRef<HTMLDivElement>();
+    const first = vi.fn(() => screen.getByText('Original modal trigger'));
+    const latest = vi.fn(() => screen.getByText('Latest modal trigger'));
+    const content = (open: boolean, getter: typeof first) => <>
+      <button>Original modal trigger</button><button>Latest modal trigger</button>
+      <Modal ref={ref} open={open} onClose={vi.fn()} ariaLabel="Explicit modal" getReturnFocusTarget={getter}>
+        <input autoFocus aria-label="Modal draft" />
+      </Modal>
+    </>;
+    const view = render(content(false, first));
+    await user.click(screen.getByText('Original modal trigger'));
+    view.rerender(content(true, first));
+    expect(screen.getByLabelText('Modal draft')).toHaveFocus();
+    expect(ref.current).toBe(screen.getByRole('dialog'));
+    expect(ref.current).not.toHaveAttribute('getReturnFocusTarget');
+    view.rerender(content(true, latest));
+    expect(screen.getByLabelText('Modal draft')).toHaveFocus();
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).not.toHaveBeenCalled();
+    view.rerender(content(false, latest));
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Latest modal trigger')).toHaveFocus();
+    expect(ref.current).toBeNull();
+    view.rerender(content(true, first));
+    view.rerender(content(false, first));
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Original modal trigger')).toHaveFocus();
+  });
+
+  it('restores an external explicit target on actual modal unmount after real autoFocus', async () => {
+    const user = userEvent.setup();
+    const triggerView = render(<button>Surviving modal activation</button>);
+    const trigger = screen.getByText('Surviving modal activation');
+    await user.click(trigger);
+    const getter = vi.fn(() => trigger);
+    const view = render(<Modal open onClose={vi.fn()} ariaLabel="Unmounting" getReturnFocusTarget={getter}>
+      <input autoFocus aria-label="Unmount draft" />
+    </Modal>);
+    expect(screen.getByLabelText('Unmount draft')).toHaveFocus();
+    expect(getter).not.toHaveBeenCalled();
+    view.unmount();
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(trigger).toHaveFocus();
+    triggerView.unmount();
+  });
 });
 
 function getDialog(): HTMLElement {
