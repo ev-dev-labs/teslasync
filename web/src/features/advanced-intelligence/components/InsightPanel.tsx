@@ -87,7 +87,7 @@ export function InsightPanel({
           errorRecovery={{ onRetry: retry }}
           emptyContent={emptyBody}
         >
-          {empty && !retained ? emptyBody : children}
+          {empty && (!retained || (Array.isArray(dataState.data) && dataState.data.length === 0)) ? emptyBody : children}
         </SourceContent>
       </LayoutCard>
     </div>

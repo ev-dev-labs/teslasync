@@ -169,8 +169,8 @@ describe('source-local observation and modeled evidence closure', () => {
       <InsightPanel title="Modeled source" query={{ error: new Error('not calculated') }}><span>Invented result</span></InsightPanel>
     </>);
     expect(within(card('Observed source')).getByText('Observed zero')).toBeInTheDocument();
-    expect(within(card('Observed source')).getByRole('status')).toHaveTextContent('Previously loaded data remains visible');
-    fireEvent.click(within(card('Observed source')).getByRole('button', { name: 'Retry' }));
+    expect(within(card('Observed source')).getByTestId('stale-refresh-warning')).toHaveTextContent('The refresh failed; the most recently loaded evidence remains visible.');
+    fireEvent.click(within(within(card('Observed source')).getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(state.retry).toHaveBeenCalledOnce();
     expect(within(card('Modeled source')).getByText('Intelligence evidence could not be loaded.')).toBeInTheDocument();
     expect(screen.queryByText('Invented result')).not.toBeInTheDocument();
@@ -180,7 +180,7 @@ describe('source-local observation and modeled evidence closure', () => {
     renderSubject(<InsightPanel title="Resolved empty" query={{ data: [], error: new Error('refresh') }}
       empty emptyMessage="Authoritative empty observation"><span>Not an observation</span></InsightPanel>);
     expect(screen.getByText('Authoritative empty observation')).toBeInTheDocument();
-    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByText('The refresh failed; the most recently loaded evidence remains visible.')).toBeInTheDocument();
     expect(screen.queryByText('Evidence availability has not resolved yet.')).not.toBeInTheDocument();
   });
 
@@ -248,7 +248,9 @@ describe('returned history, details and caller-owned pagination', () => {
     state.reads[source].error = new Error('refresh failed');
     view.rerender(<Page />);
     expect(screen.getByRole('heading', { name: firstTitle })).toBeInTheDocument();
-    expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(source === 'federated'
+      ? 'Previously loaded data remains visible while affected sources recover.'
+      : 'The refresh failed; the most recently loaded evidence remains visible.').length).toBeGreaterThan(0);
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Previous page' }));
     expect(state.readCalls[source]).toHaveBeenLastCalledWith(7, size, 0);
@@ -426,7 +428,7 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();
   });
 
-  it('opens the real Twin brief drawer with calibration evidence, source windows, model limitations and raw-aware metric captions', () => {
+  it('opens the real Twin brief drawer with calibration evidence, source windows, model limitations and raw-aware metric captions', async () => {
     state.twin.data = structuredClone(fixtures.twin);
     renderSubject(<TwinLabPage />);
     const brief = screen.getByTestId('advanced-intelligence-twin-brief');
@@ -443,8 +445,8 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(within(drawer).getByText(/No meter coverage; do not infer a measured loss/)).toBeInTheDocument();
     expect(within(drawer).getByText('calibrated-not-guaranteed')).toBeInTheDocument();
-    fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('heading', { name: 'Range-effect uncertainty comparison' })).toBeInTheDocument();
     expect(state.twin.mutate).not.toHaveBeenCalled();
   });
@@ -476,8 +478,10 @@ describe('modeled analysis outputs and complete chart alternatives', () => {
 
   it('keeps the original modeled result and detail action while another site calculation is pending or fails', () => {
     state.site.data = fixtures.site;
-    state.site.isPending = true;
+    state.site.isPending = false;
     const view = renderSubject(<ChargingSiteTwinPage />);
+    state.site.isPending = true;
+    view.rerender(<ChargingSiteTwinPage />);
     const brief = screen.getByTestId('advanced-intelligence-site-brief');
     expect(brief).not.toHaveAttribute('aria-busy');
     expect(within(brief).getByText('Updating result')).toBeInTheDocument();

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { InsightPanel } from './InsightPanel';
@@ -75,13 +75,53 @@ describe('InsightPanel empty source recovery', () => {
 
     it('distinguishes a paused refresh without inventing a server failure or offline diagnosis', () => {
       const refetch = vi.fn();
-      renderQueryPanel({ data: [], fetchStatus: 'paused', dataUpdatedAt: Date.now(), refetch }, true);
+      renderQueryPanel({ data: [0], fetchStatus: 'paused', dataUpdatedAt: Date.now(), refetch }, true);
       expect(screen.getByText('Retained observation: 0')).toBeInTheDocument();
       expect(screen.getByText('Cached evidence remains visible while its refresh is paused.')).toBeInTheDocument();
       expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
       expect(screen.queryByText(/refresh failed|you're offline/i)).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
       expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps an authoritative empty array and recovery after a failed refresh without invented children', () => {
+      const refetch = vi.fn();
+      const onRetry = vi.fn();
+      renderQueryPanel({
+        data: [], error: new Error('Refresh failed'), isError: true,
+        dataUpdatedAt: Date.now(), refetch,
+      }, true, onRetry);
+      expect(screen.getByText('No matching evidence')).toBeInTheDocument();
+      expect(screen.queryByText('Retained observation: 0')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Inspect evidence' })).not.toBeInTheDocument();
+      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(warning).toHaveTextContent('The refresh failed; the most recently loaded evidence remains visible.');
+      expect(warning).not.toHaveAttribute('data-refresh-blocked');
+      expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Evidence availability has not resolved yet.')).not.toBeInTheDocument();
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(onRetry).toHaveBeenCalledTimes(1);
+      expect(refetch).not.toHaveBeenCalled();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' }).find(button => !warning.contains(button))!);
+      expect(onRetry).toHaveBeenCalledTimes(2);
+      expect(refetch).not.toHaveBeenCalled();
+    });
+
+    it('keeps an authoritative empty array and recovery while paused without inventing failure or offline status', () => {
+      const refetch = vi.fn();
+      renderQueryPanel({ data: [], fetchStatus: 'paused', dataUpdatedAt: Date.now(), refetch }, true);
+      expect(screen.getByText('No matching evidence')).toBeInTheDocument();
+      expect(screen.queryByText('Retained observation: 0')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Inspect evidence' })).not.toBeInTheDocument();
+      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(warning).toHaveTextContent('Cached evidence remains visible while its refresh is paused.');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(screen.queryByText(/refresh failed|you're offline/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('The initial evidence query is paused; no empty result is inferred.')).not.toBeInTheDocument();
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' }).find(button => !warning.contains(button))!);
+      expect(refetch).toHaveBeenCalledTimes(2);
     });
 
     it('gives refresh failure precedence over a simultaneous pause', () => {
