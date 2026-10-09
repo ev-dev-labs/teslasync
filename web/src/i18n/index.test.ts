@@ -76,8 +76,11 @@ describe('deferred English resources', () => {
   })
 
   it('assigns dashboard strings to one usage-local bundle', () => {
-    expect(usageManifest.namespaceToBundle.dashboard).toBe('dashboard')
-    expect(usageManifest.bundles.dashboard).toContain('dashboard')
+    expect(usageManifest.namespaceToBundle.dashboard).toBe('shared')
+    expect(usageManifest.bundles.shared).toContain('dashboard')
+    expect(
+      Object.values(usageManifest.bundles).flat().filter(namespace => namespace === 'dashboard'),
+    ).toEqual(['dashboard'])
   })
 
   it('loads missing shell detail keys through the real t() handler once', async () => {
