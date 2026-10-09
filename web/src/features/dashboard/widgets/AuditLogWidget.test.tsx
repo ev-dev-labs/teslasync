@@ -169,9 +169,9 @@ describe('AuditLogWidget — feed view (wide)', () => {
     expect(screen.getByText('vehicle · vin 5YJ')).toBeInTheDocument();
 
     // Severity → colour: delete=critical, update=warning, login=info.
-    expect(rowStyle('vehicle.delete')).toContain('rgb(239, 68, 68)');
-    expect(rowStyle('settings.update')).toContain('rgb(245, 158, 11)');
-    expect(rowStyle('user.login')).toContain('rgb(14, 165, 233)');
+    expect(rowStyle('vehicle.delete')).toContain('color: var(--semantic-danger);');
+    expect(rowStyle('settings.update')).toContain('color: var(--semantic-warning);');
+    expect(rowStyle('user.login')).toContain('color: var(--semantic-info);');
   });
 
   it('renders a distinct security title for each state branch with matching severity colour', () => {
@@ -197,9 +197,12 @@ describe('AuditLogWidget — feed view (wide)', () => {
     expect(screen.getByText('Valet mode on')).toBeInTheDocument();
 
     // inferSecuritySeverity: unlocked=critical, sentry active=warning, locked=info.
-    expect(rowStyle('Vehicle unlocked')).toContain('rgb(239, 68, 68)');
-    expect(rowStyle('Sentry: active')).toContain('rgb(245, 158, 11)');
-    expect(rowStyle('Vehicle locked')).toContain('rgb(14, 165, 233)');
+    expect(rowStyle('Vehicle unlocked')).toContain('color: var(--semantic-danger);');
+    expect(rowStyle('Sentry: active')).toContain('color: var(--semantic-warning);');
+    expect(rowStyle('Vehicle locked')).toContain('color: var(--semantic-info);');
+    expect(rowStyle('Door: open')).toContain('color: var(--semantic-info);');
+    expect(rowStyle('Guest mode on')).toContain('color: var(--semantic-info);');
+    expect(rowStyle('Valet mode on')).toContain('color: var(--semantic-info);');
   });
 
   it('falls back to the generic "Security event" title when no state field is set', () => {
@@ -338,8 +341,30 @@ describe('AuditLogWidget — loading / error / refresh', () => {
     it('only shows initial skeleton when no source has resolved', () => {
       mockUseAuditLogs.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
       mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
-      const { container } = renderWidget();
-      expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+      const initial = renderWidget();
+      const shell = initial.container.querySelector('[data-data-state="initial"]');
+      const skeleton = shell?.querySelector('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]');
+      expect(skeleton).not.toBeNull();
+      expect(skeleton).toHaveClass('h-full', 'min-h-24', 'w-full', 'rounded-xl');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(shell).toHaveAttribute('aria-busy', 'true');
+      expect(initial.container.querySelector('.animate-pulse')).toBeNull();
+      expect(screen.queryByText('No audit events')).not.toBeInTheDocument();
+      initial.unmount();
+
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: [] }));
+      const partial = renderWidget();
+      expect(partial.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+      expect(partial.container.querySelector('.bg-\\[var\\(--skeleton-bg\\)\\]')).toBeNull();
+      expect(screen.getByText('No audit events')).toBeInTheDocument();
+      partial.unmount();
+
+      mockUseAuditLogs.mockReturnValue(makeQuery({ data: [], isLoading: true, isFetching: true }));
+      mockUseSecurityEvents.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+      const cached = renderWidget();
+      expect(cached.container.querySelector('[data-data-state="partial"]')).not.toBeNull();
+      expect(cached.container.querySelector('.bg-\\[var\\(--skeleton-bg\\)\\]')).toBeNull();
+      expect(screen.getByText('No audit events')).toBeInTheDocument();
     });
   });
 
