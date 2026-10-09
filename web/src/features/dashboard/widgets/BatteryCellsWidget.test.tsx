@@ -333,9 +333,21 @@ describe('BatteryCellsWidget', () => {
 
     const { container } = renderWidget(<BatteryCellsWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    const shell = container.querySelector('[aria-busy="true"][data-data-state="initial"]');
+    expect(shell).toBeInTheDocument();
+    const skeletons = shell?.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeletons).toHaveLength(1);
+    expect(skeletons?.[0]).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeletons?.[0]).not.toHaveClass('animate-pulse');
+    expect(skeletons?.[0].childElementCount).toBe(0);
     expect(screen.queryByText('Min V')).not.toBeInTheDocument();
     expect(screen.queryByText('No battery cell data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Max V')).not.toBeInTheDocument();
+    expect(screen.queryByText('Avg V')).not.toBeInTheDocument();
+    expect(screen.queryByText('Spread')).not.toBeInTheDocument();
+    expect(screen.queryByText('No cell data')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-battery-cells-brief')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('surfaces an error state instead of the panel body when the query fails', () => {

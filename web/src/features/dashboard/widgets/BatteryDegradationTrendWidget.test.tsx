@@ -421,8 +421,20 @@ describe('BatteryDegradationTrendWidget', () => {
     degradationMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    const shell = container.querySelector('[aria-busy="true"][data-data-state="initial"]');
+    expect(shell).toBeInTheDocument();
+    const skeletons = shell?.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeletons).toHaveLength(1);
+    expect(skeletons?.[0]).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeletons?.[0]).not.toHaveClass('animate-pulse');
+    expect(skeletons?.[0].childElementCount).toBe(0);
     expect(screen.queryByText('SoH')).not.toBeInTheDocument();
+    expect(screen.queryByText('Degradation')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cycles')).not.toBeInTheDocument();
+    expect(screen.queryByText('No degradation data')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('responsive-container')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('surfaces the error panel (not the empty state) when the query fails', () => {

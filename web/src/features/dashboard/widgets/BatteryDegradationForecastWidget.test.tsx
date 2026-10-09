@@ -259,9 +259,22 @@ describe('BatteryDegradationForecastWidget — shell states', () => {
     mockDegradation.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const shell = container.querySelector('[aria-busy="true"][data-data-state="initial"]');
+    expect(shell).toBeInTheDocument();
+    const skeletons = shell?.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeletons).toHaveLength(1);
+    expect(skeletons?.[0]).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeletons?.[0]).not.toHaveClass('animate-pulse');
+    expect(skeletons?.[0].childElementCount).toBe(0);
     expect(screen.queryByText('Projected 80% capacity')).toBeNull();
     expect(screen.queryByText('No degradation forecast data')).toBeNull();
+    expect(screen.queryByText('Current health')).toBeNull();
+    expect(screen.queryByText('1 / 3 / 5-year outlook')).toBeNull();
+    expect(screen.queryByText('Risk factors')).toBeNull();
+    expect(screen.queryByText('Recommendations')).toBeNull();
+    expect(screen.queryByText('No recommendations')).toBeNull();
+    expect(screen.queryByTestId('dashboard-battery-forecast-brief')).toBeNull();
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('renders a QueryError (not an empty state) when the fetch fails', () => {
