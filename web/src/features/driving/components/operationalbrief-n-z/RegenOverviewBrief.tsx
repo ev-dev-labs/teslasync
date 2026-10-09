@@ -120,6 +120,7 @@ export function RegenOverviewBrief({ aggregate, model, aggregateState, detailSta
           <Subhead>{t('regen.overview.sampleScope', 'Measured canonical Drive rows returned by the capped detailed request.')}</Subhead>
           {detailState.isLoading ? <Skeleton height={220} />
             : detailState.error ? <QueryError error={detailState.error} onRetry={detailState.onRetry} />
+            // no-action: Unresolved detail is not a failed or empty response; parent query state owns resolution, while resolved/error branches already expose retry.
             : !detailState.isResolved ? <EmptyState message={t('regen.states.detailPending', 'Detailed data availability has not resolved.')} />
             : model.accounting.eligibleCount === 0 ? <EmptyState
               action={{ label: t('common.retry', 'Retry'), onClick: detailState.onRetry }}

@@ -70,7 +70,8 @@ export function SweetSpotSummaryBrief({ summary, isLoading, error, onRetry, scop
         retained={retained}
         actions={error ? <QueryError error={error} onRetry={onRetry} /> : undefined}
       />
-      {resolved && summary.observed === 0 && <EmptyState
+      {// no-action: A resolved zero-row sample is not a failed read for retry to repair; the header owns the selected vehicle and window.
+      resolved && summary.observed === 0 && <EmptyState
         message={t('sweetSpot.emptyWindow', 'No drives were returned for this selected window.')}
       />}
     </section>

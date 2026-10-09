@@ -42,7 +42,8 @@ export function TripCostBrief({ comparison, scope, loading, retained }: TripCost
         metrics={metrics} scope={scope} loading={loading} unavailable={!comparison} retained={retained}
         provenance={t('tripPlanner.brief.provenance', 'Deterministic trip-plan response using the submitted route, battery level, and preferences.')}
       />
-      {!comparison && !loading && <EmptyState message={t('tripPlanner.cost.empty', 'Plan a trip to compare EV charging cost against gasoline.')} />}
+      {// no-action: The parent trip form owns validated inputs and Plan Trip; this read-only cost summary has no planning callback and must not duplicate submission.
+      !comparison && !loading && <EmptyState message={t('tripPlanner.cost.empty', 'Plan a trip to compare EV charging cost against gasoline.')} />}
     </section>
   );
 }

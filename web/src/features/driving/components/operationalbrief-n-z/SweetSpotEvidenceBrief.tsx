@@ -57,7 +57,8 @@ export function SweetSpotEvidenceBrief({ summary, state, className, scope, resol
         </Badge> : undefined}
       />
       <SpeedSweetSpotSectionBody state={state} className="mt-4">
-        {summary.sweetSpot == null ? <EmptyState message={t('sweetSpot.evidence.empty',
+        {// no-action: This read-only comparison cannot create eligible drives or relax the sample floor; the header owns selection and source errors expose retry.
+        summary.sweetSpot == null ? <EmptyState message={t('sweetSpot.evidence.empty',
           'No speed band has enough eligible drives to support a best-band comparison in this window.')} /> : (
           <Text as="p" variant="bodySm">{summary.runnerUp != null
             ? t('sweetSpot.evidence.runnerUp', 'Next-best qualified band {{band}} measured {{gap}} higher than the winner ({{percent}}).', {

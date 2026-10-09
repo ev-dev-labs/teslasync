@@ -33,7 +33,8 @@ export function CarbonRecommendationBrief({ analysis, states, display }: CarbonS
     title={t('carbon.recommendation.title', 'Full-history greenest-window scenario')}
     description={t('carbon.source.recommendation', 'Green-window scenario')}
     scope={<span>{t('carbon.source.recommendationScope', 'Full vehicle history; independent of the selected range')}</span>}>
-    {recommendation.availability === 'empty' ? <EmptyState
+    {// no-action: No lifetime charging energy supports this read-only scenario; range changes cannot supply it, and source recovery lives in the ledger.
+    recommendation.availability === 'empty' ? <EmptyState
       message={t('carbon.recommendation.empty', 'No lifetime charging energy supports a green-window scenario.')} />
       : recommendation.availability === 'invalid' ? <AlertBanner className="mt-4" variant="warning">
         {t('carbon.recommendation.invalid', 'Recommendation fields failed runtime or three-hour-window validation; unknown values remain withheld.')}

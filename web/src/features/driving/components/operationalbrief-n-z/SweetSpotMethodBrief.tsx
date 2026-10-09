@@ -69,7 +69,8 @@ export function SweetSpotMethodBrief({ summary, start, end, windowLimit, state, 
         </Badge> : undefined}
       />
       <SpeedSweetSpotSectionBody state={state} className="mt-4">
-        {summary.observed === 0 && <EmptyState message={t('sweetSpot.method.empty', 'Coverage will appear when the selected window returns drives.')} />}
+        {// no-action: Coverage describes the returned sample and cannot add drive rows; the header owns the window and the section body handles failed reads.
+        summary.observed === 0 && <EmptyState message={t('sweetSpot.method.empty', 'Coverage will appear when the selected window returns drives.')} />}
         <Text as="p" variant="caption">{summary.historyCapReached
           ? t('sweetSpot.method.capped', 'The request returned {{limit}} rows, so this describes the observed selected-window subset; additional drives in the date range may not be represented.', { limit: fmtInt(windowLimit) })
           : t('sweetSpot.method.window', 'This describes all {{count}} rows returned for the selected window, up to the {{limit}}-row API limit.', {

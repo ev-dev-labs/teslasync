@@ -38,7 +38,8 @@ export function CarbonScoreBrief({ analysis, states, display }: CarbonSectionPro
       <LinearGauge value={score} max={100} label={t('carbon.score.gaugeLabel', 'Lifetime green score')}
         color={score < 35 ? '#f43f5e' : score < 70 ? '#f59e0b' : '#10b981'} size={170} decimals={precision} />
       <Text as="p" variant="caption" className="mt-2">{t('carbon.score.scale', '100 maps to the model minimum; 0 maps to the model maximum.')}</Text>
-    </div> : <EmptyState message={hasScoredSessions
+    </div> : <EmptyState message={// no-action: Missing scored sessions or an invalid score cannot be repaired by this read-only gauge; source recovery belongs to the ledger.
+      hasScoredSessions
       ? t('carbon.score.unavailable', 'A timing score is unavailable because the returned score failed validation.')
       : t('carbon.score.empty', 'No scored lifetime charging sessions support a timing score.')} />}
     <Text as="p" variant="caption" className="mt-4">{disclosure}</Text>

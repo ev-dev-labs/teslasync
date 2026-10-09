@@ -44,7 +44,8 @@ export function ColdStartBrief({ summary, penaltyCostLabel, isLoading, error, on
       description={t('coldStart.brief.description', 'Cold and warm starts compared within the returned selected window; this is observed cohort evidence, not a causal test.')}
       scope={scope} provenance={t('coldStart.brief.source', 'Returned drive energy and preceding parking gaps; up to 1,000 drives in the selected window.')}
       loading={isLoading} error={error} retained={retained} onRetry={onRetry} />
-    {available && summary.analyzed === 0 && <EmptyState
+    {// no-action: Retry cannot create usable energy or known parking gaps in returned drives; the header owns changes to the selected window.
+    available && summary.analyzed === 0 && <EmptyState
       message={t('coldStart.emptyWindow', 'No drives with usable energy and a known preceding parking gap were returned for this selected window.')} />}
   </section>;
 }
