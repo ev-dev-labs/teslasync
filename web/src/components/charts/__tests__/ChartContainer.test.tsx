@@ -21,6 +21,7 @@ import { useChartHiddenSeries } from '../ChartHiddenSeriesContext';
 import type { ApiRequestOptions } from '@/api/client';
 import type { ChartAnnotationRow } from '@/types/annotations';
 import type { ChartAnnotationsConfig } from '../ChartContainer';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 const { requestMock, toastSuccess, toastError, invalidateMock } = vi.hoisted(() => ({
   requestMock: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
@@ -402,5 +403,37 @@ describe('ChartLegend with context fallback', () => {
       </svg>,
     );
     expect(container).toBeTruthy();
+  });
+
+  describe('ChartContainer restrained toolbar chrome', () => {
+    it('keeps annotation visibility and series controls independent with semantic active ink', () => {
+      window.localStorage.removeItem('teslasync-annotations-hidden:restrained-frame');
+      renderWithProviders(
+        <ChartContainer title="Restrained frame" ariaLabel="Original trend"
+          annotations={{ vehicleId: 7, scope: 'tire', chartId: 'restrained-frame' }}
+          chartKey="restrained-frame" exportable={false}
+          data={[{ reading: 0 }, { reading: null }]}
+          dataColumns={[{ key: 'reading', label: 'Original reading' }]}>
+          {({ hidden }) => <div data-testid="annotation-visibility" data-hidden={hidden}>
+            <ContextProbe seriesKeys={['health']} />
+          </div>}
+        </ChartContainer>,
+        '/page?hidden_restrained-frame=health',
+      );
+      const add = screen.getByRole('button', { name: 'Add annotation' });
+      const toggle = screen.getByRole('button', { name: 'Hide annotations' });
+      expect(add).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7');
+      expect(toggle).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7', neonColorMap.blue.text);
+      expect(toggle).toHaveAttribute('aria-pressed', 'false');
+      fireEvent.click(toggle);
+      expect(screen.getByRole('button', { name: 'Show annotations' })).toHaveClass(typography.color.muted);
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByTestId('annotation-visibility')).toHaveAttribute('data-hidden', 'true');
+      expect(screen.getByTestId('probe-series-health')).toHaveAttribute('data-hidden', 'true');
+      fireEvent.click(toggle);
+      expect(toggle).toHaveClass(neonColorMap.blue.text);
+      expect(screen.getByTestId('annotation-visibility')).toHaveAttribute('data-hidden', 'false');
+      expect(screen.getByTestId('probe-series-health')).toHaveAttribute('data-hidden', 'true');
+    });
   });
 });

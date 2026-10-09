@@ -11,6 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { glassCardClasses, neonColorMap, typography } from '@/lib/tokens';
 import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
@@ -255,6 +256,7 @@ export interface ChartDataColumn {
 }
 
 const HIDDEN_STORAGE_PREFIX = 'teslasync-annotations-hidden:';
+const toolbarIconClassName = 'h-11 w-11 p-0 md:h-7 md:w-7';
 
 function readHiddenPref(key: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -556,7 +558,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                 'group m-0 border-0 bg-transparent p-0 shadow-none',
                 fluid && 'h-full min-h-0 max-h-full',
               )
-            : 'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-panel',
+            : cn('group', glassCardClasses.lg),
           // Tailwind preflight already removes default <figure> margins;
           // re-state `m-0` defensively so any consumer override of preflight
           // doesn't shift the chart vertical rhythm.
@@ -599,7 +601,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           <div className="flex min-w-0 items-start gap-2.5">
             {icon && (
               <span
-                className="mt-0.5 inline-flex shrink-0 text-[var(--theme-primary)]"
+                className={cn('mt-0.5 inline-flex shrink-0', typography.color.muted)}
                 aria-hidden="true"
               >
                 {icon}
@@ -618,7 +620,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           ) : (icon || metadataContent) ? (
             <div className="flex min-w-0 items-start gap-2.5">
               {icon && (
-                <span className="inline-flex shrink-0 text-[var(--theme-primary)]" aria-hidden="true">
+                <span className={cn('inline-flex shrink-0', typography.color.muted)} aria-hidden="true">
                   {icon}
                 </span>
               )}
@@ -644,7 +646,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   key={liveContext.current.revision}
                   variant="ghost"
                   size="sm"
-                  className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  className={cn(toolbarIconClassName, typography.color.muted, 'hover:text-[var(--text-secondary)]')}
                   icon={<Plus className="h-3.5 w-3.5" />}
                   onClick={(event) => {
                     if (annotationTarget || !annotationsConfig || !liveContext.current.available) return;
@@ -693,10 +695,10 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    '!h-7 !w-7 !p-0',
+                    toolbarIconClassName,
                     hidden
                       ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-                      : 'text-blue-400 hover:text-blue-300',
+                      : neonColorMap.blue.text,
                   )}
                   icon={hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   onClick={toggleHidden}
@@ -726,7 +728,10 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               />
             )}
 
-            {fullscreen && !controlsUnavailable && <FullscreenButton targetRef={figureRef} />}
+            {fullscreen && !controlsUnavailable && <FullscreenButton
+              targetRef={figureRef}
+              className="!h-11 !w-11 md:!h-7 md:!w-7"
+            />}
           </div>
           )}
           </div>
@@ -738,14 +743,16 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             aria-label={t('annotations.markerRow', 'Annotations on this chart')}
           >
             {visibleAnnotations.map((ann) => (
-              <span
+              <Text
+                as="span"
+                variant="caption"
                 key={ann.id}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5 text-2xs text-[var(--text-secondary)]"
+                className={cn('inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5', typography.color.secondary)}
                 title={ann.description ?? ann.label}
               >
                 <Tag className="h-2.5 w-2.5" aria-hidden="true" />
                 {ann.label}
-              </span>
+              </Text>
             ))}
           </div>
         )}

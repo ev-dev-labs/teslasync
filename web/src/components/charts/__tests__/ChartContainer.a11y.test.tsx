@@ -16,6 +16,7 @@ import { EmbeddedChart } from '../EmbeddedChart';
 import { ChartCard } from '@/components/layout/layout-reference/ChartCard';
 import type { ApiRequestOptions } from '@/api/client';
 import type { ChartAnnotationRow } from '@/types/annotations';
+import { glassCardClasses, typography } from '@/lib/tokens';
 
 const { annotationRequest } = vi.hoisted(() => ({
   annotationRequest: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
@@ -28,6 +29,33 @@ vi.mock('@/api/hooks/_toastHelpers', () => ({
 }));
 
 let previousPreferences: ReturnType<typeof getFormatterPreferences>;
+
+describe('ChartContainer canonical frame chrome', () => {
+  it('reuses neutral panel chrome without dropping descriptions, gaps, sampling or export controls', () => {
+    renderChart(
+      <ChartContainer title="Complete frame" ariaLabel="Original observations"
+        icon={<span data-testid="frame-icon" />} subtitle="Original context"
+        ariaDescription="Original source with missing observations"
+        metadata={{ sampling: { sampled: true, sourceCount: 20, renderedCount: 2, strategy: 'stride' } }}
+        data={[{ reading: 0 }, { reading: null }]}
+        dataColumns={[{ key: 'reading', label: 'Reading' }]}>
+        <span data-testid="original-series">Original series</span>
+      </ChartContainer>,
+    );
+    const figure = screen.getByRole('figure', { name: 'Complete frame' });
+    expect(figure).toHaveClass(...glassCardClasses.lg.split(' '));
+    expect(figure).toHaveClass('forced-colors:border-[CanvasText]', 'forced-colors:bg-[Canvas]');
+    expect(figure).not.toHaveClass('shadow-panel');
+    expect(screen.getByTestId('frame-icon').parentElement).toHaveClass(typography.color.muted);
+    expect(figure).toHaveAccessibleDescription(/Original source with missing observations/);
+    expect(screen.getByText('Showing 2 of 20 observations for display.')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '0' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '—' })).toBeInTheDocument();
+    expect(figure).toContainElement(screen.getByTestId('original-series'));
+    expect(screen.getByRole('button', { name: 'Export chart' })).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7');
+    expect(figure.querySelector('[data-chart-toolbar]')).toHaveAttribute('data-html2canvas-ignore', 'true');
+  });
+});
 
 describe('managed annotation dialog focus and authority', () => {
   it('retains focused editable rejection and restores the actual trigger only on idle cancellation', async () => {
