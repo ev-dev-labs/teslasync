@@ -211,7 +211,22 @@ describe('AnalyticsSummaryWidget', () => {
     renderWidget();
     expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
     expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    const brief = screen.getByTestId('analytics-summary-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    expect(within(brief).getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(within(brief).getByText('200.00 kWh')).toBeInTheDocument();
+    expect(within(brief).getByText('$0.25')).toBeInTheDocument();
+    expect(within(brief).getByText('Fleet-wide · default analytics window')).toBeInTheDocument();
+    expect(within(brief).getAllByText(/Exact bounds and completeness are not supplied/).length).toBeGreaterThan(0);
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Data may be stale');
+    expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('aria-live', 'polite');
+    expect(warning).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(analyticsMock.mock.results[0].value.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('keeps known zero measurements visible instead of reporting no qualifying data', () => {
@@ -300,7 +315,15 @@ describe('AnalyticsSummaryWidget', () => {
     analyticsMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    const skeleton = container.querySelector('[aria-hidden="true"].min-h-24');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByTestId('analytics-summary-operational-brief')).not.toBeInTheDocument();
+    expect(screen.queryByText('1,000.00 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('No analytics data')).not.toBeInTheDocument();
     // No KPI content while loading.
     expect(screen.queryByText('Total distance')).not.toBeInTheDocument();
   });

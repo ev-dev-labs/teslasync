@@ -240,7 +240,14 @@ describe('AnomalyDetectorWidget — states', () => {
   it('renders a loading skeleton while the query is pending', () => {
     useAnomaliesMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"].min-h-24');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryAllByText(/· z=/)).toHaveLength(0);
+    expect(screen.queryByText(/active$/)).toBeNull();
     expect(screen.queryByText('No anomalies')).toBeNull();
   });
 
@@ -404,8 +411,14 @@ describe('AnomalyDetectorWidget — compact', () => {
 
     expect(screen.getByText('2')).toBeInTheDocument();
     const badge = screen.getByText('2 active');
-    // maxSeverity → critical → SEVERITY_BADGE.danger → red chip.
-    expect(badge).toHaveClass('bg-red-100');
+    // Critical severity flows through WidgetBigNumber to Badge's danger role.
+    expect(badge).toHaveClass(
+      'border',
+      'border-[var(--semantic-danger-border)]',
+      'bg-[var(--semantic-danger-bg)]',
+      'text-[var(--semantic-danger)]',
+    );
+    expect(badge).toHaveTextContent('2 active');
   });
 
   it('renders an empty state in compact mode when there are no anomalies', () => {

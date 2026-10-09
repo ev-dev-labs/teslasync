@@ -159,7 +159,14 @@ describe('AlertFeedWidget — shell states', () => {
     mockAlerts.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(NARROW);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"].min-h-24');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText('Battery critically low')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alerts yet')).not.toBeInTheDocument();
     // Title + rows are suppressed until the shell resolves.
     expect(screen.queryByText('Alert feed')).toBeInTheDocument();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
