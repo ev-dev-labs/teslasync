@@ -44,7 +44,7 @@
 
 import { type ReactNode } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -214,7 +214,7 @@ it('reviews the real fleet error sample while retaining source errors independen
   const drawer = screen.getByRole('dialog');
   expect(within(drawer).getAllByText('1')).toHaveLength(2);
   expect(within(drawer).getByText(/not the total error count for a complete time range/)).toBeInTheDocument();
-  expect(within(drawer).getByText(/exact coverage bounds unknown/)).toBeInTheDocument();
+  expect(within(drawer).getAllByText(/exact coverage bounds unknown/)).toHaveLength(2);
 });
 
 // ── Compact layout (cols ≤ 1): the status hero ──────────────────────────────
@@ -223,7 +223,7 @@ describe('TelemetryErrorsWidget — compact layout', () => {
   it('renders a loading skeleton (no hero copy) while the VIN query loads', () => {
     mockUseVINs.mockReturnValue(qr({ isLoading: true }));
     const { container } = renderWidget(COMPACT);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="initial"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
     expect(screen.queryByText('Error VINs')).toBeNull();
   });
 
@@ -233,7 +233,7 @@ describe('TelemetryErrorsWidget — compact layout', () => {
     const { container } = renderWidget(COMPACT);
 
     expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="initial"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
     expect(screen.queryByText('Error VINs')).not.toBeInTheDocument();
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
     expect(screen.queryByText('No telemetry error data')).not.toBeInTheDocument();
