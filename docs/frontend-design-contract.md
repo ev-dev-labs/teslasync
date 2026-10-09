@@ -2402,3 +2402,78 @@ catalog evidence and DAG checks are in
 and its own JSON report. All application tests, TypeScript, lint/audits/build,
 docs preview/build, browser/network/device and composed acceptance are **NOTRUN**.
 No application completion, point plumbing or implementation correctness is claimed.
+
+## More overflow geometry and preservation — MDC-024 / MDC-025 / MDC-030 / MDC-043
+
+**`phase3-more-menu-geometry-contract`, attempt 1: naming-only decision.**
+Preserve the complete approved **175126-byte** prefix, SHA-256
+`6625a32961b2d05227e3e2ecc0aabdec76ee8be957ca713e0b4850dc3e9a9f78`,
+including the annotation-authority API and every prior token/role decision.
+Actual `phase3-more-segment-attempt1-20261008T2358-release.json` and `-scan.log`
+under `.agent-status\receipts\` retain FAILED startup (no tests executed),
+scan1 with two geometry candidates and one token-reference review. The genuine
+MoreSegment source/test remain byte-identical, **155/178 lines, 5 cases /
+15 expectations**. Those receipts are not runtime acceptance.
+
+Approve exactly `theme.extend.maxHeight['more-menu'] = 'min(70vh,520px)'`
+at existing `web\tailwind.config.js`; replace only
+`max-h-[min(70vh,520px)]` with **`max-h-more-menu`**.
+No current named max-height is equal; `max-h-status-options = 280px` is
+not equivalent. Preserve the growing scroll cap, `overflow-y-auto`, `vh`
+and fixed pixels: no fixed height, rem/dvh/container conversion or rounding.
+For `w-[min(92vw,320px)]`, explicitly reuse existing
+**`w-connection-diagnostics = min(92vw, 320px)`**: equal width shape may
+serve More without implying connection semantics. Add no duplicate width alias.
+No desktop/mobile dimension, breakpoint, viewport unit or placement changes.
+
+The already queued **`phase3-more-menu-geometry-tokens`** owns only
+`web\tailwind.config.js`, `web\src\lib\cn.ts`, `web\src\lib\cn.test.ts` and
+`web\src\lib\__tests__\tokens.test.ts`, after catalog acceptance and prior
+token leases release. Add one maxHeight entry and typed recognition in the
+existing cn `max-h` family: `{ 'max-h': ['more-menu'] }`; retain existing
+`w` recognition of `connection-diagnostics`. No `tokens.ts`, CSS, palette,
+plugin, screen, scanner, catalog, consumer or test-configuration writes.
+Freeze the immediate accepted predecessor; preserve original golden hashes,
+type/role dictionaries, all historical expectations and exact additive
+accounting. Assert this one key/value before excluding only its approved
+addition from historical projections; never reset fingerprints or prune
+assertions to hide effects. Preserve the queued 957-case predecessor intent;
+that count is historical context, not tests run by this architect.
+
+Require actual installed Tailwind generated CSS for both old/new pairs,
+including bare, `!`, matching `sm/md/xl:` and responsive-important forms.
+After utility-name substitution compare selectors/context/specificity,
+declarations/values, importance and media conditions exactly; no added
+declarations or changed breakpoints. Execute exported typed `cn()` in both
+orders against exact old arbitrary classes, ordinary alternatives and other
+arbitrary same-property values. Matching variants/importance are last-conflict
+wins; distinct breakpoints, important/non-important contexts and width versus
+min/max-width versus max-height coexist. Registration/source order alone
+proves neither CSS nor merge parity; record raw commands/output/exits.
+
+Consumer scope is only the existing **MoreSegment.tsx / MoreSegment.test.tsx**
+pair under `web\src\components\layout\status-bar\`, at final attempt2.
+Preserve all original five bodies' behavior and 15 assertion obligations.
+Authorize only exact semantic oracle adaptations: running/build-news
+`text-amber-300` -> `neonColorMap.amber.text`; error `text-rose-300` ->
+`neonColorMap.red.text`; build-news marker `bg-amber-400` ->
+`neonColorMap.amber.dot`. Complete retains success via `neonColorMap.green.text`;
+idle retains `typography.color.muted`. These existing roles preserve meaning,
+not numeric paint identity. Assert the actual role classes/marker and retain
+names, icons, counts, spinner intent and interactions; never weaken success
+or retain obsolete decorative classes to trick old tests. Error > running >
+complete > build-news > idle tone precedence, separate build-news marker/
+summary, iconOnly, props/defaults/ref, all embedded actions and close/About
+callbacks remain unchanged. No new business policy, keys, API or backend data.
+
+Validation order is **architect acceptance -> frozen CURRENT source catalog
+generator repair (`phase3-post-authority-source-catalog-closure`) -> normal
+geometry-token proof -> More final attempt2**. Canonical **28139** leaves
+stay untouched; actual shell/usage drift remains failed/no-tests until normal
+repair/guards verify the exact generated root. Do not require token PASS
+before catalog repair or runtime-owner DONE before its needed generator.
+Source release is the parent's write barrier, not runtime acceptance.
+Mobile sizing/name clipping, keyboard/topmost and embedded targets remain
+existing shared Popover/embedded-owner work plus separate composed proof;
+no new portal/focus engine. Mission §§43–44/MDC-040–043/060–070 still apply.
+This docs-only append claims no tests, app pass, scanner waiver or runtime QA.
