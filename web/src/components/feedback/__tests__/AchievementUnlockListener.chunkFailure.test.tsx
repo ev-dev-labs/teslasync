@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import '@/i18n'
 import type { AchievementUnlockedEvent } from '@/api/hooks/useAchievementUnlocks'
 
 /**
@@ -184,7 +185,8 @@ describe('AchievementUnlockListener — lazy chunk failure containment', () => {
 
     // The app is untouched: no full-page error card, no blanked shell.
     expect(screen.getByTestId('app-shell')).toBeInTheDocument()
-    expect(screen.queryByText(/something went wrong/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Something went wrong' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try Again' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /reload/i })).not.toBeInTheDocument()
 
     // No celebration UI, and crucially no error UI in its place.
@@ -295,7 +297,18 @@ describe('AchievementUnlockListener — lazy chunk failure containment', () => {
     // This is the behaviour the local boundary exists to prevent: the whole
     // shell is gone and the full-page error card is showing instead.
     expect(screen.queryByTestId('app-shell')).not.toBeInTheDocument()
-    expect(screen.getByText(/something went wrong/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument()
+    const retry = screen.getByRole('button', { name: 'Try Again' })
+    expect(retry).toBeEnabled()
+    fireEvent.click(retry)
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(screen.queryByTestId('app-shell')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Something went wrong' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Try Again' })).toBeEnabled()
+    expect(reloadSpy).not.toHaveBeenCalled()
   })
 })
 
