@@ -22,7 +22,7 @@
  *   3. Ready — two stacked series with the right keys, names, fills, stackId.
  *   4. Ready — the chart lives in a labelled `img` region and wires the date
  *      axis through `formatDateShort` + renders the tooltip and legend.
- *   5. Loading — a 256px skeleton, no chart leaks through.
+ *   5. Loading — the shared chart double's static 220px skeleton, no chart leaks through.
  *   6. Error — a retry-able banner, `onRetry` forwarded, no chart (also pins
  *      error-over-data precedence: non-empty buckets stay hidden).
  *   7. Error precedence — an error wins over a concurrent loading flag.
@@ -242,9 +242,15 @@ describe('SentryModeChart — loading + error states', () => {
   it('shows a skeleton (not the chart) while loading', () => {
     const { container } = renderChart({ isLoading: true, sentryBuckets: [] });
 
-    const skeleton = container.querySelector('.animate-pulse');
+    const skeleton = container.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 220px"]');
     expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(skeleton).toHaveClass('bg-[var(--skeleton-bg)]');
+    expect(skeleton).toBeEmptyDOMElement();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-datum')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Sentry mode activity/i })).not.toBeInTheDocument();
   });
 
   it('renders a retry-able error, forwards onRetry, and hides the chart even with data present', () => {
@@ -272,7 +278,7 @@ describe('SentryModeChart — loading + error states', () => {
     });
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 220px"]')).toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 });

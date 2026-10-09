@@ -162,7 +162,7 @@ describe('WindowStatusDetail — data', () => {
       expect(within(group).getByText(label)).toBeInTheDocument();
     }
     // Data branch → no skeletons, no error alert.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 104px"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -212,7 +212,7 @@ describe('WindowStatusDetail — placeholder (no event)', () => {
       expect(windowValueText(label)).toBe('Unknown');
     }
     // Placeholder is not a loading or error state.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 104px"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
@@ -224,13 +224,25 @@ describe('WindowStatusDetail — loading', () => {
     // Title still anchors the panel while loading.
     expect(screen.getByText('Window status detail')).toBeInTheDocument();
 
-    const skeletonGrid = container.querySelector('[aria-hidden="true"]');
+    const skeletonGrid = container.querySelector('div.grid.grid-cols-2.gap-3[aria-hidden="true"]');
     expect(skeletonGrid).not.toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(4);
+    const skeletons = container.querySelectorAll('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 104px"]');
+    expect(skeletons.length).toBe(4);
+    expect(skeletonGrid?.children).toHaveLength(4);
+    for (const skeleton of skeletons) {
+      expect(skeleton.parentElement).toBe(skeletonGrid);
+      expect(skeleton).toHaveClass('bg-[var(--skeleton-bg)]');
+      expect(skeleton).toHaveStyle({ height: '104px' });
+      expect(skeleton).toBeEmptyDOMElement();
+    }
 
     // Neither the window group nor its tiles may render yet.
     expect(screen.queryByRole('group')).toBeNull();
     expect(screen.queryByText('Front driver')).toBeNull();
+    for (const label of WINDOW_LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText('Unknown')).toBeNull();
   });
 
   it('prioritises the skeleton over stale event data when both are present', () => {
@@ -239,9 +251,21 @@ describe('WindowStatusDetail — loading', () => {
       latest: makeEvent({ fdWindow: 'Open' }),
     });
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(4);
+    const skeletons = container.querySelectorAll('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 104px"]');
+    expect(skeletons.length).toBe(4);
+    for (const skeleton of skeletons) {
+      expect(skeleton.parentElement).toHaveAttribute('aria-hidden', 'true');
+      expect(skeleton).toHaveStyle({ height: '104px' });
+      expect(skeleton).toHaveClass('bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+    }
     expect(screen.queryByRole('group')).toBeNull();
     expect(screen.queryByText('Front driver')).toBeNull();
+    for (const label of WINDOW_LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText('Open')).toBeNull();
+    expect(screen.queryByText('Closed')).toBeNull();
   });
 });
 
@@ -252,7 +276,7 @@ describe('WindowStatusDetail — error', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The window group and skeletons must not render.
     expect(screen.queryByRole('group')).toBeNull();
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 104px"]')).toBeNull();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -267,7 +291,7 @@ describe('WindowStatusDetail — error', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(0);
+    expect(container.querySelectorAll('.h-4.w-full.rounded[aria-hidden="true"][style*="height: 104px"]').length).toBe(0);
     expect(screen.queryByRole('group')).toBeNull();
   });
 

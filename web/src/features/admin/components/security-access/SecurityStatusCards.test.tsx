@@ -130,12 +130,22 @@ describe('SecurityStatusCards', () => {
     expect(region).toBeInTheDocument();
     expect(region).toHaveAttribute('aria-busy', 'true');
     // Six skeleton placeholders — one per tile the grid will eventually show.
-    expect(region.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    const skeletons = region.querySelectorAll(':scope > .h-4.w-full.rounded[aria-hidden="true"]');
+    expect(skeletons).toHaveLength(6);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveStyle({ height: '104px' });
+      expect(skeleton).toHaveClass('bg-[var(--skeleton-bg)]');
+      expect(skeleton).toBeEmptyDOMElement();
+    }
     // Neither the empty message nor the tiles render while loading.
     expect(
       screen.queryByText(/no security state available/i),
     ).not.toBeInTheDocument();
     expect(screen.queryByText('Lock status')).not.toBeInTheDocument();
+    for (const label of TILE_LABELS) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText('Locked')).not.toBeInTheDocument();
   });
 
   it('renders the empty state (no tiles) when there is no data, no loading and no error', () => {
