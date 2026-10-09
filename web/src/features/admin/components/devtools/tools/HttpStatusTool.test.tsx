@@ -93,10 +93,10 @@ describe('HttpStatusTool', () => {
 
     // 2xx → success, 3xx → info, 4xx → warning, 5xx → danger. The variant maps
     // to a distinct background utility class on the Badge span.
-    expect(screen.getByText('200')).toHaveClass('bg-green-100') // success
-    expect(screen.getByText('301')).toHaveClass('bg-blue-100') // info
-    expect(screen.getByText('404')).toHaveClass('bg-yellow-100') // warning
-    expect(screen.getByText('500')).toHaveClass('bg-red-100') // danger
+    expect(screen.getByText('200')).toHaveClass('bg-[var(--semantic-success-bg)]') // success
+    expect(screen.getByText('301')).toHaveClass('bg-[var(--semantic-info-bg)]') // info
+    expect(screen.getByText('404')).toHaveClass('bg-[var(--semantic-warning-bg)]') // warning
+    expect(screen.getByText('500')).toHaveClass('bg-[var(--semantic-danger-bg)]') // danger
   })
 
   it('filters by code, is case-insensitive, and trims surrounding whitespace', () => {

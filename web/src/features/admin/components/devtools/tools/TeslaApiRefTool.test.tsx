@@ -121,11 +121,11 @@ describe('TeslaApiRefTool', () => {
 
     const getRow = screen.getByText(LIST_PATH).closest('tr') as HTMLElement
     const getBadge = within(getRow).getByText('GET')
-    expect(getBadge.className).toMatch(/bg-blue/)
+    expect(getBadge.className).toMatch(/bg-\[var\(--semantic-info-bg\)\]/)
 
     const postRow = screen.getByText(WAKE_PATH).closest('tr') as HTMLElement
     const postBadge = within(postRow).getByText('POST')
-    expect(postBadge.className).toMatch(/bg-yellow/)
+    expect(postBadge.className).toMatch(/bg-\[var\(--semantic-warning-bg\)\]/)
   })
 
   it('filters by HTTP method case-insensitively', () => {

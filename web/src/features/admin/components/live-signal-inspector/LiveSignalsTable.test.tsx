@@ -236,10 +236,10 @@ describe('LiveSignalsTable — kind badge', () => {
       />,
     );
 
-    expect(screen.getByText('Numeric')).toHaveClass('bg-blue-100');
-    expect(screen.getByText('Boolean')).toHaveClass('bg-yellow-100');
-    expect(screen.getByText('Enum')).toHaveClass('bg-green-100');
-    expect(screen.getByText('Compound')).toHaveClass('bg-red-100');
+    expect(screen.getByText('Numeric')).toHaveClass('bg-[var(--semantic-info-bg)]');
+    expect(screen.getByText('Boolean')).toHaveClass('bg-[var(--semantic-warning-bg)]');
+    expect(screen.getByText('Enum')).toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(screen.getByText('Compound')).toHaveClass('bg-[var(--semantic-danger-bg)]');
   });
 });
 

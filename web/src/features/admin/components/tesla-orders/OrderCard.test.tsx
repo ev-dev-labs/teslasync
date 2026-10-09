@@ -140,11 +140,11 @@ describe('OrderCard', () => {
 
   it('maps each lifecycle status onto its canonical Badge variant and sentence-cases the label', () => {
     const cases = [
-      { status: 'DELIVERED', label: 'Delivered', bg: 'bg-green-100' },
-      { status: 'IN_PRODUCTION', label: 'In production', bg: 'bg-yellow-100' },
-      { status: 'CANCELED', label: 'Canceled', bg: 'bg-red-100' },
+      { status: 'DELIVERED', label: 'Delivered', bg: 'bg-[var(--semantic-success-bg)]' },
+      { status: 'IN_PRODUCTION', label: 'In production', bg: 'bg-[var(--semantic-warning-bg)]' },
+      { status: 'CANCELED', label: 'Canceled', bg: 'bg-[var(--semantic-danger-bg)]' },
       // READY_FOR_DELIVERY contains "DELIVER" but READY wins → info, not success.
-      { status: 'READY_FOR_DELIVERY', label: 'Ready for delivery', bg: 'bg-blue-100' },
+      { status: 'READY_FOR_DELIVERY', label: 'Ready for delivery', bg: 'bg-[var(--semantic-info-bg)]' },
       { status: 'WEIRD_STATE', label: 'Weird state', bg: BADGE_VARIANTS.neutral },
     ] as const;
 
