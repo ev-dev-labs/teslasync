@@ -33,6 +33,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
+import { chartTokens } from '@/lib/tokens';
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
 
 // Return the English fallback (2nd arg) for every t() call so the copy we
@@ -137,7 +138,10 @@ describe('ReasonBreakdown — state branches', () => {
   it('shows a skeleton on first load (loading with no rows yet)', () => {
     const { container } = renderRB({ rows: [], loading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('w-full', 'rounded');
+    expect(skeleton).toHaveStyle({ height: '200px' });
     // No bars and no empty-state while we're still loading.
     expect(screen.queryByTestId('metric-bar')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
@@ -149,7 +153,7 @@ describe('ReasonBreakdown — state branches', () => {
     const empty = screen.getByRole('status');
     expect(empty).toBeInTheDocument();
     expect(empty).toHaveTextContent(/No failed ingests/i);
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 
@@ -173,7 +177,7 @@ describe('ReasonBreakdown — state branches', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 
@@ -184,7 +188,7 @@ describe('ReasonBreakdown — state branches', () => {
     });
 
     // buckets.length > 0 → the `loading && empty` skeleton guard is skipped.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.getAllByTestId('metric-bar')).toHaveLength(2);
   });
 });
@@ -260,8 +264,11 @@ describe('ReasonBreakdown — reason bucketing', () => {
 
     const bars = readBars();
     expect(bars).toHaveLength(9);
-    expect(bars[0].color).toBe('#3b82f6'); // series[0]
-    expect(bars[8].color).toBe('#3b82f6'); // series[8 % 8] === series[0]
+    expect(chartTokens.series).toHaveLength(8);
+    expect(bars.map((bar) => bar.color)).toEqual([...chartTokens.series, chartTokens.series[0]]);
+    expect(bars[0].color).toBe('light-dark(#385e7e, #91b4d2)'); // series[0]
+    expect(bars[8].color).toBe('light-dark(#385e7e, #91b4d2)'); // series[8 % 8] === series[0]
+    expect(bars[0].color).toBe(bars[8].color);
     expect(bars[0].color).not.toBe(bars[1].color);
   });
 });
