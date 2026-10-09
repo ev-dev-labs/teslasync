@@ -86,6 +86,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import FleetComparePage from './FleetComparePage'
 import type { Vehicle } from '@/types/vehicle'
@@ -254,9 +255,11 @@ function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/fleet-compare']}>
       <QueryClientProvider client={client}>
-        <ToastProvider>
-          <FleetComparePage />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <FleetComparePage />
+          </ToastProvider>
+        </ThemeProvider>
       </QueryClientProvider>
       <LocationProbe />
     </MemoryRouter>,
@@ -304,8 +307,11 @@ describe('FleetComparePage', () => {
     // Real formatting boundary: km stays km, currency uses $, 2dp default.
     expect(screen.getAllByText('5,000.00 km').length).toBe(2)
     // KPI band interpolates the i18n "A vs B" connector with live/lifetime data.
-    expect(await screen.findByText('72% vs 65%')).toBeInTheDocument()
-    expect(await screen.findByText('$500.00 vs $650.00')).toBeInTheDocument()
+    const batteryReading = screen.getByText('Battery level · Model 3 LR').closest('[role="listitem"]') as HTMLElement
+    expect(await within(batteryReading).findByText('72% vs 65%')).toBeInTheDocument()
+    const chargingCostReading = screen.getByText('Charging cost · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
+    if (!chargingCostReading) throw new Error('Charging cost · Model 3 LR must belong to a semantic listitem')
+    expect(await within(chargingCostReading).findByText('$500.00 vs $650.00')).toBeInTheDocument()
 
     // Vehicle names surface as the table's value-column headers.
     expect(screen.getAllByText('Model 3 LR').length).toBeGreaterThan(0)
@@ -317,24 +323,25 @@ describe('FleetComparePage', () => {
 
   it('annotates the winner with a ✓ across higher / lower / tie semantics', async () => {
     renderPage()
+    const comparisonTable = within(await screen.findByRole('table'))
 
     // Settle past the transient auto-select window before reading cell values.
     // 'higher' → A (210) beats B (140): ✓ sits with the winner only.
-    const drivesWinner = await screen.findByText('210')
+    const drivesWinner = await comparisonTable.findByText('210')
     expect(within(drivesWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(screen.getByText('140')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('140')).queryByText('✓')).toBeNull()
 
     // 'lower' → B (155 Wh/km) beats A (170 Wh/km).
-    const effWinner = screen.getByText('155.00 Wh/km')
+    const effWinner = comparisonTable.getByText('155.00 Wh/km')
     expect(within(effWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(screen.getByText('170.00 Wh/km')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('170.00 Wh/km')).queryByText('✓')).toBeNull()
 
     // 'neutral' → Avg Speed never annotates a winner even though the values differ.
-    expect(within(screen.getByText('60.00 km/h')).queryByText('✓')).toBeNull()
-    expect(within(screen.getByText('62.00 km/h')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('60.00 km/h')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('62.00 km/h')).queryByText('✓')).toBeNull()
 
     // a === b → equal Total Distance is a tie despite the 'higher' semantic.
-    for (const cell of screen.getAllByText('5,000.00 km')) {
+    for (const cell of comparisonTable.getAllByText('5,000.00 km')) {
       expect(within(cell).queryByText('✓')).toBeNull()
     }
   })
