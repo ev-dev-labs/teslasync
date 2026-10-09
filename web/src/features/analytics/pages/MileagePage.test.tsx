@@ -253,7 +253,8 @@ describe('MileagePage — loading', () => {
       screen.getByRole('heading', { name: 'Odometer over time', level: 3 }),
     ).toBeInTheDocument();
     // Skeletons stand in for the real content: no metric values, no chart image.
-    expect(within(kpiRegion()).queryByText('Total distance')).toBeNull();
+    expect(within(kpiRegion()).getByText('Total distance')).toBeInTheDocument();
+    expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryByRole('img', { name: 'Odometer readings over time' })).toBeNull();
     // Loading is not "empty": the empty-state copy must not show yet.
     expect(screen.queryByText('No odometer readings yet')).toBeNull();
