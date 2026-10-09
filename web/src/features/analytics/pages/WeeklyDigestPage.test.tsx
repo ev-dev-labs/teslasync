@@ -238,7 +238,7 @@ function section(id: string): HTMLElement {
   return card;
 }
 const loadingAttr = (id: string) =>
-  section(id).querySelector('[data-state="loading"], [aria-busy="true"], .animate-pulse') ? 'true' : 'false';
+  section(id).querySelector('[data-state="loading"], [aria-busy="true"], [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]') ? 'true' : 'false';
 const errorAttr = (id: string) =>
   within(section(id)).queryByRole('alert') ? 'true' : 'false';
 function errorMessage(id: string): string {
