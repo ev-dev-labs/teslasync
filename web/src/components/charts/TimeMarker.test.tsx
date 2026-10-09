@@ -148,7 +148,7 @@ describe('TimeMarker — severity → colour mapping', () => {
 describe('TimeMarker — re-export + chart integration', () => {
   it('re-exports the canonical severityTokens map by reference', () => {
     expect(severityTokens).toBe(canonicalSeverityTokens);
-    expect(severityTokens.critical.dot).toBe('bg-red-400');
+    expect(severityTokens.critical.dot).toBe('bg-[var(--semantic-danger)]');
   });
 
   it('mounts as a valid child inside a recharts chart without throwing', () => {
