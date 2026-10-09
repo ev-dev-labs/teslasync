@@ -78,7 +78,7 @@ console.log(`Coverage: ${adopted}/${TECHNICAL_SURFACES.length}`);
 //
 // A file that vanished (`why === 'file not found'`) is always a hard failure —
 // the pin list would otherwise rot into a no-op.
-const FLOOR = Number(process.env.AUDIT_HELP_TOOLTIP_FLOOR ?? 6);
+const FLOOR = Number(process.env.AUDIT_HELP_TOOLTIP_FLOOR ?? 8);
 const vanished = missing.filter((m) => m.why === 'file not found');
 if (vanished.length > 0) {
   console.error(
