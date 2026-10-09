@@ -21,15 +21,38 @@ the frontend package is `web`. `migration-queue.md` is orchestrator-owned.
 - Use category barrels in features and concrete internal imports inside
   shared components. Keep all loading, empty, error, stale/offline, keyboard,
   focus, reduced-motion, and mobile behavior.
-- Do not run full-repository lint or build. Use targeted checks only when
-  allowed by the assignment. Record exact commands, exit codes, and output;
-  source inspection or old receipts are not runtime acceptance.
+- Run tests only for files changed by your item:
+  `vitest run <file> --pool=forks --maxWorkers=2`. Explicitly list multiple
+  changed test files; never run an unselected suite or unrelated selectors.
+  No-change workers do not launch new tests. Scoped lint and typing remain
+  allowed when assigned; full tests, full lint, and builds belong exclusively
+  to the orchestrator at phase gates, one command at a time, never parallel.
+- Redirect all command output to `logs\<item-id>.log` at the Git root.
+  Append command names and exit codes without replacing earlier output.
+  Never attach to background shell output or stream it through `Tee-Object`.
+  Read only a summary or the last 50 lines. Preserve earlier evidence files.
 - Update `.agent-status\<item-id>.txt` at start, every three minutes, and
   immediately before release: `UTC timestamp | current step | files touched`.
 - Target a bounded item under 15 minutes. Stop and report a concrete blocker
   rather than looping. The orchestrator enforces the 25-minute stuck limit.
 - No questions: make reasonable scoped decisions and report assumptions.
   Never bypass a safety/authentication prompt or run a production mutation.
+
+## Queue and resource discipline
+
+- Dispatch only an item already present in `migration-queue.md`. Verification,
+  provenance, revalidation, and repair work must also have a queued item;
+  after a failed check, add one scoped fix item before dispatching it.
+- Keep at most 32 actual concurrent workers. Reservations and delivered idle
+  workers are not running workers. On restart or reconciliation, reset real
+  zombie `[~]` items to `[ ]`; stop running agents whose work is not queued.
+- If a process reports out-of-memory, stop that specific process ID, reduce
+  worker concurrency to 16, and restore 32 after ten clean completions.
+  Do not stop unrelated shared-host processes.
+- Finish or stop already-running full checks before a new gate. Full test,
+  lint, and build gates are serialized in the orchestrator, not workers.
+- These resource rules supersede earlier assignments. Do not restart the
+  migration, redo completed items, weaken gates, or bypass startup guards.
 
 Implementation workers return exactly one of:
 
