@@ -159,8 +159,11 @@ describe('GasPriceTrendChart — loading', () => {
   it('shows an accessible loading skeleton and withholds the chart on first load', () => {
     const { container } = renderChart(makeQuery({ isLoading: true, data: undefined }));
 
-    // EmbeddedChart in loading state renders a skeleton (animate-pulse).
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The existing EmbeddedChart double retains static Skeleton geometry.
+    const placeholder = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder).toHaveStyle({ height: '220px' });
+    expect(placeholder).not.toHaveClass('animate-pulse');
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
     // The title still frames the panel while loading.
     expect(screen.getByText('Price trend')).toBeInTheDocument();

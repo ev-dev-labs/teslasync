@@ -229,7 +229,10 @@ describe('GasPriceHistoryTable — error / loading / empty', () => {
 
     // Heading stays mounted; body is a skeleton placeholder.
     expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const placeholder = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholder).not.toBeNull();
+    expect(placeholder).toHaveStyle({ height: '240px' });
+    expect(placeholder).not.toHaveClass('animate-pulse');
     expect(screen.queryByRole('table')).toBeNull();
   });
 
@@ -239,7 +242,7 @@ describe('GasPriceHistoryTable — error / loading / empty', () => {
     // Background refetch must not blank the already-rendered data.
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('$3.50')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
   });
 
   it('renders the empty message and no data rows when there is no history', () => {
