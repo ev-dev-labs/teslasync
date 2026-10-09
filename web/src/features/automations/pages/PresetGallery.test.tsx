@@ -157,10 +157,10 @@ describe('PresetGallery — loading state', () => {
     mockUsePresets.mockReturnValue(hookResult({ isLoading: true }));
     const { container } = renderGallery();
 
-    // Each PresetCardSkeleton contributes several animate-pulse placeholders;
+    // Each PresetCardSkeleton contributes several static decorative placeholders;
     // four cards means comfortably more than four in the tree.
-    const pulses = container.querySelectorAll('.animate-pulse');
-    expect(pulses.length).toBeGreaterThanOrEqual(4);
+    const skeletons = container.querySelectorAll('[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons.length).toBeGreaterThanOrEqual(4);
     // The canonical loading status owns the four specialist skeleton cards.
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading Automation presets' })).toBeInTheDocument();

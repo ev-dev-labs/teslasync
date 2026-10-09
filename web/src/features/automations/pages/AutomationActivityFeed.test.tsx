@@ -213,7 +213,10 @@ describe('AutomationActivityFeed — loading / error / empty', () => {
       connectionState: 'connected',
       history: [],
     });
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(8);
+    expect(container.querySelectorAll(
+      '[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"], '
+      + '[data-testid="automation-activity-brief"][aria-busy="true"] [data-operational-metric] [aria-hidden="true"][class*="bg-[var(--surface-3)]"]',
+    )).toHaveLength(8);
     expect(screen.getByTestId('automation-activity-brief')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByTestId('automation-activity-brief').querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No execution history yet')).toBeNull();

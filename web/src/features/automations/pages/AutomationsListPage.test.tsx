@@ -464,7 +464,7 @@ describe('AutomationsListPage — workspace states', () => {
   it('renders skeleton placeholders while loading and no cards', () => {
     setAutomations(undefined, { isLoading: true });
     const { container } = renderPage();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(4);
     expect(screen.queryByTestId('automation-card')).toBeNull();
   });
 
