@@ -2477,3 +2477,63 @@ Mobile sizing/name clipping, keyboard/topmost and embedded targets remain
 existing shared Popover/embedded-owner work plus separate composed proof;
 no new portal/focus engine. Mission §§43–44/MDC-040–043/060–070 still apply.
 This docs-only append claims no tests, app pass, scanner waiver or runtime QA.
+
+## Explicit dialog return target — MDC-024 / MDC-040 / MDC-060
+
+**`phase3-dialog-restoration-target-contract`, attempt1: decision only.**
+Approved prefix: 180198 bytes; SHA-256 `b9eb00c9fb5765490c4576bc7aa97481d6b1dbed28c40085ccdc63d1c257c3c4`.
+Actual hook :149 captures activeElement after Input autoFocus; Popover :83
+privately owns Modal's exact ref. Caller :360–369 pins no trigger. fallbackRef
+cannot override a restorable captured input; Modal/Popover do not expose it.
+Activation focus alone is overwritten before capture. No existing public mechanism safely satisfies this flow; approve one intrinsically shared capability.
+
+| Boundary | Exact additive API / forwarding |
+| --- | --- |
+| UseDialogFocusOptions | `getReturnFocusTarget?: () => HTMLElement \| null` |
+| ModalProps | Same name/type via `UseDialogFocusOptions['getReturnFocusTarget']`; destructure before DOM spread, forward to existing useDialogFocus with its exact dialogRef. |
+| AddAnnotationPopoverProps | Same name/type via `ModalProps['getReturnFocusTarget']`; forward unchanged to its real Modal, independent of createAuthority. |
+
+Omitted at open preserves existing passive capture, initial focus, restore and fallback behavior, including its limitations; no global timing/default repair.
+Explicit mode is fixed for that open lifecycle. Store the latest getter in a
+ref without restarting the trap; invoke once, synchronously, only at eligible
+owner cleanup on open->false/unmount, never during render/open/update/settlement.
+Getter replacement is read at cleanup. Removal after explicit open means no
+target, never implicit capture; omitted->explicit adoption requires a new open.
+Null, stale/disposed eligibility or a throwing getter is explicit no-target. Never retry, propagate cleanup failure, restore captured input or substitute a
+new/current-scope trigger. Validate returned target with existing isFocusRestorable,
+reject body and the outgoing container/descendants; invalid/disabled/disconnected
+targets use existing fallbackRef -> route-focus target -> main precedence.
+
+Existing exact-container outside-focus-intent guard runs before getter/fallback;
+another focused surface wins. Preserve body-key topmost recovery and listeners.
+In explicit mode, body/null recovery with another live topmost dialog may restore
+only within that dialog; otherwise leave focus to its owner, including fallback.
+No default-consumer guard expansion. Keep existing SSR guards and keyboard,
+Escape/backdrop, refs/labels/scroll, reduced-motion and async/draft APIs unchanged.
+
+Caller final2 pins event.currentTarget, original context/revision and form instance
+at actual activation. A stable getter closes over that original record and reads
+latest semantic eligibility at cleanup; it never resolves a replacement trigger.
+Normal current cancel/success retains an outgoing return record through close:
+clearing target/submittedRevision or bumping active instance must not invalidate
+that eligible close. Genuine teardown/disposal/new-instance or context/revision
+change invalidates it; saved-stale dismissal returns null even after change-return.
+Retire the record after owner cleanup/before reuse, without scheduled focus work.
+
+| Regression / acceptance | Required ordinary evidence |
+| --- | --- |
+| Real autoFocus before passive capture; current cancel/success | Original explicit trigger restored once; no forced test focus or mocked owner. |
+| Updated getter; null/stale/disposed/throw; disabled/disconnected | Latest getter only; safe fallback, never captured input/new trigger; no getter on updates. |
+| External focus; exact own vs other/topmost/nested modal | Outside intent wins; no unrelated dialog inference or cross-surface focus theft. |
+| Omitted; real Modal/Popover forwarding; close/unmount/reopen | Existing defaults/API assertions retained; exact refs, no leaked DOM prop or old-instance restore. |
+
+Order: accepted decision -> exclusive atomic `phase3-dialog-restoration-target-api`
+lease (three table sources plus useDialogFocus.test.tsx, hooks\__tests__\useDialogFocus.edge.test.tsx,
+ui\Modal.test.tsx, charts\AddAnnotationPopover.test.tsx) -> verified release ->
+separate source-only caller final2 -> existing readonly caller fixtures/mounted proof.
+Recheck accepted useDialogFocus scopes, primitive-modal/overlay-modal-adoption and phase3-add-annotation-popover plus async/authority roots; untouched Drawer/Lightbox/
+other omitted consumers need bounded default-regression review, not source adoption.
+No caller writes in the seven-file root, parallel focus manager, new listeners,
+document/title inference, scheduling race, conditional hook or fabricated point/clock.
+Inherited fullcaller41 remains 39PASS/2FAIL until genuine forwarding and binding;
+docs-only prefix/hash proof is not runtime acceptance or a fresh test/type/build pass.
