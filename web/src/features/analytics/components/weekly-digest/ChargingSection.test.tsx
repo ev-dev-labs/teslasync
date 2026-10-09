@@ -193,9 +193,20 @@ beforeEach(() => {
 /* ── Chart branch: loading / error / empty / populated ────────────────────── */
 describe('ChargingSection — chart branch state machine', () => {
   it('renders the skeleton while loading and suppresses the chart + empty state', () => {
-    const { container } = renderSection({ isLoading: true });
+    const { container } = renderSection({
+      isLoading: true,
+      isError: true,
+      error: new Error('charging fetch pending'),
+    });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Charging' })).toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).toBeNull();
     expect(screen.queryByText(/No charging energy data/i)).toBeNull();
   });
@@ -325,8 +336,15 @@ describe('ChargingSection — energy-vs-last-week badge', () => {
 
     const badge = screen.getByText('20.00%');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('green');
-    expect(badge.className).not.toContain('yellow');
+    expect(badge).toHaveTextContent('20.00%', { normalizeWhitespace: false });
+    expect(badge.textContent).toBe('20.00%');
+    expect(badge).toHaveClass(
+      'border', 'border-[var(--semantic-success-border)]',
+      'bg-[var(--semantic-success-bg)]', 'text-[var(--semantic-success)]',
+    );
+    expect(badge).not.toHaveClass('border-[var(--semantic-warning-border)]');
+    expect(badge).not.toHaveClass('bg-[var(--semantic-warning-bg)]');
+    expect(badge).not.toHaveClass('text-[var(--semantic-warning)]');
   });
 
   it('is a warning badge with a negative percentage when energy is down', () => {
@@ -336,7 +354,14 @@ describe('ChargingSection — energy-vs-last-week badge', () => {
 
     const badge = screen.getByText('-20.00%');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('yellow');
+    expect(badge.textContent).toBe('-20.00%');
+    expect(badge).toHaveClass(
+      'border', 'border-[var(--semantic-warning-border)]',
+      'bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]',
+    );
+    expect(badge).not.toHaveClass('border-[var(--semantic-success-border)]');
+    expect(badge).not.toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(badge).not.toHaveClass('text-[var(--semantic-success)]');
   });
 
   it('falls back to an em-dash when there is no prior-week baseline', () => {

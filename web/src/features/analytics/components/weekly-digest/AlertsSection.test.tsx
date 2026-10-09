@@ -183,7 +183,13 @@ describe('AlertsSection — loading', () => {
   it('renders a skeleton and withholds the breakdown, captions and empty state', () => {
     const { container } = renderSection({ isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(heading()).toBeInTheDocument();
+    expect(screen.queryByText('No severity breakdown to chart.')).toBeNull();
     expect(screen.queryByRole('list')).toBeNull();
     expect(screen.queryByText('Alerts by severity')).toBeNull();
     expect(screen.queryByText('Alert distribution')).toBeNull();
@@ -197,7 +203,15 @@ describe('AlertsSection — loading', () => {
       error: new ApiError('still broken', 500),
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(heading()).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
+    expect(screen.queryByText('No severity breakdown to chart.')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
@@ -283,10 +297,18 @@ describe('AlertsSection — populated breakdown', () => {
       'text-sky-300',
     );
 
-    // Badge variant → danger/warning/info class families.
-    expect(within(severityRow('critical')).getByText('3').className).toContain('bg-red-100');
-    expect(within(severityRow('warning')).getByText('2').className).toContain('bg-yellow-100');
-    expect(within(severityRow('info')).getByText('1').className).toContain('bg-blue-100');
+    expect(within(severityRow('critical')).getByText('3')).toHaveClass(
+      'border', 'border-[var(--semantic-danger-border)]',
+      'bg-[var(--semantic-danger-bg)]', 'text-[var(--semantic-danger)]',
+    );
+    expect(within(severityRow('warning')).getByText('2')).toHaveClass(
+      'border', 'border-[var(--semantic-warning-border)]',
+      'bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]',
+    );
+    expect(within(severityRow('info')).getByText('1')).toHaveClass(
+      'border', 'border-[var(--semantic-info-border)]',
+      'bg-[var(--semantic-info-bg)]', 'text-[var(--semantic-info)]',
+    );
   });
 
   it('falls back to the Info icon colour and info Badge for an unknown severity', () => {
@@ -298,8 +320,13 @@ describe('AlertsSection — populated breakdown', () => {
     const row = severityRow('mystery');
     // `SEVERITY_ICON_CLASS[severity] ?? 'text-sky-300'`
     expect(row.querySelector('svg')?.getAttribute('class')).toContain('text-sky-300');
+    expect(row.querySelector('svg')).toHaveClass('lucide-info');
+    expect(row.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // `SEVERITY_BADGE[severity] ?? 'info'`
-    expect(within(row).getByText('4').className).toContain('bg-blue-100');
+    expect(within(row).getByText('4')).toHaveClass(
+      'border', 'border-[var(--semantic-info-border)]',
+      'bg-[var(--semantic-info-bg)]', 'text-[var(--semantic-info)]',
+    );
   });
 
   it('preserves the source severity without forced presentation casing', () => {

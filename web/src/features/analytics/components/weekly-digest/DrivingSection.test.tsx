@@ -327,7 +327,11 @@ describe('DrivingSection — loading', () => {
       { isLoading: true },
     );
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(chartRegion()).toBeNull();
     expect(
       screen.queryByText('No driving distance data is available for this week.'),
@@ -337,6 +341,10 @@ describe('DrivingSection — loading', () => {
     expect(title()).toBeInTheDocument();
     expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
     expect(screen.getByText('152.40 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('Total driving time')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency change')).toBeInTheDocument();
+    expect(screen.getByText('Drives')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
   });
 
   it('gives loading precedence over an error (skeleton wins, no QueryError)', () => {
@@ -346,7 +354,19 @@ describe('DrivingSection — loading', () => {
       error: new ApiError('boom', 500),
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(title()).toBeInTheDocument();
+    expect(chartRegion()).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('No driving distance data is available for this week.')).toBeNull();
+    expect(screen.getByText('Avg efficiency')).toBeInTheDocument();
+    expect(screen.getByText('Total driving time')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency change')).toBeInTheDocument();
+    expect(screen.getByText('Drives')).toBeInTheDocument();
     expect(screen.queryByText('Server error')).toBeNull();
   });
 });

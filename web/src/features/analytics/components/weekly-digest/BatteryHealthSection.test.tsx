@@ -222,7 +222,13 @@ describe('BatteryHealthSection — loading', () => {
       { isLoading: true },
     );
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '200px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText('No battery data is available for this week.')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(title()).toBeInTheDocument();
     // No pill / stat values leak through the skeleton.
     expect(screen.queryByText('20%')).toBeNull();
@@ -236,7 +242,16 @@ describe('BatteryHealthSection — loading', () => {
       error: new ApiError('boom', 500),
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '200px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(title()).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('No battery data is available for this week.')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
   });
 });
