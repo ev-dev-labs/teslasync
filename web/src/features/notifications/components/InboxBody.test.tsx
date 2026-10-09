@@ -392,7 +392,12 @@ describe('InboxBody — flat view', () => {
     installRequest({ logs: () => new Promise<never>(() => {}) });
     const { container } = renderInbox({ route: '/notifications/inbox?view=flat' });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    const skeletons = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons).toHaveLength(5);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('h-14', 'w-full', 'rounded');
+      expect(skeleton.parentElement).toHaveClass('space-y-2');
+    }
     // Neither the populated list nor the empty state leaks during loading.
     expect(screen.queryByText('No notifications')).toBeNull();
   });
@@ -956,7 +961,16 @@ describe('InboxBody — redesigned evidence contracts', () => {
         installRequest({ logs: () => Promise.resolve([makeLog({ title: 'Independent evidence' })]) });
         renderInbox({ report: true });
         expect(await screen.findByText('Independent evidence')).toBeInTheDocument();
-        expect(await screen.findByRole('alert')).toHaveTextContent("Can't reach server");
+        const report = screen.getByRole('region', { name: 'Notification activity' });
+        await waitFor(() => {
+          const reportErrors = report.querySelectorAll(':scope > [data-print-card] > [role="alert"]');
+          expect(reportErrors).toHaveLength(1);
+          for (const reportError of reportErrors) {
+            expect(reportError).toHaveTextContent("Can't reach server");
+            expect(within(reportError as HTMLElement).getByText("Can't reach server", { exact: true })).toBeInTheDocument();
+            expect(within(reportError as HTMLElement).getByText('Check your internet connection and try again.', { exact: true })).toBeInTheDocument();
+          }
+        });
         expect(screen.getByRole('table', { name: 'Inbox' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: 'Open notification: Independent evidence' })).toBeEnabled();
       });
