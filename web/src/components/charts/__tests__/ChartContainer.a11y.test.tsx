@@ -7,17 +7,85 @@
  */
 
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
 import { EmbeddedChart } from '../EmbeddedChart';
 import { ChartCard } from '@/components/layout/layout-reference/ChartCard';
+import type { ApiRequestOptions } from '@/api/client';
+import type { ChartAnnotationRow } from '@/types/annotations';
+
+const { annotationRequest } = vi.hoisted(() => ({
+  annotationRequest: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
+}));
+vi.mock('@/api/client', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/client')>(), request: annotationRequest,
+}));
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useDeferredMutationToast: () => ({ success: vi.fn(), error: vi.fn() }),
+}));
 
 let previousPreferences: ReturnType<typeof getFormatterPreferences>;
 
+describe('managed annotation dialog focus and authority', () => {
+  it('retains focused editable rejection and restores the actual trigger only on idle cancellation', async () => {
+    annotationRequest.mockImplementation((_path, options) => options?.method === 'POST'
+      ? Promise.reject(new Error('Unavailable')) : Promise.resolve([]));
+    renderChart(<ChartContainer title="Tire chart" ariaLabel="Tire chart" exportable={false}
+      annotations={{ vehicleId: 7, scope: 'tire' }}><span>Observations</span></ChartContainer>);
+    const trigger = screen.getByRole('button', { name: 'Add annotation' });
+    fireEvent.click(trigger);
+    const label = screen.getByLabelText('Label');
+    fireEvent.change(label, { target: { value: '  retained label  ' } });
+    label.focus();
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form')!);
+    await waitFor(() => expect(screen.getByText(/Failed to add annotation/)).toBeInTheDocument());
+    expect(label).toHaveFocus();
+    expect(label).toBeEnabled();
+    expect(label).toHaveValue('  retained label  ');
+    expect(trigger).not.toHaveFocus();
+    fireEvent.keyDown(label, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it('uses the existing safe focus fallback rather than a new scope trigger on stale saved dismissal', async () => {
+    let resolve!: (row: ChartAnnotationRow) => void;
+    const pending = new Promise<ChartAnnotationRow>((yes) => { resolve = yes; });
+    annotationRequest.mockImplementation((_path, options) =>
+      options?.method === 'POST' ? pending : Promise.resolve([]));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const view = (vehicleId: number) => <QueryClientProvider client={qc}><MemoryRouter>
+      <main id="main-content" tabIndex={-1}><ChartContainer title="Tire chart" ariaLabel="Tire chart" exportable={false}
+        annotations={{ vehicleId, scope: 'tire' }}><span>Observations</span></ChartContainer></main>
+    </MemoryRouter></QueryClientProvider>;
+    const rendered = render(view(7));
+    const oldTrigger = screen.getByRole('button', { name: 'Add annotation' });
+    fireEvent.click(oldTrigger);
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Saved old target' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add Annotation' }));
+    await waitFor(() => expect(annotationRequest.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(true));
+    rendered.rerender(view(8));
+    await act(async () => { resolve({
+      id: 42, vehicle_id: 7, occurred_at: '2025-03-01T00:00:00Z', title: 'Saved old target',
+      category: 'milestone', scope: ['tire'], created_at: '2025-03-01T00:00:00Z', updated_at: '2025-03-01T00:00:00Z',
+    }); });
+    const dialog = screen.getByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status')).toHaveTextContent(/vehicle 7/));
+    expect(dialog.querySelector('form')).not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByLabelText('Label')).toBeDisabled();
+    expect(oldTrigger.isConnected).toBe(false);
+    fireEvent.keyDown(within(dialog).getAllByRole('button', { name: 'Close' })[0], { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('main')).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Add annotation' })).not.toHaveFocus();
+  });
+});
+
 beforeEach(() => {
+  annotationRequest.mockReset().mockResolvedValue([]);
   previousPreferences = getFormatterPreferences();
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
@@ -56,23 +124,20 @@ vi.mock('@/hooks/useChartExport', () => ({
   }),
 }));
 
-// Annotations would otherwise hit the API client. Stub the hooks the
-// container imports.
-vi.mock('@/api/hooks/useAnnotations', () => ({
-  useChartAnnotationsAsData: () => ({ annotations: [] }),
-  useCreateAnnotation: () => ({ mutate: vi.fn() }),
-  useDeleteAnnotation: () => ({ mutate: vi.fn() }),
-}));
+vi.unmock('@/api/hooks/useAnnotations');
 
 function renderChart(ui: React.ReactNode) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>{ui}</MemoryRouter>
-    </QueryClientProvider>,
-  );
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
+  }
+  return render(ui, { wrapper: Wrapper });
 }
 
 describe('ChartContainer accessibility contract', () => {
