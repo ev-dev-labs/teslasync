@@ -49,15 +49,15 @@ describe('CategoryBadge', () => {
     const { chip } = renderBadge('bug')
     expect(chip).not.toBeNull()
     expect(chip?.textContent?.trim()).toBe('Bug report')
-    expect(chip?.className).toContain('bg-red-100')
-    expect(chip?.className).toContain('text-red-800')
+    expect(chip?.className).toContain('bg-[var(--semantic-danger-bg)]')
+    expect(chip?.className).toContain('text-[var(--semantic-danger)]')
   })
 
   it('renders a feature request as a blue info chip', () => {
     const { chip } = renderBadge('feature')
     expect(chip?.textContent?.trim()).toBe('Feature request')
-    expect(chip?.className).toContain('bg-blue-100')
-    expect(chip?.className).not.toContain('bg-red-100')
+    expect(chip?.className).toContain('bg-[var(--semantic-info-bg)]')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-danger-bg)]')
   })
 
   it('renders other/question as a neutral grey chip', () => {
@@ -73,8 +73,8 @@ describe('CategoryBadge', () => {
     const bug = bg('bug')
     const feature = bg('feature')
     const other = bg('other')
-    expect(bug).toContain('bg-red-100')
-    expect(feature).toContain('bg-blue-100')
+    expect(bug).toContain('bg-[var(--semantic-danger-bg)]')
+    expect(feature).toContain('bg-[var(--semantic-info-bg)]')
     expect(other).toContain(BADGE_VARIANTS.neutral)
     expect(bug).not.toEqual(feature)
     expect(feature).not.toEqual(other)
@@ -95,8 +95,8 @@ describe('CategoryBadge', () => {
     const { chip } = renderBadge(unknownCategory)
     expect(chip?.textContent?.trim()).toBe('Other / question')
     expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
-    expect(chip?.className).not.toContain('bg-red-100')
-    expect(chip?.className).not.toContain('bg-blue-100')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-danger-bg)]')
+    expect(chip?.className).not.toContain('bg-[var(--semantic-info-bg)]')
   })
 
   it('never throws or renders an empty badge for an empty category string', () => {
