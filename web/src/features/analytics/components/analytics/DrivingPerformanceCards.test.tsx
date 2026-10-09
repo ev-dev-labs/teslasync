@@ -249,6 +249,6 @@ describe('DrivingPerformanceCards', () => {
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     fireEvent.click(within(group).getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(within(screen.getByRole('dialog')).getByText('Returned speed and distance statistics; power and regeneration remain unknown when the response omits them.')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Returned speed and distance statistics; power and regeneration remain unknown when the response omits them.', { selector: `[id="${screen.getByRole('dialog').getAttribute('aria-describedby')}"]` })).toBeInTheDocument();
   });
 });
