@@ -154,6 +154,7 @@ describe('ChartContainer chartKey + ChartLegend toggle (Phase-46/67)', () => {
       return { resolve, reject };
     }
     function chart(config: ChartAnnotationsConfig | null = { vehicleId: 7, scope: 'tire' }, title = 'Tire history') {
+      // chart-a11y:no-table annotation request-lifecycle fixture renders only a stub span, with no chart data to tabulate
       return <ChartContainer title={title} ariaLabel="Tire pressure history" annotations={config ?? undefined}
         exportable={false}><span>Real chart observations</span></ChartContainer>;
     }
