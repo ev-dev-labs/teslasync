@@ -681,7 +681,7 @@ function ThemeQuickSwitcher({
         aria-expanded={open}
         aria-label={t('theme.openPicker', 'Open theme picker')}
         onClick={() => setOpen(v => !v)}
-        className="h-9 w-9 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)]"
+        className="h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] md:h-9 md:w-9"
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
       </Button>
@@ -1303,7 +1303,7 @@ export default function Layout() {
             // with the <aside> sidebar (drawer pattern), not a dialog. New
             // interactive dialogs MUST use <Modal>.
             // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] xl:hidden"
+            className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] xl:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -1356,7 +1356,7 @@ export default function Layout() {
 
         {/* Desktop brand stays visible above the rail search. */}
         <div className={cn(
-          'hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
+          'hidden h-workspace-header shrink-0 items-center border-b border-[var(--border-default)] xl:flex',
           deckRailCollapsed ? 'justify-center px-2' : 'px-5',
         )}
         >
@@ -1439,7 +1439,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {presentation.mode === 'standard' && !sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
           <Button
             ref={sidebarTriggerRef}
             onClick={() => setSidebarOpen(true)}
@@ -1463,8 +1463,8 @@ export default function Layout() {
       {/* Main content */}
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
         {/* Spacer for fixed mobile header */}
-        <div className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />
-        {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-[4.5rem] shrink-0 xl:block" />}>
+        {presentation.mode === 'standard' && <div className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
+        {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}
             themeControl={<ThemeQuickSwitcher />}
