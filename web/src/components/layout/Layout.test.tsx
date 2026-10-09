@@ -40,7 +40,7 @@ const H = vi.hoisted(() => {
   const STALE = { stale_charging: [{ id: 1 }], stale_drives: [{ id: 1 }, { id: 2 }] }
   const REPAIR_STATS = { open: 1, in_review: 2 }
 
-  const defaultReq = (url: unknown) => {
+  const defaultReq = (url: unknown, _options?: import('@/api/client').ApiRequestOptions) => {
     if (typeof url === 'string') {
       if (url.startsWith('/alerts')) return Promise.resolve(ALERTS)
       if (url === '/vehicles') return Promise.resolve(VEHICLES)
@@ -227,7 +227,7 @@ vi.mock('../feedback/Toast', () => ({ useToast: () => H.toast }))
 
 // ── API boundary ──────────────────────────────────────────────────────
 vi.mock('@/api/client', () => ({
-  request: (...args: unknown[]) => H.request(...args),
+  request: (...args: Parameters<typeof H.defaultReq>) => H.request(...args),
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('@/api/hooks/useAuthMode', () => ({
@@ -406,6 +406,9 @@ vi.mock('@/components/ui/runtime', async () => {
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
+vi.mock('../ui/CommandPaletteTrigger', () => ({
+  CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
+}))
 vi.mock('@/components/ui/ThemePicker', () => ({
   ThemePicker: () => <div data-testid="theme-picker" />,
 }))
@@ -1550,5 +1553,46 @@ describe('Layout — nav pins under a rejected write', () => {
     } finally {
       setItem.mockRestore()
     }
+  })
+})
+
+describe('Layout — restrained host chrome and shared offsets', () => {
+  it('uses a neutral opaque mobile header and preserves safe-area clearance', () => {
+    const { container } = renderLayout('/')
+    const header = container.querySelector('[data-role="appbar"]')
+    expect(header).toHaveClass('bg-[var(--surface-1)]', 'xl:hidden')
+    expect(header).not.toHaveClass('backdrop-blur-md', 'bg-[var(--surface-1)]/95')
+    expect(header?.parentElement?.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toHaveClass('h-[calc(4.25rem+env(safe-area-inset-top,0px))]')
+    expect(within(header as HTMLElement).getByRole('button', { name: 'Open theme picker' })).toHaveClass(
+      'h-11', 'w-11', 'md:h-9', 'md:w-9',
+    )
+    expect(container.querySelector('[data-role="main-content"]')).toHaveClass(
+      'overflow-y-auto', 'pb-[var(--shell-chrome-bottom)]',
+    )
+  })
+
+  it('keeps the clickable drawer scrim theme-neutral without blur', () => {
+    const { container } = renderLayout('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const scrim = container.querySelector('[data-sidebar-backdrop]')
+    expect(scrim).toHaveClass('bg-[var(--surface-overlay)]', 'xl:hidden')
+    expect(scrim).not.toHaveClass('backdrop-blur-sm', 'bg-[var(--bg-app)]')
+    fireEvent.click(scrim as HTMLElement)
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it.each(['report', 'kiosk'] as const)('reserves no absent mobile header or bottom chrome in %s mode', mode => {
+    H.presentation.mode = mode
+    const { container } = renderLayout('/')
+    expect(container.querySelector('[data-role="appbar"]')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toBe(
+      container.querySelector('[data-role="main-content"]'),
+    )
+    expect(container.querySelector('[data-role="main-content"]')).not.toHaveClass(
+      'pb-[var(--shell-chrome-bottom)]',
+    )
+    expect(document.documentElement.dataset.statusBar).toBe('off')
+    expect(document.documentElement.dataset.tabBar).toBe('off')
   })
 })
