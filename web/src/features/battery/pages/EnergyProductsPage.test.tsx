@@ -343,9 +343,14 @@ describe('EnergyProductsPage — loading / error / empty', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { name: 'Energy Products', level: 1 })).toBeInTheDocument();
-    expect(screen.queryByText('Energy Sites')).not.toBeInTheDocument();
+    // Metric labels persist during loading; no ready measurement may leak.
+    const summary = screen.getByRole('region', { name: 'Energy summary' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Energy Sites').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(screen.queryByText('Home Powerwall')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-card-content] > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"].h-72').length).toBeGreaterThan(0);
   });
 
   it('swaps the body for QueryError and wires Retry to the sites refetch', () => {
@@ -395,7 +400,7 @@ describe('EnergyProductsPage — SiteInfoSection states', () => {
     // The section header always renders; its body is a skeleton.
     expect(screen.getByText('Site Configuration')).toBeInTheDocument();
     expect(screen.queryByText('Time-Based Control')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('section > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"].h-40').length).toBeGreaterThan(0);
   });
 
   it('surfaces QueryError in the card and retries via the site-info mutation', () => {
@@ -530,7 +535,16 @@ describe('resourceIcon', () => {
       h.sites = makeSitesQuery({ data: [makeSite()], fetchStatus: 'paused' });
       renderPage();
 
-      expect(screen.getByText(/The device is offline, so this section is showing the last values it received/)).toBeInTheDocument();
+      const notice = screen.getByTestId('stale-refresh-warning');
+      expect(notice).toHaveAttribute('role', 'status');
+      expect(notice).toHaveAttribute('data-data-state', 'stale');
+      expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+      expect(notice).not.toHaveTextContent(/offline|failed/i);
+      expect(within(screen.getByRole('region', { name: 'Energy summary' }))
+        .getByText('Retained source evidence')).toBeInTheDocument();
+      expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+      expect(screen.getByText('5.00 kW')).toBeInTheDocument();
       expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
       expect(screen.getByText('87.50%')).toBeInTheDocument();
       expect(screen.queryByText(/No energy products found/)).not.toBeInTheDocument();

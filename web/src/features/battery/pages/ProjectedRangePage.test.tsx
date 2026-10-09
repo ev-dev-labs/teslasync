@@ -398,12 +398,17 @@ describe('ProjectedRangePage · states', () => {
 
   it('renders skeletons (never KPI numbers) while the projection query is in flight', () => {
     rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
-    const { container } = renderPage();
+    renderPage();
 
     // Panel shells stay visible; only the data slots are skeletoned.
     expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Your Estimate')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Range Scenarios', exact: true }).closest('[data-card]')!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
+    // The estimate label persists, but its measurement slot is not ready.
+    const summary = screen.getByRole('region', { name: 'Range summary metrics' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Your Estimate').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('surfaces a retryable error banner in every data section on failure', () => {
@@ -584,7 +589,14 @@ describe('ProjectedRangePage · mile units', () => {
       rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), fetchStatus: 'paused' }));
       renderPage();
 
-      expect(screen.getByText(/The device is offline, so this section is showing the last values it received/)).toBeInTheDocument();
+      const notice = screen.getByTestId('stale-refresh-warning');
+      expect(notice).toHaveAttribute('role', 'status');
+      expect(notice).toHaveAttribute('data-data-state', 'stale');
+      expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+      expect(notice).not.toHaveTextContent(/offline|failed/i);
+      expect(within(screen.getByRole('region', { name: 'Range summary metrics' }))
+        .getByText('Retained source evidence')).toBeInTheDocument();
       expect(metricValue('Battery')).toContain('72');
       expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
       expect(screen.getByText('Range Factors')).toBeInTheDocument();
@@ -599,7 +611,13 @@ describe('ProjectedRangePage · mile units', () => {
       expect(metricValue('Your Estimate')).toBe('0.00 km');
       expect(metricValue('Tesla Estimate')).toBe('0.00 km');
       expect(metricValue('Battery')).toContain('0.00');
-      expect(screen.getByText('0.00 km')).toBeInTheDocument();
+      const calculator = screen.getByRole('heading', { name: 'What If Calculator', exact: true })
+        .closest('[data-card]') as HTMLElement;
+      expect(within(calculator).getByText('0.00 km')).toBeInTheDocument();
+      for (const label of ['Your Estimate', 'Tesla Estimate', 'Battery']) {
+        expect(screen.getByText(label).closest('[data-operational-metric]'))
+          .toHaveAttribute('data-value-state', 'value');
+      }
     });
 
     it('does not invent a 75 kWh usable capacity for incomplete calculator inputs', () => {

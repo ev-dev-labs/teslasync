@@ -316,7 +316,17 @@ describe('BatteryCellsPage', () => {
       'Temperature summary',
       'Health recommendations',
     ]) {
-      expect(screen.getByRole('heading', { name: title, exact: true })).toBeInTheDocument();
+      const scope = title === 'Temperature summary'
+        ? within(screen.getByRole('region', { name: title, exact: true }))
+        : screen;
+      const heading = scope.getByRole('heading', { name: title, exact: true });
+      expect(heading).toBeInTheDocument();
+      if (title === 'Temperature summary') {
+        const card = heading.closest('[data-card]') as HTMLElement;
+        expect(within(card).getAllByRole('heading', { name: title, exact: true })).toHaveLength(2);
+        expect(within(card.querySelector('header')!).getByRole('heading', { name: title, exact: true }))
+          .toBeInTheDocument();
+      }
     }
   });
 
@@ -343,7 +353,7 @@ describe('BatteryCellsPage', () => {
     expect(screen.getByRole('heading', { name: /Battery Cells/i, level: 1 })).toBeInTheDocument();
     expect(screen.queryByText('3.9025 V')).not.toBeInTheDocument();
     expect(screen.queryByText('25.00°C')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-card-content] > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
   });
 
   it('surfaces QueryError in the data panels and wires Retry to the query refetch', () => {

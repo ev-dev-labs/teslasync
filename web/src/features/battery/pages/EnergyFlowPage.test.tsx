@@ -464,10 +464,10 @@ describe('EnergyFlowPage — live energy flow', () => {
 
   it('shows a skeleton (not the gauge) while the flow query is loading', () => {
     mockFlow.mockReturnValue(qr({ isLoading: true, isFetching: true }));
-    const { container } = renderPage();
+    renderPage();
     expect(screen.queryByText('62.50 kWh')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
   });
 
   it('surfaces a retry-able error and re-fetches the flow on retry', async () => {
@@ -501,12 +501,17 @@ describe('EnergyFlowPage — historical sections', () => {
 
   it('renders the efficiency-metrics panel with a unit-aware rating badge', () => {
     renderPage();
+    const efficiency = screen.getByRole('region', { name: 'Efficiency metrics', exact: true });
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Efficiency metrics' }),
+      within(efficiency).getByRole('heading', { level: 3, name: 'Efficiency metrics' }),
     ).toBeInTheDocument();
+    const card = efficiency.closest('[data-card]') as HTMLElement;
+    expect(within(card).getAllByRole('heading', { level: 3, name: 'Efficiency metrics' })).toHaveLength(2);
+    expect(within(card.querySelector('header')!).getByRole('heading', { name: 'Efficiency metrics' }))
+      .toBeInTheDocument();
     // avg 160 Wh/km → "good" bucket.
-    expect(screen.getByText('Good')).toBeInTheDocument();
-    expect(metricValue('Avg energy/day', screen.getByText('Avg energy/day').closest('[data-operational-brief]') as HTMLElement)).toBe('6.00 kWh');
+    expect(within(efficiency).getByText('Good')).toBeInTheDocument();
+    expect(metricValue('Avg energy/day', efficiency)).toBe('6.00 kWh');
   });
 
   it('re-fetches stats when a stats-section retry is clicked', async () => {

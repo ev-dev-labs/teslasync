@@ -129,9 +129,15 @@ describe('Energy flow modernization — real shared surfaces', () => {
     expect(within(card('Daily energy usage')).queryByText('technical SQL failure')).not.toBeInTheDocument();
     setStats(stats, { fetchStatus: 'paused' });
     view.update();
-    expect(within(card('Daily distance')).getByText(
-      'The device is offline, so this section is showing the last values it received.',
-    )).toBeInTheDocument();
+    const notice = within(card('Daily distance')).getByTestId('stale-refresh-warning');
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(notice).toHaveAttribute('data-data-state', 'stale');
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(notice).not.toHaveTextContent(/offline|failed/i);
+    expect(within(card('Daily distance')).getByRole('table', { hidden: true })).toBeInTheDocument();
+    expect(within(card('Live power')).getByText('10.00 kW')).toBeInTheDocument();
+    expect(within(card('Live power')).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     fireEvent.click(within(card('Daily distance')).getByRole('button', { name: 'Refresh', exact: true }));
     expect(statsRetry).toHaveBeenCalledOnce();
   });
@@ -162,7 +168,7 @@ describe('Energy flow modernization — real shared surfaces', () => {
     )).toBeInTheDocument();
     setFlow(undefined, { isLoading: true, isPending: true, fetchStatus: 'fetching' });
     view.update();
-    expect(card('Live power').querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(card('Live power').querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeInTheDocument();
     expect(within(card('Live power')).queryByText('No live power data available.')).not.toBeInTheDocument();
     setFlow(undefined, { isPending: false });
     view.update();
