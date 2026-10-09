@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { Drive } from '@/types/driving';
 import type { DataStateSource } from '@/api/dataState';
@@ -51,6 +52,12 @@ vi.mock('../driving-dynamics', () => {
     GrokDynamicsBriefing: presenter('GrokDynamicsBriefing'),
   };
 });
+vi.mock('../operationalbrief-a-m/MotorSamplesBrief', () => ({
+  MotorSamplesBrief: (props: Record<string, unknown>) => {
+    source.presentations.set('MotorSamplesBrief', props);
+    return <div data-testid="MotorSamplesBrief" />;
+  },
+}));
 vi.mock('./index', () => {
   const presenter = (name: string) => (props: Record<string, unknown>) => {
     source.presentations.set(name, props);
@@ -62,7 +69,6 @@ vi.mock('./index', () => {
     DynamicsTripToolbar: presenter('DynamicsTripToolbar'),
     RideOverview: presenter('RideOverview'),
     PowertrainSummary: presenter('PowertrainSummary'),
-    SummaryStats: presenter('SummaryStats'),
     MotorHistoryCharts: presenter('MotorHistoryCharts'),
     DrivingTips: presenter('DrivingTips'),
     GForcePanel: presenter('GForcePanel'),
@@ -80,18 +86,37 @@ const drive: Drive = {
   outsideTempAvgC: null, insideTempAvgC: null, score: null, endedStatus: null,
   createdAt: '2026-10-01T10:00:00Z', updatedAt: '2026-10-01T11:00:00Z',
 };
-function mount() { return render(<DrivingDynamicsPage />, { wrapper: MemoryRouter }); }
+let queryClient: QueryClient;
+function mount() {
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+  return render(<DrivingDynamicsPage />, { wrapper: Wrapper });
+}
 beforeEach(() => {
+  queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0, refetchOnWindowFocus: false },
+      mutations: { retry: false },
+    },
+  });
   source.range = { data: [drive], isLoading: false };
   source.latest = { data: [], isLoading: false };
   source.driveParam = undefined;
   source.presentations.clear(); source.driveCalls.mockClear(); source.signalCalls.mockClear();
 });
+afterEach(async () => {
+  cleanup();
+  await queryClient.cancelQueries();
+  queryClient.clear();
+});
 
 describe('Driving Dynamics full source orchestration', () => {
   it('keeps all fifteen original presenters plus source notices, bounds and coach policy', () => {
     mount();
-    const names = ['DynamicsTripToolbar', 'RideOverview', 'PowertrainSummary', 'SummaryStats',
+    const names = ['DynamicsTripToolbar', 'RideOverview', 'PowertrainSummary', 'MotorSamplesBrief',
       'MotorEfficiencyInsights', 'MotorHistoryCharts', 'DrivingTips', 'LiveMotorStatus',
       'PedalUsage', 'GrokDynamicsBriefing', 'SpeedGearPanel', 'GForcePanel', 'AutopilotSection',
       'DrivingCoachSection', 'DriveAnalyticsSection'];
@@ -101,7 +126,7 @@ describe('Driving Dynamics full source orchestration', () => {
     });
     expect(source.driveCalls).toHaveBeenCalledWith('7', { limit: 5, refetchInterval: 30000 });
     expect(source.presentations.get('DrivingCoachSection')).toEqual({ vehicleId: '7', showPerDriveScores: false });
-    for (const name of ['PowertrainSummary', 'SummaryStats', 'MotorEfficiencyInsights', 'MotorHistoryCharts', 'DrivingTips']) {
+    for (const name of ['PowertrainSummary', 'MotorSamplesBrief', 'MotorEfficiencyInsights', 'MotorHistoryCharts', 'DrivingTips']) {
       expect(source.presentations.get(name)?.historyQuery).toEqual({
         start: drive.startTs, end: '2026-10-01T11:00:01.000Z', enabled: true, refetchInterval: false,
       });
@@ -139,7 +164,7 @@ describe('Driving Dynamics full source orchestration', () => {
     source.range = { isLoading: true, isPending: true };
     source.latest = { isLoading: true, isPending: true };
     const view = mount();
-    expect(source.presentations.get('SummaryStats')?.historyQuery).toEqual({ enabled: false });
+    expect(source.presentations.get('MotorSamplesBrief')?.historyQuery).toEqual({ enabled: false });
     source.range = { data: [] }; source.latest = { data: [] };
     view.rerender(<DrivingDynamicsPage />);
     expect(source.presentations.get('RideOverview')?.drive).toBeNull();
@@ -158,7 +183,7 @@ describe('Driving Dynamics full source orchestration', () => {
     source.latest = { data: [open] };
     mount();
     expect(source.presentations.get('RideOverview')?.drive).toBe(open);
-    expect(source.presentations.get('SummaryStats')?.historyQuery).toEqual(expect.objectContaining({
+    expect(source.presentations.get('MotorSamplesBrief')?.historyQuery).toEqual(expect.objectContaining({
       enabled: true, start: drive.startTs, refetchInterval: 30000,
     }));
     expect(source.presentations.get('DriveAnalyticsSection')?.filteredDrives).toEqual([open, drive]);
