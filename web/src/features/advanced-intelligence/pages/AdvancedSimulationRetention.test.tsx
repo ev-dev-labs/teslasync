@@ -153,7 +153,7 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     expect(brief).toHaveTextContent(formatDateTime(quality.window_start));
     expect(brief).toHaveTextContent(formatDateTime(quality.window_end));
     expect(brief).toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
-    expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible());
     let chartRows: string | undefined;
     if (current.chartTitle) {
       chartRows = screen.getByRole('table', { name: `${current.chartTitle} — data table` }).textContent ?? '';
@@ -171,7 +171,7 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     expect(edit).toHaveValue(90000);
     const drawer = sourceDrawer(brief, current.title);
     expect(values(brief)).toEqual(publishedValues);
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog', { name: `${current.title} details` }), { key: 'Escape' });
     expect(drawer).not.toBeInTheDocument();
     if (current.chartTitle) {
       expect(screen.getByRole('table', { name: `${current.chartTitle} — data table` }).textContent).toBe(chartRows);
@@ -185,7 +185,7 @@ describe.each(subjects)('$name publication retention with actual mutation transi
       expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeVisible();
       expect(screen.getByText('recalculation unavailable')).toBeVisible();
       sourceDrawer(brief, current.title);
-      fireEvent.keyDown(document, { key: 'Escape' });
+      fireEvent.keyDown(screen.getByRole('dialog', { name: `${current.title} details` }), { key: 'Escape' });
       current.recover();
       fireEvent.click(run);
     } else {
@@ -219,14 +219,14 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     expect(drawer).not.toHaveTextContent(observation.summary);
     expect(drawer).not.toHaveTextContent(quality.reasons[0]);
     expect(drawer).not.toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(screen.getByRole('dialog', { name: `${current.title} details` }), { key: 'Escape' });
     held.resolve();
     await waitFor(() => expect(screen.getByRole('button', { name: current.runLabel })).toBeEnabled());
     state.vehicleId = 7;
     view.rerender(<current.Page />);
     expect(brief).toHaveTextContent('Not calculated');
     expect(brief).not.toHaveTextContent(formatDateTime('2026-08-03T00:00:00Z'));
-    expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible());
     state.vehicleId = null;
     view.rerender(<current.Page />);
     expect(brief).toHaveTextContent('Select a vehicle');
@@ -242,6 +242,6 @@ describe.each(subjects)('$name publication retention with actual mutation transi
     expect(brief).not.toHaveTextContent('Retained result');
     expect(values(brief).every(metric => metric.state === 'missing')).toBe(true);
     expect(screen.getByRole('button', { name: current.runLabel })).toBeEnabled();
-    expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('heading', { name: current.preservedSection })).toBeVisible());
   });
 });
