@@ -149,8 +149,12 @@ describe('DetailCards — Temperature Details states', () => {
 
     // Both card headers are always present regardless of state.
     expect(screen.getByRole('heading', { name: 'Temperature Details' })).toBeInTheDocument();
-    // Skeleton lines render as animate-pulse bars — one per requested line.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    // Multiline Skeleton hides its wrapper; each child reserves one text row.
+    const lines = container.querySelectorAll<HTMLElement>('[aria-hidden="true"] > [class~="bg-[var(--skeleton-bg)]"]');
+    expect(lines).toHaveLength(4);
+    expect(Array.from(lines, line => line.style.width)).toEqual(['100%', '100%', '100%', '60%']);
+    for (const line of lines) expect(line).toHaveClass('h-4', 'rounded');
+    expect(screen.getByRole('heading', { name: 'Power Summary' })).toBeInTheDocument();
     // The rows and the empty state must NOT show while loading.
     expect(screen.queryByText('Front Motor Temp')).not.toBeInTheDocument();
     expect(
@@ -164,7 +168,7 @@ describe('DetailCards — Temperature Details states', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('No drivetrain health data available yet');
     // No skeleton, no temperature rows in the empty branch.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"] > [class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByText('Rear Motor Temp')).not.toBeInTheDocument();
   });
 

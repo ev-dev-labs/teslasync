@@ -364,7 +364,29 @@ describe('DriveScorePage', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: /Drive Score/i })).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const placeholder = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(placeholder).length).toBeGreaterThan(0);
+    for (const [name, heights] of [
+      ['Overall Score', [240, 240]],
+      ['Category Breakdown', [260, 260, 260]],
+      ['Score Trend', [300, 260]],
+      ['Score Distribution', [220, 220]],
+      ['Best and worst drives', [200, 200, 200, 200]],
+      ['Drive History', [320]],
+      ['Period averages', [120, 120, 120, 120, 120, 120]],
+      ['Achievements', [200]],
+    ] as const) {
+      const region = screen.getByRole('region', { name });
+      expect(Array.from(region.querySelectorAll<HTMLElement>(placeholder), node => node.style.height))
+        .toEqual(heights.map(height => `${height}px`));
+    }
+    const kpis = screen.getByRole('region', { name: 'Key metrics' });
+    expect(kpis).toHaveAttribute('aria-busy', 'true');
+    expect(kpis.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(kpis.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20')).toHaveLength(4);
+    expect(kpis.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     // No resolved insight / achievement copy leaks while loading.
     expect(screen.queryByText('First Drive')).not.toBeInTheDocument();
     expect(

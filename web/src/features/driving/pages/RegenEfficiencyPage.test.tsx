@@ -339,7 +339,34 @@ describe('RegenEfficiencyPage', () => {
 
     const { container } = renderPage();
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const placeholder = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(container.querySelectorAll(placeholder).length).toBeGreaterThan(0);
+    for (const [testId, heights] of [
+      ['regen-overview', [220, 220]],
+      ['regen-temperature', [220]],
+      ['regen-soc', [220]],
+      ['regen-evidence', [280]],
+    ] as const) {
+      expect(Array.from(screen.getByTestId(testId).querySelectorAll<HTMLElement>(placeholder), node => node.style.height))
+        .toEqual(heights.map(height => `${height}px`));
+    }
+    for (const testId of ['regen-monthly', 'regen-distribution']) {
+      const chart = within(screen.getByTestId(testId)).getByTestId('chart-skeleton');
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      expect(chart.querySelectorAll('[aria-hidden="true"]')).toHaveLength(7);
+    }
+    for (const [testId, count] of [
+      ['regen-selected-window-summary', 6],
+      ['regen-overview-brief', 5],
+      ['regen-coverage-brief', 4],
+    ] as const) {
+      const brief = screen.getByTestId(testId);
+      expect(brief).toHaveAttribute('aria-busy', 'true');
+      expect(brief.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20')).toHaveLength(count);
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    }
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByText('Drive #2')).not.toBeInTheDocument();
     for (const testId of [
       'regen-kpis',
       'regen-overview',
