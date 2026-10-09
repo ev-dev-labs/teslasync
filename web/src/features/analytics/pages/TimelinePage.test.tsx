@@ -227,7 +227,7 @@ describe('TimelinePage', () => {
     const drawer = await screen.findByRole('dialog')
     expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument()
     expect(within(drawer).getByText('Time in the driving state, rounded to whole minutes')).toBeInTheDocument()
-    expect(within(drawer).getByText(/continuous observation coverage is unknown/)).toBeInTheDocument()
+    expect(within(drawer).getByText(/continuous observation coverage is unknown/, { selector: `[id="${drawer.getAttribute('aria-describedby')}"]` })).toBeInTheDocument()
     expect(mockedRequest.mock.calls.length).toBe(calls)
   })
 
