@@ -191,7 +191,7 @@ describe('SummaryHeroCards — state-invariant chrome', () => {
 
 describe('SummaryHeroCards — state precedence', () => {
   it('prioritises the error branch over loading when both flags are set', () => {
-    const { container } = renderCards({
+    renderCards({
       isLoading: true,
       isError: true,
       error: new ApiError('still broken', 500),
@@ -199,7 +199,9 @@ describe('SummaryHeroCards — state precedence', () => {
 
     // Error wins: the retriable alert shows and the skeletons do not.
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(region().querySelectorAll(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="height: 72px"]',
+    )).toHaveLength(0);
     expect(screen.queryByText('Total distance')).toBeNull();
   });
 });
@@ -282,11 +284,32 @@ describe('SummaryHeroCards — fun fact card', () => {
 
 describe('SummaryHeroCards — loading', () => {
   it('renders exactly six skeleton tiles and withholds KPI labels + errors', () => {
-    const { container } = renderCards({ isLoading: true });
+    renderCards({ isLoading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    const tiles = region().querySelectorAll<HTMLElement>(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="height: 72px"]',
+    );
+    expect(tiles).toHaveLength(6);
+    expect(region()).toHaveAttribute('aria-busy', 'true');
+    for (const tile of tiles) {
+      expect(tile).toHaveAttribute('aria-hidden', 'true');
+      expect(tile).toHaveClass('h-4', 'w-full', 'rounded');
+      expect(tile.style.height).toBe('72px');
+      expect(tile).toBeEmptyDOMElement();
+      expect(tile).not.toHaveClass('animate-pulse');
+    }
     expect(screen.queryByText('Total distance')).toBeNull();
     expect(screen.queryByText('Energy used')).toBeNull();
+    expect(screen.queryByText('Total drives')).toBeNull();
+    expect(screen.queryByText('Charging cost')).toBeNull();
+    expect(screen.queryByText('CO₂ saved')).toBeNull();
+    expect(screen.queryByText('Fun fact')).toBeNull();
+    expect(region().querySelectorAll('[data-print-card]')).toHaveLength(6);
+    expect(screen.queryByText('120.00 km')).toBeNull();
+    expect(screen.queryByText('8')).toBeNull();
+    expect(screen.queryByText('200.00 kWh')).toBeNull();
+    expect(screen.queryByText('$12.50')).toBeNull();
+    expect(screen.queryByText('42.00 kg')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

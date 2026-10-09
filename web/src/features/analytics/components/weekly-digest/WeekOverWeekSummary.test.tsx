@@ -36,7 +36,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -251,7 +251,7 @@ describe('WeekOverWeekSummary — null-safety', () => {
 /* ── Loading state ────────────────────────────────────────────────────────── */
 describe('WeekOverWeekSummary — loading state', () => {
   it('renders skeleton cards and hides values while keeping the section title', () => {
-    const { container } = renderSummary({ metrics: POPULATED, isLoading: true });
+    renderSummary({ metrics: POPULATED, isLoading: true });
 
     // Title lives outside the grid and is always shown.
     expect(screen.getByText('Week-over-week comparison')).toBeInTheDocument();
@@ -259,7 +259,42 @@ describe('WeekOverWeekSummary — loading state', () => {
     expect(screen.queryByText('Distance')).toBeNull();
     expect(screen.queryByText('130.00')).toBeNull();
     // Two skeleton bars per card × six cards.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(12);
+    const section = screen.getByRole('region', { name: 'Week-over-week comparison' });
+    const loadingCards = within(section).getAllByRole('status', { name: 'Loading' });
+    expect(loadingCards).toHaveLength(6);
+    const placeholders = section.querySelectorAll<HTMLElement>(
+      '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="width: 60%"][style*="height: 16px"],'
+      + '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="width: 40%"][style*="height: 32px"]',
+    );
+    expect(placeholders.length).toBeGreaterThanOrEqual(12);
+    for (const card of loadingCards) {
+      expect(card).toHaveAttribute('aria-busy', 'true');
+      const labelBars = card.querySelectorAll<HTMLElement>(
+        '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="width: 60%"][style*="height: 16px"]',
+      );
+      const valueBars = card.querySelectorAll<HTMLElement>(
+        '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style*="width: 40%"][style*="height: 32px"]',
+      );
+      expect(labelBars).toHaveLength(1);
+      expect(valueBars).toHaveLength(1);
+      for (const placeholder of [...labelBars, ...valueBars]) {
+        expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+        expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded');
+        expect(placeholder).toBeEmptyDOMElement();
+        expect(placeholder).not.toHaveClass('animate-pulse');
+      }
+      expect(valueBars[0]).toHaveClass('mt-2');
+    }
+    for (const label of ['Drives', 'Energy', 'Cost', 'Efficiency', 'CO₂ saved']) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    for (const value of ['130.00 km', '10', '55.00 kWh', '$12.00', '140.00 Wh/km', '8.00', 'kg']) {
+      expect(screen.queryByText(value)).toBeNull();
+    }
+    for (const trend of ['+30.00%', '+25.00%', '+37.50%', '+20.00%', '-12.50%', '+60.00%']) {
+      expect(screen.queryByText(trend)).toBeNull();
+    }
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
