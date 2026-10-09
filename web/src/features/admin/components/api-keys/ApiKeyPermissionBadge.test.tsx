@@ -55,9 +55,9 @@ describe('ApiKeyPermissionBadge', () => {
     const { chip, svg } = renderBadge('read');
     expect(chip).not.toBeNull();
     expect(chip?.textContent?.trim()).toBe('Read');
-    expect(chip?.className).toContain('bg-neon-green/10');
-    expect(chip?.className).toContain('ring-neon-green/20');
-    expect(chip?.className).toContain('text-emerald-300');
+    expect(chip?.className).toContain('bg-[var(--semantic-success-bg)]');
+    expect(chip?.className).toContain('ring-[var(--semantic-success-border)]');
+    expect(chip?.className).toContain('text-[var(--semantic-success)]');
     // Plain Shield glyph for read-only access.
     expect(svg?.getAttribute('class') ?? '').toContain('lucide-shield');
   });
@@ -65,9 +65,9 @@ describe('ApiKeyPermissionBadge', () => {
   it('renders the read-write permission with amber text on a neon-amber chip', () => {
     const { chip, svg } = renderBadge('read-write');
     expect(chip?.textContent?.trim()).toBe('Read-write');
-    expect(chip?.className).toContain('bg-neon-amber/10');
-    expect(chip?.className).toContain('ring-neon-amber/20');
-    expect(chip?.className).toContain('text-amber-300');
+    expect(chip?.className).toContain('bg-[var(--semantic-warning-bg)]');
+    expect(chip?.className).toContain('ring-[var(--semantic-warning-border)]');
+    expect(chip?.className).toContain('text-[var(--semantic-warning)]');
     // ShieldAlert — a different glyph from the plain Shield used for read.
     expect(svg?.getAttribute('class') ?? '').toContain('lucide-shield-alert');
   });
@@ -75,9 +75,9 @@ describe('ApiKeyPermissionBadge', () => {
   it('renders the admin permission with purple text on a neon-purple chip', () => {
     const { chip, svg } = renderBadge('admin');
     expect(chip?.textContent?.trim()).toBe('Admin');
-    expect(chip?.className).toContain('bg-neon-purple/10');
-    expect(chip?.className).toContain('ring-neon-purple/20');
-    expect(chip?.className).toContain('text-purple-300');
+    expect(chip?.className).toContain('bg-[var(--semantic-purple-bg)]');
+    expect(chip?.className).toContain('ring-[var(--semantic-purple-border)]');
+    expect(chip?.className).toContain('text-[var(--semantic-purple)]');
     expect(svg?.getAttribute('class') ?? '').toContain('lucide-crown');
   });
 
@@ -93,7 +93,7 @@ describe('ApiKeyPermissionBadge', () => {
     const { chip, svg } = renderBadge('super-admin');
     expect(chip?.textContent?.trim()).toBe('Read');
     expect(chip).not.toHaveTextContent('Admin');
-    expect(chip?.className).toContain('text-emerald-300');
+    expect(chip?.className).toContain('text-[var(--semantic-success)]');
     expect(svg?.getAttribute('class') ?? '').toContain('lucide-shield');
   });
 
@@ -113,7 +113,7 @@ describe('ApiKeyPermissionBadge', () => {
   it('lets a caller-supplied text colour override the default via tailwind-merge', () => {
     const { chip } = renderBadge('read', 'text-rose-300');
     expect(chip?.className).toContain('text-rose-300');
-    expect(chip?.className).not.toContain('text-emerald-300');
+    expect(chip?.className).not.toContain('text-[var(--semantic-success)]');
   });
 
   it('marks the icon decorative so the accessible name is just the label', () => {
