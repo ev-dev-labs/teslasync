@@ -114,4 +114,15 @@ describe('CategoryBadge', () => {
     expect(chip?.className).toContain('rounded-full')
     expect(chip?.className).toContain('font-medium')
   })
+  it.each(['constructor', 'toString', 'hasOwnProperty', 'valueOf', '__proto__'])(
+    'renders inherited category %s as the complete neutral Other / question chip',
+    (category) => {
+      // Exercise out-of-union wire values without changing the typed helper.
+      const { chip }: ReturnType<typeof renderBadge> = Reflect.apply(renderBadge, undefined, [category])
+      expect(chip).not.toBeNull()
+      expect(chip?.textContent?.trim()).toBe('Other / question')
+      expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
+      expect(screen.queryByText(category)).toBeNull()
+    },
+  )
 })

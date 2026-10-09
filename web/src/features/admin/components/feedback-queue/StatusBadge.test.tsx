@@ -134,4 +134,16 @@ describe('StatusBadge', () => {
     expect(chip?.className).toContain('rounded-full')
     expect(chip?.className).toContain('font-medium')
   })
+  it.each(['constructor', 'toString', 'hasOwnProperty', 'valueOf', '__proto__'])(
+    'renders inherited status %s as the complete neutral Unknown chip, never Closed',
+    (status) => {
+      // Exercise out-of-union wire values without changing the typed helper.
+      const { chip }: ReturnType<typeof renderBadge> = Reflect.apply(renderBadge, undefined, [status])
+      expect(chip).not.toBeNull()
+      expect(chip?.textContent?.trim()).toBe('Unknown')
+      expect(chip?.className).toContain(BADGE_VARIANTS.neutral)
+      expect(chip?.textContent?.trim()).not.toBe('Closed')
+      expect(screen.queryByText(status)).toBeNull()
+    },
+  )
 })
