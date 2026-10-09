@@ -66,7 +66,7 @@ function renderPanels() {
 }
 
 function statTile(region: HTMLElement, label: string): HTMLElement {
-  const tile = within(region).getByText(label).closest<HTMLElement>('[data-operational-metric]');
+  const tile = within(region).getByText(label, { selector: '[data-operational-metric] *' }).closest<HTMLElement>('[data-operational-metric]');
   expect(tile).not.toBeNull();
   return tile!;
 }
@@ -130,8 +130,26 @@ describe('Notification health continuation source independence', () => {
   it('does not present empty-history metrics while the source is unknown', () => {
     state.analysis = undefined;
     state.delivery = undefined;
-    const { container } = renderPanels();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    renderPanels();
+    for (const label of ['Alert fatigue metrics', 'Delivery SLO metrics']) {
+      const metrics = screen.getByRole('region', { name: label });
+      const skeletons = metrics.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+      expect(skeletons).toHaveLength(4);
+      for (const skeleton of skeletons) {
+        expect(skeleton).toHaveStyle({ height: '96px' });
+        expect(skeleton).toHaveClass('w-full', 'rounded-xl');
+      }
+      expect(metrics.querySelector('[data-operational-value]')).not.toBeInTheDocument();
+    }
+    const latency = screen.getByRole('region', { name: 'Notification latency metrics' });
+    expect(within(latency).getByTestId('notification-latency-brief')).toHaveAttribute('aria-busy', 'true');
+    const pendingValues = latency.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]');
+    expect(pendingValues).toHaveLength(4);
+    for (const value of pendingValues) {
+      expect(value).toHaveClass('h-5', 'w-20', 'max-w-full', 'rounded');
+      expect(value).toBeEmptyDOMElement();
+    }
+    expect(latency.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(screen.queryByRole('table', { name: 'Slowest delivery records' })).not.toBeInTheDocument();
     expect(screen.queryByText('No outcomes')).not.toBeInTheDocument();
     expect(screen.queryByText('No notifications have been delivered yet, so there is nothing to score.')).not.toBeInTheDocument();
@@ -141,8 +159,23 @@ describe('Notification health continuation source independence', () => {
     state.paused = true;
     renderPanels();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3);
-    expect(screen.getAllByText(/The device is offline/)).toHaveLength(3);
+    for (const label of ['Alert fatigue', 'Notification burn rate', 'Notification latency']) {
+      const region = screen.getByRole('region', { name: label });
+      const warning = within(region).getByTestId('stale-refresh-warning');
+      expect(warning).toHaveAttribute('role', 'status');
+      expect(warning).toHaveAttribute('data-data-state', 'stale');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(within(warning).getByText(`${label} may be out of date`)).toBeInTheDocument();
+      expect(within(warning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument();
+      expect(within(warning).queryByText(/The device is offline/)).not.toBeInTheDocument();
+    }
+    expect(screen.getByRole('heading', { name: 'Noise score by rule' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery outcomes by hour' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Latency distribution' })).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'Slowest delivery records' })).toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Slowest delivery records' });
+    expect(within(table).getByText('Complete notification title')).toBeInTheDocument();
+    expect(within(table).getByText('Measured')).toBeInTheDocument();
   });
 
   it('mounts real fatigue metrics with complete captions, read eligibility, and burst denominators', () => {

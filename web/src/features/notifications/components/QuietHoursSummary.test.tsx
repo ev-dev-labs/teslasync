@@ -107,7 +107,14 @@ describe('QuietHoursSummary — loading & error states', () => {
     expect(getRegion()).toBeInTheDocument();
     const skeleton = screen.getByTestId('stat-grid-skeleton');
     expect(skeleton).toHaveAttribute('aria-busy', 'true');
-    expect(skeleton.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    expect(skeleton).toHaveAttribute('role', 'status');
+    expect(skeleton).toHaveAttribute('aria-label', 'Loading stat cards');
+    expect(getRegion()).toContainElement(skeleton);
+    const cards = skeleton.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(cards).toHaveLength(4);
+    for (const card of cards) {
+      expect(card).toHaveClass('h-24', 'w-full', 'rounded-xl');
+    }
     // No KPI cards while first-loading.
     expect(screen.queryByText('Windows')).not.toBeInTheDocument();
   });

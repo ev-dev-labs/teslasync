@@ -153,11 +153,17 @@ beforeEach(() => {
 describe('BrowserTabSignalsPanel — loading', () => {
   it('shows a skeleton (no toggles) while settings are in flight', () => {
     setupRequest({ get: () => new Promise<unknown>(() => {}) }); // never resolves
-    const { container } = renderPanel();
+    renderPanel();
 
     // Heading is always present; the body is a skeleton, not the switches.
     expect(screen.getByText('Browser tab signals')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByText('Browser tab signals').closest('[data-print-card]');
+    expect(panel).not.toBeNull();
+    const skeletons = panel!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons).toHaveLength(1);
+    expect(panel).toContainElement(skeletons[0] as HTMLElement);
+    expect(skeletons[0]).toHaveStyle({ height: '132px' });
+    expect(skeletons[0]).toHaveClass('w-full', 'rounded');
     expect(screen.queryByRole('switch')).not.toBeInTheDocument();
   });
 });
