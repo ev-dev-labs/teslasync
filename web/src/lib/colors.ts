@@ -97,7 +97,7 @@ export const CHART_COLORS_NEON = [
   '#cfb481', // amber
   '#a5aac9', // indigo
   '#d6a0a5', // red
-  '#c3a2b5', // pink
+  '#c3a2b7', // pink
   '#91bcb2', // teal
 ] as const
 
