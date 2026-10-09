@@ -36,10 +36,10 @@ import { FSMBadge } from './FSMBadge';
 import { BADGE_VARIANTS } from '@/components/ui';
 
 const VARIANT_BG = {
-  info: 'bg-blue-100',
-  success: 'bg-green-100',
-  warning: 'bg-yellow-100',
-  danger: 'bg-red-100',
+  info: 'border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] text-[var(--semantic-info)]',
+  success: 'border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]',
+  warning: 'border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)]',
+  danger: 'border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] text-[var(--semantic-danger)]',
   neutral: BADGE_VARIANTS.neutral,
 } as const;
 
@@ -111,13 +111,13 @@ describe('FSMBadge — input normalization', () => {
   it('matches case-insensitively for uppercase input', () => {
     const { container } = render(<FSMBadge type="DRIVE_SESSION" />);
     expect(screen.getByText('Drive')).toBeInTheDocument();
-    expect(chip(container).className).toContain('bg-green-100');
+    expect(chip(container).className).toContain('border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]');
   });
 
   it('ignores surrounding whitespace', () => {
     const { container } = render(<FSMBadge type="  charge_session  " />);
     expect(screen.getByText('Charge')).toBeInTheDocument();
-    expect(chip(container).className).toContain('bg-yellow-100');
+    expect(chip(container).className).toContain('border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] text-[var(--semantic-warning)]');
   });
 });
 
