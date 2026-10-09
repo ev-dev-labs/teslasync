@@ -2,6 +2,11 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { VehicleTwin } from '../VehicleTwin';
 import type { VehicleTwinProps } from '../VehicleTwin';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
+import english from '@/i18n/en.json';
+
+vi.unmock('react-i18next');
 
 const motionPreference = vi.hoisted(() => ({ reduce: false }));
 vi.mock('@/hooks/useMotionPreference', () => ({
@@ -10,6 +15,57 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 
 beforeEach(() => {
   motionPreference.reduce = false;
+});
+
+describe('VehicleTwin localized native titles and hotspots', () => {
+  it.each([false, true, null] as const)('retains opening state %s and translated source associations', async opening => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'fixture',
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: english },
+        fixture: { translation: {
+          digitalTwin: {
+            frunk: 'Avant', trunk: 'Coffre', windowFD: 'Avant conducteur',
+            windowRD: 'Arrière conducteur', windowFP: 'Avant passager', windowRP: 'Arrière passager',
+            doorDriverFront: 'Conducteur avant', doorDriverRear: 'Conducteur arrière',
+          },
+          teslaOnly: { door: 'Porte', window: 'Fenêtre' },
+          common: { open: 'Ouvert', closed: 'Fermé', unknown: 'Inconnu' },
+          dayLog: { windowStates: { partial: 'Partiellement ouvert' } },
+        } },
+      },
+    });
+    const state = opening === null ? 'Inconnu' : opening ? 'Ouvert' : 'Fermé';
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <VehicleTwin {...baseTwinState} interactive frunkOpen={opening} trunkOpen={opening}
+          doors={{ ...baseTwinState.doors, driverFront: opening, driverRear: opening }}
+          windowFD="partial" windowRD={null} windowFP="closed" windowRP="open" />
+      </I18nextProvider>,
+    );
+    const titles = Array.from(container.querySelectorAll('title'), title => title.textContent?.replace(/\s+/g, ' ').trim());
+    expect(titles).toContain(`Conducteur avant Porte: ${state}`);
+    expect(titles).toContain(`Conducteur arrière Porte: ${state}`);
+    expect(titles).toContain('Avant passager Fenêtre: Fermé. Arrière passager Fenêtre: Ouvert.');
+    const hotspots = [
+      ['foreignObject[x="44"][y="140"][width="150"][height="48"]', `Avant: ${state}`],
+      ['foreignObject[x="462"][y="94"][width="88"][height="46"]', `Coffre: ${state}`],
+      ['foreignObject[x="198"][y="92"][width="98"][height="50"]', 'Avant conducteur Fenêtre: Partiellement ouvert'],
+      ['foreignObject[x="316"][y="90"][width="96"][height="46"]', 'Arrière conducteur Fenêtre: Inconnu'],
+      ['foreignObject[x="206"][y="148"][width="100"][height="92"]', `Conducteur avant Porte: ${state}`],
+      ['foreignObject[x="310"][y="142"][width="124"][height="98"]', `Conducteur arrière Porte: ${state}`],
+    ] as const;
+    for (const [selector, label] of hotspots) {
+      const hotspot = container.querySelector(selector)!;
+      const target = hotspot.querySelector('[aria-describedby]')!;
+      const tooltip = hotspot.querySelector('[role="tooltip"]')!;
+      expect(target).toBeInTheDocument();
+      expect(tooltip).toHaveTextContent(label);
+      expect(target).toHaveAttribute('aria-describedby', tooltip.id);
+    }
+  });
 });
 afterEach(() => {
   vi.unstubAllGlobals();

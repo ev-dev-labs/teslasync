@@ -12,6 +12,8 @@ import { buildCompositorUrl, COMPOSITOR_METRICS } from '@/lib/teslaCompositor';
 import { useVehiclePaint } from '@/hooks/useVehiclePaint';
 import { ambientFrames, ambientLoop } from '@/components/motion/ambient';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const SIZE_MAP = { sm: 300, md: 440, lg: 560 } as const;
 const VIEWBOX_WIDTH = 560;
@@ -252,12 +254,12 @@ function windowStroke(state: WindowState): string {
   }
 }
 
-function windowLabel(state: WindowState): string {
+function windowLabel(state: WindowState, t: TFunction): string {
   switch (state) {
-    case 'closed': return 'Closed';
-    case 'open': return 'Open';
-    case 'partial': return 'Partially open';
-    default: return 'Unknown';
+    case 'closed': return t('common.closed');
+    case 'open': return t('common.open');
+    case 'partial': return t('dayLog.windowStates.partial');
+    default: return t('common.unknown');
   }
 }
 
@@ -266,8 +268,8 @@ function doorStroke(open: boolean | null): string {
   return open ? C.doorOpen : C.doorClosed;
 }
 
-function stateLabel(value: boolean | null, trueText: string, falseText: string): string {
-  if (value === null) return 'Unknown';
+function stateLabel(value: boolean | null, trueText: string, falseText: string, t?: TFunction): string {
+  if (value === null) return t ? t('common.unknown') : 'Unknown';
   return value ? trueText : falseText;
 }
 
@@ -466,6 +468,7 @@ function BodyShell({
 }) {
   const { ids, bodyAccent } = useTwinCtx();
   const { reduce, durationMs } = useMotionPreference();
+  const { t } = useTranslation();
   return (
     <g>
       {!photo && (
@@ -561,7 +564,7 @@ function BodyShell({
         y={140}
         width={150}
         height={48}
-        label={`Frunk: ${stateLabel(frunkOpen, 'Open', 'Closed')}`}
+        label={`${t('digitalTwin.frunk')}: ${stateLabel(frunkOpen, t('common.open'), t('common.closed'), t)}`}
         side="left"
       />
       <InteractiveHotspot
@@ -570,7 +573,7 @@ function BodyShell({
         y={94}
         width={88}
         height={46}
-        label={`Trunk: ${stateLabel(trunkOpen, 'Open', 'Closed')}`}
+        label={`${t('digitalTwin.trunk')}: ${stateLabel(trunkOpen, t('common.open'), t('common.closed'), t)}`}
         side="right"
       />
     </g>
@@ -653,6 +656,7 @@ function SideWindows({
   interactive?: boolean;
   photo?: boolean;
 }) {
+  const { t } = useTranslation();
   const { ids } = useTwinCtx();
   const glassClosedRef = `url(#${ids.glassGrad})`;
   const passengerAlert = wFP === 'open' || wFP === 'partial' || wRP === 'open' || wRP === 'partial';
@@ -786,7 +790,7 @@ function SideWindows({
         y={92}
         width={98}
         height={50}
-        label={`Front driver window: ${windowLabel(wFD)}`}
+        label={`${t('digitalTwin.windowFD')} ${t('teslaOnly.window')}: ${windowLabel(wFD, t)}`}
       />
       <InteractiveHotspot
         enabled={interactive}
@@ -794,10 +798,10 @@ function SideWindows({
         y={90}
         width={96}
         height={46}
-        label={`Rear driver window: ${windowLabel(wRD)}`}
+        label={`${t('digitalTwin.windowRD')} ${t('teslaOnly.window')}: ${windowLabel(wRD, t)}`}
       />
       <title>
-        Front passenger window: {windowLabel(wFP)}. Rear passenger window: {windowLabel(wRP)}.
+        {t('digitalTwin.windowFP')} {t('teslaOnly.window')}: {windowLabel(wFP, t)}. {t('digitalTwin.windowRP')} {t('teslaOnly.window')}: {windowLabel(wRP, t)}.
       </title>
     </g>
   );
@@ -812,10 +816,12 @@ function DoorOverlay({
 }: {
   kind: 'front' | 'rear';
   open: boolean | null;
-  label: string;
+  label: 'digitalTwin.doorDriverFront' | 'digitalTwin.doorDriverRear';
   interactive?: boolean;
   photo?: boolean;
 }) {
+  const { t } = useTranslation();
+  const doorLabel = `${t(label)} ${t('teslaOnly.door')}`;
   const { reduce, durationMs } = useMotionPreference();
   const isFront = kind === 'front';
   const seam = isFront
@@ -873,10 +879,10 @@ function DoorOverlay({
         y={hotspot.y}
         width={hotspot.width}
         height={hotspot.height}
-        label={`${label}: ${stateLabel(open, 'Open', 'Closed')}`}
+        label={`${doorLabel}: ${stateLabel(open, t('common.open'), t('common.closed'), t)}`}
         side={hotspot.side}
       />
-      <title>{label}: {stateLabel(open, 'Open', 'Closed')}</title>
+      <title>{doorLabel}: {stateLabel(open, t('common.open'), t('common.closed'), t)}</title>
     </g>
   );
 }
@@ -1560,14 +1566,14 @@ export function VehicleTwin({
             <DoorOverlay
               kind="rear"
               open={doors.driverRear}
-              label="Driver Rear"
+              label="digitalTwin.doorDriverRear"
               interactive={interactive}
               photo={photoOn}
             />
             <DoorOverlay
               kind="front"
               open={doors.driverFront}
-              label="Driver Front"
+              label="digitalTwin.doorDriverFront"
               interactive={interactive}
               photo={photoOn}
             />
