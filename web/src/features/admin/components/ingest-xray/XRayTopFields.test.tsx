@@ -109,11 +109,24 @@ describe('XRayTopFields — loading', () => {
   it('renders a skeleton and no list / empty / error while loading', () => {
     const { container } = renderPanel({ loading: true, rows: [makeRow()] });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const placeholder = container.querySelector(
+      '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholder).not.toBeNull();
+    expect(container.querySelectorAll(
+      '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toHaveLength(1);
+    expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+    expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded');
+    expect(placeholder).toHaveStyle({ height: '220px' });
+    expect(placeholder).toBeEmptyDOMElement();
+    expect(container.querySelectorAll('[data-print-card] .animate-pulse')).toHaveLength(0);
     // Loading strictly precedes every other branch.
     expect(screen.queryByRole('list')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('VehicleSpeed')).toBeNull();
+    expect(screen.queryByText('100')).toBeNull();
   });
 });
 
