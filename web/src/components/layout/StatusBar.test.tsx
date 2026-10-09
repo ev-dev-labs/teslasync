@@ -304,6 +304,24 @@ describe('StatusBar :: visibility & accessibility', () => {
 
 // ── StatusBar: icon-only propagation ─────────────────────────────────────────
 
+describe('StatusBar :: restrained presentation', () => {
+  it('uses opaque neutral chrome and existing secondary typography without decorative blur', () => {
+    render(<StatusBar />);
+    const bar = screen.getByRole('contentinfo', { name: 'Application status' });
+    expect(bar).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]', 'text-xs', 'text-[var(--text-secondary)]');
+    expect(bar).not.toHaveClass('backdrop-blur-xl', 'bg-[var(--surface-1)]/95', 'border-[var(--glass-border)]');
+  });
+
+  it('keeps the Helix action neutral while retaining native focus and reduced-motion treatment', () => {
+    render(<StatusBar />);
+    const helix = screen.getByRole('button', { name: 'Open Helix chat' });
+    expect(helix).toHaveClass('text-[var(--text-secondary)]', 'focus-visible:outline-2', 'focus-visible:outline-offset-2', 'focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none');
+    expect(helix).not.toHaveClass('text-[var(--theme-primary)]');
+    expect(helix).toHaveAttribute('type', 'button');
+    expect(helix).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
 describe('StatusBar :: icon-only propagation', () => {
   it('renders full (non-icon-only) segments by default on a wide viewport', () => {
     render(<StatusBar />);

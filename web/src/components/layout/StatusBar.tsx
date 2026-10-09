@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useBackgroundJobs';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { Button, Tooltip } from '@/components/ui/runtime';
 import { HelixMark } from '@/components/branding/HelixMark';
 
@@ -128,8 +129,10 @@ function StatusBarContent({
         data-print-hide
         className={cn(
           'fixed left-0 right-0 z-shell-status-bar flex flex-col items-stretch justify-between md:flex-row md:items-center md:gap-2',
-          'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
-          'px-3 text-xs text-[var(--text-secondary)] lg:px-4',
+          'border-t border-[var(--border-default)] bg-[var(--surface-1)]',
+          'px-3 lg:px-4',
+          typography.size.xs,
+          typography.color.secondary,
           'bottom-[var(--shell-tab-bar-height)] xl:bottom-0',
           'h-[var(--shell-status-bar-height)]',
           className,
@@ -192,7 +195,7 @@ function StatusBarContent({
                 setHelixMounted(true);
                 setHelixOpen(value => !value);
               }}
-              className="h-11 min-h-11 min-w-11 shrink-0 rounded px-1.5 py-0 text-[var(--theme-primary)] md:h-5 md:min-h-0 md:min-w-0"
+              className={cn('h-11 min-h-11 min-w-11 shrink-0 rounded px-1.5 py-0 md:h-5 md:min-h-0 md:min-w-0', typography.color.secondary)}
             >
               <HelixMark className="h-4 w-4" aria-hidden="true" />
             </Button>
