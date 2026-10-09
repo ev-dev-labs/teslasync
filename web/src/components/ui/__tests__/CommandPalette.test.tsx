@@ -174,6 +174,97 @@ beforeEach(() => {
   requestMock.mockResolvedValue({})
 })
 
+describe('CommandPalette remote search trust', () => {
+  it('keeps static rows during initial search and does not claim no matches until the response resolves', async () => {
+    let resolveSearch!: (response: SearchResponse) => void
+    requestMock.mockImplementation(() => new Promise<SearchResponse>(resolve => { resolveSearch = resolve }))
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'drives' } })
+    expect(screen.getByRole('status')).toHaveTextContent('Loading...')
+    expect(screen.getByRole('option', { name: /^Drives/ })).toBeInTheDocument()
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/search?q=drives&limit=5', expect.anything()))
+    expect(screen.queryByText(/No results for/)).not.toBeInTheDocument()
+    await act(async () => resolveSearch({ query: 'drives', hits: [] }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    fireEvent.change(input, { target: { value: 'zzzzmissing' } })
+    expect(screen.queryByText(/No results for/)).not.toBeInTheDocument()
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/search?q=zzzzmissing&limit=5', expect.anything()))
+    await act(async () => resolveSearch({ query: 'zzzzmissing', hits: [] }))
+    expect(await screen.findByText('No results for "zzzzmissing"')).toBeInTheDocument()
+  })
+
+  it('discloses older-query hits throughout debounce and pending without retrying the previous query', async () => {
+    let resolveSearch!: (response: SearchResponse) => void
+    requestMock.mockImplementation(() => new Promise<SearchResponse>(resolve => { resolveSearch = resolve }))
+    const alpha: SearchResponse = {
+      query: 'alpha',
+      hits: [{ type: 'drive', id: 77, title: 'Alpha commute', subtitle: 'Drive', url: '/drives/77', score: 100 }],
+    }
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles(), [], { alpha }) })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'alpha' } })
+    await screen.findByRole('option', { name: /Alpha commute/ })
+    fireEvent.change(input, { target: { value: 'beta' } })
+    expect(screen.getByRole('status')).toHaveTextContent('Showing results for "alpha" while search for "beta" is pending.')
+    expect(screen.getByRole('option', { name: /Alpha commute/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/search?q=beta&limit=5', expect.anything()))
+    expect(screen.getByRole('status')).toHaveTextContent('Showing results for "alpha"')
+    await act(async () => resolveSearch({ query: 'beta', hits: [] }))
+    await waitFor(() => expect(screen.queryByText('Alpha commute')).not.toBeInTheDocument())
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows initial failure beside static rows and retries the actual current hook', async () => {
+    const searchRequest = vi.fn<() => Promise<SearchResponse>>()
+      .mockRejectedValueOnce(new Error('Search unavailable'))
+      .mockResolvedValue({ query: 'drives', hits: [] })
+    requestMock.mockImplementation((path: string) => {
+      if (path === '/search?q=drives&limit=5') return searchRequest()
+      if (path === '/system/auth-mode') return Promise.resolve({
+        mode: 'open', subject: null,
+        capabilities: { step_up_reauth: false, totp_enrollment: false, session_list: false, impersonation: false, rbac: false },
+      } satisfies import('@/api/types').AuthModeResponse)
+      return Promise.reject(new Error(`Unexpected request: ${path}`))
+    })
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'drives' } })
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('The search service did not respond.')
+    expect(screen.getByRole('option', { name: /^Drives/ })).toBeInTheDocument()
+    expect(screen.queryByText(/No results for/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    expect(requestMock.mock.calls.filter(([path]) => path === '/search?q=drives&limit=5')).toHaveLength(2)
+  })
+
+  it('retains hits during refresh failure, reports stale data and retries without changing navigation', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+    qc.setQueryData(vehicleKeys.all, makeVehicles())
+    qc.setQueryData(savedViewsKeys.allList, [])
+    qc.setQueryData(alertKeys.alerts, [])
+    qc.setQueryData(searchKeys.global('alpha', undefined, 5), {
+      query: 'alpha',
+      hits: [{ type: 'drive', id: 77, title: 'Alpha commute', subtitle: 'Drive', url: '/drives/77', score: 100 }],
+    } satisfies SearchResponse)
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<QueryClientProvider client={qc}><CommandPalette initialOpen /><LocationProbe /></QueryClientProvider>, { wrapper: Wrapper })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'alpha' } })
+    await screen.findByRole('option', { name: /Alpha commute/ })
+    requestMock.mockRejectedValueOnce(new Error('Refresh unavailable'))
+    await act(async () => { await qc.invalidateQueries({ queryKey: searchKeys.global('alpha', undefined, 5) }) })
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Previously loaded data remains visible.')
+    expect(screen.getByRole('option', { name: /Alpha commute/ })).toBeInTheDocument()
+    requestMock.mockResolvedValue(qc.getQueryData(searchKeys.global('alpha', undefined, 5)))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    fireEvent.click(screen.getByRole('option', { name: /Alpha commute/ }))
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives/77'))
+  })
+})
+
 describe('CommandPalette result presentation', () => {
   it('keeps long result text reachable, logical alignment and actual selection/navigation', async () => {
     const title = `Alpha ${'رحلةطويلة'.repeat(24)}`
