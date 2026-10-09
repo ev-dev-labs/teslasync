@@ -182,7 +182,14 @@ describe.each([1, 2, 3])('AutomationStatusWidget — identifying heading at cols
         else expect(screen.getByText('Retained automation')).toBeInTheDocument();
         if (cols === 3) expect(screen.getByRole('switch', { name: 'Toggle Retained automation' })).toBeInTheDocument();
       }
-      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'loading') {
+        const skeleton = container.querySelector('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]');
+        expect(skeleton).toBeInTheDocument();
+        expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl');
+        expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+        expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+        expect(container.querySelector('.animate-pulse')).toBeNull();
+      }
       if (state === 'empty') expect(screen.getByText('No automations configured')).toBeInTheDocument();
       if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
       if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -193,7 +200,12 @@ describe.each([1, 2, 3])('AutomationStatusWidget — identifying heading at cols
 describe('AutomationStatusWidget — query states', () => {
   it('renders a skeleton (and no content) while loading', () => {
     const { container } = renderWidget(FULL, makeQuery({ isLoading: true, data: undefined }));
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    const skeleton = container.querySelector('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-full', 'w-full', 'min-h-24', 'rounded-xl');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     // The title remains; content and empty state are suppressed during load.
     expect(screen.queryByText('Automation status')).toBeInTheDocument();
     expect(screen.queryByText('No automations configured')).toBeNull();
@@ -271,7 +283,12 @@ describe('AutomationStatusWidget — full view', () => {
     expect(within(drawer).getByText('1')).toBeInTheDocument();
     expect(within(drawer).getByText('0')).toBeInTheDocument();
     expect(within(drawer).getByText(/not all manually disabled automations/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/action permissions and per-row recovery remain independent/)).toBeInTheDocument();
+    const scope = within(drawer).getByText('Returned automation list; action permissions and per-row recovery remain independent');
+    expect(scope).toBeInTheDocument();
+    expect(scope.closest('[data-drawer-header]')).toContainElement(within(drawer).getByRole('heading', { name: 'Automation configuration details' }));
+    const provenance = within(drawer).getByRole('region', { name: 'How this was calculated' });
+    expect(within(provenance).getByText('Data sources')).toBeInTheDocument();
+    expect(within(provenance).getByText('Current automation configuration and reported failure flags; no execution-success confidence is inferred. Returned automation list; action permissions and per-row recovery remain independent')).toBeInTheDocument();
   });
   it('shows a titled summary header and one row per automation', () => {
     renderWidget(
