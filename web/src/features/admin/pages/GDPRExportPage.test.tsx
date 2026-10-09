@@ -232,8 +232,9 @@ describe('GDPRExportPage — empty + lookup', () => {
     renderPage();
     fireEvent.change(screen.getByRole('textbox'), { target: { value: ART_A } });
     fireEvent.click(screen.getByRole('button', { name: 'Look up' }));
-    const summary = await screen.findByTestId('gdpr-export-summary');
-    await waitFor(() => expect(summary.querySelector('[data-operational-metric="bytes"]')).toHaveAttribute('data-value-state', 'value'));
+    await screen.findByTestId('gdpr-export-summary');
+    await waitFor(() => expect(screen.getByTestId('gdpr-export-summary').querySelector('[data-operational-metric="bytes"]')).toHaveAttribute('data-value-state', 'value'));
+    const summary = screen.getByTestId('gdpr-export-summary');
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(summary).toHaveAttribute('data-operational-brief');
     expect(summary).toHaveTextContent('only the selected export artifact');
