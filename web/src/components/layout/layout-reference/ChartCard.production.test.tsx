@@ -38,7 +38,7 @@ const columns: NonNullable<ChartCardProps['dataColumns']> = Object.freeze([
 ]);
 
 function latestChartProps() {
-  const call = renderEmbedded.mock.calls.at(-1);
+  const call = renderEmbedded.mock.calls[renderEmbedded.mock.calls.length - 1];
   if (!call) throw new Error('ChartCard did not render its concrete EmbeddedChart boundary');
   return call[0];
 }
