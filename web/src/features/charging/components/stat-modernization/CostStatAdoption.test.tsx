@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { settingsKeys } from '@/api/hooks/useSettings';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import type { BillVarianceReport } from '@/types/charging';
 import {
   fmtNumber, getFormatterPreferences, setGlobalLocale, setGlobalPrecision,
@@ -74,7 +75,9 @@ function render(ui: ReactElement) {
   return renderWithTestingLibrary(ui, {
     wrapper: ({ children }) => (
       <MemoryRouter initialEntries={['/cost-analysis']}>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          <ThemeProvider>{children}</ThemeProvider>
+        </QueryClientProvider>
       </MemoryRouter>
     ),
   });

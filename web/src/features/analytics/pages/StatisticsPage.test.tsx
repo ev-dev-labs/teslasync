@@ -172,6 +172,7 @@ import { useMileageStats, useStateSummary, useFleetAnalytics } from '@/api/hooks
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import StatisticsPage from './StatisticsPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -280,9 +281,11 @@ function renderPage(initialEntries: string[] = ['/statistics']) {
   return render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
-        <ToastProvider>
-          <StatisticsPage />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <StatisticsPage />
+          </ToastProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
