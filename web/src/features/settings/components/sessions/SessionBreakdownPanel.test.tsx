@@ -137,7 +137,11 @@ describe('SessionBreakdownPanel', () => {
     const { container } = renderPanel({ isLoading: true })
 
     expect(screen.getByText('By browser')).toBeInTheDocument()
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    const placeholders = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')
+    expect(placeholders).toHaveLength(1)
+    expect(placeholders[0]).toHaveClass('w-full', 'rounded')
+    expect(placeholders[0]).toHaveStyle({ height: '168px' })
+    expect(placeholders[0]).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
     expect(screen.queryByText('Chrome')).not.toBeInTheDocument()
   })
 

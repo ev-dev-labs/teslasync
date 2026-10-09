@@ -121,7 +121,13 @@ describe('FeatureToggles — loading state', () => {
     const loading = screen.getByTestId('feature-toggles-loading')
     expect(loading).toBeInTheDocument()
     // Three skeleton bars, no misleading "no data" copy, no rows.
-    expect(loading.querySelectorAll('.animate-pulse')).toHaveLength(3)
+    const placeholders = loading.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')
+    expect(placeholders).toHaveLength(3)
+    placeholders.forEach((placeholder) => {
+      expect(placeholder).toHaveClass('w-full', 'rounded')
+      expect(placeholder).toHaveStyle({ height: '32px' })
+      expect(placeholder).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
+    })
     expect(
       screen.queryByText('No feature config data yet. Click Refresh to fetch from Tesla.'),
     ).not.toBeInTheDocument()

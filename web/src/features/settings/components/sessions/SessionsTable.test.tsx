@@ -276,7 +276,11 @@ describe('SessionsTable — owned states', () => {
   it('shows a skeleton and no table while loading', () => {
     const { container } = renderTable({ isLoading: true })
     expect(screen.queryByRole('table')).toBeNull()
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    const placeholders = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')
+    expect(placeholders).toHaveLength(1)
+    expect(placeholders[0]).toHaveClass('w-full', 'rounded')
+    expect(placeholders[0]).toHaveStyle({ height: '240px' })
+    expect(placeholders[0]).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
     // The panel chrome (title) stays mounted during load — never a blank panel.
     expect(
       screen.getByRole('heading', { level: 3, name: 'Active devices' }),

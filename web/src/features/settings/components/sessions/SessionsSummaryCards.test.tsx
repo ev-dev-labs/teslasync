@@ -99,8 +99,16 @@ describe('SessionsSummaryCards — loading', () => {
   it('renders four loading values in the retained Brief shell and marks the region busy', () => {
     const { container } = renderCards({ isLoading: true })
 
-    // One `.animate-pulse` element per Skeleton — the layout must not jump.
-    expect(container.querySelectorAll('.motion-safe\\:animate-pulse')).toHaveLength(4)
+    // Each retained metric owns a static value placeholder, not a shared Skeleton.
+    const metrics = container.querySelectorAll('[data-operational-metric]')
+    expect(metrics).toHaveLength(4)
+    const placeholders = container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]')
+    expect(placeholders).toHaveLength(4)
+    metrics.forEach((metric) => {
+      const placeholder = metric.querySelector('[aria-hidden="true"][class~="bg-[var(--surface-3)]"]')
+      expect(placeholder).toHaveClass('block', 'h-5', 'w-20', 'max-w-full', 'rounded')
+      expect(placeholder).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
+    })
     expect(screen.getByText('Active sessions')).toBeInTheDocument()
     expect(screen.getByText('This device')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
@@ -199,10 +207,10 @@ describe('SessionsSummaryCards — error state', () => {
       onRetry,
     })
 
-    // Cards + skeletons are gone; the error banner owns the region.
+    // Unavailable metric shells remain beside the error, with no loading values.
     expect(screen.getByText('Active sessions')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4)
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
+    expect(container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class~="bg-[var(--surface-3)]"]')).toHaveLength(0)
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
 
     const retry = screen.getByRole('button', { name: 'Retry' })
