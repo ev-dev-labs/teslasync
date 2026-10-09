@@ -38,6 +38,7 @@ import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import { BADGE_VARIANTS } from '@/components/ui';
 
 import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings } from '@/types/charging';
 import type { OcppChargePoint, OcppSession } from '@/api/hooks/useOcpp';
@@ -352,7 +353,10 @@ describe('defaultDepartBy', () => {
 describe('SmartChargePage — before an optimization runs', () => {
   it('shows the labelled cost-comparison region with em-dash placeholders', () => {
     renderPage();
-    const kpi = screen.getByRole('region', { name: 'Cost comparison' });
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const kpi = within(costComparison).getByRole('region', { name: 'Cost comparison' });
     expect(within(kpi).getByText('Charge now')).toBeInTheDocument();
     expect(within(kpi).getByText('Optimized cost')).toBeInTheDocument();
     expect(within(kpi).getByText('Savings')).toBeInTheDocument();
@@ -488,10 +492,31 @@ describe('SmartChargePage — optimize interaction', () => {
   });
 
   it('renders a spinner + skeletons and blocks re-submit while pending', () => {
-    mockOptimize.mockReturnValue(optimizeState({ isPending: true }));
+    const mutate = vi.fn();
+    mockOptimize.mockReturnValue(optimizeState({ isPending: true, mutate }));
     const { container } = renderPage();
     expect(optimizeButton()).toBeDisabled();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(optimizeButton()).toHaveAttribute('aria-busy', 'true');
+    const spinner = optimizeButton().querySelector('svg[aria-hidden="true"]');
+    expect(spinner).not.toBeNull();
+    expect(spinner).toHaveAttribute('focusable', 'false');
+    expect(spinner).toHaveClass('h-4', 'w-4');
+    const timeline = container.querySelector('[data-chart-state="loading"]');
+    expect(timeline).not.toBeNull();
+    expect(timeline).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[data-chart-state="ready"]')).toBeNull();
+    for (const title of ['Recommended schedule', 'Alternative windows']) {
+      const panel = screen.getByRole('heading', { name: title }).closest('[data-card]');
+      const skeleton = panel?.querySelector('[aria-hidden="true"][style="height: 120px;"]');
+      expect(skeleton).not.toBeNull();
+      expect(skeleton).toHaveClass('h-4', 'w-full', 'bg-[var(--skeleton-bg)]');
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText(/Optimize a schedule to see the recommended charge window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Optimize a schedule to compare alternative charge windows/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
+    fireEvent.click(optimizeButton());
+    expect(mutate).not.toHaveBeenCalled();
   });
 
   it('surfaces the optimizer error message on failure', () => {
@@ -562,7 +587,10 @@ describe('SmartChargePage — after a successful optimization', () => {
 
   it('fills the KPI band, energy tile, and savings delta from the response', () => {
     optimizeToResult();
-    const kpi = screen.getByRole('region', { name: 'Cost comparison' });
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const kpi = within(costComparison).getByRole('region', { name: 'Cost comparison' });
     expect(within(kpi).getByText('$8.50')).toBeInTheDocument(); // charge now
     expect(within(kpi).getByText('$3.25')).toBeInTheDocument(); // optimized
     expect(within(kpi).getByText('$5.25')).toBeInTheDocument(); // savings
@@ -635,7 +663,10 @@ describe('SmartChargePage — after a successful optimization', () => {
     }));
     renderPage();
     fireEvent.click(optimizeButton());
-    const kpi = within(screen.getByRole('region', { name: 'Cost comparison' }));
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const kpi = within(within(costComparison).getByRole('region', { name: 'Cost comparison' }));
     expect(kpi.getAllByText('—')).toHaveLength(2);
     expect(kpi.queryByText('$0.00')).not.toBeInTheDocument();
     expect(kpi.queryByText('0.00 kWh')).not.toBeInTheDocument();
@@ -656,7 +687,10 @@ describe('SmartChargePage — after a successful optimization', () => {
     fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
     act(() => finish?.(RESULT));
     expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
-    const kpi = within(screen.getByRole('region', { name: 'Cost comparison' }));
+    const costComparison = screen.getByRole('region', {
+      name: (name, element) => name === 'Cost comparison' && element.hasAttribute('aria-label'),
+    });
+    const kpi = within(within(costComparison).getByRole('region', { name: 'Cost comparison' }));
     expect(kpi.getAllByText('—')).toHaveLength(4);
   });
 });
@@ -667,7 +701,12 @@ describe('SmartChargePage — plan history', () => {
   it('renders a skeleton while history is loading and there is nothing cached', () => {
     mockPlans.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderPage();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const history = screen.getByRole('heading', { name: 'Plan history' }).closest('[data-card]');
+    const skeleton = history?.querySelector('[aria-hidden="true"][style="height: 200px;"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'bg-[var(--skeleton-bg)]');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByRole('table', { name: 'charging:smart-charge-history' })).not.toBeInTheDocument();
     expect(
       screen.queryByText(/No charge plans yet/i),
     ).not.toBeInTheDocument();
@@ -700,8 +739,8 @@ describe('SmartChargePage — plan history', () => {
     expect(table.getByText('PG&E EV2-A')).toBeInTheDocument();
     expect(table.getByText('SCE TOU-D')).toBeInTheDocument();
     // planStatusVariant surfaced through the shared Badge colour classes.
-    expect(table.getByText('completed').className).toContain('bg-green-100');
-    expect(table.getByText('pending').className).toContain('bg-yellow-100');
+    expect(table.getByText('completed')).toHaveClass(...BADGE_VARIANTS.success.split(' '));
+    expect(table.getByText('pending')).toHaveClass(...BADGE_VARIANTS.warning.split(' '));
   });
 
   it('shows the empty message when there are no charge plans', () => {
@@ -730,7 +769,17 @@ describe('SmartChargePage — plan history', () => {
     mockRatePlans.mockReturnValue(makeQuery({ data: backendRatePlans, fetchStatus: 'paused' }));
     renderPage();
     expect(screen.getAllByText('LADWP R1B (LADWP)').length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/device is offline/i).length).toBeGreaterThan(0);
+    const settings = within(screen.getByRole('group', { name: 'Charge settings' }));
+    const warning = settings.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('aria-live', 'polite');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(warning).getByText('Data may be stale')).toBeInTheDocument();
+    expect(within(warning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument();
+    expect(within(warning).getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    expect(settings.getByLabelText('Rate plan')).toHaveValue('pge-ev2a');
+    expect(screen.queryByText(/device is offline/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
     expect(screen.queryByText('SCE TOU-D')).not.toBeInTheDocument();
   });
 
