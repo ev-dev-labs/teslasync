@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import { formatMetric, type MetricPreferences } from '@/lib/metric-reference';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { VehicleCostStatStrip } from './VehicleCostStatStrip';
@@ -33,7 +34,7 @@ afterEach(() => {
 });
 function setup(overrides: Partial<Parameters<typeof VehicleCostStatStrip>[0]> = {}) {
   return render(<VehicleCostStatStrip totals={totals} vehicleCount={3} windowDays={30}
-    loading={false} error={null} onRetry={vi.fn()} {...overrides} />);
+    loading={false} error={null} onRetry={vi.fn()} {...overrides} />, { wrapper: MemoryRouter });
 }
 
 describe('Vehicle ingest canonical summary preservation', () => {
