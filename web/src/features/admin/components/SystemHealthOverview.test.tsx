@@ -165,7 +165,7 @@ describe('SystemHealthOverview — first paint', () => {
     expect(loading).toHaveAttribute('role', 'status')
     expect(loading).toHaveAttribute('aria-busy', 'true')
     expect(loading).toHaveAttribute('aria-label', expect.stringContaining('Loading system health'))
-    expect(loading.querySelectorAll('.animate-pulse')).toHaveLength(6)
+    expect(loading.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toHaveLength(6)
     expect(screen.queryByTestId('system-overview')).not.toBeInTheDocument()
   })
 

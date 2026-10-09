@@ -211,13 +211,13 @@ describe('SecretRotationPage', () => {
     const { container } = renderPage()
 
     // Title chrome is always present; the KPI cards are not — the band is
-    // still showing its six pulse skeletons.
+    // still showing its six static skeletons.
     expect(
       screen.getByRole('heading', { level: 1, name: 'Secret rotation' }),
     ).toBeInTheDocument()
     expect(screen.getByTestId('secret-rotation-summary')).toHaveAttribute('aria-busy', 'true')
     expect(screen.getByTestId('secret-rotation-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0)
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0)
 
     // Settle the promise so React-Query teardown is clean.
     resolve(makeResponse([]))

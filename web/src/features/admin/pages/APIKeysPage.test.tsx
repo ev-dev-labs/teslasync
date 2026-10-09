@@ -272,7 +272,7 @@ describe('APIKeysPage', () => {
     const { container } = renderPage();
 
     // Loading branch: skeletons render, real KPI values do not yet.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
     expect(screen.getByText('Total keys')).toBeInTheDocument();
     expect(screen.getByTestId('api-keys-summary')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByTestId('api-keys-summary').querySelector('[data-operational-value]')).toBeNull();

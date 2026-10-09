@@ -351,8 +351,8 @@ describe('FeedbackQueuePage', () => {
     expect(screen.getByRole('heading', { name: 'Feedback queue' })).toBeInTheDocument()
     expect(screen.queryByText('Timeline cuts off early')).toBeNull()
     expect(screen.queryByText('No feedback yet')).toBeNull()
-    // Skeletons render as `.animate-pulse` blocks.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    // The table's multi-line Skeleton contains static source-shaped blocks.
+    expect(container.querySelectorAll('[aria-hidden="true"] > [class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0)
   })
 
   it('renders the QueryError banner when the table query fails and retries the LIST on click', () => {

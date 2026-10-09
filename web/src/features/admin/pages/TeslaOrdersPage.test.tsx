@@ -325,7 +325,7 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
     // Header shell + KPI band stay mounted; each data section shows a skeleton.
     expect(headerRefresh()).toBeInTheDocument()
     expect(within(kpiRegion()).getByText('Total orders')).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(4)
 
     // No resolved data or error surfaced yet.
     expect(screen.queryByRole('table')).toBeNull()

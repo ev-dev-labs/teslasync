@@ -64,6 +64,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import GasPriceAutoPollPage from './GasPriceAutoPollPage'
 import type { GasPriceStatus, GasPriceHistory } from '@/api/types'
 
@@ -168,9 +169,11 @@ function renderPage() {
   const rendered = render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
-        <ToastProvider>
-          <GasPriceAutoPollPage />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <GasPriceAutoPollPage />
+          </ToastProvider>
+        </ThemeProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
@@ -298,7 +301,15 @@ describe('GasPriceAutoPollPage — loading, error, empty', () => {
 
     // The page shell + action stay mounted; sections show skeletons.
     expect(screen.getByRole('button', { name: 'Poll now' })).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4)
+    // Each source owns its loading geometry: metric values, panel boxes or chart bars.
+    // Match only those placeholders inside their source's loading announcement.
+    const loadingPlaceholders = container.querySelectorAll([
+      '[data-testid="gas-price-summary"][data-operational-brief][aria-busy="true"] [data-operational-metric] span[aria-hidden="true"][class~="bg-[var(--surface-3)]"]',
+      '[role="status"][aria-label="Loading Configuration"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      '[role="status"][aria-label="Loading Price history"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      'figure[data-chart-state="loading"][aria-busy="true"] [data-testid="chart-skeleton"][aria-busy="true"] > [aria-hidden="true"][class~="bg-white/[0.04]"]',
+    ].join(', '))
+    expect(loadingPlaceholders.length).toBeGreaterThanOrEqual(4)
     // No resolved data + no error surfaced yet.
     expect(screen.queryByText('Running')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
