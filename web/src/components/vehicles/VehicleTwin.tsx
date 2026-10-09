@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from '@/components/motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { Button } from '@/components/ui/Button';
+import { Text } from '@/components/ui/Typography';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
 import {
   FALLBACK_PAINT,
@@ -295,7 +297,7 @@ function InteractiveHotspot({
   return (
     <foreignObject x={x} y={y} width={width} height={height}>
       <Tooltip content={label} side={side}>
-        <span className="block w-full h-full" />
+        <Button type="button" variant="ghost" aria-label={label} className="block w-full h-full rounded-none p-0 hover:bg-transparent" />
       </Tooltip>
     </foreignObject>
   );
@@ -1126,10 +1128,12 @@ function SecurityOverlay({
   sentryMode: boolean | null;
   interactive?: boolean;
 }) {
+  const { t } = useTranslation();
   const iconSize = 18;
   const cx = 320;
   const cy = 114;
   const sentryY = cy - 23;
+  const sentryIcon = <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />;
 
   return (
     <g>
@@ -1140,11 +1144,12 @@ function SecurityOverlay({
       {sentryMode && (
         <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
           <Tooltip content="Sentry mode active" side="top">
-            <span
-              className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]"
-            >
-              <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />
-            </span>
+            {interactive ? (
+              <Button type="button" variant="ghost" aria-label={t('guard.sentryActive')}
+                className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">{sentryIcon}</Button>
+            ) : (
+              <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">{sentryIcon}</span>
+            )}
           </Tooltip>
         </foreignObject>
       )}
@@ -1152,12 +1157,12 @@ function SecurityOverlay({
         <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
           {interactive ? (
             <Tooltip content={locked ? 'Locked' : 'Unlocked'} side="top">
-              <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
+              <Button type="button" variant="ghost" aria-label={t(locked ? 'common.locked' : 'common.unlocked')} className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">
                 {locked
                   ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
                   : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
                 }
-              </span>
+              </Button>
             </Tooltip>
           ) : (
             <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
@@ -1392,6 +1397,33 @@ export function VehicleTwin({
   paint: paintOverride,
   model,
 }: VehicleTwinProps) {
+  const { t } = useTranslation();
+  const summaryId = useId();
+  const opening = (value: boolean | null) => stateLabel(value, t('common.open'), t('common.closed'), t);
+  const toggle = (value: boolean | null) => stateLabel(value, t('common.on'), t('common.off'), t);
+  const inspection = [
+    [t('digitalTwin.doorDriverFront'), t('teslaOnly.door'), opening(doors.driverFront)],
+    [t('digitalTwin.doorDriverRear'), t('teslaOnly.door'), opening(doors.driverRear)],
+    [t('digitalTwin.doorPassengerFront'), t('teslaOnly.door'), opening(doors.passengerFront)],
+    [t('digitalTwin.doorPassengerRear'), t('teslaOnly.door'), opening(doors.passengerRear)],
+    [t('digitalTwin.frunk'), '', opening(frunkOpen)],
+    [t('digitalTwin.trunk'), '', opening(trunkOpen)],
+    [t('digitalTwin.windowFD'), t('teslaOnly.window'), windowLabel(windowFD, t)],
+    [t('digitalTwin.windowFP'), t('teslaOnly.window'), windowLabel(windowFP, t)],
+    [t('digitalTwin.windowRD'), t('teslaOnly.window'), windowLabel(windowRD, t)],
+    [t('digitalTwin.windowRP'), t('teslaOnly.window'), windowLabel(windowRP, t)],
+    [t('digitalTwin.chargePort'), '', opening(chargePortOpen)],
+    [t('common.charging'), '', stateLabel(isCharging, t('common.charging'), t('common.notCharging'), t)],
+    [t('common.locked'), '', stateLabel(locked, t('common.locked'), t('common.unlocked'), t)],
+    [t('digitalTwin.sentryMode'), '', toggle(sentryMode)],
+    [t('digitalTwin.headlights'), '', toggle(headlights)],
+    [t('digitalTwin.hazards'), '', toggle(hazards)],
+    [t('digitalTwin.turnSignal'), '', turnSignal === null ? t('common.unknown')
+      : ({ off: t('common.off'), left: t('digitalTwin.turnLeft'), right: t('digitalTwin.turnRight'), both: t('digitalTwin.turnBoth') })[turnSignal]],
+    [t('digitalTwin.driverSeat'), '', stateLabel(driverSeatOccupied, t('digitalTwin.occupied'), t('digitalTwin.empty'), t)],
+    [t('digitalTwin.driving'), '', toggle(isDriving)],
+  ].map(([name, kind, state]) => ({ name: [name, kind].filter(Boolean).join(' '), state }));
+  const summary = inspection.map(({ name, state }) => `${name}: ${state}`).join('. ');
   // A11Y-08 (WCAG 2.2.2). Every looping layer below is wrapped in
   // `ambientLoop` / `ambientFrames`, which read the preference
   // synchronously at render time. Subscribing to it once here is what
@@ -1487,8 +1519,8 @@ export function VehicleTwin({
         ref={containerRef}
         className={cn('relative inline-flex max-w-full items-center justify-center overflow-hidden', className)}
         style={{ width: SIZE_MAP[size], height }}
-        role="img"
-        aria-label="Vehicle digital twin showing current physical state"
+        role={interactive ? 'group' : 'img'}
+        aria-label={t('digitalTwin.title')} aria-describedby={summaryId}
         initial={animateEntry ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
         animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
         transition={driveIn ? { duration: reduce ? 0 : DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
@@ -1539,8 +1571,8 @@ export function VehicleTwin({
           className="select-none relative"
         >
           <SvgDefs paint={paint} ids={ids} />
-          <title>Tesla side view digital twin</title>
-          <desc>Vehicle side view with dynamic telemetry overlays for doors, windows, lights, lock, sentry mode, and charging status.</desc>
+          <title>{t('digitalTwin.title')}</title>
+          <desc>{summary}</desc>
           {!photoOn && <GroundShadow />}
           {isCharging && <ChargingUnderglow />}
           <g id="body">
@@ -1598,6 +1630,21 @@ export function VehicleTwin({
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
         </svg>
       </motion.div>
+      <Text id={summaryId} className="sr-only">{summary}</Text>
+      {interactive && (
+        <div role="group" aria-label={t('digitalTwin.brief.title')} className="flex min-w-0 max-w-full flex-wrap gap-2"
+          style={{ width: SIZE_MAP[size] }}>
+          {inspection.map(({ name, state }) => (
+            <Tooltip key={name} content={`${name}: ${state}`} multiline>
+              <Button type="button" variant="outline" wrapLabel
+                className="min-h-touch11 min-w-touch11"
+                onClick={event => event.currentTarget.focus()}>
+                <Text variant="bodySm">{name}: {state}</Text>
+              </Button>
+            </Tooltip>
+          ))}
+        </div>
+      )}
     </TwinContext.Provider>
   );
 }
