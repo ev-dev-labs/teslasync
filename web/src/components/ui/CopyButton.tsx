@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle, Copy } from 'lucide-react'
 import { Button, type ButtonProps } from './Button'
 import { Icon } from './Icon'
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden'
 import { useOptionalToast } from '@/components/feedback/Toast'
 
 /**
@@ -145,9 +146,9 @@ export function CopyButton({
         {visibleLabel}
       </Button>
       {hasFixedName && (
-        <span role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        <VisuallyHidden liveRegion>
           {copied ? copiedLabel : ''}
-        </span>
+        </VisuallyHidden>
       )}
     </>
   )

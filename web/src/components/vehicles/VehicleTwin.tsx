@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Typography';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
 import {
   FALLBACK_PAINT,
@@ -1630,7 +1631,7 @@ export function VehicleTwin({
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
         </svg>
       </motion.div>
-      <Text id={summaryId} className="sr-only">{summary}</Text>
+      <VisuallyHidden id={summaryId}>{summary}</VisuallyHidden>
       {interactive && (
         <div role="group" aria-label={t('digitalTwin.brief.title')} className="flex min-w-0 max-w-full flex-wrap gap-2"
           style={{ width: SIZE_MAP[size] }}>
