@@ -80,7 +80,7 @@ const twMerge = extendTailwindMerge({
       w: [{ w: ['side-panel', 'theme-switcher', 'connection-diagnostics', 'presentation-menu', 'workspace-context', 'alerts-preview', 'recent-pages', 'command-deck-collapsed', 'command-deck-expanded', 'help-menu'] }],
       'max-w': [{ 'max-w': ['side-panel-viewport', 'shell-panel-viewport', 'breadcrumb-label', 'background-summary', 'active-vehicle-label', 'active-vehicle-compact-label'] }],
       'min-w': [{ 'min-w': ['background-work', 'vehicle-options', 'freshness-age'] }],
-      'max-h': [{ 'max-h': ['notification-panel', 'workspace-context', 'alerts-preview', 'status-options', 'table-filter-viewport', 'command-palette'] }],
+      'max-h': [{ 'max-h': ['notification-panel', 'workspace-context', 'alerts-preview', 'status-options', 'table-filter-viewport', 'command-palette', 'more-menu'] }],
       h: [{ h: ['vehicle-grid', 'workspace-header'] }],
       'min-h': [{ 'min-h': ['side-panel-header', 'vehicle-grid', 'error-fallback'] }],
       'grid-cols': [{ 'grid-cols': ['replay-shortcuts', 'page-actions-scope', 'metric-compact', 'workspace-header'] }],

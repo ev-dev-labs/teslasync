@@ -55,7 +55,7 @@ const finalShellGeometry = [
 ] as const
 
 function finalShellPredecessor(): ReturnType<typeof loadConfig> {
-  const current = loadConfig(resolve('tailwind.config.js'))
+  const current = moreMenuPredecessor()
   const extend = {
     ...current.theme?.extend,
     width: { ...current.theme?.extend?.width },
@@ -68,6 +68,105 @@ function finalShellPredecessor(): ReturnType<typeof loadConfig> {
   }
   return { ...current, theme: { ...current.theme, extend } }
 }
+
+function moreMenuPredecessor(): ReturnType<typeof loadConfig> {
+  const current = loadConfig(resolve('tailwind.config.js'))
+  const maxHeight = { ...current.theme?.extend?.maxHeight }
+  expect(maxHeight).toHaveProperty('more-menu', 'min(70vh,520px)')
+  Reflect.deleteProperty(maxHeight, 'more-menu')
+  return { ...current, theme: { ...current.theme, extend: { ...current.theme?.extend, maxHeight } } }
+}
+
+describe('cn — More menu exact naming and reused width', () => {
+  const variants = ['', '!', 'sm:', 'sm:!', 'md:', 'md:!', 'xl:', 'xl:!'] as const
+  const pairs = [
+    ['max-h-more-menu', 'max-h-[min(70vh,520px)]', 'max-height', 'min(70vh,520px)', ['max-h-80', 'max-h-full', 'max-h-[500px]', 'max-h-status-options']],
+    ['w-connection-diagnostics', 'w-[min(92vw,320px)]', 'width', 'min(92vw,320px)', ['w-80', 'w-full', 'w-[400px]', 'w-theme-switcher']],
+  ] as const
+
+  for (const [named, arbitrary, , , alternatives] of pairs) {
+    for (const caller of [arbitrary, ...alternatives]) {
+      it.each(variants)(`${named} versus ${caller} is last-conflict-wins for %s`, variant => {
+        expect(cn(`${variant}${named}`, `${variant}${caller}`)).toBe(`${variant}${caller}`)
+        expect(cn(`${variant}${caller}`, `${variant}${named}`)).toBe(`${variant}${named}`)
+      })
+    }
+  }
+
+  it('preserves every distinct breakpoint and importance context in both orders', () => {
+    for (const [named, arbitrary] of pairs) {
+      for (const left of variants) {
+        for (const right of variants) {
+          if (left === right) continue
+          const classes = [`${left}${named}`, `${right}${arbitrary}`]
+          expect(tokens(cn(classes))).toEqual(new Set(classes))
+          expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+        }
+      }
+    }
+  })
+
+  it.each(variants)('keeps width, min/max-width and max-height independent for %s', variant => {
+    const classes = ['w-connection-diagnostics', 'min-w-64', 'max-w-sm', 'max-h-more-menu']
+      .map(value => `${variant}${value}`)
+    expect(tokens(cn(classes))).toEqual(new Set(classes))
+    expect(tokens(cn([...classes].reverse()))).toEqual(new Set(classes))
+  })
+
+  it('proves real installed CSS selector, specificity, context, values and importance parity', async () => {
+    const current = loadConfig(resolve('tailwind.config.js'))
+    const oldClasses = variants.flatMap(variant => pairs.flatMap(([, old, , , alternatives]) =>
+      [old, ...alternatives].map(value => `${variant}${value}`)))
+    const newClasses = variants.flatMap(variant => pairs.map(([named]) => `${variant}${named}`))
+    const generate = async (config: typeof current, classes: string[]) =>
+      (await postcss([tailwindcss({ ...config, content: [{ raw: classes.join(' '), extension: 'html' }] })])
+        .process('@tailwind utilities;', { from: undefined })).root
+    const before = await generate(moreMenuPredecessor(), oldClasses)
+    const after = await generate(current, [...oldClasses, ...newClasses])
+    console.log('RAW MORE BEFORE CSS\n' + before.toString())
+    console.log('RAW MORE AFTER CSS\n' + after.toString())
+    function signature(root: Root, className: string) {
+      const matches: { selector: string; specificity: number[]; declarations: [string, string, boolean][]; context: string[] }[] = []
+      root.walkRules(rule => {
+        const selector = rule.selector.replace(/\\([\da-f]{1,6})\s?/gi,
+          (_, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16))).replace(/\\(.)/g, '$1')
+        if (selector !== `.${className}`) return
+        const declarations: [string, string, boolean][] = []
+        // Tailwind inserts comma whitespace into arbitrary min(); no numeric normalization.
+        rule.walkDecls(decl => { declarations.push([decl.prop, decl.value.replace(/,\s*/g, ','), Boolean(decl.important)]) })
+        const context: string[] = []
+        let parent: typeof rule.parent | Root['parent'] = rule.parent
+        while (parent) {
+          if (parent.type === 'atrule') context.unshift(`@${parent.name} ${parent.params}`)
+          parent = parent.parent
+        }
+        // Exact single-class selectors above have specificity (0,1,0).
+        matches.push({ selector: '.ROLE', specificity: [0, 1, 0], declarations, context })
+      })
+      expect(matches, className).toHaveLength(1)
+      return matches[0]
+    }
+    for (const variant of variants) {
+      for (const [named, old, property, value, alternatives] of pairs) {
+        const actual = signature(after, `${variant}${named}`)
+        expect(actual).toEqual(signature(before, `${variant}${old}`))
+        const breakpoint = variant.split(':')[0]
+        const media = { sm: '640px', md: '768px', xl: '1280px' }[breakpoint as 'sm' | 'md' | 'xl']
+        expect(actual).toEqual({
+          selector: '.ROLE', specificity: [0, 1, 0],
+          declarations: [[property, value, variant.includes('!')]],
+          context: media ? [`@media (min-width: ${media})`] : [],
+        })
+        for (const alternative of [old, ...alternatives]) {
+          const caller = `${variant}${alternative}`
+          expect(signature(after, caller)).toEqual(signature(before, caller))
+          expect(signature(after, cn(`${variant}${named}`, caller))).toEqual(signature(before, caller))
+          expect(signature(after, cn(caller, `${variant}${named}`))).toEqual(actual)
+        }
+      }
+    }
+  })
+})
 
 describe('cn — exact two final shell naming roles', () => {
   const variants = ['', 'md:', '!', 'md:!'] as const

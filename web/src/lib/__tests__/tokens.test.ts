@@ -9,7 +9,7 @@ import { beforeAll, describe, it, expect } from 'vitest';
 import { motion, neonColorMap, semanticToNeon, severityTokens, gaugeTone, glassCardClasses, chartTokens, typography } from '../tokens';
 
 function finalShellPredecessor(): ReturnType<typeof loadConfig> {
-  const current = loadConfig(resolve('tailwind.config.js'));
+  const current = moreMenuPredecessor();
   const additions = [
     ['width', 'help-menu', 'min(92vw,260px)'],
     ['zIndex', 'shell-status-bar', '55'],
@@ -27,9 +27,42 @@ function finalShellPredecessor(): ReturnType<typeof loadConfig> {
   return { ...current, theme: { ...current.theme, extend } };
 }
 
+function moreMenuPredecessor(): ReturnType<typeof loadConfig> {
+  const current = loadConfig(resolve('tailwind.config.js'));
+  const maxHeight = { ...current.theme?.extend?.maxHeight };
+  expect(maxHeight).toHaveProperty('more-menu', 'min(70vh,520px)');
+  Reflect.deleteProperty(maxHeight, 'more-menu');
+  return { ...current, theme: { ...current.theme, extend: { ...current.theme?.extend, maxHeight } } };
+}
+
+function moreMenuPredecessorSource(): string {
+  const source = readFileSync(resolve('tailwind.config.js'), 'utf8');
+  const addition = "        'more-menu': 'min(70vh,520px)',\n";
+  expect(source.split(addition)).toHaveLength(2);
+  expect(loadConfig(resolve('tailwind.config.js')).theme?.extend?.maxHeight)
+    .toHaveProperty('more-menu', 'min(70vh,520px)');
+  return source.replace(addition, '');
+}
+
+describe('More menu exact single additive geometry role', () => {
+  it('preserves the immutable immediate source with only the approved key/value', () => {
+    expect(createHash('sha256').update(moreMenuPredecessorSource()).digest('hex'))
+      .toBe('18cfebdf6b3e70e0414f9c74cf4b766c2d0eff6a39f0453a6636d08827782b97');
+    const prior = resolveConfig(moreMenuPredecessor());
+    const current = resolveConfig(loadConfig(resolve('tailwind.config.js')));
+    expect(prior.theme.maxHeight).not.toHaveProperty('more-menu');
+    expect(current).toEqual({
+      ...prior,
+      theme: { ...prior.theme, maxHeight: { ...prior.theme.maxHeight, 'more-menu': 'min(70vh,520px)' } },
+    });
+    expect(current.theme.width['connection-diagnostics']).toBe('min(92vw, 320px)');
+    expect(Object.keys(current.theme.width)).toEqual(Object.keys(prior.theme.width));
+  });
+});
+
 describe('exact two final shell additions', () => {
   it('projects only the two verified additions onto the exact accepted predecessor', () => {
-    const source = readFileSync(resolve('tailwind.config.js'), 'utf8');
+    const source = moreMenuPredecessorSource();
     const addedLines = [
       "        'help-menu': 'min(92vw,260px)',\n",
       "        'shell-status-bar': '55',\n",
@@ -43,7 +76,7 @@ describe('exact two final shell additions', () => {
     expect(createHash('sha256').update(predecessorSource).digest('hex'))
       .toBe('45987adc4bbc8d71638e2ea447328dbc1d9b873caaf48ce7cdd7afe058943937');
     const prior = resolveConfig(finalShellPredecessor());
-    const current = resolveConfig(loadConfig(resolve('tailwind.config.js')));
+    const current = resolveConfig(moreMenuPredecessor());
     expect(current).toEqual({
       ...prior,
       theme: {

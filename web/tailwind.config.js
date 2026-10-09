@@ -42,6 +42,7 @@ export default {
         'active-vehicle-compact-label': '140px',
       },
       maxHeight: {
+        'more-menu': 'min(70vh,520px)',
         modal: '90vh',
         'notification-panel': 'calc(100vh - 6rem)',
         'workspace-context': 'min(80vh, 38rem)',
