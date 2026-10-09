@@ -17,11 +17,11 @@ describe('TableToolbar', () => {
     expect(screen.queryByRole('searchbox')).toBeNull();
     expect(screen.getByText('Caller columns')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-    expect(screen.getByRole('radio', { name: 'Selected (2)' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('menuitemradio', { name: 'Selected (2)' })).toHaveAttribute('aria-checked', 'true');
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
     expect(csv).toHaveBeenCalledWith('selected');
     fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-    fireEvent.click(screen.getByRole('radio', { name: 'Visible (15)' }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: 'Visible (15)' }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
     expect(json).toHaveBeenCalledWith('visible');
   });
