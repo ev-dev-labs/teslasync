@@ -76,9 +76,15 @@ function panel(title: string) {
 }
 function tile(label: string) {
   const element = within(screen.getByRole('region', { name: 'Mileage summary metrics' }))
-    .getByText(label).closest('[data-stat]');
+    .getByText(label).closest('[data-operational-metric]');
   if (!(element instanceof HTMLElement)) throw new Error(`Missing metric: ${label}`);
   return element;
+}
+
+function metricValue(label: string) {
+  const element = tile(label).querySelector('[data-operational-value]');
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing metric value: ${label}`);
+  return element.textContent;
 }
 
 beforeEach(() => {
@@ -131,24 +137,24 @@ describe('live mileage modernization preservation', () => {
 
   it('keeps six KPI meanings, exact operands, units and occurrence-specific precision', () => {
     mount();
-    expect(tile('Total distance')).toHaveAttribute('aria-label', 'Total distance: 12,000 km');
-    expect(tile('Total drives')).toHaveAttribute('aria-label', 'Total drives: 500');
-    expect(tile('Daily avg (30d)')).toHaveAttribute('aria-label', 'Daily avg (30d): 31.00 km');
-    expect(tile('Annual projection')).toHaveAttribute('aria-label', 'Annual projection: 11,315 km');
-    expect(tile('Last 7 days')).toHaveAttribute('aria-label', 'Last 7 days: 210.00 km');
-    expect(tile('Last 365 days')).toHaveAttribute('aria-label', 'Last 365 days: 9,500 km');
+    expect(metricValue('Total distance')).toBe('12,000 km');
+    expect(metricValue('Total drives')).toBe('500');
+    expect(metricValue('Daily avg (30d)')).toBe('31.00 km');
+    expect(metricValue('Annual projection')).toBe('11,315 km');
+    expect(metricValue('Last 7 days')).toBe('210.00 km');
+    expect(metricValue('Last 365 days')).toBe('9,500 km');
     expect(screen.getByText(/Recording completeness is not reported/)).toBeInTheDocument();
   });
 
   it('converts exactly once using the current distance preference and preserves reactive numeric locale', () => {
     vi.mocked(useUnits).mockReturnValue({ unitPrefs: { distance: 'mi' } } as ReturnType<typeof useUnits>);
     mount();
-    expect(tile('Total distance')).toHaveAttribute('aria-label',
-      `Total distance: ${fmtNumber(convertDistanceFromSI(12000 * 1000, 'mi'), 0)} mi`);
+    expect(metricValue('Total distance')).toBe(
+      `${fmtNumber(convertDistanceFromSI(12000 * 1000, 'mi'), 0)} mi`);
     expect(within(screen.getByRole('table')).getByText('Distance (mi)')).toBeInTheDocument();
     act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(3); });
-    expect(tile('Daily avg (30d)')).toHaveAttribute('aria-label',
-      `Daily avg (30d): ${fmtNumber(convertDistanceFromSI((930 / 30) * 1000, 'mi'), 3, 'de-DE')} mi`);
+    expect(metricValue('Daily avg (30d)')).toBe(
+      `${fmtNumber(convertDistanceFromSI((930 / 30) * 1000, 'mi'), 3, 'de-DE')} mi`);
   });
 
   it.each(['summary', 'daily', 'monthly'] as const)('retains %s data and unrelated neighbors after refresh failure', (source) => {
@@ -158,7 +164,7 @@ describe('live mileage modernization preservation', () => {
     if (source === 'daily') vi.mocked(useDailyMileage).mockReturnValue(query(days, { ...failed, refetch: retry }) as ReturnType<typeof useDailyMileage>);
     if (source === 'monthly') vi.mocked(useMonthlyMileage).mockReturnValue(query(months, { ...failed, refetch: retry }) as ReturnType<typeof useMonthlyMileage>);
     mount();
-    expect(tile('Total distance')).toHaveAttribute('data-state', 'value');
+    expect(tile('Total distance')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByRole('img', { name: 'Odometer readings over time' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Monthly distance traveled over time' })).toBeInTheDocument();
@@ -176,24 +182,42 @@ describe('live mileage modernization preservation', () => {
     expect(container.querySelectorAll('[data-card]')).toHaveLength(6);
     expect(screen.queryByRole('img', { name: 'Odometer readings over time' })).toBeNull();
     expect(panel('Odometer over time').getByText('Service unavailable')).toBeInTheDocument();
-    expect(tile('Total distance')).toHaveAttribute('data-state', 'value');
+    expect(tile('Total distance')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByRole('img', { name: 'Monthly distance traveled over time' })).toBeInTheDocument();
   });
 
-  it('does not manufacture zero KPIs from a missing summary, but preserves measured zeros', () => {
+  it('does not manufacture zero KPIs from a missing summary, but preserves measured zeros', async () => {
     const retry = vi.fn();
     vi.mocked(useMileageStats).mockReturnValue(query(undefined, { refetch: retry }) as ReturnType<typeof useMileageStats>);
     const view = mount();
-    expect(screen.getAllByText('Mileage summary has not been supplied.')).toHaveLength(2);
-    expect(screen.queryByText('Total distance')).toBeNull();
+    expect(within(panel('Mileage summary metrics').getByRole('status'))
+      .getByText('Mileage summary has not been supplied.')).toBeInTheDocument();
+    expect(within(panel('Distance by window').getByRole('status'))
+      .getByText('Mileage summary has not been supplied.')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Mileage summary metrics' }))
+      .getAllByRole('listitem')).toHaveLength(6);
+    for (const label of ['Total distance', 'Total drives', 'Daily avg (30d)',
+      'Annual projection', 'Last 7 days', 'Last 365 days']) {
+      expect(tile(label)).toHaveAttribute('data-value-state', 'missing');
+      expect(metricValue(label)).toBe('—');
+      await waitFor(() => {
+        expect(within(tile(label)).getByText(label)).toBeVisible();
+      });
+    }
+    expect(within(panel('Mileage summary metrics').getByRole('status'))
+      .getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
+    await waitFor(() => {
+      expect(within(panel('Distance by window').getByRole('status'))
+      .getByRole('button', { name: 'Refresh' })).toBeVisible();
+    });
     expect(panel('Mileage summary metrics').getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
     fireEvent.click(panel('Distance by window').getByRole('button', { name: 'Refresh' }));
     expect(retry).toHaveBeenCalledOnce();
     view.unmount();
     vi.mocked(useMileageStats).mockReturnValue(query({ ...stats, lifetime_km: 0, last_30d_km: 0 }) as ReturnType<typeof useMileageStats>);
     mount();
-    expect(tile('Total distance')).toHaveAttribute('aria-label', 'Total distance: 0 km');
-    expect(tile('Daily avg (30d)')).toHaveAttribute('aria-label', 'Daily avg (30d): 0.00 km');
+    expect(metricValue('Total distance')).toBe('0 km');
+    expect(metricValue('Daily avg (30d)')).toBe('0.00 km');
   });
 
   it('keeps retained content during paused refresh instead of reporting empty or failure', () => {
@@ -213,7 +237,7 @@ describe('live mileage modernization preservation', () => {
     expect(panel('Odometer over time').queryByText('No odometer readings yet')).toBeNull();
     expect(panel('Daily distance').queryByText('No daily distance yet')).toBeNull();
     expect(panel('Monthly distance').getByText('No monthly distance yet')).toBeInTheDocument();
-    expect(tile('Total distance')).toHaveAttribute('data-state', 'value');
+    expect(tile('Total distance')).toHaveAttribute('data-value-state', 'value');
   });
 
   it('filters only missing absolute odometers, not corresponding daily drive distance', () => {
