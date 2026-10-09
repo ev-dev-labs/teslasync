@@ -237,7 +237,14 @@ describe('AutomationHistoryWidget — loading & error states', () => {
     setQuery({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-full', 'min-h-24', 'rounded-xl', 'w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[aria-hidden="true"].bg-\\[var\\(--skeleton-bg\\)\\]')).toHaveLength(1);
+    expect(screen.queryByText(/Success rate/)).toBeNull();
+    expect(screen.queryByText('No automation runs yet')).toBeNull();
     expect(screen.queryByRole('heading', { name: /Automation history/i })).toBeInTheDocument();
     expect(screen.queryByTestId('feed')).toBeNull();
     expect(screen.queryByTestId('feed-empty')).toBeNull();
@@ -272,7 +279,7 @@ describe('AutomationHistoryWidget — full layout', () => {
 
     expect(screen.getByRole('heading', { name: /Automation history/i })).toBeInTheDocument();
     const badge = screen.getByText('100.00% Success rate');
-    expect(badge).toHaveClass('bg-green-100');
+    expect(badge).toHaveClass(BADGE_VARIANTS.success);
     expect(screen.getByText('2 runs')).toBeInTheDocument();
   });
 
@@ -372,7 +379,12 @@ describe('AutomationHistoryWidget — badge grading', () => {
     renderWidget(FULL);
 
     const badge = screen.getByText(`${rate}.00% Success rate`);
-    expect(badge).toHaveClass(cls);
+    const variant = cls === 'bg-green-100'
+      ? BADGE_VARIANTS.success
+      : cls === 'bg-yellow-100'
+        ? BADGE_VARIANTS.warning
+        : BADGE_VARIANTS.danger;
+    expect(badge).toHaveClass(variant);
   });
 
   it('uses a NEUTRAL badge (not danger) when there are zero runs', () => {
