@@ -160,10 +160,24 @@ describe('LiveVehicleState', () => {
   it('renders a ten-cell skeleton grid while loading, with no tiles or live badge but an intact title', () => {
     const { container } = renderState({ isLoading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(10);
+    const panel = title().closest('[data-print-card]');
+    const grid = panel?.querySelector('.grid.grid-cols-2');
+    expect(grid).toHaveClass('gap-3', 'sm:grid-cols-3', '2xl:grid-cols-4');
+    expect(grid?.children).toHaveLength(10);
+    const cells = grid?.querySelectorAll(':scope > [aria-hidden="true"].h-4.w-full');
+    expect(cells).toHaveLength(10);
+    for (const cell of cells ?? []) {
+      expect(cell).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveStyle({ height: '92px' });
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     // Loading must not leak the data grid or the "Live" indicator…
     expect(screen.queryByText('Hazards')).toBeNull();
+    for (const label of LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
     expect(screen.queryByText('Live')).toBeNull();
+    expect(screen.queryByText('No live state data available')).toBeNull();
     // …but the section is never blank: its heading anchors the panel.
     expect(title()).toBeInTheDocument();
   });
@@ -178,6 +192,7 @@ describe('LiveVehicleState', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(container.querySelectorAll('.grid.grid-cols-2 > [aria-hidden="true"].h-4.w-full')).toHaveLength(0);
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     expect(screen.queryByText('Hazards')).toBeNull();
 

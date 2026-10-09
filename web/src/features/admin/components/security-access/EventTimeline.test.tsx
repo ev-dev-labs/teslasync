@@ -135,6 +135,7 @@ describe('EventTimeline — state precedence', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(container.querySelector('.space-y-2[aria-hidden="true"]')).toBeNull();
     expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(
       screen.queryByRole('list', { name: 'Security event timeline' }),
@@ -144,8 +145,19 @@ describe('EventTimeline — state precedence', () => {
   it('shows a skeleton on first load (loading, no error)', () => {
     const { container } = renderTimeline({ isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByRole('heading', { name: 'Security event timeline' }).closest('[data-print-card]');
+    const skeleton = panel?.querySelector('.space-y-2[aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton?.children).toHaveLength(8);
+    for (const [index, line] of Array.from(skeleton?.children ?? []).entries()) {
+      expect(line).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(line).toHaveStyle({ width: index === 7 ? '60%' : '100%' });
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByRole('list')).toBeNull();
+    expect(screen.queryByTestId('event-timestamp')).toBeNull();
+    expect(screen.queryByText('Vehicle locked')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByText(/no State changes detected/i)).toBeNull();
   });
 

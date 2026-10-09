@@ -235,8 +235,18 @@ describe('EventHistoryTable — loading + error states', () => {
   it('renders the skeleton (not the table) while loading', () => {
     const { container } = renderTable({ history: [], isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByText('Security event history').closest('[data-print-card]');
+    const skeleton = panel?.querySelector('.space-y-2[aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton?.children).toHaveLength(8);
+    for (const [index, line] of Array.from(skeleton?.children ?? []).entries()) {
+      expect(line).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(line).toHaveStyle({ width: index === 7 ? '60%' : '100%' });
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByTestId('ts')).toBeNull();
+    expect(screen.queryByText('No security events recorded yet.')).toBeNull();
     // The panel chrome is still present so the surface never goes blank.
     expect(screen.getByText('Security event history')).toBeInTheDocument();
   });
@@ -251,6 +261,7 @@ describe('EventHistoryTable — loading + error states', () => {
     // QueryError's network branch (jsdom is "online" → not-found/5xx skipped).
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
+    expect(container.querySelector('.space-y-2[aria-hidden="true"]')).toBeNull();
     expect(container.querySelector('.animate-pulse')).toBeNull();
   });
 
