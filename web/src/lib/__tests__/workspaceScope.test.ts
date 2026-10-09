@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import nodePath from 'node:path';
+import { sourceHookCalls } from '../../test/sourceHookGraph';
 import {
   RANGE_ENABLED_PATHS,
   VEHICLE_DISABLED_PATHS,
@@ -237,7 +239,10 @@ describe('workspace scope metadata', () => {
     const unscoped = routedPages.flatMap(({ path, name }) => {
       const page = pageSources[lazyPages.get(name) ?? ''];
       if (!page) return [];
-      const hasRange = page.includes('useRangeState(') ||
+      const pageFile = nodePath.resolve(process.cwd(), 'src/lib/__tests__', lazyPages.get(name) ?? '');
+      const hasRange = (getWorkspaceRouteScope(path).range && sourceHookCalls(pageFile).some((call) =>
+        call.name === 'useRangeState' &&
+        call.module === nodePath.resolve(process.cwd(), 'src/hooks/useRangeState.ts'))) ||
         (name === 'ArchivedPage' && page.includes('<InboxBody'));
       const hasPagePicker = page.includes('<RangePicker');
       if (getWorkspaceRouteScope(path).range && !hasRange) return [path];
