@@ -208,10 +208,11 @@ describe('statusVariant / statusLabel / statusDotColor', () => {
   });
 
   it('picks the semantic dot colour per status', () => {
-    expect(statusDotColor('completed')).toContain('bg-emerald-400');
-    expect(statusDotColor('running')).toContain('bg-amber-400');
-    expect(statusDotColor('queued')).toContain('bg-amber-400');
-    expect(statusDotColor('failed')).toContain('bg-red-400');
+    expect(statusDotColor('completed')).toBe('bg-[var(--semantic-success)]');
+    expect(statusDotColor('running')).toBe('bg-[var(--semantic-warning)]');
+    expect(statusDotColor('queued')).toBe('bg-[var(--semantic-warning)]');
+    expect(statusDotColor('failed')).toBe('bg-[var(--semantic-danger)]');
+    expect(statusDotColor('mystery')).toBe('bg-[var(--text-muted)]');
   });
 });
 
@@ -221,7 +222,12 @@ describe('BackupMonitorWidget states', () => {
   it('retains its heading above a loading skeleton without empty copy', () => {
     mockUseBackupRuns.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton?.className).toBe('w-full bg-[var(--skeleton-bg)] h-full min-h-24 rounded-xl');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton?.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('No backup data')).toBeNull();
     expect(screen.queryByText('Backup monitor')).toBeInTheDocument();
   });
@@ -299,7 +305,8 @@ describe('BackupMonitorWidget compact layout', () => {
     // Icon-only status indicator carries its meaning for screen readers.
     const dot = screen.getByRole('img', { name: 'Success' });
     expect(dot).toBeInTheDocument();
-    expect(dot.className).toContain('bg-emerald-400');
+    expect(dot).toHaveAccessibleName('Success');
+    expect(dot.className).toBe('inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] shrink-0 bg-[var(--semantic-success)]');
   });
 });
 
