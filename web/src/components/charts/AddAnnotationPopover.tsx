@@ -35,11 +35,18 @@ export function toIsoTimestamp(date: string): string {
   return `${date}T00:00:00Z`;
 }
 
+interface AnnotationCreateAuthority {
+  targetLabel: string;
+  canSubmit: boolean;
+  getSettlementAuthority: () => 'current' | 'stale';
+}
+
 interface AddAnnotationPopoverProps {
   open: boolean;
   timestamp: string;
   onAdd: (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => void | Promise<void>;
   onAdded?: () => void;
+  createAuthority?: AnnotationCreateAuthority;
   onCancel: () => void;
   /** When true, the timestamp becomes editable via a `<Input type="date">`.
    *  Used by the new managed `<ChartContainer annotations>` flow where the
@@ -65,24 +72,58 @@ export function AddAnnotationPopover({
   timestamp,
   onAdd,
   onAdded,
+  createAuthority,
   onCancel,
   editableDate = false,
 }: AddAnnotationPopoverProps) {
   const { t } = useTranslation();
   const categoryLabelId = useId();
   const feedbackId = useId();
+  const contextFeedbackId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
   const inFlight = useRef(false);
   const retainDate = useRef(false);
   const mounted = useRef(false);
   const generation = useRef(0);
+  const latestAuthority = useRef(createAuthority);
+  latestAuthority.current = createAuthority;
+  const latestOpen = useRef(open);
+  latestOpen.current = open;
+  const latestTimestamp = useRef(timestamp);
+  latestTimestamp.current = timestamp;
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
   const [notificationFailed, setNotificationFailed] = useState(false);
+  const [savedReference, setSavedReference] = useState<{
+    targetLabel: string;
+    contextChanged: boolean;
+  } | null>(null);
   const [label, setLabel] = useState('');
   const [category, setCategory] = useState<AnnotationCategory>('milestone');
   const [description, setDescription] = useState('');
   const [editedDate, setEditedDate] = useState(() => toDateInputValue(timestamp));
+  const contextChanged = createAuthority?.canSubmit === false;
+  const locked = pending || notificationFailed || savedReference !== null;
+
+  useEffect(() => {
+    if (!open) {
+      setPending(false);
+      setFailed(false);
+      setNotificationFailed(false);
+      setSavedReference(null);
+      setLabel('');
+      setCategory('milestone');
+      setDescription('');
+      return;
+    }
+    // A managed form's date belongs to its captured target, not subsequent props.
+    retainDate.current = latestAuthority.current !== undefined;
+    if (retainDate.current) setEditedDate(toDateInputValue(latestTimestamp.current));
+    return () => {
+      generation.current += 1;
+      inFlight.current = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     mounted.current = true;
@@ -130,12 +171,14 @@ export function AddAnnotationPopover({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (inFlight.current || notificationFailed || !label.trim()) return;
+    if (!open || inFlight.current || notificationFailed || savedReference || contextChanged || !label.trim()) return;
     const occurredAt = editableDate ? toIsoTimestamp(editedDate) : timestamp;
     if (!occurredAt) return;
     inFlight.current = true;
     const attempt = ++generation.current;
-    const isCurrent = () => mounted.current && generation.current === attempt;
+    const targetLabel = createAuthority?.targetLabel ?? '';
+    const attemptAuthority = createAuthority;
+    const isCurrent = () => mounted.current && latestOpen.current && generation.current === attempt;
     const reject = () => {
       if (!isCurrent()) return;
       inFlight.current = false;
@@ -147,6 +190,22 @@ export function AddAnnotationPopover({
       if (!isCurrent()) return;
       setPending(false);
       setFailed(false);
+      let authority: 'current' | 'stale';
+      try {
+        authority = (latestAuthority.current ?? attemptAuthority)?.getSettlementAuthority() ?? 'current';
+      } catch {
+        // Persistence already succeeded; an authority error cannot enable retry.
+        retainDate.current = true;
+        inFlight.current = false;
+        setSavedReference({ targetLabel, contextChanged: false });
+        return;
+      }
+      if (authority === 'stale') {
+        retainDate.current = true;
+        inFlight.current = false;
+        setSavedReference({ targetLabel, contextChanged: true });
+        return;
+      }
       retainDate.current = false;
       resetDraft();
       // Notification is not persistence: its failure must never enable create retry.
@@ -185,6 +244,7 @@ export function AddAnnotationPopover({
     resetDraft();
     setFailed(false);
     setNotificationFailed(false);
+    setSavedReference(null);
     onCancel();
   };
 
@@ -206,14 +266,17 @@ export function AddAnnotationPopover({
         onSubmit={handleSubmit}
         className="space-y-4"
         aria-busy={pending || undefined}
-        aria-describedby={pending || failed || notificationFailed ? feedbackId : undefined}
+        aria-describedby={[
+          pending || failed || notificationFailed || savedReference ? feedbackId : '',
+          contextChanged && !pending && !savedReference ? contextFeedbackId : '',
+        ].filter(Boolean).join(' ') || undefined}
       >
         {editableDate ? (
           <Input
             type="date"
             value={editedDate}
-            onChange={(e) => { if (!inFlight.current && !notificationFailed) setEditedDate(e.target.value); }}
-            disabled={pending || notificationFailed}
+            onChange={(e) => { if (!inFlight.current && !locked) setEditedDate(e.target.value); }}
+            disabled={locked}
             label={t('annotation.date', 'Date')}
             max={toDateInputValue(new Date().toISOString())}
             required
@@ -226,8 +289,8 @@ export function AddAnnotationPopover({
 
         <Input
           value={label}
-          onChange={(e) => { if (!inFlight.current && !notificationFailed) setLabel(e.target.value); }}
-          disabled={pending || notificationFailed}
+          onChange={(e) => { if (!inFlight.current && !locked) setLabel(e.target.value); }}
+          disabled={locked}
           placeholder={t('annotation.labelPlaceholder', 'e.g., Battery replaced')}
           autoFocus
           maxLength={50}
@@ -249,8 +312,8 @@ export function AddAnnotationPopover({
                   size="sm"
                   wrapLabel
                   icon={<Icon icon={opt.icon} size="sm" />}
-                  onClick={() => { if (!inFlight.current && !notificationFailed) setCategory(opt.value); }}
-                  disabled={pending || notificationFailed}
+                  onClick={() => { if (!inFlight.current && !locked) setCategory(opt.value); }}
+                  disabled={locked}
                   aria-pressed={isSelected}
                   className="min-h-11 md:min-h-9"
                 >
@@ -263,14 +326,26 @@ export function AddAnnotationPopover({
 
         <Input
           value={description}
-          onChange={(e) => { if (!inFlight.current && !notificationFailed) setDescription(e.target.value); }}
-          disabled={pending || notificationFailed}
+          onChange={(e) => { if (!inFlight.current && !locked) setDescription(e.target.value); }}
+          disabled={locked}
           placeholder={t('annotation.descPlaceholder', 'Optional description...')}
           maxLength={200}
           label={t('annotation.description', 'Description')}
         />
 
         {pending && <HelperText id={feedbackId} role="status">{t('common.saving', 'Saving…')}</HelperText>}
+        {savedReference && (
+          <HelperText id={feedbackId} role="status">
+            {savedReference.contextChanged
+              ? t('annotation.savedStale', 'Annotation saved for {{target}}. The chart context changed. This form is retained for reference; close it before adding another annotation.', { target: savedReference.targetLabel })
+              : t('toast.annotation.created.success', 'Annotation added')}
+          </HelperText>
+        )}
+        {contextChanged && !pending && !savedReference && (
+          <HelperText id={contextFeedbackId} role="status">
+            {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: createAuthority?.targetLabel })}
+          </HelperText>
+        )}
         {failed && (
           <ErrorText id={feedbackId}>
             {t('toast.annotation.created.error', 'Failed to add annotation')}. {t('statusBar.background.tryAgain', 'Please try again')}
@@ -284,9 +359,9 @@ export function AddAnnotationPopover({
 
         <div className="flex flex-wrap justify-end gap-2 pt-1">
           <Button variant="ghost" size="sm" wrapLabel className="min-h-11 md:min-h-9" type="button" onClick={handleClose} disabled={pending}>
-            {t('common.cancel', 'Cancel')}
+            {savedReference ? t('common.close', 'Close') : t('common.cancel', 'Cancel')}
           </Button>
-          <Button size="sm" wrapLabel className="min-h-11 md:min-h-9" type="submit" disabled={pending || notificationFailed || !label.trim()} loading={pending}>
+          <Button size="sm" wrapLabel className="min-h-11 md:min-h-9" type="submit" disabled={locked || contextChanged || !label.trim()} loading={pending}>
             {t('annotation.add', 'Add Annotation')}
           </Button>
         </div>

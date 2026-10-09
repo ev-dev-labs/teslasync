@@ -688,3 +688,319 @@ describe('AddAnnotationPopover — cancel', () => {
     expect(labelInput()).toHaveFocus();
   });
 });
+
+function authorityRequest() {
+  let resolve!: () => void;
+  let reject!: (reason: Error) => void;
+  const promise = new Promise<void>((fulfill, fail) => {
+    resolve = fulfill;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+type CreateAuthority = NonNullable<React.ComponentProps<typeof AddAnnotationPopover>['createAuthority']>;
+const TARGET = 'Battery — vehicle 7 — scope battery';
+
+function currentAuthority(): CreateAuthority {
+  return { targetLabel: TARGET, canSubmit: true, getSettlementAuthority: () => 'current' };
+}
+
+describe('AddAnnotationPopover — settlement authority', () => {
+  it('seeds a fresh managed opening date while retaining the current form date through context changes', () => {
+    const onAdd = vi.fn();
+    const onCancel = vi.fn();
+    const props = { editableDate: true, onAdd, onCancel, createAuthority: currentAuthority() };
+    const { rerender } = render(<AddAnnotationPopover {...props} open timestamp={TS} />);
+    typeInto(labelInput(), 'Current draft');
+    typeInto(dateInput(), '2025-04-20');
+    rerender(<AddAnnotationPopover {...props} open timestamp="2025-07-01T12:00:00Z" />);
+    expect(dateInput().value).toBe('2025-04-20');
+    expect(labelInput().value).toBe('Current draft');
+    rerender(<AddAnnotationPopover {...props} open={false} timestamp="2025-08-01T12:00:00Z" />);
+    rerender(<AddAnnotationPopover {...props} open timestamp="2025-08-01T12:00:00Z" />);
+    expect(dateInput().value).toBe('2025-08-01');
+    expect(labelInput().value).toBe('');
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+  });
+
+  it.each(['void', 'async'])('keeps standalone legacy %s success reset and exactly-once notification without authority', async (kind) => {
+    const request = authorityRequest();
+    const onAdd = vi.fn(() => kind === 'async' ? request.promise : undefined);
+    const onAdded = vi.fn();
+    renderPopover({ onAdd, onAdded });
+    typeInto(labelInput(), '  Legacy  ');
+    typeInto(descriptionInput(), '  Note  ');
+    fireEvent.click(catButton('Trip'));
+    fireEvent.submit(getForm());
+    if (kind === 'async') {
+      expect(labelInput().value).toBe('  Legacy  ');
+      expect(onAdded).not.toHaveBeenCalled();
+      await act(async () => { request.resolve(); await request.promise; });
+    }
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(onAdd).toHaveBeenCalledWith('Legacy', 'trip', 'Note', TS);
+    expect(onAdded).toHaveBeenCalledTimes(1);
+    expect(labelInput().value).toBe('');
+    expect(descriptionInput().value).toBe('');
+    expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+    expect(getForm()).not.toHaveAttribute('aria-busy');
+  });
+
+  it.each(['void', 'async'])('checks current authority before %s draft reset and notification', async (kind) => {
+    const request = authorityRequest();
+    const onAdded = vi.fn();
+    const getSettlementAuthority = vi.fn((): 'current' => {
+      expect(labelInput().value).toBe('  Current  ');
+      expect(descriptionInput().value).toBe('  Note  ');
+      expect(onAdded).not.toHaveBeenCalled();
+      return 'current';
+    });
+    renderPopover({
+      onAdd: () => kind === 'async' ? request.promise : undefined,
+      onAdded,
+      createAuthority: { ...currentAuthority(), getSettlementAuthority },
+    });
+    typeInto(labelInput(), '  Current  ');
+    typeInto(descriptionInput(), '  Note  ');
+    fireEvent.submit(getForm());
+    if (kind === 'async') {
+      expect(getSettlementAuthority).not.toHaveBeenCalled();
+      await act(async () => { request.resolve(); await request.promise; });
+    }
+    expect(getSettlementAuthority).toHaveBeenCalledTimes(1);
+    expect(onAdded).toHaveBeenCalledTimes(1);
+    expect(getSettlementAuthority.mock.invocationCallOrder[0]).toBeLessThan(onAdded.mock.invocationCallOrder[0]);
+    expect(onAdded.mock.results[0]?.type).toBe('return');
+    expect(labelInput().value).toBe('');
+    expect(descriptionInput().value).toBe('');
+    expect(catButton('Milestone')).toHaveAttribute('aria-pressed', 'true');
+    expect(getForm()).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('uses latest semantic authority at settlement and keeps saved-stale terminal, retained and nonbusy without focus transfer', async () => {
+    const request = authorityRequest();
+    const onAdd = vi.fn(() => request.promise);
+    const onAdded = vi.fn();
+    const onCancel = vi.fn();
+    const oldGetter = vi.fn((): 'current' => 'current');
+    const latestGetter = vi.fn((): 'stale' => 'stale');
+    const props = { open: true, editableDate: true, timestamp: TS, onAdd, onAdded, onCancel };
+    const { rerender } = render(<AddAnnotationPopover {...props} createAuthority={{ ...currentAuthority(), getSettlementAuthority: oldGetter }} />);
+    typeInto(labelInput(), '  Original  ');
+    typeInto(descriptionInput(), '  Original note  ');
+    typeInto(dateInput(), '2025-04-20');
+    fireEvent.click(catButton('Custom'));
+    labelInput().focus();
+    fireEvent.submit(getForm());
+    rerender(<AddAnnotationPopover {...props} timestamp="2025-08-01T00:00:00Z" createAuthority={{ ...currentAuthority(), canSubmit: false, getSettlementAuthority: latestGetter }} />);
+    expect(getForm()).toHaveAttribute('aria-busy', 'true');
+    expect(dateInput().value).toBe('2025-04-20');
+    await act(async () => { request.resolve(); await request.promise; });
+    expect(oldGetter).not.toHaveBeenCalled();
+    expect(latestGetter).toHaveBeenCalledTimes(1);
+    expect(labelInput().value).toBe('  Original  ');
+    expect(descriptionInput().value).toBe('  Original note  ');
+    expect(dateInput().value).toBe('2025-04-20');
+    expect(catButton('Custom')).toHaveAttribute('aria-pressed', 'true');
+    expect(labelInput()).toHaveFocus();
+    expect(getForm()).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(`Annotation saved for ${TARGET}. The chart context changed.`);
+    expect(getForm()).toHaveAttribute('aria-describedby', screen.getByRole('status').id);
+    expect(screen.queryByText(/Saving/)).toBeNull();
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(labelInput()).toBeDisabled();
+    expect(descriptionInput()).toBeDisabled();
+    expect(dateInput()).toBeDisabled();
+    expect(catButton('Trip')).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    rerender(<AddAnnotationPopover {...props} createAuthority={currentAuthority()} />);
+    typeInto(labelInput(), 'Duplicate');
+    fireEvent.submit(getForm());
+    fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+    fireEvent.keyDown(labelInput(), { key: 'Enter' });
+    expect(labelInput().value).toBe('  Original  ');
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('status')).toHaveTextContent('retained for reference');
+  });
+
+  it('blocks actual submission before save when caller context changes, explaining the original target while leaving draft editable', () => {
+    const onAdd = vi.fn();
+    const onAdded = vi.fn();
+    const getSettlementAuthority = vi.fn((): 'current' => 'current');
+    renderPopover({
+      onAdd, onAdded,
+      createAuthority: { ...currentAuthority(), canSubmit: false, getSettlementAuthority },
+    });
+    typeInto(labelInput(), '  Unsaved  ');
+    typeInto(descriptionInput(), 'Editable');
+    expect(labelInput()).toBeEnabled();
+    expect(descriptionInput()).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeDisabled();
+    expect(screen.getByRole('status')).toHaveTextContent(`This form belongs to ${TARGET}. Return to that context to save`);
+    expect(getForm()).toHaveAttribute('aria-describedby', screen.getByRole('status').id);
+    fireEvent.submit(getForm());
+    expect(onAdd).not.toHaveBeenCalled();
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(getSettlementAuthority).not.toHaveBeenCalled();
+    expect(labelInput().value).toBe('  Unsaved  ');
+    expect(getForm()).not.toHaveAttribute('aria-busy');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('keeps a genuinely failed save editable and only retries after caller authorization returns', async () => {
+    const first = authorityRequest();
+    const retry = authorityRequest();
+    const onAdd = vi.fn().mockReturnValueOnce(first.promise).mockReturnValueOnce(retry.promise);
+    const onAdded = vi.fn();
+    const onCancel = vi.fn();
+    const props = { open: true, timestamp: TS, onAdd, onAdded, onCancel };
+    const { rerender } = render(<AddAnnotationPopover {...props} createAuthority={currentAuthority()} />);
+    typeInto(labelInput(), '  Failed draft  ');
+    typeInto(descriptionInput(), '  Kept note  ');
+    fireEvent.click(catButton('Issue'));
+    fireEvent.submit(getForm());
+    rerender(<AddAnnotationPopover {...props} createAuthority={{ ...currentAuthority(), canSubmit: false }} />);
+    await act(async () => { first.reject(new Error('Actual POST failure')); await first.promise.catch(() => {}); });
+    expect(labelInput().value).toBe('  Failed draft  ');
+    expect(descriptionInput().value).toBe('  Kept note  ');
+    expect(catButton('Issue')).toHaveAttribute('aria-pressed', 'true');
+    expect(labelInput()).toBeEnabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Failed to add annotation');
+    expect(screen.getByRole('status')).toHaveTextContent('Return to that context');
+    expect(getForm().getAttribute('aria-describedby')?.split(' ')).toEqual([screen.getByRole('alert').id, screen.getByRole('status').id]);
+    typeInto(labelInput(), '  Authorized retry  ');
+    fireEvent.submit(getForm());
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    rerender(<AddAnnotationPopover {...props} createAuthority={currentAuthority()} />);
+    fireEvent.submit(getForm());
+    expect(onAdd).toHaveBeenCalledTimes(2);
+    expect(onAdd).toHaveBeenLastCalledWith('Authorized retry', 'issue', 'Kept note', TS);
+    expect(onAdded).not.toHaveBeenCalled();
+    await act(async () => { retry.resolve(); await retry.promise; });
+    expect(onAdded).toHaveBeenCalledTimes(1);
+    expect(labelInput().value).toBe('');
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  it('treats a thrown authority getter as confirmed saved reference, never failed, changed-context or retryable', async () => {
+    const request = authorityRequest();
+    const onAdd = vi.fn(() => request.promise);
+    const onAdded = vi.fn();
+    renderPopover({
+      onAdd, onAdded,
+      createAuthority: { ...currentAuthority(), getSettlementAuthority: () => { throw new Error('Authority unavailable'); } },
+    });
+    typeInto(labelInput(), '  Saved  ');
+    fireEvent.submit(getForm());
+    await act(async () => { request.resolve(); await request.promise; });
+    expect(labelInput().value).toBe('  Saved  ');
+    expect(screen.getByRole('status')).toHaveTextContent('Annotation added');
+    expect(screen.getByRole('status')).not.toHaveTextContent('context changed');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(getForm()).not.toHaveAttribute('aria-busy');
+    expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeDisabled();
+    fireEvent.submit(getForm());
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(onAdded).not.toHaveBeenCalled();
+  });
+
+  it.each(['footer', 'Escape', 'backdrop'])('allows explicit saved-stale %s dismissal without another create or success notification', async (dismissal) => {
+    const request = authorityRequest();
+    const onAdd = vi.fn(() => request.promise);
+    const onAdded = vi.fn();
+    const onCancel = vi.fn();
+    const user = userEvent.setup();
+    renderPopover({
+      onAdd, onAdded, onCancel,
+      createAuthority: { ...currentAuthority(), getSettlementAuthority: () => 'stale' },
+    });
+    typeInto(labelInput(), 'Saved reference');
+    fireEvent.submit(getForm());
+    await act(async () => { request.resolve(); await request.promise; });
+    const close = screen.getAllByRole('button', { name: 'Close' }).find(button => button.getAttribute('type') === 'button' && button.closest('form'));
+    if (!close) throw new Error('Saved-reference footer Close missing');
+    expect(close).toBeEnabled();
+    if (dismissal === 'Escape') {
+      close.focus();
+      expect(close).toHaveFocus();
+      await user.keyboard('{Escape}');
+    } else if (dismissal === 'backdrop') {
+      const backdrop = screen.getByRole('dialog').parentElement?.previousElementSibling;
+      if (!backdrop) throw new Error('Modal backdrop missing');
+      fireEvent.click(backdrop);
+    } else {
+      fireEvent.click(close);
+    }
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onAdded).not.toHaveBeenCalled();
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(labelInput().value).toBe('');
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('reads the live getter without a rerender and keeps change-return success stale despite canSubmit returning true', async () => {
+    const request = authorityRequest();
+    let revision = 0;
+    const capturedRevision = revision;
+    const getSettlementAuthority = vi.fn((): 'current' | 'stale' => revision === capturedRevision ? 'current' : 'stale');
+    const onAdded = vi.fn();
+    const onAdd = vi.fn(() => request.promise);
+    renderPopover({ onAdd, onAdded, createAuthority: { ...currentAuthority(), getSettlementAuthority } });
+    typeInto(labelInput(), 'Original context');
+    fireEvent.submit(getForm());
+    revision += 1;
+    revision += 1;
+    await act(async () => { request.resolve(); await request.promise; });
+    expect(getSettlementAuthority).toHaveBeenCalledTimes(1);
+    expect(labelInput().value).toBe('Original context');
+    expect(screen.getByRole('status')).toHaveTextContent('chart context changed');
+    expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeDisabled();
+    fireEvent.submit(getForm());
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(onAdded).not.toHaveBeenCalled();
+  });
+
+  it.each(['close', 'unmount'])('ignores disposed %s completion and does not release a new instance latch', async (disposal) => {
+    const old = authorityRequest();
+    const next = authorityRequest();
+    const oldAdded = vi.fn();
+    const oldGetter = vi.fn((): 'current' => 'current');
+    const onCancel = vi.fn();
+    const view = render(<AddAnnotationPopover open timestamp={TS} onAdd={() => old.promise} onAdded={oldAdded} onCancel={onCancel} createAuthority={{ ...currentAuthority(), getSettlementAuthority: oldGetter }} />);
+    typeInto(labelInput(), 'Old');
+    fireEvent.submit(getForm());
+    const nextAdd = vi.fn(() => next.promise);
+    const nextAdded = vi.fn();
+    const nextForm = <AddAnnotationPopover open timestamp={TS} onAdd={nextAdd} onAdded={nextAdded} onCancel={onCancel} createAuthority={currentAuthority()} />;
+    if (disposal === 'unmount') {
+      view.unmount();
+      render(nextForm);
+    } else {
+      view.rerender(<AddAnnotationPopover open={false} timestamp={TS} onAdd={() => old.promise} onAdded={oldAdded} onCancel={onCancel} />);
+      view.rerender(nextForm);
+    }
+    typeInto(labelInput(), 'New');
+    labelInput().focus();
+    fireEvent.submit(getForm());
+    await act(async () => { old.resolve(); await old.promise; });
+    expect(oldGetter).not.toHaveBeenCalled();
+    expect(oldAdded).not.toHaveBeenCalled();
+    expect(nextAdded).not.toHaveBeenCalled();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(labelInput().value).toBe('New');
+    expect(labelInput()).toHaveFocus();
+    expect(getForm()).toHaveAttribute('aria-busy', 'true');
+    fireEvent.submit(getForm());
+    expect(nextAdd).toHaveBeenCalledTimes(1);
+    await act(async () => { next.resolve(); await next.promise; });
+    expect(nextAdded).toHaveBeenCalledTimes(1);
+    expect(labelInput().value).toBe('');
+  });
+});
