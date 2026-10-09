@@ -399,6 +399,9 @@ describe('DevToolsPage', () => {
     // Empty fleet is real data → the KPI legitimately reads 0, not "—".
     const region = overviewRegion()
     await waitFor(() =>
+      expect(screen.getByTestId('devtools-live-summary').querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(2),
+    )
+    await waitFor(() =>
       expect(within(region).queryAllByText('—')).toHaveLength(0),
     )
     expect(within(region).getAllByText('0').length).toBeGreaterThanOrEqual(2)
