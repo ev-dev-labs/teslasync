@@ -345,7 +345,42 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     const annotationsEnabled = annotationsConfig != null;
     const annotationKey = annotationsConfig?.chartId ?? title;
     const [hidden, setHidden] = useState(() => readHiddenPref(annotationKey));
-    const [popoverOpen, setPopoverOpen] = useState(false);
+    const contextKey = JSON.stringify([
+      annotationsEnabled, annotationsConfig?.vehicleId ?? null,
+      annotationsConfig?.scope, annotationKey, chartKey ?? null, variant,
+    ]);
+    const liveContext = useRef({ key: contextKey, revision: 0, available: false });
+    if (liveContext.current.key !== contextKey) {
+      liveContext.current = { key: contextKey, revision: liveContext.current.revision + 1, available: false };
+    }
+    liveContext.current.available = annotationsEnabled && !(loading || error || empty) && toolbar !== false;
+    const instance = useRef(0);
+    const mounted = useRef(false);
+    const submittedRevision = useRef<number | null>(null);
+    type AnnotationReturnRecord = {
+      instance: number;
+      closingInstance: number | null;
+      getTarget: () => HTMLElement | null;
+    };
+    const annotationReturn = useRef<AnnotationReturnRecord | null>(null);
+    const [annotationTarget, setAnnotationTarget] = useState<{
+      instance: number;
+      key: string;
+      revision: number;
+      vehicleId: number | null;
+      scope: AnnotationScope;
+      timestamp: string;
+      label: string;
+    } | null>(null);
+
+    useEffect(() => {
+      mounted.current = true;
+      return () => {
+        mounted.current = false;
+        instance.current += 1;
+        annotationReturn.current = null;
+      };
+    }, []);
 
     useEffect(() => {
       if (annotationsEnabled) setHidden(readHiddenPref(annotationKey));
@@ -378,21 +413,39 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     }, [annotationKey]);
 
     const handleAddAnnotation = useCallback(
-      (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => {
-        if (!annotationsEnabled || !annotationsConfig) return;
-        if (!occurredAt) return;
-        createMutation.mutate({
-          vehicle_id: annotationsConfig.vehicleId ?? null,
+      async (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => {
+        if (!annotationTarget || !mounted.current || instance.current !== annotationTarget.instance ||
+            !liveContext.current.available || liveContext.current.key !== annotationTarget.key ||
+            !occurredAt || !Number.isFinite(Date.parse(occurredAt))) {
+          throw new Error('Annotation target is unavailable');
+        }
+        submittedRevision.current = liveContext.current.revision;
+        await createMutation.mutateAsync({
+          vehicle_id: annotationTarget.vehicleId,
           occurred_at: occurredAt,
           category,
           title: label,
           description,
-          scope: [annotationsConfig.scope],
+          scope: [annotationTarget.scope],
         });
-        setPopoverOpen(false);
       },
-      [annotationsEnabled, annotationsConfig, createMutation],
+      [annotationTarget, createMutation],
     );
+
+    const getSettlementAuthority = useCallback((): 'current' | 'stale' =>
+      annotationTarget && mounted.current && instance.current === annotationTarget.instance &&
+      liveContext.current.available && liveContext.current.key === annotationTarget.key &&
+      liveContext.current.revision === submittedRevision.current ? 'current' : 'stale',
+    [annotationTarget]);
+
+    const closeAnnotation = useCallback(() => {
+      instance.current += 1;
+      if (annotationReturn.current?.instance === instance.current - 1) {
+        annotationReturn.current.closingInstance = instance.current;
+      }
+      submittedRevision.current = null;
+      setAnnotationTarget(null);
+    }, []);
 
     const handleRemoveAnnotation = useCallback(
       (id: string) => {
@@ -588,11 +641,50 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             {annotationsEnabled && (
               <>
                 <Button
+                  key={liveContext.current.revision}
                   variant="ghost"
                   size="sm"
                   className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                   icon={<Plus className="h-3.5 w-3.5" />}
-                  onClick={() => setPopoverOpen(true)}
+                  onClick={(event) => {
+                    if (annotationTarget || !annotationsConfig || !liveContext.current.available) return;
+                    event.currentTarget.focus();
+                    submittedRevision.current = null;
+                    const trigger = event.currentTarget;
+                    const targetInstance = ++instance.current;
+                    const targetKey = liveContext.current.key;
+                    const targetRevision = liveContext.current.revision;
+                    const returnRecord: AnnotationReturnRecord = {
+                      instance: targetInstance,
+                      closingInstance: null,
+                      getTarget: (): HTMLElement | null => {
+                        if (annotationReturn.current !== returnRecord) return null;
+                        annotationReturn.current = null;
+                        return mounted.current && liveContext.current.available &&
+                          liveContext.current.key === targetKey &&
+                          liveContext.current.revision === targetRevision &&
+                          (instance.current === targetInstance ||
+                            instance.current === returnRecord.closingInstance)
+                          ? trigger : null;
+                      },
+                    };
+                    annotationReturn.current = returnRecord;
+                    setAnnotationTarget({
+                      instance: targetInstance,
+                      key: liveContext.current.key,
+                      revision: liveContext.current.revision,
+                      vehicleId: annotationsConfig.vehicleId ?? null,
+                      scope: annotationsConfig.scope,
+                      timestamp: new Date().toISOString(),
+                      label: annotationsConfig.vehicleId == null
+                        ? t('annotation.targetFleet', '{{chart}} — fleet-wide — scope {{scope}}', {
+                            chart: title, scope: annotationsConfig.scope,
+                          })
+                        : t('annotation.targetVehicle', '{{chart}} — vehicle {{vehicleId}} — scope {{scope}}', {
+                            chart: title, vehicleId: annotationsConfig.vehicleId, scope: annotationsConfig.scope,
+                          }),
+                    });
+                  }}
                   disabled={controlsUnavailable}
                   aria-label={t('annotations.add', 'Add annotation')}
                   title={t('annotations.add', 'Add annotation')}
@@ -863,13 +955,20 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           />
         )}
 
-        {annotationsEnabled && (
+        {(annotationsEnabled || annotationTarget) && (
           <AddAnnotationPopover
-            open={popoverOpen}
-            timestamp={new Date().toISOString()}
+            open={annotationTarget !== null}
+            getReturnFocusTarget={annotationReturn.current?.getTarget}
+            timestamp={annotationTarget?.timestamp ?? ''}
             editableDate
             onAdd={handleAddAnnotation}
-            onCancel={() => setPopoverOpen(false)}
+            onAdded={() => { if (getSettlementAuthority() === 'current') closeAnnotation(); }}
+            createAuthority={annotationTarget ? {
+              targetLabel: annotationTarget.label,
+              canSubmit: liveContext.current.available && liveContext.current.key === annotationTarget.key,
+              getSettlementAuthority,
+            } : undefined}
+            onCancel={closeAnnotation}
           />
         )}
       </figure>
