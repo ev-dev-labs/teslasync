@@ -171,7 +171,7 @@ function renderSection(query: FleetAnalyticsQuery) {
 const PANEL_TITLES = [
   'Charger brands',
   'Cost by charger type',
-  'Cost analysis',
+  'Returned charging cost distribution',
   'Monthly charging trend',
 ];
 
@@ -215,6 +215,7 @@ describe('ChargingDetailSection — populated', () => {
   it('formats the four cost MetricCards through formatCurrency (2dp, $)', () => {
     renderSection(makeQuery({ data: FULL }));
 
+    expect(screen.getByRole('heading', { level: 3, name: 'Cost analysis' })).toBeInTheDocument();
     expect(screen.getByText('Min cost')).toBeInTheDocument();
     expect(screen.getByText('$1.50')).toBeInTheDocument();
     expect(screen.getByText('$12.40')).toBeInTheDocument();
@@ -236,10 +237,19 @@ describe('ChargingDetailSection — loading', () => {
     const { container } = renderSection(makeQuery({ isLoading: true, data: FULL }));
 
     // Loading takes precedence — skeletons render, panel titles stay mounted.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const skeletons = container.querySelectorAll<HTMLElement>(
+      '[aria-busy="true"] [role="status"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(Array.from(skeletons, skeleton => skeleton.style.height))
+      .toEqual(['260px', '260px', '140px']);
+    const chart = screen.getByTestId('chart-skeleton');
+    expect(chart).toHaveAttribute('aria-busy', 'true');
+    expect(chart.querySelectorAll('[aria-hidden="true"].flex-1.rounded-t')).toHaveLength(7);
     for (const name of PANEL_TITLES) {
       expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
     }
+    expect(screen.queryByRole('heading', { name: 'Cost analysis' })).not.toBeInTheDocument();
     // No populated content bleeds through the skeleton.
     expect(screen.queryByText('#1 Tesla Supercharger')).toBeNull();
     expect(screen.queryByText('$1.50')).toBeNull();
@@ -283,6 +293,7 @@ describe('ChargingDetailSection — empty states', () => {
     for (const name of PANEL_TITLES) {
       expect(screen.getByRole('heading', { level: 3, name })).toBeInTheDocument();
     }
+    expect(screen.queryByRole('heading', { name: 'Cost analysis' })).not.toBeInTheDocument();
   });
 
   it('shows per-section empty copy when charging_analytics is present but sections are empty', () => {

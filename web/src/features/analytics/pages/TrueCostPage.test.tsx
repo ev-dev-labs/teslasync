@@ -301,10 +301,25 @@ describe('TrueCostPage persistent query states', () => {
       isFetching: true,
       fetchStatus: 'fetching',
     });
-    const { container } = renderPage();
+    renderPage();
 
     expectPersistentShells();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(5);
+    const skeletons = SECTION_IDS.flatMap(id => Array.from(
+      screen.getByTestId(id).querySelectorAll(
+        '[role="status"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      ),
+    ));
+    expect(skeletons.length).toBeGreaterThan(5);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('w-full');
+      expect((skeleton as HTMLElement).style.height).toMatch(/^\d+px$/);
+    }
+    const brief = screen.getByTestId('tco-evidence-kpis');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll(
+      '[data-operational-metric] [aria-hidden="true"].h-5.w-20',
+    )).toHaveLength(8);
+    expect(brief.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryAllByRole('button', { name: 'Export chart' })).toHaveLength(0);
   });
 

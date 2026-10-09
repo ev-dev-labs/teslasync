@@ -81,7 +81,7 @@ describe('AnalyticsPanel', () => {
 
     // No loading / error / empty surfaces leak into the ready state, and the
     // panel is not falsely announced as busy.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(container.querySelector('[data-print-card]')).not.toHaveAttribute('aria-busy');
@@ -112,8 +112,10 @@ describe('AnalyticsPanel', () => {
     expect(screen.getByRole('heading', { level: 3, name: /Battery/i })).toBeInTheDocument();
 
     // Skeleton block present at the 260px default.
-    const skeleton = container.querySelector('.animate-pulse');
+    const skeleton = screen.getByRole('status')
+      .querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
     expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('w-full');
     expect(skeleton).toHaveStyle({ height: '260px' });
 
     // Panel is announced as busy for assistive tech during the fetch.
@@ -131,7 +133,8 @@ describe('AnalyticsPanel', () => {
       </AnalyticsPanel>,
     );
 
-    expect(container.querySelector('.animate-pulse')).toHaveStyle({ height: '120px' });
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]'))
+      .toHaveStyle({ height: '120px' });
   });
 
   it('surfaces a retryable QueryError and wires the CTA to onRetry, withholding children', () => {
@@ -196,7 +199,7 @@ describe('AnalyticsPanel', () => {
     );
 
     // loading wins over error + empty + children.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
     expect(screen.queryByText('Failed to load data')).not.toBeInTheDocument();
     expect(screen.queryByText('No analytics records match the current selection.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();

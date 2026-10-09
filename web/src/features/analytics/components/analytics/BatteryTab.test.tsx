@@ -10,7 +10,7 @@
  *
  * This suite drives every branch:
  *   - loading  → the KPI band renders as a skeleton (no labels/values) and the
- *     panels render pulsing skeletons; no chart is drawn.
+ *     panels render source-shaped skeletons; no chart is drawn.
  *   - empty    → the band still renders all five labelled cards with an em-dash
  *     placeholder (latest === null) and all four panels show the shared empty
  *     state; no chart is drawn.
@@ -38,7 +38,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/feedback';
@@ -252,8 +252,17 @@ describe('BatteryTab — loading', () => {
     expect(screen.getByText('Est. range')).toBeInTheDocument();
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelector('[data-operational-value]')).toBeNull();
-    // Pulsing skeletons are on screen…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // Pending metric slots and all four chart silhouettes stay source-local.
+    const brief = container.querySelector('[data-operational-brief][aria-busy="true"]');
+    expect(brief?.querySelector('[data-operational-metric] [aria-hidden="true"].h-5.w-20')).not.toBeNull();
+    expect(brief?.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20')).toHaveLength(5);
+    const charts = screen.getAllByTestId('chart-skeleton');
+    expect(charts).toHaveLength(4);
+    for (const chart of charts) {
+      expect(chart).toHaveAttribute('aria-busy', 'true');
+      expect(chart).toHaveAttribute('role', 'status');
+      expect(chart.querySelectorAll('[aria-hidden="true"].flex-1.rounded-t')).toHaveLength(7);
+    }
     // …but no chart has been drawn yet.
     expect(screen.queryByTestId('chart-area')).toBeNull();
     expect(screen.queryAllByTestId('chart-line')).toHaveLength(0);
@@ -402,7 +411,11 @@ describe('BatteryTab — null safety', () => {
     });
     renderTab(makeQuery({ data: analytics([nulled]) }));
 
-    expect(screen.getAllByText('—')).toHaveLength(5);
+    const brief = screen.getByRole('region', { name: 'Latest returned battery measurements' });
+    expect(within(brief).getAllByText('—')).toHaveLength(5);
+    expect(brief.querySelectorAll(
+      '[data-operational-metric][data-value-state="missing"] [data-operational-value]',
+    )).toHaveLength(5);
     expect(screen.queryByText('0.00 kWh')).toBeNull();
 
     // Charts still render (the row exists) and the range projection is 0, not NaN.
