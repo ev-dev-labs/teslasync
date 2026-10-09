@@ -7,6 +7,7 @@ import {
   within,
 } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -115,6 +116,15 @@ if (typeof window.matchMedia !== 'function') {
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import SleepEfficiencyPage from './SleepEfficiencyPage';
+
+it('offers keyboard-accessible transition interpretation help without duration evidence', () => {
+  mockSleep.mockReturnValue(queryResult({ data: transitionOnlyData() }));
+  renderPage();
+  const help = screen.getByRole('button', { name: 'Methodology and interpretation limits' });
+  help.focus();
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.sleep.methodology.transitionSemantics);
+});
 
 type SleepQueryResult = ReturnType<typeof useSleepEfficiency>;
 
@@ -371,7 +381,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     for (const testId of SECTION_TEST_IDS) {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(
+    expect(container.querySelectorAll('[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(
       0,
     );
   });

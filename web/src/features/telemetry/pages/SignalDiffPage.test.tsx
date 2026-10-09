@@ -29,6 +29,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
@@ -188,6 +189,15 @@ vi.mock('@/lib/csvExport', async (importOriginal) => {
 
 import SignalDiffPage, { toNum, formatSpan } from './SignalDiffPage';
 
+it('offers keyboard-accessible snapshot comparison help even when the source fails', () => {
+  h.diff = makeQuery({ isError: true, error: new Error('diff failed') });
+  renderPage();
+  const help = screen.getByRole('button', { name: 'Signal differences' });
+  help.focus();
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.help.signal.diff);
+});
+
 // ── Fixtures ─────────────────────────────────────────────────────────
 const ROWS: SignalDiffRow[] = [
   { name: 'battery_level', value_a: 80, value_b: 75, source_b: 'l1', changed: true },
@@ -340,7 +350,7 @@ describe('SignalDiffPage', () => {
     expect(kpiValueText('Window span')).toBe('1h');
 
     // Table band shows the six skeleton rows; no table stub leaks through.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(6);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(6);
     expect(screen.queryByTestId('signal-diff-table')).not.toBeInTheDocument();
     expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-loading', 'true');
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();

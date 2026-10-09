@@ -31,6 +31,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import english from '@/i18n/en.json';
 
 import type { LifetimeStats, LifetimeAchievement } from '@/api/hooks/useAnalytics';
 
@@ -117,6 +118,15 @@ vi.mock('@/components/ai/AILifetimeStatsQA', () => ({
 }));
 
 import LifetimeStatsPage from './LifetimeStatsPage';
+
+it('offers keyboard-accessible lifetime aggregate help without source data', () => {
+  h.query = makeQuery();
+  renderPage();
+  const help = screen.getByRole('button', { name: 'Lifetime stats' });
+  help.focus();
+  expect(help).toHaveFocus();
+  expect(help).toHaveAccessibleDescription(english.lifetime.brief.description);
+});
 
 // jsdom lacks matchMedia (framer-motion's useReducedMotion) and
 // scrollIntoView — polyfill/stub both so motion + deep-link paths run.
@@ -250,8 +260,8 @@ describe('LifetimeStatsPage', () => {
     expect(screen.getByText('75.50 kWh')).toBeInTheDocument();
 
     // Fun facts + activity summary.
-    expect(screen.getByText('250.00 %')).toBeInTheDocument(); // earth %
-    expect(screen.getByText('3.20 %')).toBeInTheDocument(); // moon %
+    expect(screen.getByText('250.00%')).toBeInTheDocument(); // earth %
+    expect(screen.getByText('3.20%')).toBeInTheDocument(); // moon %
     expect(screen.getByText('Saturday')).toBeInTheDocument();
     expect(screen.getByText('18:00')).toBeInTheDocument();
     expect(screen.getByText('155.00 Wh/km')).toBeInTheDocument();
@@ -304,7 +314,7 @@ describe('LifetimeStatsPage', () => {
     expect(screen.queryByText('12,345.00 km')).not.toBeInTheDocument();
     expect(screen.queryByText('456.70 km')).not.toBeInTheDocument();
     // Skeletons render across the page.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
   });
 
   it('renders a per-section EmptyState (never a blank panel) when the query resolves with no data', () => {
@@ -318,7 +328,7 @@ describe('LifetimeStatsPage', () => {
     expect(screen.getByText(/Start driving to unlock achievements/i)).toBeInTheDocument();
     // Hero degrades gracefully to a zero drive count rather than crashing.
     expect(screen.getByText(/driven across 0 drives/i)).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetchMock).toHaveBeenCalledTimes(1);
   });
