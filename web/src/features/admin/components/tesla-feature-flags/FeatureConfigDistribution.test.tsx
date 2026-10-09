@@ -134,8 +134,33 @@ describe('FeatureConfigDistribution', () => {
   it('wires the enabled chip to the success tone and the disabled chip to the neutral tone', () => {
     renderPanel({ summary: makeSummary({ total: 4, enabled: 3, disabled: 1, enabledRate: 75 }) });
 
-    expect(screen.getByText('Enabled: 3').className).toContain('bg-green-100');
-    expect(screen.getByText('Disabled: 1').className).toContain(BADGE_VARIANTS.neutral);
+    expect(BADGE_VARIANTS.success).toBe(
+      'border border-[var(--semantic-success-border)] bg-[var(--semantic-success-bg)] text-[var(--semantic-success)]',
+    );
+    expect(BADGE_VARIANTS.neutral).toBe(
+      'border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)]',
+    );
+    const enabled = screen.getByText('Enabled: 3');
+    const disabled = screen.getByText('Disabled: 1');
+    expect(enabled).toHaveClass('border');
+    expect(disabled).toHaveClass('border');
+    expect(
+      enabled.className.split(/\s+/).filter((token) => /^(bg-|border-|text-)/.test(token)),
+    ).toEqual([
+      'border-[var(--semantic-success-border)]',
+      'bg-[var(--semantic-success-bg)]',
+      'text-[var(--semantic-success)]',
+      'text-xs',
+    ]);
+    expect(
+      disabled.className.split(/\s+/).filter((token) => /^(bg-|border-|text-)/.test(token)),
+    ).toEqual([
+      'border-[var(--border-default)]',
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'text-xs',
+    ]);
+    expect(enabled.className).not.toBe(disabled.className);
   });
 
   it('formats large enabled/disabled counts with locale thousands separators', () => {
@@ -173,9 +198,22 @@ describe('FeatureConfigDistribution', () => {
       summary: makeSummary({ total: 5, enabled: 5, disabled: 0, enabledRate: 100 }),
     });
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const placeholders = container.querySelectorAll('.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(placeholders.length).toBeGreaterThan(0);
+    expect(placeholders).toHaveLength(1);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveStyle({ height: '200px' });
+      expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded');
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     // Loading wins even though there is data and no error.
     expect(screen.queryByText('Enabled rate')).toBeNull();
+    expect(screen.queryByText('100.00')).toBeNull();
+    expect(screen.queryByText('%')).toBeNull();
+    expect(screen.queryByText(/^Enabled:/)).toBeNull();
+    expect(screen.queryByText(/^Disabled:/)).toBeNull();
     expect(screen.queryByText('No feature data to summarise yet.')).toBeNull();
     expect(heading()).toBeInTheDocument();
   });

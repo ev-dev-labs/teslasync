@@ -118,17 +118,36 @@ describe('FeatureConfigComposition — loading', () => {
   it('shows an accessible loading skeleton and withholds the chart on first load', () => {
     const { container } = renderComposition({ composition: [], isLoading: true });
 
-    // EmbeddedChart in loading state renders a skeleton (animate-pulse).
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const placeholders = container.querySelectorAll('.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(placeholders).toHaveLength(1);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveStyle({ height: '220px' });
+      expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded');
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-enabled')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-disabled')).not.toBeInTheDocument();
     // The title still frames the panel while loading.
     expect(screen.getByText('Enabled vs disabled by type')).toBeInTheDocument();
   });
 
   it('prioritises loading over populated rows (skeleton wins, chart withheld)', () => {
     const { container } = renderComposition({ composition: COMPOSITION, isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const placeholders = container.querySelectorAll('.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(placeholders).toHaveLength(1);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveStyle({ height: '220px' });
+      expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded');
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-enabled')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('bar-disabled')).not.toBeInTheDocument();
   });
 });
 

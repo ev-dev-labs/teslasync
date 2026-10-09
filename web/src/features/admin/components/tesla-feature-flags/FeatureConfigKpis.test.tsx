@@ -62,20 +62,51 @@ describe('FeatureConfigKpis — loading', () => {
     ).toBeInTheDocument();
     // Four placeholder cards keep the row's footprint so data landing does
     // not shift the layout.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    const loading = screen.getByRole('status', { name: /loading stat cards/i });
+    expect(loading).toHaveAttribute('aria-busy', 'true');
+    expect(loading).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4', 'lg:grid-cols-4', 'gap-4');
+    expect(loading.children).toHaveLength(4);
+    for (const cell of loading.children) {
+      expect(cell).toHaveClass('h-24', 'w-full', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveAttribute('aria-hidden', 'true');
+      expect(cell).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     // The real MetricCards (and their labels) must not render yet.
     expect(screen.queryByText('Total features')).toBeNull();
+    for (const label of ALL_LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText('4')).toBeNull();
+    expect(screen.queryByText('2')).toBeNull();
+    expect(screen.queryByText('50.00%')).toBeNull();
   });
 
   it('gives loading precedence over error — a skeleton, never em-dashes', () => {
-    renderKpis({ isLoading: true, error: new Error('boom') });
+    const { container } = renderKpis({ isLoading: true, error: new Error('boom') });
 
     expect(
       screen.getByRole('status', { name: /loading stat cards/i }),
     ).toBeInTheDocument();
+    const loading = screen.getByRole('status', { name: /loading stat cards/i });
+    expect(loading).toHaveAttribute('aria-busy', 'true');
+    expect(loading).toHaveClass('grid', 'grid-cols-2', 'md:grid-cols-4', 'lg:grid-cols-4', 'gap-4');
+    expect(loading.children).toHaveLength(4);
+    for (const cell of loading.children) {
+      expect(cell).toHaveClass('h-24', 'w-full', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveAttribute('aria-hidden', 'true');
+      expect(cell).toBeEmptyDOMElement();
+    }
+    expect(container.querySelectorAll('.animate-pulse, .animate-spin, .animate-bounce')).toHaveLength(0);
     // isLoading short-circuits before the error branch is considered.
     expect(screen.queryByText(EM_DASH)).toBeNull();
     expect(screen.queryByText('Total features')).toBeNull();
+    for (const label of ALL_LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByText('4')).toBeNull();
+    expect(screen.queryByText('2')).toBeNull();
+    expect(screen.queryByText('50.00%')).toBeNull();
   });
 });
 
