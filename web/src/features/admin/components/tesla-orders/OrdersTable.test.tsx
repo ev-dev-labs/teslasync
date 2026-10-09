@@ -181,10 +181,10 @@ describe('OrdersTable', () => {
 
     // orderStatusVariant → Badge colour language: in-progress=warning(amber),
     // ready=info(blue), delivered=success(green), cancelled=danger(red).
-    expect(inProgress.className).toContain('yellow');
-    expect(ready.className).toContain('blue');
-    expect(delivered.className).toContain('green');
-    expect(cancelled.className).toContain('red');
+    expect(inProgress.className).toContain('bg-[var(--semantic-warning-bg)]');
+    expect(ready.className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(delivered.className).toContain('bg-[var(--semantic-success-bg)]');
+    expect(cancelled.className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 
   it('sorts by model ascending by default', () => {
