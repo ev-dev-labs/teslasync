@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Select, CopyButton, PanelTitle, Text } from '@/components/ui';
+import { GlassPanel, Select, CopyButton, PanelTitle, Text, HelpTooltip } from '@/components/ui';
 import { BulkActionsToolbar, SavedViewMenu, type BulkAction, type StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
@@ -367,6 +367,11 @@ export default function SignalDiffPage() {
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitCompare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalDiff.tableTitle', 'Signal differences')}
+            <HelpTooltip
+              i18nKey="help.signal.diff"
+              defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
+              ariaLabel={t('signalDiff.tableTitle', 'Signal differences')}
+            />
           </PanelTitle>
           {diffState.fatalError ? (
             <QueryError error={diffState.fatalError} onRetry={() => refetch()} />

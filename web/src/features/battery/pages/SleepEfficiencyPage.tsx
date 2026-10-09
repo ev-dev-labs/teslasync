@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
-import { Button } from '@/components/ui';
+import { Button, HelpTooltip } from '@/components/ui';
 import { CardGrid, PageLayout } from '@/components/layout';
 import { useDataState } from '@/hooks/useDataState';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -107,6 +107,13 @@ export default function SleepEfficiencyPage() {
         'Inspect transition counts, withheld duration derivations, Sentry evidence, and exact source accounting',
       )}
       query={sleepQuery}
+      metadataActions={
+        <HelpTooltip
+          i18nKey="sleep.methodology.transitionSemantics"
+          defaultValue="state_distribution.count records FSM transition destinations from fsm_transitions.to_state; it is not occupancy or duration."
+          ariaLabel={t('sleep.methodology.title', 'Methodology and interpretation limits')}
+        />
+      }
     >
       {hasCachedData && sleepState.status !== 'ok' && (
         <div data-testid={refreshError ? 'sleep-refresh-error' : undefined}>

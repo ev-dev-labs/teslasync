@@ -9,7 +9,7 @@ import {
 
 import { Grid, PageLayout, Section, CardGrid, LayoutCard, SourceContent } from '@/components/layout';
 import {
-  GlassPanel, Text, Caption,
+  GlassPanel, Text, Caption, HelpTooltip,
 } from '@/components/ui';
 import {
   AnimatedNumber, DataFreshnessAuto,
@@ -130,6 +130,11 @@ export default function LifetimeStatsPage() {
         <div className="flex flex-wrap items-center justify-end gap-3">
           {/* Lifetime stats are cagg-driven; force amber after 6h. */}
           <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+          <HelpTooltip
+            i18nKey="lifetime.brief.description"
+            defaultValue="Server lifetime aggregates with recorded driving hours, charging sessions, and savings versus gasoline."
+            ariaLabel={t('lifetime.title', 'Lifetime stats')}
+          />
         </div>
       }
     >
