@@ -1468,16 +1468,16 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
               </div>
 
               {/* Footer */}
-              <div className="shrink-0 border-t border-[var(--glass-border)] px-5 py-3 text-2xs text-[var(--text-muted)]">
+              <Text as="div" variant="caption" className="shrink-0 border-t border-[var(--glass-border)] px-4 py-3">
                 <div className="flex items-center gap-4 flex-wrap">
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
+                    <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">↑↓</Text> {t('palette.navigate', 'Navigate')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↵</kbd> {t('palette.select', 'Select')}
+                    <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">↵</Text> {t('palette.select', 'Select')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">ESC</kbd>{' '}
+                    <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">ESC</Text>{' '}
                     {mode !== 'search'
                       ? t('palette.back', 'Back')
                       : activeScope !== null
@@ -1485,8 +1485,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                         : t('palette.close', 'Close')}
                   </span>
                   {mode === 'search' && vehicleList.length > 0 && (
-                    <span className="ml-auto flex items-center gap-1 text-[var(--theme-primary)]">
-                      <Zap className="h-3 w-3" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
+                    <span className="ms-auto flex items-center gap-1">
+                      <Zap className="h-3 w-3 shrink-0" aria-hidden="true" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
                     </span>
                   )}
                 </div>
@@ -1495,30 +1495,31 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                     distracting from search results. */}
                 {mode === 'search' && activeScope === null && query === '' && (
                   <div
-                    className="mt-2 flex items-center gap-3 flex-wrap text-[var(--text-muted)]"
+                    className="mt-2 flex flex-wrap items-center gap-3"
                     data-palette-scope-hints
                   >
-                    <span className="text-2xs uppercase tracking-wider opacity-70">
+                    <Text variant="caption">
                       {t('palette.filterBy', 'Filter')}
-                    </span>
+                    </Text>
                     {PALETTE_SCOPE_HINTS.map(hint => (
-                      <button
+                      <Button
                         key={hint.scope}
                         type="button"
+                        variant="ghost"
                         onClick={() => {
                           setQuery(`${hint.prefix} `)
                           setSelectedIndex(0)
                           inputRef.current?.focus()
                         }}
-                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
+                        className="h-auto min-h-11 min-w-11 max-w-full flex-wrap justify-start gap-1 whitespace-normal px-2 py-2 text-start text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)]"
                       >
-                        <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs">{hint.prefix}</kbd>
-                        <span>{t(`palette.scope.${hint.scope}`, hint.label)}</span>
-                      </button>
+                        <Text as="kbd" variant="caption" mono className="shrink-0 rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">{hint.prefix}</Text>
+                        <Text variant="caption" className="min-w-0 break-words">{t(`palette.scope.${hint.scope}`, hint.label)}</Text>
+                      </Button>
                     ))}
                   </div>
                 )}
-              </div>
+              </Text>
               </div>
             </motion.div>
           </div>

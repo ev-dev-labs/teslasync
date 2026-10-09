@@ -27,6 +27,7 @@ import type { Vehicle } from '@/types/vehicle'
 import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
 import { StrictMode } from 'react'
+import userEvent from '@testing-library/user-event'
 
 const locale = vi.hoisted(() => ({
   translations: {} as Record<string, string>,
@@ -2184,4 +2185,83 @@ describe('CommandPalette latest-callback commit semantics', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+})
+describe('CommandPalette footer hints adoption', () => {
+  it.each([
+    ['>', 'Commands', 'Search commands…'],
+    ['/', 'Pages', 'Search pages…'],
+    ['@', 'Vehicles', 'Switch vehicle…'],
+    [':', 'Settings', 'Search settings…'],
+  ])('keeps %s %s reachable by keyboard and click with focus and touch roles', async (prefix, label, placeholder) => {
+    const user = userEvent.setup()
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+    for (const activation of ['{Enter}', ' ', 'click']) {
+      const chip = screen.getByRole('button', { name: `${prefix}${label}` })
+      expect(chip).toHaveClass('min-h-11', 'min-w-11', 'h-auto', 'focus-visible:outline-2', 'focus-visible:outline-offset-2')
+      expect(chip).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
+      expect(getShellFocusableElements(screen.getByRole('dialog'))).toContain(chip)
+      for (let step = 0; step < 6 && document.activeElement !== chip; step++) await user.tab()
+      expect(chip).toHaveFocus()
+      if (activation === 'click') await user.click(chip)
+      else await user.keyboard(activation)
+      const input = screen.getByRole('combobox')
+      expect(input).toHaveAttribute('placeholder', placeholder)
+      expect(input).toHaveFocus()
+      expect(document.querySelector('[data-palette-scope-hints]')).toBeNull()
+      expect(screen.getByText('Clear filter')).toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      expect(input).toHaveValue('')
+      expect(input).toHaveFocus()
+      expect(document.querySelector('[data-palette-scope-hints]')).not.toBeNull()
+      expect(screen.getByText('Close')).toBeInTheDocument()
+    }
+  })
+
+  it('retains actual Tab and Shift+Tab order through all footer chips and the modal boundary', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const input = screen.getByRole('combobox')
+    await waitFor(() => expect(input).toHaveFocus())
+    const hints = document.querySelector('[data-palette-scope-hints]')!
+    const chips = Array.from(hints.querySelectorAll('button'))
+    const focusables = getShellFocusableElements(screen.getByRole('dialog'))
+    expect(focusables.slice(-4)).toEqual(chips)
+    for (const target of focusables.slice(1)) {
+      await user.tab()
+      expect(target).toHaveFocus()
+    }
+    await user.tab()
+    expect(input).toHaveFocus()
+    for (const target of [...focusables.slice(1)].reverse()) {
+      await user.tab({ shift: true })
+      expect(target).toHaveFocus()
+    }
+    await user.tab({ shift: true })
+    expect(input).toHaveFocus()
+  })
+
+  it('uses caption roles and logical wrapping for long RTL hints without hiding instructions or count', async () => {
+    const longLabel = 'إعداداتطويلة'.repeat(24)
+    locale.translations['palette.scope.registry'] = longLabel
+    render(<div dir="rtl"><CommandPalette initialOpen /></div>, { wrapper: makeWrapper(makeVehicles()) })
+    const hints = document.querySelector('[data-palette-scope-hints]')!
+    expect(hints.closest('[dir]')).toHaveAttribute('dir', 'rtl')
+    expect(hints).toHaveClass('flex-wrap', 'gap-3')
+    const footer = hints.parentElement!
+    expect(footer).toHaveClass('text-xs')
+    expect(footer.firstElementChild).toHaveClass('flex-wrap')
+    for (const instruction of ['Navigate', 'Select', 'Close', 'Filter']) {
+      expect(screen.getByText(instruction)).toBeInTheDocument()
+    }
+    expect(Array.from(hints.querySelectorAll('kbd'), node => node.textContent)).toEqual(['>', '/', '@', ':'])
+    const chip = screen.getByRole('button', { name: `:${longLabel}` })
+    expect(chip).toHaveClass('flex-wrap', 'max-w-full', 'whitespace-normal', 'text-start')
+    expect(screen.getByText(longLabel)).toHaveClass('break-words', 'min-w-0', 'text-xs')
+    const count = screen.getByText(/2 vehicles/)
+    expect(count).toHaveClass('ms-auto')
+    expect(count.className).not.toContain('--theme-primary')
+    expect(count.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(footer.querySelector('.text-2xs')).toBeNull()
+  })
 })
