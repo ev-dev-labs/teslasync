@@ -223,7 +223,7 @@ describe('FleetAPIPage', () => {
     renderPage();
 
     // The page shell + labelled KPI region are always present.
-    expect(screen.getByText('Fleet API settings')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet API settings', level: 1 })).toBeInTheDocument();
     expect(kpiRegion()).toBeInTheDocument();
 
     expect(within(kpiRegion()).getByText('API status')).toBeInTheDocument();
