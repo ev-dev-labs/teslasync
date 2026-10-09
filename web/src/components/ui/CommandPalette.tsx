@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { useDataState } from '@/hooks/useDataState'
 import type { TFunction } from 'i18next'
 import { Input } from './Input'
 import { Button } from './Button'
@@ -855,12 +856,21 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     return () => window.clearTimeout(handle)
   }, [scopedTerm])
 
-  const { data: searchData } = useGlobalSearch(debouncedQuery, {
+  const searchQuery = useGlobalSearch(debouncedQuery, {
     // When a scope is active the search hits are filtered out anyway —
     // skip the network round-trip entirely.
     disabled: mode !== 'search' || activeScope !== null,
     limit: 5,
   })
+  const searchState = useDataState(searchQuery)
+  const searchData = searchState.data
+  const remoteEnabled = mode === 'search' && activeScope === null && scopedTerm.trim().length >= 2
+  const debouncePending = scopedTerm.trim() !== debouncedQuery
+  const remotePending = remoteEnabled && (debouncePending || searchState.status === 'initial' || searchState.isRefreshing || searchQuery.isPlaceholderData)
+  const remoteFailed = remoteEnabled && !debouncePending && (searchState.fatalError !== null || searchState.refreshError !== null)
+  const remoteBlocked = remoteEnabled && !debouncePending && searchState.isRefreshBlocked
+  const retainedQuery = remotePending && (searchData?.hits?.length ?? 0) > 0 && searchData?.query !== scopedTerm.trim()
+  const remoteUnresolved = remotePending || remoteFailed || remoteBlocked
 
   const searchResultItems: PaletteItem[] = useMemo(() => {
     const hits = searchData?.hits ?? []
@@ -1352,6 +1362,32 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 )}
               </div>
 
+              {remoteUnresolved && (
+                <div role="status" aria-live="polite" className="flex flex-wrap items-center gap-2 px-4 py-2">
+                  <Text variant="bodySm" className="min-w-0 break-words">
+                    {remoteFailed
+                      ? searchState.hasData
+                        ? t('dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')
+                        : t('search.error.message', 'The search service did not respond. Try again or refine your query.')
+                      : remoteBlocked
+                        ? searchState.hasData
+                          ? t('dataState.refreshBlocked.message', 'The device is offline, so this section is showing the last values it received.')
+                          : t('dataState.offline.title', 'Offline')
+                        : retainedQuery
+                          ? t('search.palette.retainedQuery', {
+                              previousQuery: searchData?.query,
+                              query: scopedTerm.trim(),
+                              defaultValue: 'Showing results for "{{previousQuery}}" while search for "{{query}}" is pending.',
+                            })
+                          : t('common.loading', 'Loading...')}
+                  </Text>
+                  {remoteFailed && searchState.retry && (
+                    <Button variant="ghost" className="min-h-11 md:min-h-10" onClick={searchState.retry}>
+                      {t('common.retry', 'Retry')}
+                    </Button>
+                  )}
+                </div>
+              )}
               {/* Results */}
               <div
                 ref={listRef}
@@ -1363,7 +1399,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 className="max-h-80 min-h-0 overflow-y-auto px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                 onKeyDown={mode !== 'search' ? handleInputKey : undefined}
               >
-                {displayItems.length === 0 ? (
+                {displayItems.length === 0 ? remoteUnresolved ? null : (
                   <Text as="div" variant="bodySm" className="break-words py-8 text-center text-[var(--text-muted)]">
                     {mode === 'vehicle-select'
                       ? t('palette.noVehicles', 'No vehicles available')
