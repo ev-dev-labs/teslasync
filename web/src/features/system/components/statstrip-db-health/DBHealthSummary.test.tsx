@@ -48,7 +48,7 @@ describe('DB health canonical summary preservation', () => {
   });
 
   it('does not spread one source loading or refresh failure to the other sources', () => {
-    const { container } = render(<MemoryRouter><DBHealthSummary {...props}
+    render(<MemoryRouter><DBHealthSummary {...props}
       stats={deriveDataState<DBStats>({ isLoading: true })} statsLoading
       sizeBytes={null} totalRows={null} largeTables={null}
       migration={deriveDataState({ data: migration, error: new Error('migration failed') })} /></MemoryRouter>);

@@ -67,7 +67,7 @@ vi.mock('@/hooks/useOperationalMetrics', async () => {
       return actual.useOperationalMetrics(...args);
     },
   };
-}));
+});
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => ({
     mode: operationalModeState.canWrite ? 'live' : 'as_of',
@@ -248,8 +248,9 @@ describe('ActionCenterPage', () => {
     expect(container.querySelector('[data-operational-metric="open"] [data-operational-value]')).toHaveTextContent('1,200');
     expect(container.querySelector('[data-operational-metric="dismissed"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="dismissed"] [data-operational-value]')).toHaveTextContent('0');
-    expect(screen.getByText('Orion · Before priority, source, state, and pagination filters')).toBeInTheDocument();
-    expect(screen.getByText(/^Generated (?!recommendations)/)).toBeInTheDocument();
+    const bridge = within(screen.getByLabelText('Action center summary')).getByRole('region', { name: 'Decision queue overview' });
+    expect(bridge).toHaveTextContent('Orion · Before priority, source, state, and pagination filters');
+    expect(within(bridge).getByText(/^Orion · Before priority, source, state, and pagination filtersGenerated (?!recommendations)/)).toBeInTheDocument();
   });
 
   it('opens and closes the actual Review details drawer with count semantics and bounded source context', async () => {
@@ -295,7 +296,8 @@ describe('ActionCenterPage', () => {
     expect(screen.getByText('Persisted alert source unavailable.')).toBeInTheDocument();
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(6);
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog')).getByText('Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.')).toBeInTheDocument();
+    const narrative = within(screen.getByRole('dialog')).getByRole('region', { name: 'Decision narrative' });
+    expect(within(narrative).getByText('Source coverage is incomplete or unknown; unavailable sources do not imply zero findings.', { selector: 'p' })).toBeInTheDocument();
   });
 
   it('does not render invalid count operands as measured zero', () => {

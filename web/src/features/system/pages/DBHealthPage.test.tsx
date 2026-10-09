@@ -319,7 +319,7 @@ describe('DBHealthPage — loading', () => {
 
   it('does not let pending statistics mask a successful migration or pool snapshot', () => {
     mockUseDBStats.mockReturnValue(makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
-    const { container } = renderPage();
+    renderPage();
     expect(screen.getByTestId('db-health-summary-0').querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(screen.getByTestId('db-health-summary-0')).toHaveAttribute('aria-busy', 'true');
     expect(metricValue('Migration')).toBe('185');
