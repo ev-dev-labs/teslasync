@@ -278,9 +278,18 @@ describe('LiveSignalSourceBreakdown', () => {
   it('renders a skeleton (not the bar) while loading', () => {
     const { container } = renderBreakdown({ status: 'loading' });
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const loading = within(container).getByRole('status', { name: 'Loading Source layers' });
+    const skeletons = loading.querySelectorAll('[aria-hidden="true"]');
+    expect(skeletons.length).toBeGreaterThan(0);
+    expect(skeletons).toHaveLength(1);
+    const [skeleton] = skeletons;
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '180px' });
     expect(screen.queryByRole('img')).toBeNull();
     expect(screen.queryAllByTestId('source-layer-badge')).toHaveLength(0);
+    expect(screen.queryByText('Live · L1')).not.toBeInTheDocument();
+    expect(screen.queryByText('No live signals to classify yet.')).not.toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Source layers' }),
     ).toBeInTheDocument();
