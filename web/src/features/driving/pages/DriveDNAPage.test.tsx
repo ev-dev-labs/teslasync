@@ -301,7 +301,11 @@ describe('DriveDNAPage', () => {
     renderPage();
     expectEverySection();
     const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).not.toHaveTextContent('offline');
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
     expect(telemetryRefetch).not.toHaveBeenCalled();
@@ -340,7 +344,11 @@ describe('DriveDNAPage', () => {
 
     expectEverySection();
     expect(h.telemetryHook).toHaveBeenLastCalledWith('');
-    expect(screen.getAllByText('Loading…').length).toBeGreaterThan(0);
+    expect(
+      screen
+        .getByTestId('drive-dna-fingerprint')
+        .querySelectorAll('[class*="--skeleton-bg"]').length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getAllByLabelText('Loading drive history').length,
     ).toBeGreaterThan(0);
@@ -520,7 +528,12 @@ describe('DriveDNAPage', () => {
         'No telemetry rows were returned for cadence or channel coverage.',
       ),
     ).toBeInTheDocument();
-    expect(coverage.getAllByText('0 / 0')).toHaveLength(6);
+    expect(
+      coverage.getAllByText(/^0\s*\/\s*0$/, {
+        selector:
+          '[data-operational-brief] [role="list"] [data-operational-metric] [data-operational-value]',
+      }),
+    ).toHaveLength(6);
     expect(
       coverage.getAllByText('No valid-row denominator'),
     ).toHaveLength(5);
