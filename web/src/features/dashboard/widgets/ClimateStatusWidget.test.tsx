@@ -247,7 +247,7 @@ describe('ClimateStatusWidget — rendering', () => {
     setup({ climate: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Climate')).toBeInTheDocument();
     expect(screen.queryByText('No climate data')).not.toBeInTheDocument();
   });
