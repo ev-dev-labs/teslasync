@@ -334,15 +334,15 @@ function renderPage(initialEntries: string[] = [DEFAULT_RANGE]) {
   return render(<><DrivesListPage /><LocationProbe /></>, { wrapper: Providers });
 }
 
-const kpiRegion = () => screen.getByTestId('drives-overview-kpis');
+const kpiRegion = () => screen.getByRole('region', { name: 'Overview' });
 const listRegion = () => screen.getByRole('region', { name: 'Drive list' });
 const analysisRegion = () => screen.getByRole('region', { name: 'Trends and highlights' });
 const filtersBar = () => screen.getByRole('group', { name: 'Filter drives by collection · Filter drives by FSD evidence' });
 
-/** Value <p> that immediately follows a MetricCard's label span. */
+/** Read the validated value belonging to this overview metric, not its detail. */
 function cardValue(region: HTMLElement, label: string): string {
-  const span = within(region).getByText(label);
-  return span.closest('p')?.nextElementSibling?.textContent ?? '';
+  const metric = within(region).getByText(label).closest('[data-operational-metric]');
+  return metric?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -510,12 +510,13 @@ describe('DrivesListPage — populated (km)', () => {
 
   it('renders every overview label and value in a compact, non-interactive metric grid', () => {
     renderPage();
-    const grid = screen.getByTestId('drives-overview-kpis');
-    expect(grid).toHaveClass('gap-px', 'grid-cols-2', 'lg:grid-cols-3');
-    const cards = grid.querySelectorAll('[data-role="metric-card"]');
+    const grid = within(kpiRegion()).getByRole('list');
+    expect(grid).toHaveClass('gap-px', 'grid-cols-1', 'sm:grid-cols-2', 'md:grid-cols-3', '3xl:grid-cols-6');
+    const cards = within(grid).getAllByRole('listitem');
     expect(cards).toHaveLength(6);
-    expect(cards[4].querySelector('[data-role="metric-label"] span')).toHaveClass('break-words');
-    expect(cards[5].querySelector('[data-role="metric-value"]')).toHaveClass('break-words');
+    expect(within(grid).getByText('Energy intensity (Wh/km)')).toHaveClass('min-w-0');
+    expect(within(grid).getByText('Energy intensity (Wh/km)')).not.toHaveClass('truncate');
+    expect(cards[5].querySelector('[data-operational-value]')).toHaveClass('break-words');
     expect(within(grid).queryByRole('button')).toBeNull();
   });
 
@@ -561,15 +562,28 @@ describe('DrivesListPage — populated (km)', () => {
     expect(within(listRegion()).getAllByRole('link')).not.toHaveLength(0);
   });
 
-  it('labels the period + the empty prior window, and fills the highlights', () => {
+  it('labels the period + the empty prior window, and fills the highlights', async () => {
     renderPage();
 
-    // ComparisonHeader current + comparison labels.
+    // The shared brief keeps the prior window in provenance, without inventing
+    // a comparison when the independent prior window contains no drives.
     expect(screen.getByRole('heading', { name: 'Overview', level: 3 })).toBeInTheDocument();
     expect(screen.getByText('Apr 1, 2026 – Apr 30, 2026')).toBeInTheDocument();
+    expect(kpiRegion().querySelector('[data-testid^="delta-"]')).toBeNull();
+    expect(kpiRegion().querySelector('[title*=" vs "]')).toBeNull();
+    expect(within(kpiRegion()).queryByText('Mar 2, 2026 – Mar 31, 2026')).not.toBeInTheDocument();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const details = await screen.findByRole('dialog', { name: 'Overview details' });
+    const calculation = within(details).getByRole('region', { name: 'How this was calculated' });
     expect(
-      screen.getByText('No drives in prior period: Mar 2, 2026 – Mar 31, 2026'),
+      within(calculation).getByText(
+        'Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals. · No drives in prior period: Mar 2, 2026 – Mar 31, 2026',
+      ),
     ).toBeInTheDocument();
+    const detailsHeader = within(details).getByRole('heading', { name: 'Overview details', level: 3 })
+      .closest<HTMLElement>('[data-drawer-header]');
+    if (!detailsHeader) throw new Error('Overview details drawer header is missing');
+    fireEvent.click(within(detailsHeader).getByRole('button', { name: 'Close' }));
 
     const analysis = analysisRegion();
     // Top speed 60 m/s → 216 km/h; longest 100 km; avg trip 55 km; avg dur 75 min.
