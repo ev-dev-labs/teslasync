@@ -262,7 +262,7 @@ describe('EventHistoryTable — loading + error states', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
     expect(container.querySelector('.space-y-2[aria-hidden="true"]')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('invokes onRetry when the error banner Retry button is clicked', () => {

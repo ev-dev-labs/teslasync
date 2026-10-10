@@ -176,7 +176,7 @@ describe('PreviewApplyPanel — preview metrics', () => {
   it('shows a loading skeleton while the preview query is in flight', () => {
     mockedPreview.mockReturnValue(makePreviewQuery({ isLoading: true, data: undefined }));
     const { container } = renderPanel({ geofenceId: 7, rate });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('surfaces a QueryError with a working retry when the preview fails', () => {

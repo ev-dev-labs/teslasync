@@ -410,7 +410,7 @@ describe('GeofencesPage — KPI band', () => {
     store.mode = 'pending';
     const { container } = renderPage();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(summary().getByText('Total geofences')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Geofence summary' })).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('region', { name: 'Geofence summary' }).querySelector('[data-operational-value]')).toBeNull();

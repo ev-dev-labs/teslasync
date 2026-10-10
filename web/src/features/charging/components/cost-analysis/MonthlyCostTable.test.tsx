@@ -243,7 +243,7 @@ describe('MonthlyCostTable — loading / error / empty chrome', () => {
     expect(screen.getByText('No monthly data available')).toBeInTheDocument();
     // Neither rows nor a loading skeleton render.
     expect(container.querySelector('tbody tr')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders an error with a working Retry that invokes onRetry', () => {

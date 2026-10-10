@@ -76,7 +76,7 @@ beforeEach(() => {
 describe('RateHistoryPanel — loading/error/empty', () => {
   it('shows a loading skeleton when loading with no rows yet', () => {
     const { container } = renderPanel({ isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('surfaces a QueryError with a working retry on failure', () => {

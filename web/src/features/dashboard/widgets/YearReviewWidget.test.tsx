@@ -273,7 +273,7 @@ describe('YearReviewWidget states', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget(2, 1);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.getByRole('heading', { name: `Year in review ${YEAR}` })).toBeInTheDocument();
     expect(screen.queryByText('No year-in-review data')).toBeNull();
   });

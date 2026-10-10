@@ -180,7 +180,7 @@ describe('BatteryHealthSection — populated', () => {
       makeMetrics({ chargingSessionCount: 3, batteryStart: 50, batteryEnd: 70, chargeEnergyAddedWh: 10_000 }),
     );
 
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
     expect(
       screen.queryByText('No battery data is available for this week.'),

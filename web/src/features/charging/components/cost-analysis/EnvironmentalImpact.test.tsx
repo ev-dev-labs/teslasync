@@ -190,7 +190,7 @@ describe('EnvironmentalImpact — loading / empty / error states', () => {
     expect(screen.getByText('No data')).toBeInTheDocument();
     // Neither metrics nor a loading skeleton render.
     expect(screen.queryByText('kg CO₂ saved')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders an error with a working Retry that invokes onRetry', () => {

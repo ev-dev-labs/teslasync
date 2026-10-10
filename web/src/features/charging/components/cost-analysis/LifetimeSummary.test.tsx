@@ -188,7 +188,7 @@ describe('LifetimeSummary — populated', () => {
 
   it('does not leak any loading / error / empty branch alongside the tiles', () => {
     const { container } = renderSummary();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });

@@ -318,7 +318,7 @@ describe('WeatherAtCarWidget — loading / empty / error', () => {
     mockUseVehicleState.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No weather data')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Weather at car' })).toBeInTheDocument();
   });

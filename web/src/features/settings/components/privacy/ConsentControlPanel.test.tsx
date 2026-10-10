@@ -141,7 +141,7 @@ describe('ConsentControlPanel — policy copy across version-fetch states', () =
   it('shows a skeleton and no policy/error copy while the version query loads', () => {
     const { container } = renderPanel({ isLoading: true })
     // Skeleton is a decorative animated placeholder, not real copy.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     expect(screen.queryByText(BODY_ON)).not.toBeInTheDocument()
     expect(screen.queryByText(BODY_OFF)).not.toBeInTheDocument()
     expect(screen.queryByText(POLICY_ERROR)).not.toBeInTheDocument()
@@ -179,7 +179,7 @@ describe('ConsentControlPanel — policy copy across version-fetch states', () =
 
   it('gives loading precedence over error when both flags are set', () => {
     const { container } = renderPanel({ isLoading: true, isError: true })
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     expect(screen.queryByText(POLICY_ERROR)).not.toBeInTheDocument()
   })
 })

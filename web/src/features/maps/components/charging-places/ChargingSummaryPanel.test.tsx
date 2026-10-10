@@ -62,7 +62,7 @@ beforeEach(() => {
 describe('ChargingSummaryPanel — loading/error/empty', () => {
   it('shows a loading skeleton', () => {
     const { container } = renderPanel({ isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('surfaces a QueryError with a working retry on failure', () => {

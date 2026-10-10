@@ -160,7 +160,7 @@ describe('CostSection — content branch', () => {
     // The wrapper div (not the child) receives bodyClassName.
     expect(body.parentElement).toHaveClass('space-y-4');
     // None of the state branches leak alongside the content.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -169,7 +169,7 @@ describe('CostSection — content branch', () => {
     // MonthlyCostChart / CostPerKwhChart pass `{null}` in their non-error path.
     const { container } = renderSection({ children: null });
     expect(heading()).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

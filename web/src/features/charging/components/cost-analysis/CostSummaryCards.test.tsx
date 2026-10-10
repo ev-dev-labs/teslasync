@@ -190,7 +190,7 @@ describe('CostSummaryCards — state priority', () => {
     const { container } = renderCards({ coreStats: FULL_STATS, isLoading: true });
 
     // A background refetch must NOT flash the skeleton over existing data.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.getByText('Total Cost')).toBeInTheDocument();
     expect(screen.getByText('$123.45')).toBeInTheDocument();
   });
@@ -203,7 +203,7 @@ describe('CostSummaryCards — state priority', () => {
     expect(screen.getByText(/no charging sessions in the selected range/i)).toBeInTheDocument();
     // No tiles, no skeleton.
     expect(screen.queryByText('Total Cost')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 });
 

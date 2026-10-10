@@ -71,7 +71,7 @@ function renderQueue(props: Partial<Parameters<typeof NeedsSetupQueue>[0]> = {})
 describe('NeedsSetupQueue — loading/error/empty', () => {
   it('shows a loading skeleton with no rows or count badge', () => {
     const { container } = renderQueue({ isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Review')).not.toBeInTheDocument();
   });
 

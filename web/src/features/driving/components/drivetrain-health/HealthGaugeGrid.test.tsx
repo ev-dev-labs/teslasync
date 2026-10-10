@@ -246,7 +246,7 @@ describe('HealthGaugeGrid — loading states', () => {
   it('renders health skeletons and hides content while loading, keeping titles', () => {
     const { container } = render(<HealthGaugeGrid {...makeProps({ loading: true })} />)
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     // Gauge + motor content is replaced by skeletons.
     expect(screen.queryByText('Overall drivetrain condition rating')).toBeNull()
     expect(screen.queryByText('Motor Status')).toBeNull()
@@ -260,7 +260,7 @@ describe('HealthGaugeGrid — loading states', () => {
     )
 
     expect(screen.getByText('Drive Statistics')).toBeInTheDocument()
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     expect(screen.queryByText('No drive statistics available yet')).toBeNull()
     expect(screen.queryByText('Total Drives')).toBeNull()
   })

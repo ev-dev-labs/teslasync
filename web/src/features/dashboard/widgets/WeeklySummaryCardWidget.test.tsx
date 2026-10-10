@@ -308,7 +308,7 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
   it('renders only a skeleton while the digest is loading', () => {
     const { container } = renderWidget({ size: TALL, vehicleId: 7, query: makeQuery({ isLoading: true, data: undefined }) });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Weekly summary')).toBeInTheDocument();
     expect(screen.queryByText('No weekly data')).toBeNull();
   });

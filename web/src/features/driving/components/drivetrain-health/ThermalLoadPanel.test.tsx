@@ -296,7 +296,7 @@ describe('ThermalLoadPanel — loading + empty', () => {
   it('shows a skeleton and withholds every metric while loading, keeping the title', () => {
     const { container } = render(<ThermalLoadPanel {...makeProps({ loading: true })} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     // Title persists so the layout does not jump.
     expect(screen.getByRole('heading', { level: 3, name: 'Thermal Load Indicators' })).toBeInTheDocument();
     // No sensor rows, no inline metrics.

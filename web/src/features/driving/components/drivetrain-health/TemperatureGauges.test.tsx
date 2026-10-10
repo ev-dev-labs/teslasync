@@ -167,7 +167,7 @@ describe('TemperatureGauges — loading branch', () => {
     const { container } = renderGauges({ sensors: fourSensors(), loading: true });
 
     // A pulsing placeholder stands in for the gauges…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     // …and none of the sensor content renders yet.
     expect(screen.queryByText('Front Motor')).toBeNull();
     expect(container.querySelectorAll('circle')).toHaveLength(0);
