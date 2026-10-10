@@ -411,8 +411,8 @@ export default defineConfig({
         chunkFileNames: ({ name }) =>
           /^(vendor-|locale-)/.test(name) ? 'assets/[name]-[hash].js' : 'assets/[hash].js',
         manualChunks: {
-          // Both are cold-shell dependencies; share compression and one request.
-          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query'],
+          // React and i18n are already eager; share compression without deferring either.
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next'],
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
           'vendor-motion': ['framer-motion'],
@@ -422,7 +422,6 @@ export default defineConfig({
           // only lazy routes ever render were downloaded during cold start.
           // Letting Rollup place icons by importer keeps shell icons in the
           // startup closure and route-only icons in their route chunk.
-          'vendor-i18n': ['i18next', 'react-i18next'],
         },
       },
     },
