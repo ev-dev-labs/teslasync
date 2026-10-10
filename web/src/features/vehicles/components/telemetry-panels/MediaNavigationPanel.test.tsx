@@ -139,7 +139,7 @@ describe('MediaNavigationPanel', () => {
     );
     const badge = screen.getByText('Playing');
     // Before the fix this badge fell through to the neutral default (bg-gray-100).
-    expect(badge).toHaveClass('bg-green-100');
+    expect(badge).toHaveClass('bg-[var(--semantic-success-bg)]');
     expect(badge).not.toHaveClass(BADGE_VARIANTS.neutral);
   });
 
@@ -150,7 +150,7 @@ describe('MediaNavigationPanel', () => {
         locationData={null}
       />,
     );
-    expect(screen.getByText('Paused')).toHaveClass('bg-yellow-100');
+    expect(screen.getByText('Paused')).toHaveClass('bg-[var(--semantic-warning-bg)]');
   });
 
   it('falls back to the neutral badge for any other status', () => {
@@ -162,7 +162,7 @@ describe('MediaNavigationPanel', () => {
     );
     const badge = screen.getByText('Stopped');
     expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
-    expect(badge).not.toHaveClass('bg-green-100');
+    expect(badge).not.toHaveClass('bg-[var(--semantic-success-bg)]');
   });
 
   it('converts miles_to_arrival from SI metres to the km display unit', () => {
