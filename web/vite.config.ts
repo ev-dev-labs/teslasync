@@ -379,6 +379,11 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap,
+    // Preserve wrappers for conditional requires and cycles, not every CJS
+    // module. Vite's bundled CommonJS plugin owns that dependency analysis.
+    commonjsOptions: {
+      strictRequires: 'auto',
+    },
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       // ── CLEAN-01: cyclic cross-chunk re-exports are build errors ───────────
@@ -411,11 +416,11 @@ export default defineConfig({
         chunkFileNames: ({ name }) =>
           /^(vendor-|locale-)/.test(name) ? 'assets/[name]-[hash].js' : 'assets/[hash].js',
         manualChunks: {
-          // React and i18n are already eager; share compression without deferring either.
-          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next'],
+          // Motion already belongs to the static shell closure. Sharing React's
+          // chunk removes cross-chunk exports and shares compression, not imports.
+          'vendor-react': ['react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next', 'framer-motion'],
           'vendor-charts': ['recharts'],
           'vendor-map': ['leaflet', 'react-leaflet'],
-          'vendor-motion': ['framer-motion'],
           // lucide-react is deliberately NOT force-grouped. Naming it here
           // hoisted every icon the whole app imports — 426 modules — into a
           // single chunk that the entry statically imports, so ~200 icons that

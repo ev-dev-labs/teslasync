@@ -41,22 +41,23 @@ const chunks = Object.fromEntries(chunkObject.properties.map((entry) => {
   ]
 }))
 
-test('co-locates only the existing eager React and localization dependencies', () => {
+test('co-locates only the existing eager React, localization and motion dependencies', () => {
   assert.deepEqual(chunks['vendor-react'], [
-    'react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next',
+    'react', 'react-dom', 'react-router-dom', '@tanstack/react-query', 'i18next', 'react-i18next', 'framer-motion',
   ])
   assert.equal(Object.hasOwn(chunks, 'vendor-i18n'), false)
   assert.equal(Object.values(chunks).flat().filter((module) => module === 'i18next').length, 1)
   assert.equal(Object.values(chunks).flat().filter((module) => module === 'react-i18next').length, 1)
+  assert.equal(Object.values(chunks).flat().filter((module) => module === 'framer-motion').length, 1)
+  assert.equal(Object.hasOwn(chunks, 'vendor-motion'), false)
 })
 
-test('retains chart, map and motion boundaries without force-grouping route icons', () => {
+test('retains lazy chart and map boundaries without force-grouping route icons', () => {
   assert.deepEqual(chunks['vendor-charts'], ['recharts'])
   assert.deepEqual(chunks['vendor-map'], ['leaflet', 'react-leaflet'])
-  assert.deepEqual(chunks['vendor-motion'], ['framer-motion'])
   assert.equal(Object.values(chunks).flat().includes('lucide-react'), false)
   assert.deepEqual(Object.keys(chunks).sort(), [
-    'vendor-charts', 'vendor-map', 'vendor-motion', 'vendor-react',
+    'vendor-charts', 'vendor-map', 'vendor-react',
   ])
 })
 
@@ -71,4 +72,12 @@ test('keeps English shell initialization eager and leaves the browser target unc
   assert.equal(build.properties.some((entry) => (
     ts.isPropertyAssignment(entry) && entry.name.getText(source) === 'target'
   )), false)
+})
+
+test('uses CommonJS dependency analysis rather than disabling require-order protection', () => {
+  const commonjs = objectProperty(build, 'commonjsOptions')
+  const strictRequires = property(commonjs, 'strictRequires')
+  assert.ok(ts.isStringLiteral(strictRequires))
+  assert.equal(strictRequires.text, 'auto')
+  assert.deepEqual(commonjs.properties.map(entry => entry.name?.getText(source)), ['strictRequires'])
 })
