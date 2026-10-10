@@ -16,7 +16,7 @@
  *   - empty events: per-site "no backup events" empty state, no list rows.
  *   - populated standard layout: outage count, average duration, and events
  *     sorted newest-first in a semantic list.
- *   - compact layout: list capped at 3 rows, average-duration stat hidden.
+ *   - compact layout: list capped at 3 rows, average-duration evidence retained.
  *   - null-safety: a missing timestamp collapses to "—" and a null duration
  *     to "—" without inventing a zero-duration outage.
  *   - refresh: the freshness control refetches sites + events (standard) and
@@ -28,11 +28,12 @@ import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import type { TeslaBackupEvent, TeslaEnergySite } from '@/types/energy';
 
-// ── i18n stub: return the English fallback (2nd arg) or the key ──
+// ── i18n stub: English fallback with the supplied interpolation operands ──
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, def?: string | Record<string, unknown>) =>
-      typeof def === 'string' ? def : _key,
+    t: (_key: string, def?: string | Record<string, unknown>, options?: Record<string, unknown>) =>
+      (typeof def === 'string' ? def : _key).replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
+        options?.[key] != null ? String(options[key]) : match),
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -119,15 +120,17 @@ it('reviews measured backup counts and durations with the actual site and open-e
   const drawer = screen.getByRole('dialog');
   expect(within(drawer).getByText('2')).toBeInTheDocument();
   expect(within(drawer).getByText('45m')).toBeInTheDocument();
-  expect(within(drawer).getByText(/Energy site 100/)).toBeInTheDocument();
-  expect(within(drawer).getByText(/no explicit exclusive end bound/)).toBeInTheDocument();
+  const scope = within(drawer).getByText(/^Energy site 100;/);
+  expect(scope).toHaveTextContent(`history since ${thirtyDaysAgo()}`);
+  expect(scope).toHaveTextContent('no explicit exclusive end bound');
+  expect(mockEvents).toHaveBeenCalledWith(100, thirtyDaysAgo());
 });
 
 it.each([1, 2, 3])('keeps an accessible heading and events at %s columns', cols => {
   setup({ events: makeQuery({ data: [makeEvent()] }) });
   render(<BackupHistoryWidget size={{ cols, rows: 4 }} />);
   expect(screen.getByRole('heading', { name: 'Backup history', level: 3 })).toBeVisible();
-  expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  expect(within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem')).toHaveLength(1);
 });
 
 it.each([1, 2, 3])('keeps its heading with the no-site state at %s columns', cols => {
@@ -171,7 +174,7 @@ describe('fmtDuration', () => {
         events: makeQuery({ data: [makeEvent()], isError: true, refetch: refetchEvents }),
       });
       render(<BackupHistoryWidget size={STANDARD} />);
-      expect(screen.getAllByRole('listitem')).toHaveLength(1);
+      expect(within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem')).toHaveLength(1);
       fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
       expect(refetchEvents).toHaveBeenCalledOnce();
       expect(refetchSites).toHaveBeenCalledOnce();
@@ -236,7 +239,8 @@ describe('BackupHistoryWidget', () => {
     });
     const { container } = render(<BackupHistoryWidget size={STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelector('[aria-hidden="true"].min-h-24')).toHaveClass('h-full', 'rounded-xl', 'bg-[var(--skeleton-bg)]');
     expect(screen.queryByText('Outages (30d)')).not.toBeInTheDocument();
     expect(screen.queryByText('No Tesla energy site linked')).not.toBeInTheDocument();
   });
@@ -246,8 +250,13 @@ describe('BackupHistoryWidget', () => {
     render(<BackupHistoryWidget size={STANDARD} />);
 
     expect(screen.getByText('No backup events in the last 30 days')).toBeInTheDocument();
-    expect(screen.queryByRole('listitem')).not.toBeInTheDocument();
-    expect(screen.queryByText('Outages (30d)')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Event feed' })).not.toBeInTheDocument();
+    const brief = screen.getByTestId('backup-history-operational-brief');
+    expect(within(brief).getByText('Outages (30d)')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(1);
+    expect(within(brief).getByText('0')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(within(brief).getByText('—')).toBeInTheDocument();
   });
 
   it('renders outage count, average duration, and events sorted newest-first', () => {
@@ -265,17 +274,17 @@ describe('BackupHistoryWidget', () => {
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('20m')).toBeInTheDocument();
 
-    const rows = screen.getAllByRole('listitem');
+    const rows = within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem');
     expect(rows).toHaveLength(3);
     // Newest first: Jun 3 (1m badge), Jun 2 (45s), Jun 1 (1h badge).
     expect(within(rows[0]).getByText('1m')).toBeInTheDocument();
     expect(within(rows[1]).getByText('45s')).toBeInTheDocument();
     expect(within(rows[2]).getByText('1h')).toBeInTheDocument();
     // Semantic list for a11y.
-    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Event feed' })).toBeInTheDocument();
   });
 
-  it('caps the list at 3 rows and hides average duration in compact layout', () => {
+  it('caps the list at 3 rows and retains average duration in compact layout', () => {
     const events = Array.from({ length: 5 }, (_, i) =>
       makeEvent({
         id: i + 1,
@@ -288,9 +297,17 @@ describe('BackupHistoryWidget', () => {
 
     expect(screen.getByText('Outages (30d)')).toBeInTheDocument();
     // Full count still reported even though the list is capped.
-    expect(screen.getByText('5')).toBeInTheDocument();
-    expect(screen.queryByText('Avg duration')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(3);
+    const brief = screen.getByTestId('backup-history-operational-brief');
+    expect(within(brief).getByText('5')).toBeInTheDocument();
+    expect(within(brief).getByText('Avg duration')).toBeInTheDocument();
+    expect(within(brief).getByText('3m')).toBeInTheDocument();
+    const rows = within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem');
+    expect(rows).toHaveLength(3);
+    expect(within(rows[0]).getByText('5m')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('4m')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('3m')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('3m')).toBeInTheDocument();
   });
 
   it('handles a missing timestamp and null duration without crashing', () => {
@@ -300,7 +317,7 @@ describe('BackupHistoryWidget', () => {
     setup({ sites: makeQuery({ data: [SITE] }), events: makeQuery({ data: events }) });
     render(<BackupHistoryWidget size={STANDARD} />);
 
-    const rows = screen.getAllByRole('listitem');
+    const rows = within(screen.getByRole('list', { name: 'Event feed' })).getAllByRole('listitem');
     expect(rows).toHaveLength(1);
     expect(within(rows[0]).getAllByText('—')).toHaveLength(2);
     expect(within(rows[0]).queryByText('0s')).not.toBeInTheDocument();

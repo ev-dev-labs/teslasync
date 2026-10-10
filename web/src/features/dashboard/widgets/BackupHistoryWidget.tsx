@@ -8,11 +8,10 @@ import { useTeslaBackupHistory, useTeslaEnergySites } from '@/api/hooks/useEnerg
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { safeArray } from '@/lib/safeArray';
 import { fmtInt as formatDurationNumber, isFiniteNumber } from '@/lib/numberFormat';
-import { WidgetBigNumber, WidgetEventFeed } from './shared';
+import { WidgetEventFeed } from './shared';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 
 /** Format seconds into human-readable duration (e.g. "2h 15m", "45m", "30s"). */
@@ -43,7 +42,6 @@ function toTime(ts?: string): number {
 }
 
 export default function BackupHistoryWidget({ size }: WidgetProps) {
-  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { formatDateTime: fmtEventTime } = useDateFormat();
 
@@ -159,55 +157,14 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
     );
   }
 
-  // ── Compact layout (1-col) ──
-  if (isCompact) {
-    return (
-      <WidgetShell
-        title={t('widget.backupHistory.title', 'Backup history')}
-        loading={isLoading}
-        dataState={dataState}
-        updatedAt={updatedAt}
-        isFetching={isFetching}
-        isStale={isStale}
-        isError={isError}
-        onRefresh={handleRefresh}
-      >
-        <DashboardSourceBrief
-          metrics={[
-            { metricId: 'count', rawValue: Array.isArray(events) ? totalOutages : null, label: t('widget.backupHistory.outages30d', 'Outages (30d)'), description: t('widget.backupHistory.countDescription', 'Count of returned backup events; an absent or malformed event array is not zero.') },
-            { metricId: 'duration', rawValue: avgDurationSec, label: t('widget.backupHistory.avgDuration', 'Avg duration'), description: t('widget.backupHistory.durationDescription', 'Mean of valid non-negative event durations in seconds; missing duration operands leave the mean unknown.'), display: { formatter: raw => ({ value: fmtDuration(Number(raw)), unit: '' }) } },
-          ]}
-          state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-          title={t('widget.backupHistory.summaryTitle', 'Backup event sources')}
-          description={t('widget.backupHistory.summaryDescription', 'Energy-site discovery and backup events retain independent recovery; the recent-event feed is a capped presentation of returned history.')}
-          scope={t('widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound', { siteId, since })}
-          loading={isLoading && !Array.isArray(events)} testId="backup-history-operational-brief"
-        />
-        {items.length === 0 && !isLoading ? (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            icon={<BatteryFull className="h-5 w-5" />}
-            message={emptyMessage}
-            className="py-4"
-          />
-        ) : (
-          <div className="flex flex-col gap-2">
-            <WidgetBigNumber
-              label={t('widget.backupHistory.outages30d', 'Outages (30d)')}
-              value={fmtInt(totalOutages)}
-              size="secondary"
-            />
-            <WidgetEventFeed items={feedItems} compact order="source" maxItems={maxEvents} />
-          </div>
-        )}
-      </WidgetShell>
-    );
-  }
-
-  // ── Standard layout (2×4+) ──
+  // ── One source summary for compact (1-col) and standard (2×4+) layouts ──
+  // The metrics describe all returned events, never only the capped preview.
+  // Empty history measures a zero count, but has no duration operands.
+  // WidgetShell withholds this content during initial loading/fatal failure.
   return (
     <WidgetShell
       title={t('widget.backupHistory.title', 'Backup history')}
-      icon={<BatteryFull className="h-3.5 w-3.5 text-emerald-400" />}
+      icon={isCompact ? undefined : <BatteryFull className="h-3.5 w-3.5 text-emerald-400" />}
       loading={isLoading}
       dataState={dataState}
       updatedAt={updatedAt}
@@ -216,6 +173,17 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
       isError={isError}
       onRefresh={handleRefresh}
     >
+      <DashboardSourceBrief
+        metrics={[
+          { metricId: 'count', rawValue: Array.isArray(events) ? totalOutages : null, label: t('widget.backupHistory.outages30d', 'Outages (30d)'), description: t('widget.backupHistory.countDescription', 'Count of returned backup events; an absent or malformed event array is not zero.') },
+          { metricId: 'duration', rawValue: avgDurationSec, label: t('widget.backupHistory.avgDuration', 'Avg duration'), description: t('widget.backupHistory.durationDescription', 'Mean of valid non-negative event durations in seconds; missing duration operands leave the mean unknown.'), display: { formatter: raw => ({ value: fmtDuration(Number(raw)), unit: '' }) } },
+        ]}
+        state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+        title={t('widget.backupHistory.summaryTitle', 'Backup event sources')}
+        description={t('widget.backupHistory.summaryDescription', 'Energy-site discovery and backup events retain independent recovery; the recent-event feed is a capped presentation of returned history.')}
+        scope={t('widget.backupHistory.summaryScope', 'Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound', { siteId, since })}
+        loading={isLoading && !Array.isArray(events)} testId="backup-history-operational-brief"
+      />
       {items.length === 0 && !isLoading ? (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={<BatteryFull className="h-5 w-5" />}
@@ -227,7 +195,7 @@ export default function BackupHistoryWidget({ size }: WidgetProps) {
 
           {/* Event list */}
           <div className="flex-1 min-h-0">
-            <WidgetEventFeed items={feedItems} order="source" maxItems={maxEvents} />
+            <WidgetEventFeed items={feedItems} compact={isCompact} order="source" maxItems={maxEvents} />
           </div>
         </div>
       )}
