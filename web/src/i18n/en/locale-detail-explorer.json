@@ -1,0 +1,174 @@
+{
+  "explorer": {
+    "title": "Explorer",
+    "subtitle": "How far and how wide your car actually roams",
+    "kpis": "Explorer summary metrics",
+    "uniquePlaces": "Unique places",
+    "arrivals": "{{count}} located arrivals",
+    "radius": "Roaming radius",
+    "radiusHint": "90% of arrivals within",
+    "farthest": "Farthest point",
+    "home": "Home base",
+    "located": "Located",
+    "homeHint": "most frequent arrival",
+    "destinations": "Destinations",
+    "place": "Place",
+    "unnamed": "Unnamed spot ({{cell}})",
+    "visits": "Visits",
+    "fromHome": "From home",
+    "firstVisit": "First visit",
+    "discoveries": "New places per month",
+    "newPlaces": "New places",
+    "noData": "No located drives yet — GPS end positions are required.",
+    "browseDrives": "Browse drives",
+    "col": {
+      "month": "Month",
+      "newPlaces": "New places"
+    },
+    "coverage": {
+      "percentValue": "{{value}}%",
+      "eligible": "Eligible arrivals",
+      "locatedRows": "Rows with usable end coordinates",
+      "timestampFallbacks": "Start-time proxies",
+      "locationShare": "Usable endpoint-coordinate coverage",
+      "timestampShare": "Usable arrival-time coverage",
+      "days": "{{count}} days",
+      "medianGap": "Median gap",
+      "longestGap": "Longest gap",
+      "latestGap": "Latest gap",
+      "cadence": "Discovery cadence",
+      "discoveryCount": "{{count}} discoveries",
+      "cadenceInsufficient": "Three destination discoveries are required before interval cadence is reported.",
+      "title": "Coverage & discovery cadence",
+      "capReached": "{{limit}}-row cap reached",
+      "belowCap": "Observed window below the row cap",
+      "empty": "Coverage will appear when drive history is returned for the selected vehicle.",
+      "cappedWindow": "The request returned {{limit}} rows and reached the API cap. Results describe only this bounded window; older drives may be absent.",
+      "observedWindow": "Results describe {{count}} returned rows, up to the {{limit}}-row request cap.",
+      "missingTimestamp": "Missing timestamp",
+      "invalidTimestamp": "Invalid timestamp",
+      "missingCoordinates": "Missing end coordinates",
+      "invalidCoordinates": "Non-finite end coordinates",
+      "outOfRangeCoordinates": "Out-of-range end coordinates",
+      "exclusions": "Exclusive exclusion accounting"
+    },
+    "destination": {
+      "empty": "No non-base destination clusters are present in this observed window.",
+      "unnamed": "Unnamed destination {{number}}",
+      "repeatVisits": "Repeat arrivals",
+      "fromBase": "From inferred base",
+      "baseEvidence": "Distances stay hidden until at least three located arrivals include a repeated inferred-base cluster."
+    },
+    "section": {
+      "directory": "Observed destination directory",
+      "rankings": "Farthest and rarely observed destination rankings",
+      "distanceBands": "Base-relative distance and radius bands",
+      "coverage": "Location coverage, exclusions, and discovery cadence",
+      "method": "Explorer methodology and evidence thresholds",
+      "monthly": "Monthly exploration and discovery trend",
+      "behavior": "New versus repeat destination behavior"
+    },
+    "rankings": {
+      "title": "Destination rankings",
+      "ready": "Comparison ready",
+      "building": "Two destinations required",
+      "empty": "A repeated inferred base and at least two destinations are required for comparative rankings.",
+      "farthest": "Farthest observed",
+      "farthestHint": "Great-circle distance from the inferred observed base",
+      "distanceVisits": "{{distance}} · {{count}} arrivals",
+      "rare": "Rare destinations",
+      "rareHint": "One or two arrivals, then farthest first within each visit count",
+      "noRare": "Every ranked destination has more than two arrivals.",
+      "rareDetail": "{{count}} arrivals · first observed {{date}}"
+    },
+    "distanceBands": {
+      "local": "Under {{max}}",
+      "near": "{{min}}–{{max}}",
+      "regional": "{{min}}–{{max}}",
+      "far": "{{min}} and beyond",
+      "radiusSubtitle": "Visit-weighted p90 radius: {{radius}}",
+      "subtitle": "Destination clusters and arrival volume by base-relative distance",
+      "title": "Distance & radius bands",
+      "aria": "Destination and arrival counts grouped by distance from the inferred observed base",
+      "band": "Distance band",
+      "destinations": "Destinations",
+      "arrivals": "Arrivals",
+      "needsBase": "At least three located arrivals, including two in the inferred-base cluster, are required for distance bands.",
+      "empty": "No non-base destinations are available for distance bands.",
+      "destinationSeries": "Destinations",
+      "arrivalSeries": "Arrivals"
+    },
+    "kpi": {
+      "farthest": {
+        "unnamed": "Unnamed destination",
+        "label": "Farthest observed destination"
+      },
+      "destinations": {
+        "label": "Observed destinations",
+        "subtitle": "{{count}} eligible located arrivals"
+      },
+      "radius": {
+        "label": "P90 roaming radius",
+        "subtitle": "90% of non-base arrivals are within this distance",
+        "insufficient": "Needs a repeated observed base"
+      },
+      "base": {
+        "label": "Inferred observed base",
+        "unnamed": "Unnamed arrival cluster",
+        "subtitle": "{{count}} arrivals; inferred, not a verified home"
+      },
+      "empty": "No drives were returned in this observed history window."
+    },
+    "method": {
+      "clustering": "Valid drive-end coordinates are rounded into 0.01° cells (roughly 1 km north–south). This is coarse grid clustering, not a geofence; east–west width varies by latitude and adjacent points can split at a cell edge.",
+      "base": "The most-observed arrival cell across the returned window is the inferred observed base. It is not verified as home, work, or any saved place; ties use earliest arrival and then a stable internal cell key.",
+      "newRepeat": "When base evidence is supported, the inferred-base cell is excluded from destination behavior; otherwise every observed cluster remains a destination. A destination’s first chronological arrival is new, and later arrivals in the same cell are repeat.",
+      "distance": "Distances use great-circle geometry between cluster centroids. Roaming radius is the visit-weighted 90th percentile of non-base arrival distances.",
+      "timestamps": "A valid drive-end timestamp is preferred for arrival order. When it is absent or invalid, a valid drive-start timestamp is counted and disclosed as a proxy.",
+      "capped": "The {{limit}}-row API cap was reached, so all findings describe a bounded observed window and may omit older drives.",
+      "window": "Findings describe {{count}} rows returned in this observed window, up to the {{limit}}-row API cap.",
+      "title": "Methodology & limits",
+      "baseReady": "Base evidence supported",
+      "baseBuilding": "Base evidence building",
+      "minimums": "Minimum evidence",
+      "locatedMinimum": "Located arrivals for base distance",
+      "baseMinimum": "Arrivals in inferred-base cluster",
+      "cadenceMinimum": "Discoveries for cadence",
+      "rankingMinimum": "Comparative rankings additionally require at least {{count}} non-base destinations."
+    },
+    "state": {
+      "loading": "Loading exploration behavior analysis"
+    },
+    "monthly": {
+      "subtitle": "First arrivals, return arrivals, and cumulative observed destinations",
+      "aria": "Monthly new destinations, repeat destination arrivals, and cumulative destinations",
+      "repeatArrivals": "Repeat arrivals",
+      "cumulativePlaces": "Cumulative places",
+      "empty": "No non-base destination arrivals are available for a monthly trend.",
+      "repeatSeries": "Repeat arrivals",
+      "cumulativeSeries": "Cumulative places"
+    },
+    "behavior": {
+      "title": "New vs repeat behavior",
+      "supported": "Behavior mix supported",
+      "building": "More arrivals needed",
+      "empty": "No non-base destination arrivals are available to classify as new or repeat.",
+      "destinationArrivals": "Destination arrivals",
+      "firstArrivals": "First arrivals",
+      "returnArrivals": "Return arrivals",
+      "newShare": "First-arrival share",
+      "percentValue": "{{value}}%",
+      "repeatShare": "Repeat-arrival share",
+      "definition": "The first chronological arrival in each destination cluster is new; later arrivals to that same cluster are repeat."
+    },
+    "brief": {
+      "coverage": "Arrival coverage",
+      "coverageScope": "Returned drive endpoints; eligible arrivals and timestamp proxies are separate evidence.",
+      "coverageDenominator": "{{count}} returned rows define the eligible-arrival denominator.",
+      "cadenceTitle": "Observed discovery intervals",
+      "cadenceScope": "Intervals between first destination discoveries in returned history, not all vehicle travel.",
+      "behaviorTitle": "Destination arrival counts",
+      "behaviorScope": "Non-base destination arrivals in returned history; first arrivals are excluded from return-arrival counts."
+    }
+  }
+}

@@ -1,0 +1,180 @@
+{
+  "journeyFragmentation": {
+    "title": "Journey fragmentation",
+    "subtitle": "Descriptive continuity analysis of a capped returned drive-history window",
+    "maxGap": "Maximum parking gap",
+    "gapMinutes": "{{count}} min",
+    "evidence": {
+      "aria": "Journey evidence and summary",
+      "eyebrow": "Observed history window",
+      "scope": "Descriptive continuity analysis; this is not lifetime history.",
+      "noVehicle": "Choose a vehicle to populate this observed history window.",
+      "rowsSummary": "{{included}} included of {{returned}} returned rows",
+      "capReached": "The 1,000-row history cap was reached.",
+      "belowCap": "The returned history is below the 1,000-row cap.",
+      "band": {
+        "none": "No returned rows",
+        "thin": "Thin observed window",
+        "observed": "Observed window",
+        "capped": "Capped observed window"
+      }
+    },
+    "kpi": {
+      "journeys": "Observed journeys",
+      "journeysHint": "{{count}} included drives",
+      "linkedPairs": "Linked pairs",
+      "linkedPairsHint": "of {{count}} adjacent pairs",
+      "multiDrive": "Multi-drive journeys",
+      "multiDriveHint": "{{count}} observed chains",
+      "shortFragments": "Short-fragment indicator",
+      "shortFragmentsHint": "of {{count}} included drives",
+      "activeDays": "Active local days",
+      "activeWeeks": "{{count}} local weeks"
+    },
+    "chainLength": {
+      "title": "Chain-length distribution",
+      "subtitle": "Observed journeys grouped by included drive count.",
+      "aria": "Bar chart of observed journey count by drive fragments",
+      "fragments": "Drive fragments",
+      "journeys": "Observed journeys",
+      "summary": "Median {{median}} fragments; p90 {{p90}} fragments."
+    },
+    "gap": {
+      "title": "Stopover-gap distribution",
+      "subtitle": "Linked pair gaps in minutes; the selected threshold is applied to continuity.",
+      "aria": "Bar chart of linked stopover gaps by minute band",
+      "band": "Gap band",
+      "pairs": "Linked pairs",
+      "summary": "Median {{median}} min; p90 {{p90}} min across {{count}} linked gaps.",
+      "empty": "No linked stopover pairs are available for this threshold."
+    },
+    "sensitivity": {
+      "title": "Threshold sensitivity",
+      "subtitle": "The same continuity rules recomputed at fixed 30, 60, 120, and 240 minute thresholds.",
+      "aria": "Bar chart comparing observed journeys and linked pairs across fixed parking thresholds",
+      "description": "This comparison changes only the maximum parking gap; it does not expand the returned history window.",
+      "threshold": "Threshold",
+      "journeys": "Journeys",
+      "pairs": "Linked pairs"
+    },
+    "chart": {
+      "noData": "No included journey data is available yet."
+    },
+    "elapsed": {
+      "title": "Elapsed composition",
+      "subtitle": "Driving time and observed parking time allocated only across linked journey pairs.",
+      "empty": "Elapsed composition will appear when included drives are returned.",
+      "driving": "Driving time",
+      "parking": "Observed parking time",
+      "pairs": "Linked stopovers",
+      "pairsHint": "Parking intervals retained inside observed chains"
+    },
+    "structure": {
+      "title": "Short-fragment and chain structure",
+      "subtitle": "Structural indicators describe the returned records; they are not route or intent recommendations.",
+      "empty": "No included drives are available for structural indicators.",
+      "shortIndicator": "Short-fragment indicator",
+      "compact": "Compact observed chains",
+      "compactHint": "Multi-drive, short linked gaps, and within the configured distance rule",
+      "distance": "Included distance",
+      "distanceBoundary": "{{distance}} at the display-unit render boundary"
+    },
+    "energy": {
+      "title": "Observed energy-intensity comparison",
+      "subtitle": "Distance-weighted whole-journey intensity with complete-energy coverage shown for each group.",
+      "empty": "No observed journeys are available for energy comparison.",
+      "single": "Single-drive journeys",
+      "multi": "Multi-drive journeys",
+      "coverage": "{{complete}} complete-energy journeys of {{total}} ({{coverage}} distance coverage)",
+      "completeDistance": "{{distance}} complete-energy distance",
+      "difference": "Observed energy-intensity difference",
+      "support": "Support band: {{band}}; recommended minimum: {{count}} complete-energy journeys per group",
+      "limit": "Missing energy is excluded from intensity calculations, never treated as zero. The difference is descriptive and does not establish a cause."
+    },
+    "startProfile": {
+      "title": "Local two-hour journey-start profile",
+      "subtitle": "Journey starts grouped in the vehicle timezone {{timeZone}}.",
+      "aria": "Bar chart of observed journey starts by local two-hour period",
+      "period": "Local period",
+      "journeys": "Journeys"
+    },
+    "weekday": {
+      "title": "Weekday journey-start profile",
+      "subtitle": "Local weekday counts use the normalized vehicle timezone.",
+      "aria": "Bar chart of observed journey starts by local weekday",
+      "day": "Weekday",
+      "journeys": "Journeys",
+      "sunday": "Sunday",
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday"
+    },
+    "profile": {
+      "empty": "No local journey-start profile is available yet."
+    },
+    "monthly": {
+      "title": "Monthly observed trend",
+      "subtitle": "Journey starts grouped by local calendar month; sparse months remain sparse.",
+      "aria": "Bar chart of observed journey starts by local calendar month",
+      "month": "Month",
+      "journeys": "Journeys",
+      "empty": "No local monthly trend is available yet."
+    },
+    "directory": {
+      "title": "Ranked observed journey directory",
+      "subtitle": "Top chains by included drive count, then distance. This is a directory of records, not a recommendation list.",
+      "empty": "No observed journeys are available for the directory.",
+      "rank": "Rank {{rank}}",
+      "fragments": "{{count}} drives",
+      "unknownStart": "Unlocated start",
+      "unknownEnd": "Unlocated end",
+      "gaps": "{{count}} linked gaps"
+    },
+    "accounting": {
+      "title": "Evidence and continuity accounting",
+      "subtitle": "Every returned row and every adjacent pair has one mutually exclusive category.",
+      "empty": "Accounting will populate when the history request returns rows.",
+      "rows": "Returned rows: {{count}}",
+      "pairs": "Adjacent pairs: {{count}}",
+      "included": "Included",
+      "live": "Incomplete / live",
+      "invalidTime": "Invalid timestamp / order",
+      "future": "Future",
+      "invalidDuration": "Invalid duration",
+      "excluded": "Excluded",
+      "linked": "Linked",
+      "sourceBoundary": "Unusable / source boundary",
+      "unlocatable": "Unlocatable endpoint",
+      "mismatch": "Endpoint mismatch",
+      "overlap": "Overlap / negative gap",
+      "overGap": "Over selected gap",
+      "span": "Returned span: {{returnedStart}} – {{returnedEnd}}. Included span: {{includedStart}} – {{includedEnd}}.",
+      "recency": "{{days}} days since the latest included drive; {{activeDays}} active local days and {{activeWeeks}} active local weeks."
+    },
+    "method": {
+      "title": "Methodology and interpretation limits",
+      "subtitle": "A frozen, vehicle-local analysis of one returned history window.",
+      "sequence": "Records are stably sorted by start time inside source-order segments; an unparseable start creates a local boundary.",
+      "continuity": "A linked pair needs adjacent included records, non-overlapping timestamps, matching normalized addresses or GPS within {{meters}} m, and a gap at or below {{minutes}} minutes.",
+      "invariant": "Each included drive belongs to one observed journey, so journey count equals included drives minus linked pairs.",
+      "energy": "Energy intensity uses complete-energy journeys only and is reported in canonical Wh/m before display-unit formatting; coverage and support remain visible.",
+      "clock": "The analysis clock is fixed at page load and calendar profiles use the vehicle IANA timezone: {{timeZone}}.",
+      "scope": "Returned history is capped at {{limit}} rows and is not a claim about lifetime history. Structural indicators and observed energy-intensity differences do not establish intent or causality."
+    },
+    "footer": {
+      "empty": "All analytical shells remain visible while the returned history window is empty.",
+      "note": "Charts and directories describe returned records at the selected continuity threshold.",
+      "waiting": "No returned drive rows are available for this vehicle yet.",
+      "title": "Report context"
+    },
+    "brief": {
+      "elapsedTitle": "Linked journey timing",
+      "intensityTitle": "Whole-journey intensity",
+      "structureTitle": "Observed chain quantities",
+      "shortDistance": "{{distance}} · {{share}} of observed distance"
+    }
+  }
+}

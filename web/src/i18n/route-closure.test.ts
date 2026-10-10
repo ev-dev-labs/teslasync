@@ -90,4 +90,18 @@ describe('route-owned shared locale closures', () => {
     expect(loads).toEqual({ dashboard: 0, driving: 0, charging: 0, vehicles: 0, chart: 1 })
   })
 
+  it('loads driving namespace fallbacks off-route without downloading the grouped driving closure', async () => {
+    await runtime.loadEnglishNamespace('driveDetail')
+    expect(runtime.default.t('driveDetail.report.overview', '__fallback__')).not.toBe('__fallback__')
+    expect(Object.values(loads).every(count => count === 0)).toBe(true)
+  })
+
+  it('serves an independent driving analysis route without loading the drives list/detail closure', async () => {
+    window.history.replaceState(null, '', '/drive-score')
+    runtime.default.t('driveScore.title', { defaultValue: '__fallback__', saveMissing: true })
+    await new Promise(resolve => setTimeout(resolve, 100))
+    expect(runtime.default.t('driveScore.title', '__fallback__')).not.toBe('__fallback__')
+    expect(Object.values(loads).every(count => count === 0)).toBe(true)
+  })
+
 })

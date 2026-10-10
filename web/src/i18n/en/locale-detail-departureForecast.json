@@ -1,0 +1,6 @@
+{
+  "departureForecast": {
+    "colSlot": "Time",
+    "next24Title": "Next-24h departure forecast"
+  }
+}

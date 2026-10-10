@@ -530,6 +530,37 @@ describe('checked-in locale artifacts', () => {
     expect(shell).not.toHaveProperty('changelogEntries')
   })
 
+  it('packs driving route closure while keeping complete namespaces in narrow fallbacks', () => {
+    const resource = emitted.get('driving')
+    expect(resource).toBeDefined()
+    const packed = new Set(leafKeys(resource) as string[])
+    const shellKeys = new Set(leafKeys(shell) as string[])
+    const required = new Set(usageManifest.featureRequiredKeys.driving)
+    for (const namespace of usageManifest.bundles.driving) {
+      expect(usageManifest.namespaceFallbackBundles[namespace as keyof typeof usageManifest.namespaceFallbackBundles])
+        .toBe(`detail-${namespace}`)
+      expect(nested(emitted.get(`detail-${namespace}`), namespace)).toEqual((catalog as Json)[namespace])
+      expect(runtimeManifest.complete).not.toContain(namespace)
+    }
+    for (const key of packed) {
+      expect(required.has(key), key).toBe(true)
+      expect(shellKeys.has(key), key).toBe(false)
+    }
+    const authoritativeKeys = usageManifest.bundles.driving.flatMap(
+      namespace => leafKeys((catalog as Json)[namespace], namespace) as string[],
+    )
+    expect(authoritativeKeys.some(key => !packed.has(key) && !shellKeys.has(key))).toBe(true)
+    expect(runtimeManifest.routes).toMatchObject({
+      '/drives': 'driving',
+      '/drives/:id': 'driving',
+      '/drive-score': 'driving-drive-score',
+      '/arrival-reliability': 'driving-arrival-reliability',
+    })
+    expect(nested(resource, 'arrivalReliability.title')).toBeUndefined()
+    expect(nested(emitted.get('driving-arrival-reliability'), 'arrivalReliability.title'))
+      .toEqual(catalog.arrivalReliability.title)
+  })
+
   it('gives every shell and shared namespace a per-namespace fallback chunk', () => {
     const complete = new Set<string>(runtimeManifest.complete)
     for (const namespace of usageManifest.detailNamespaces) {

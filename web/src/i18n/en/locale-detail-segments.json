@@ -1,0 +1,54 @@
+{
+  "segments": {
+    "title": "Ghost Racing",
+    "ghost": {
+      "tie": "Dead heat",
+      "racerA": "Attempt A",
+      "racerB": "Attempt B",
+      "winner": "Winner",
+      "tieHelp": "Identical recorded times.",
+      "margin": "Won by {{margin}}",
+      "title": "Ghost Race",
+      "subtitle": "Pick two attempts above (A and B) to race them lap-over-lap on the same route.",
+      "pick": "Choose an A and a B attempt from the leaderboard to start the race.",
+      "elapsed": "Elapsed time along the route",
+      "elapsedAria": "Line chart of elapsed time versus distance for both attempts; the lower line is ahead",
+      "gap": "Time gap (A vs B)",
+      "gapAria": "Area chart of the A-versus-B time gap along the route; below the zero line means A is ahead",
+      "gapHelp": "Below the line, Attempt A is ahead; above it, Attempt B leads.",
+      "noData": "Not enough shared telemetry to align these two attempts."
+    },
+    "selectVehicle": "Select a vehicle to find its route segments.",
+    "subtitle": "Race your most-repeated routes against your own personal best",
+    "list": {
+      "title": "Route segments",
+      "empty": "No segments yet — drive the same start-to-end route twice and it becomes a raceable segment."
+    },
+    "board": {
+      "title": "Leaderboard",
+      "orderBy": "Order by",
+      "byTime": "By time",
+      "byEfficiency": "By efficiency",
+      "empty": "No ranked attempts on this segment yet."
+    },
+    "brief": {
+      "description": "Recorded attempt durations and the original winner result for the selected segment.",
+      "provenance": "Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin."
+    },
+    "card": {
+      "aria": "Open leaderboard for {{name}}",
+      "attempts": "{{n}} runs",
+      "distance": "Distance",
+      "best": "Best",
+      "eff": "Best eff."
+    },
+    "table": {
+      "date": "Date",
+      "pr": "PR",
+      "time": "Time",
+      "eff": "Wh/km",
+      "delta": "Δ to best",
+      "race": "Race"
+    }
+  }
+}

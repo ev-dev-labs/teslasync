@@ -1,0 +1,42 @@
+{
+  "routeEfficiency": {
+    "trips": "trips",
+    "avg": "avg",
+    "best": "Best",
+    "avgLabel": "Avg",
+    "worst": "Worst",
+    "title": "Route efficiency",
+    "subtitle": "Compare efficiency across your most-driven routes",
+    "routes": "Routes",
+    "totalTrips": "Total trips",
+    "bestEfficiency": "Best",
+    "avgEfficiency": "Avg",
+    "comparison": "Route efficiency comparison",
+    "metrics": "Route metrics",
+    "bestLabel": "Best efficiency",
+    "worstLabel": "Worst efficiency",
+    "mostDrivenLabel": "Most driven route",
+    "col": {
+      "route": "Route"
+    },
+    "aiSuggestions": {
+      "title": "Route-efficiency suggestions",
+      "description": "Get a short plain-language suggestion for lower-consumption habits and route choices grounded in your own historical route data — the dominant route, its kWh/100mi figure, a comparison across your other routes, and one or two concrete, non-mutating ideas you can try yourself.",
+      "badge": "Helix",
+      "generateButton": "Generate suggestions",
+      "emptyHint": "Select a vehicle to generate route-efficiency suggestions."
+    },
+    "worstEfficiency": "Worst",
+    "mostDrivenTrips": "Most-driven",
+    "mostDriven": "Most-driven routes",
+    "noData": "No route data",
+    "selectVehicle": "Select a vehicle to see route efficiency",
+    "kpisAria": "Route efficiency summary metrics",
+    "analysisAria": "Route efficiency analysis",
+    "comparisonAria": "Per-route best, average, and worst efficiency comparison bar chart",
+    "brief": {
+      "description": "All returned routes contribute to these totals; average consumption remains the unweighted mean of route averages.",
+      "provenance": "Returned route-efficiency aggregate before pagination; completeness is not declared by the source."
+    }
+  }
+}

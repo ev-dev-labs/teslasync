@@ -1,0 +1,226 @@
+{
+  "rangeBuffer": {
+    "title": "Range buffer",
+    "subtitle": "Observed arrival SoC distribution, context, and evidence coverage in the vehicle timezone",
+    "bands": {
+      "strong": "Strong",
+      "developing": "Developing",
+      "thin": "Thin",
+      "none": "No evidence"
+    },
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "states": {
+      "noVehiclePassive": "Select a vehicle to make its returned arrival-buffer evidence available.",
+      "loadingAria": "Loading arrival buffer history",
+      "errorPassive": "Drive history is unavailable; retry from the evidence status above.",
+      "pendingPassive": "Drive-history availability has not resolved.",
+      "emptyPassive": "No drives were returned for this vehicle-local date window.",
+      "noQualifiedPassive": "No returned row had a complete, valid, non-future arrival timestamp and usable arrival SoC.",
+      "noDistancePassive": "Included arrivals are available, but none has a positive finite drive distance.",
+      "noDestinationsPassive": "No normalized destination has the three included arrivals required for a supported profile.",
+      "noVehicle": "Select a vehicle to analyze its returned arrival-buffer history.",
+      "loading": "Loading up to 1,000 drives in the selected vehicle-local window...",
+      "refreshError": "Drive history could not refresh. Showing the most recently loaded arrival evidence.",
+      "retry": "Retry",
+      "capReached": "Exactly 1,000 rows were returned. Findings cover the capped selected window and may omit earlier matching drives.",
+      "empty": "No drives were returned for this vehicle-local date window.",
+      "noQualified": "Returned rows contained no complete, valid, non-future arrival with a usable end SoC.",
+      "thinSupport": "{{band}} support: interpret arrival summaries as limited returned historical evidence.",
+      "selectVehicleKpi": "Select a vehicle above to load arrival evidence.",
+      "loadingKpi": "Waiting for returned drive history...",
+      "errorKpi": "Drive history is unavailable; use the status below to retry.",
+      "pendingKpi": "Drive-history availability has not resolved."
+    },
+    "threshold": {
+      "option": "Below {{value}}%",
+      "label": "Planning threshold",
+      "aria": "Arrival battery planning threshold"
+    },
+    "kpis": {
+      "aria": "Observed arrival buffer evidence summary",
+      "title": "Observed arrival-buffer evidence",
+      "included": "Included arrivals",
+      "returned": "{{count}} rows returned",
+      "median": "Median arrival",
+      "driveWeighted": "drive-weighted observed p50",
+      "p10": "Observed p10 arrival",
+      "downside": "lower-tail historical percentile",
+      "below": "Below {{value}}%",
+      "belowCount": "{{count}} included arrivals",
+      "latest": "Latest arrival",
+      "latestHint": "newest included completion",
+      "support": "Evidence support"
+    },
+    "distribution": {
+      "title": "Arrival SoC distribution",
+      "subtitle": "Drive-weighted 10-point bands; rose covers 0-10%, while amber marks bands whose lower edge is below the selected threshold.",
+      "aria": "Histogram of included drive arrivals by end battery percentage"
+    },
+    "month": {
+      "title": "Vehicle-local monthly arrival bands",
+      "subtitle": "Observed p10, median, p90, and sample count for up to the latest 24 returned months.",
+      "aria": "Monthly chart of observed arrival battery percentiles and included drive counts"
+    },
+    "weekday": {
+      "title": "Arrival buffer by local weekday",
+      "subtitle": "Drive-weighted arrival percentiles in {{timeZone}}; unequal sample counts remain visible.",
+      "aria": "Weekday chart of arrival battery percentiles and drive counts"
+    },
+    "hour": {
+      "title": "Arrival buffer by local completion time",
+      "subtitle": "Four-hour completion windows in {{timeZone}}; each drive is one observation.",
+      "aria": "Local completion-time chart of arrival battery percentiles and drive counts"
+    },
+    "distanceProfile": {
+      "title": "Arrival buffer by drive distance",
+      "subtitle": "Fixed SI distance bands converted only at display; association does not establish cause.",
+      "aria": "Distance-band chart of arrival battery percentiles and drive counts"
+    },
+    "sensitivity": {
+      "title": "Planning-threshold sensitivity",
+      "subtitle": "How the same included arrivals classify under several strict less-than thresholds.",
+      "aria": "Chart of arrival counts and shares below alternative battery thresholds"
+    },
+    "columns": {
+      "arrivalBand": "Arrival band",
+      "arrivals": "Arrivals",
+      "sharePct": "Share (%)",
+      "month": "Local month",
+      "p10Pct": "p10 arrival (%)",
+      "medianPct": "Median arrival (%)",
+      "p90Pct": "p90 arrival (%)",
+      "medianDropPct": "Median drive drop (%)",
+      "weekday": "Local weekday",
+      "hourWindow": "Local time window",
+      "distanceBand": "Distance band",
+      "threshold": "Threshold",
+      "belowCount": "Below count",
+      "belowSharePct": "Below share (%)"
+    },
+    "series": {
+      "arrivals": "Arrivals",
+      "p10": "p10 arrival",
+      "median": "Median arrival",
+      "p90": "p90 arrival",
+      "medianDrop": "Median drive drop",
+      "belowCount": "Below-threshold arrivals",
+      "belowShare": "Below-threshold share (%)"
+    },
+    "context": {
+      "title": "Drive-use context and field coverage",
+      "subtitle": "Start SoC, drive-associated SoC drop, and positive SI distance are secondary coverage fields; they do not decide arrival inclusion.",
+      "startCoverage": "Valid start SoC",
+      "ofIncluded": "of {{count}} included arrivals",
+      "medianStart": "Median start SoC",
+      "validStartsOnly": "valid start-SoC rows only",
+      "medianDrop": "Median drive-associated drop",
+      "nonnegativeOnly": "nonnegative start-to-end rows",
+      "p90Drop": "Observed p90 drop",
+      "depletionRows": "{{count}} depletion-eligible rows",
+      "distanceCoverage": "Positive distance",
+      "medianDistance": "Median drive distance",
+      "distanceRowsOnly": "positive finite distance rows",
+      "exclusions": "{{invalidStart}} included rows lack usable start SoC; {{increasing}} rows ended above their valid start SoC and are excluded only from depletion summaries."
+    },
+    "destinations": {
+      "destination": "Destination",
+      "address": "Address",
+      "coordinates": "Rounded coordinates",
+      "activeDays": "Active days",
+      "p10": "p10",
+      "median": "Median",
+      "below": "Below threshold",
+      "distance": "Median distance",
+      "latest": "Latest arrival",
+      "title": "Supported destination profiles",
+      "subtitle": "Normalized end addresses or rounded endpoint coordinates with at least three included arrivals.",
+      "empty": "No destination has enough included arrivals.",
+      "coverage": "{{supportedRows}} of {{locatableRows}} locatable arrivals belong to {{supportedDestinations}} supported destinations; {{unlocatableRows}} included rows have no usable endpoint."
+    },
+    "lowArrivals": {
+      "date": "Completed",
+      "destination": "Destination",
+      "unknownDestination": "Unknown endpoint",
+      "distance": "Distance",
+      "start": "Start SoC",
+      "drop": "Drive drop",
+      "arrival": "Arrival SoC",
+      "title": "Ten lowest observed arrivals",
+      "subtitle": "Ranked by end SoC, then newest completion; this is evidence review, not a future-risk prediction.",
+      "empty": "No included arrivals are available."
+    },
+    "support": {
+      "title": "Evidence support and coverage",
+      "subtitle": "Support measures returned sample breadth and recency; it is separate from whether arrival SoC is high or low.",
+      "index": "Support index",
+      "samples": "Included arrivals",
+      "sampleTarget": "50-row volume target",
+      "days": "Active local days",
+      "dayTarget": "20-day breadth target",
+      "weeks": "Active local weeks",
+      "weekTarget": "8-week breadth target",
+      "recency": "Recency",
+      "daysValue": "{{value}} days",
+      "sinceLatest": "since latest included arrival",
+      "destinationCoverage": "Repeated-destination coverage",
+      "supportedDestinations": "{{count}} supported destinations",
+      "formula": "Support index = 100 x (0.35 x sample volume + 0.25 x active days + 0.25 x active weeks + 0.15 x recency). Volume ingredients saturate at 50 arrivals, 20 days, and 8 weeks; recency scores 1 through 7 days, 0.75 through 30, 0.5 through 90, 0.25 through 180, then 0. Bands are thin below 35, developing below 70, and strong from 70.",
+      "monthLimit": "{{shown}} of {{returned}} returned local months are shown in the trend; the oldest {{omitted}} are omitted from that chart only."
+    },
+    "accounting": {
+      "title": "Row accounting and secondary coverage",
+      "subtitle": "Every returned row enters exactly one primary category; optional context fields are counted separately.",
+      "returned": "Returned",
+      "cap": "{{limit}}-row request cap",
+      "included": "Included",
+      "validArrival": "valid completed arrival evidence",
+      "incomplete": "Incomplete",
+      "noEnd": "no completion timestamp",
+      "invalidTime": "Invalid time or order",
+      "badTime": "unparseable or end before start",
+      "future": "Future-dated",
+      "afterClock": "completion after frozen analysis clock",
+      "invalidArrival": "Invalid arrival SoC",
+      "outOfRange": "missing, non-finite, or outside 0-100",
+      "distance": "Positive distance",
+      "secondary": "secondary context coverage",
+      "locatable": "Locatable endpoint",
+      "invariant": "{{returned}} returned = {{included}} included + {{incomplete}} incomplete + {{invalidTime}} invalid time/order + {{future}} future-dated + {{invalidArrival}} invalid arrival SoC."
+    },
+    "method": {
+      "arrivalTitle": "Arrival definition",
+      "arrivalBody": "One observation is a completed drive with parseable start/end order, completion at or before the frozen clock, and finite end SoC from 0% through 100%.",
+      "windowTitle": "Vehicle-local date window",
+      "windowBody": "The selected {{start}} through {{end}} calendar window becomes a half-open drive-start filter in {{timeZone}}. Profiles use completion time in the same timezone, so a drive starting near the end boundary can complete just outside the final local day.",
+      "percentileTitle": "Observed percentiles",
+      "percentileBody": "p10, p25, median, p75, and p90 use linear interpolation over included drive arrivals. They are drive-weighted historical summaries, not probability forecasts.",
+      "thresholdTitle": "Planning threshold",
+      "thresholdBody": "Below-threshold means strictly less than {{threshold}}%. The selector is a descriptive planning lens, not a battery safety limit or charging recommendation.",
+      "destinationTitle": "Destination support",
+      "destinationBody": "Trimmed case-insensitive end addresses are preferred; otherwise endpoint coordinates are rounded to three decimals. A profile needs at least {{count}} included arrivals.",
+      "distanceTitle": "SI distance context",
+      "distanceBody": "Distance bands are computed from canonical meters and converted only at display. Start-to-end SoC drop excludes rows that increased during the drive; neither association establishes cause.",
+      "supportTitle": "Support, not confidence",
+      "supportBody": "Support combines returned sample volume, active local days, active local weeks, and recency. It measures evidence breadth only and is not a calibrated confidence interval.",
+      "scopeTitle": "Scope and omitted inputs",
+      "scopeBody": "The request is capped at {{limit}} rows. Planned route, rated range, weather, elevation, traffic, charging access, driver intent, and battery health are not modeled.",
+      "title": "Methodology and limitations",
+      "subtitle": "Definitions, calendar semantics, support rules, accounting, and interpretation limits.",
+      "notice": "Use this page only to inspect returned historical arrival evidence; it does not predict whether a future trip will have enough range."
+    },
+    "colLabel": "Category",
+    "percentileTitle": "Range buffer percentile",
+    "brief": {
+      "arrivalsDescription": "Observed arrivals in returned drive history; the planning threshold is descriptive, not a guarantee.",
+      "provenance": "Returned vehicle drives in the selected window, capped at 1,000 rows; vehicle-local time and frozen analysis clock."
+    }
+  }
+}

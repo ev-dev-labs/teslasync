@@ -1,0 +1,73 @@
+{
+  "efficiency": {
+    "title": "Efficiency",
+    "state": {
+      "malformed": "The source response is malformed; measurements are unavailable.",
+      "partialTitle": "Incomplete measurements",
+      "partial": "Some measurements are missing or invalid. Available measurements remain visible.",
+      "unknown": "The source has not supplied measurements for this vehicle.",
+      "failed": "Unable to load {{label}}"
+    },
+    "period": {
+      "lifetime": "Lifetime driving summary",
+      "statsSource": "Vehicle driving aggregates; not filtered by the workspace range."
+    },
+    "subtitle": "Energy consumption and driving efficiency analysis",
+    "avg": "Avg",
+    "kmPerKwh": "km/kWh",
+    "co2Saved": "CO₂ saved (kg)",
+    "totalDistance": "Total",
+    "noStats": "No efficiency data available yet",
+    "avgConsumption": "Avg",
+    "avgSpeed": "Avg speed",
+    "costPerKm": "Est. cost/km",
+    "drivesAnalyzed": "Drives analyzed",
+    "noStatCards": "No driving statistics available yet",
+    "dailyTrend": "Daily efficiency ({{unit}})",
+    "speedDist": "Efficiency by speed range",
+    "speedVsEfficiency": "Speed vs efficiency",
+    "speed": "Speed",
+    "tempVsEfficiency": "Temperature vs efficiency",
+    "temp": "Temp",
+    "tempEfficiency": "Efficiency by temperature range",
+    "tempRange": "Temp range",
+    "drives": "Drives",
+    "total": "Total",
+    "avgSpeedCol": "Avg speed",
+    "noTempData": "Not enough data for temperature breakdown",
+    "summary": "Efficiency summary",
+    "regenRatio": "Regen ratio",
+    "totalDriveTime": "Total drive time",
+    "hours": "h",
+    "noSummary": "No efficiency summary available yet",
+    "insights": "Energy insights",
+    "totalRegen": "Total regen",
+    "regenRatioLabel": "Regen ratio",
+    "co2Label": "CO₂ saved",
+    "totalDistLabel": "Total distance",
+    "topSpeed": "Top speed",
+    "costPerKmLabel": "Est. cost/km",
+    "noInsights": "No energy insights available yet",
+    "overview": "Efficiency overview",
+    "efficiencyLabel": "Efficiency",
+    "kgUnit": "kg",
+    "section": {
+      "kpis": "Key metrics",
+      "overview": "Overview & trend",
+      "analysis": "Speed & temperature analysis",
+      "breakdown": "Breakdown & insights"
+    },
+    "col": {
+      "date": "Date",
+      "range": "Speed range"
+    },
+    "chartColumns": {
+      "driveSpeed": "Average drive speed ({{unit}})",
+      "driveTemperature": "Average outside temperature ({{unit}})",
+      "driveEfficiency": "Drive energy consumption ({{unit}})",
+      "driveDistance": "Drive distance ({{unit}})",
+      "averageEfficiency": "Average drive energy consumption ({{unit}})",
+      "driveCount": "Contributing drives"
+    }
+  }
+}

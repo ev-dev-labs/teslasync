@@ -1,0 +1,17 @@
+{
+  "driving": {
+    "brief": {
+      "loading": "Loading source",
+      "retained": "Retained source",
+      "unavailable": "Source unavailable",
+      "available": "Source available",
+      "eyebrow": "Driving evidence",
+      "observationUnknown": "Source observation time not provided",
+      "completeScope": "Complete analysis window",
+      "subsetScope": "Returned subset",
+      "unknownScope": "Coverage unknown",
+      "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
+      "returned": "Returned evidence"
+    }
+  }
+}

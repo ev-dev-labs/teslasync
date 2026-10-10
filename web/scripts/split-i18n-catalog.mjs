@@ -54,6 +54,9 @@ const KNOWN_MISSING_PATH = join(I18N_ROOT, 'known-missing-keys.json')
 // Shared controls used across dashboard, list, and detail routes should not
 // trigger a separate network request for each common label on first paint.
 const COMPLETE_SHELL_NAMESPACES = new Set(['nav', 'common', 'workspace', 'dataSources', 'a11y', 'changelog'])
+// Driving spans independent analysis routes. Pack their source closure together,
+// but resolve undiscovered keys from the existing narrow namespace fallbacks.
+const DETAIL_FALLBACK_FEATURES = new Set(['driving'])
 /**
  * A per-namespace fallback chunk this small costs less to inline than the
  * request that fetches it costs in headers and round trips. Inlining also
@@ -93,7 +96,7 @@ function shellSourceClosure() {
   return new Set([...staticClosure(SOURCE_ROOT, roots)].filter((file) => /\.(?:ts|tsx)$/.test(file)))
 }
 
-export function routeBundlePaths(appSource, availableBundles) {
+function routeBundleSources(appSource, availableBundles) {
   const source = ts.createSourceFile('App.tsx', appSource, ts.ScriptTarget.Latest, true)
   const lazyFeatures = new Map()
   const visit = (node) => {
@@ -105,7 +108,7 @@ export function routeBundlePaths(appSource, availableBundles) {
           const specifier = stringLiteralText(child.arguments[0])
           const file = specifier && resolveSourceImport(SOURCE_ROOT, join(SOURCE_ROOT, 'App.tsx'), specifier)
           const feature = file?.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').match(/^features\/([^/]+)\//)?.[1]
-          if (feature) lazyFeatures.set(node.name.text, feature)
+          if (feature) lazyFeatures.set(node.name.text, { feature, file })
         }
         ts.forEachChild(child, findImport)
       }
@@ -114,10 +117,19 @@ export function routeBundlePaths(appSource, availableBundles) {
     ts.forEachChild(node, visit)
   }
   visit(source)
-  return Object.fromEntries(parseRoutes(appSource).flatMap(({ path, name }) => {
-    const feature = lazyFeatures.get(name)
-    return feature && availableBundles.has(feature) ? [[path, feature]] : []
-  }))
+  return parseRoutes(appSource).flatMap(({ path, name }) => {
+    const source = lazyFeatures.get(name)
+    if (!source || !availableBundles.has(source.feature)) return []
+    const bundle = DETAIL_FALLBACK_FEATURES.has(source.feature) && !/^\/drives(?:\/|$)/.test(path)
+      ? `${source.feature}-${name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()}`
+      : source.feature
+    return [{ path, bundle, ...source }]
+  })
+}
+
+export function routeBundlePaths(appSource, availableBundles) {
+  return Object.fromEntries(routeBundleSources(appSource, availableBundles)
+    .map(({ path, bundle }) => [path, bundle]))
 }
 
 function sourceGroup(file, shellFiles) {
@@ -306,9 +318,12 @@ function usageManifest(catalog) {
   for (const namespaces of Object.values(bundles)) namespaces.sort()
 
   // Shell- and shared-owned namespaces each get their own fallback chunk.
-  // Feature bundles stay grouped: a route legitimately needs the namespaces
-  // its own feature owns, and one request beats a dozen.
-  const detailNamespaces = [...new Set([...bundles[SHELL_GROUP], ...bundles[SHARED_GROUP]])].sort()
+  // Most feature bundles remain authoritative; multi-route driving only packs
+  // its discovered closure rather than every leaf of its winning namespaces.
+  const detailNamespaces = [...new Set([
+    ...bundles[SHELL_GROUP], ...bundles[SHARED_GROUP],
+    ...[...DETAIL_FALLBACK_FEATURES].flatMap(feature => bundles[feature] ?? []),
+  ])].sort()
   const detailSet = new Set(detailNamespaces)
   const namespaceFallbackBundles = {}
   for (const namespace of Object.keys(namespaceToBundle)) {
@@ -320,8 +335,18 @@ function usageManifest(catalog) {
   const featureBundles = new Set(Object.keys(bundles).filter(
     bundle => ![SHELL_GROUP, SHARED_GROUP, UNREFERENCED_GROUP].includes(bundle),
   ))
+  const routeSources = routeBundleSources(readFileSync(join(SOURCE_ROOT, 'App.tsx'), 'utf8'), featureBundles)
+  const routeRoots = new Map()
+  for (const { bundle, feature, file } of routeSources) {
+    if (!DETAIL_FALLBACK_FEATURES.has(feature)) continue
+    const roots = routeRoots.get(bundle) ?? new Set()
+    roots.add(file)
+    routeRoots.set(bundle, roots)
+    bundles[bundle] ??= []
+    featureBundles.add(bundle)
+  }
   for (const bundle of featureBundles) {
-    const roots = sourceFiles.filter(file =>
+    const roots = routeRoots.has(bundle) ? [...routeRoots.get(bundle)] : sourceFiles.filter(file =>
       file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').startsWith(`features/${bundle}/`),
     )
     const keys = new Set()
@@ -349,7 +374,7 @@ function usageManifest(catalog) {
       unreferencedNamespaces: bundles[UNREFERENCED_GROUP],
       namespaceFallbackBundles,
       featureRequiredKeys,
-      routeBundles: routeBundlePaths(readFileSync(join(SOURCE_ROOT, 'App.tsx'), 'utf8'), featureBundles),
+      routeBundles: Object.fromEntries(routeSources.map(({ path, bundle }) => [path, bundle])),
     },
     // Kept out of the serialized manifest: this is every literal `t()` key in
     // the tree and only feeds known-missing detection.
@@ -382,6 +407,7 @@ function expectedFiles(catalog) {
     if (!setNested(shellResource, key, value)) shadowedKeys.push(key)
   }
   for (const namespace of manifest.detailNamespaces) {
+    if (DETAIL_FALLBACK_FEATURES.has(manifest.namespaceToBundle[namespace])) continue
     const value = catalog[namespace]
     if (value === undefined) continue
     if (JSON.stringify(value).length <= TINY_NAMESPACE_BYTES) shellResource[namespace] = value
@@ -404,13 +430,15 @@ function expectedFiles(catalog) {
   for (const [bundle, namespaces] of Object.entries(manifest.bundles)) {
     if (bundle === SHELL_GROUP || bundle === SHARED_GROUP) continue
     const resource = {}
-    for (const namespace of namespaces) resource[namespace] = catalog[namespace]
+    for (const namespace of namespaces) {
+      if (manifest.namespaceFallbackBundles[namespace] === bundle) resource[namespace] = catalog[namespace]
+    }
     for (const key of manifest.featureRequiredKeys[bundle] ?? []) {
       if (getNested(shellResource, key) !== undefined || getNested(resource, key) !== undefined) continue
       if (!setNested(resource, key, getNested(catalog, key))) shadowedKeys.push(key)
     }
     ;(manifest.composedNamespaces ??= {})[bundle] = Object.keys(resource)
-      .filter(namespace => !namespaces.includes(namespace)).sort()
+      .filter(namespace => manifest.namespaceFallbackBundles[namespace] !== bundle).sort()
     if (Object.keys(resource).length > 0) files.set(`locale-${bundle}.json`, serialized(resource))
   }
   files.set('runtime-manifest.json', serialized(runtimeManifestOf(manifest)))

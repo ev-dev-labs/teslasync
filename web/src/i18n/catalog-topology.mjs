@@ -313,7 +313,7 @@ export function validateManifest(catalog, files, manifest, shadowedKeys = []) {
         }
       }
       const composed = Object.keys(resource).filter(
-        namespace => !manifest.bundles[bundle].includes(namespace),
+        namespace => manifest.namespaceFallbackBundles[namespace] !== bundle,
       ).sort()
       for (const namespace of composed) {
         for (const key of leafKeys(resource[namespace], namespace)) {

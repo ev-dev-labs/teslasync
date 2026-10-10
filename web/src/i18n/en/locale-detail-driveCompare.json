@@ -1,0 +1,85 @@
+{
+  "driveCompare": {
+    "title": "Drive compare",
+    "subtitle": "Compare context, efficiency, and telemetry from any two drives",
+    "pickA": "Choose drive A",
+    "pickB": "Choose drive B",
+    "duel": "Full head-to-head",
+    "metric": "Metric",
+    "driveA": "Drive A",
+    "driveB": "Drive B",
+    "winner": "Winner",
+    "loading": "Loading drive comparison",
+    "needTwo": "At least two drives are needed for a comparison.",
+    "samePick": "Pick two different drives with the A and B selectors above to continue.",
+    "detailsUnavailable": "Drive details are not available for this comparison.",
+    "browseDrives": "Browse drives",
+    "noMetrics": "No comparison metrics are available.",
+    "gridAria": "Drive A and drive B metric comparison",
+    "sections": {
+      "verdict": "Comparison verdict and advantages",
+      "context": "Drive identity and context",
+      "profiles": "Normalized telemetry comparisons"
+    },
+    "verdict": {
+      "title": "Fair comparison verdict",
+      "aLeads": "Drive A leads",
+      "bLeads": "Drive B leads",
+      "tie": "Dead heat",
+      "insufficient": "Not enough comparable data",
+      "leadBody": "{{leader}} wins {{wins}} of {{count}} fair metrics.",
+      "tieBody": "The fair score is level at {{wins}}–{{wins}}, with {{ties}} tied metrics.",
+      "insufficientBody": "Both drives need valid consumption, regen, or drive-score data before a fair verdict is possible.",
+      "neutralNote": "Distance, duration, total energy, and absolute battery use stay neutral because trip size changes those totals.",
+      "scoreAria": "Fair metric score: drive A {{a}}, drive B {{b}}"
+    },
+    "identity": {
+      "title": "Drive {{side}} context",
+      "route": "Route",
+      "battery": "Battery",
+      "conditions": "Conditions",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "statusUnknown": "Status unavailable"
+    },
+    "breakdown": {
+      "title": "What decided it",
+      "subtitle": "Fair, distance-aware advantages only",
+      "count": "{{count}} of 3 fair metrics have data on both drives.",
+      "even": "Even",
+      "unavailable": "Not comparable",
+      "edge": "{{value}} edge",
+      "noEdge": "No measurable edge",
+      "needsBoth": "Needs valid data from both drives",
+      "note": "Regen is scored only on trips of at least 1 km; total energy and battery drop never award a winner."
+    },
+    "chart": {
+      "speedTitle": "Speed through trip progress",
+      "speedSubtitle": "Each drive is normalized from start to finish",
+      "speedAria": "Drive A and drive B speed compared over normalized trip progress",
+      "batteryTitle": "Battery through trip progress",
+      "batterySubtitle": "State of charge from start to finish",
+      "batteryAria": "Drive A and drive B battery state of charge over normalized trip progress",
+      "progress": "Trip progress",
+      "progressValue": "{{value}}% complete",
+      "driveASpeed": "Drive A speed",
+      "driveBSpeed": "Drive B speed",
+      "driveASoc": "Drive A SOC",
+      "driveBSoc": "Drive B SOC",
+      "noSpeed": "Both drives need at least two speed samples for a progress comparison.",
+      "noBattery": "Both drives need at least two battery samples for a progress comparison."
+    },
+    "m": {
+      "distance": "Distance",
+      "duration": "Duration",
+      "avgSpeed": "Avg speed",
+      "maxSpeed": "Top speed",
+      "energy": "Energy used",
+      "consumption": "Consumption",
+      "regenShare": "Regen share",
+      "socUsed": "Battery used",
+      "temp": "Outside temp",
+      "score": "Drive score"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "speedProfile": {
+    "title": "Speed profile",
+    "subtitle": "Speed distribution and driving pattern analysis",
+    "avgSpeed": "Avg speed",
+    "peakSpeed": "Peak speed",
+    "optimalSpeed": "Optimal speed",
+    "distribution": "Speed distribution",
+    "timeSpent": "time",
+    "timeShare": "Time share",
+    "drives": "Drives",
+    "effVsSpeed": "Efficiency vs speed",
+    "lower": "Lower",
+    "better": "better",
+    "speed": "Speed",
+    "efficient": "Efficient",
+    "moderate": "Moderate",
+    "highConsumption": "High consumption",
+    "insightTitle": "Efficiency insight",
+    "insightText": "Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.",
+    "noData": "No speed profile data available yet",
+    "readings": "Readings",
+    "samples": "Samples",
+    "drivesAnalyzed": "{{count}} drives analysed",
+    "summaryAria": "Speed summary metrics",
+    "envelope": "Speed envelope",
+    "envelopeHint": "Average, peak and most-efficient speed",
+    "buckets": "Speed buckets",
+    "distributionAria": "Speed-bucket time-share distribution bar chart",
+    "effVsSpeedAria": "Per-drive efficiency versus speed scatter plot",
+    "noDistribution": "No speed distribution available yet",
+    "noBuckets": "No speed buckets recorded for this window",
+    "noScatter": "Not enough drive data for the efficiency scatter yet",
+    "noInsight": "Efficiency insight appears once optimal-speed data is available",
+    "browseDrives": "Browse drives",
+    "brief": {
+      "driveCoverageUnknown": "Drive sample coverage is unavailable independently of the speed profile.",
+      "description": "Recorded speed statistics and distribution readings; drive evidence is a separately returned sample.",
+      "provenance": "Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage."
+    }
+  }
+}
