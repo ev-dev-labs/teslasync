@@ -1,5 +1,6 @@
 {
   "table": {
+    "genericName": "Data table",
     "search": {
       "loadedRows": "Search loaded rows"
     },
@@ -29,7 +30,9 @@
       "selectAll": "Select all rows",
       "deselectAll": "Deselect all rows",
       "selectRow": "Select row",
-      "deselectRow": "Deselect row"
+      "deselectRow": "Deselect row",
+      "deselectRowNamed": "Deselect {{row}}",
+      "selectRowNamed": "Select {{row}}"
     },
     "columns": {
       "button": "Columns",

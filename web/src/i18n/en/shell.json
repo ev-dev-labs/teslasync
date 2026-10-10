@@ -62,7 +62,16 @@
       "reload": "Reload"
     }
   },
-  "browserNotifications": {},
+  "browserNotifications": {
+    "toast": {
+      "alertTitle": "TeslaSync Alert",
+      "exportFailedBody": "Data export failed. Check the exports page for details.",
+      "exportFailedTitle": "Export Failed",
+      "exportReadyBody": "{{filename}} is ready for download",
+      "exportReadyBodyGeneric": "Your data export is ready for download",
+      "exportReadyTitle": "Export Ready"
+    }
+  },
   "carAnimation": {
     "tesla": "Tesla vehicle illustration",
     "charging": "Charging",
@@ -499,6 +508,10 @@
     }
   },
   "error": {
+    "forbidden": {
+      "message": "Your account does not have permission to view or change this resource.",
+      "title": "Permission denied"
+    },
     "network": {
       "message": "Check your internet connection and try again.",
       "offlineDetail": "We'll retry automatically when your connection returns.",
@@ -512,15 +525,28 @@
       "thingDefault": "Resource",
       "title": "{{thing}} not found"
     },
+    "request": {
+      "message": "Review the request and try again. No changes were applied."
+    },
     "retry": "Retry",
     "serverError": {
       "message": "Something went wrong on our end. Please try again.",
       "title": "Server error"
     },
+    "timeout": {
+      "message": "The service did not respond in time. Existing data has not been changed.",
+      "title": "Request timed out"
+    },
     "unauthorized": {
       "cta": "Sign in",
       "message": "Your session has expired. Please sign in again.",
       "title": "Sign in required"
+    },
+    "unavailable": {
+      "message": "A required service is temporarily unavailable. Try again after it recovers."
+    },
+    "unsupported": {
+      "message": "This feature is not available with the current server or deployment configuration."
     },
     "waiting": {
       "message": "We're pausing requests briefly. Data will refresh automatically.",
@@ -1386,6 +1412,8 @@
       "play": "Play",
       "playPause": "Play / Pause",
       "prevFrame": "⏮ frame",
+      "seekBack": "⏪ −{{n}}s",
+      "seekForward": "⏩ +{{n}}s",
       "skip10": "Skip ±10s",
       "skip5": "Skip ±5s (shift = ±30s)",
       "speed": "Speed up / slow down",
@@ -1882,14 +1910,17 @@
       "valueCount": "{{selected}} of {{total}} loaded values selected",
       "values": "Available values"
     },
+    "genericName": "Data table",
     "search": {
       "loadedRows": "Search loaded rows"
     },
     "selection": {
       "deselectAll": "Deselect all rows",
       "deselectRow": "Deselect row",
+      "deselectRowNamed": "Deselect {{row}}",
       "selectAll": "Select all rows",
-      "selectRow": "Select row"
+      "selectRow": "Select row",
+      "selectRowNamed": "Select {{row}}"
     }
   },
   "tesla": {

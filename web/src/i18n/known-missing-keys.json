@@ -1,23 +1,5 @@
 [
-  "browserNotifications.toast.alertTitle",
-  "browserNotifications.toast.exportFailedBody",
-  "browserNotifications.toast.exportFailedTitle",
-  "browserNotifications.toast.exportReadyBody",
-  "browserNotifications.toast.exportReadyBodyGeneric",
-  "browserNotifications.toast.exportReadyTitle",
-  "error.forbidden.message",
-  "error.forbidden.title",
-  "error.request.message",
   "error.request.title",
-  "error.timeout.message",
-  "error.timeout.title",
-  "error.unavailable.message",
   "error.unavailable.title",
-  "error.unsupported.message",
-  "error.unsupported.title",
-  "replay.shortcuts.seekBack",
-  "replay.shortcuts.seekForward",
-  "table.genericName",
-  "table.selection.deselectRowNamed",
-  "table.selection.selectRowNamed"
+  "error.unsupported.title"
 ]

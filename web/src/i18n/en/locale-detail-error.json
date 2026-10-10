@@ -1,5 +1,22 @@
 {
   "error": {
+    "forbidden": {
+      "message": "Your account does not have permission to view or change this resource.",
+      "title": "Permission denied"
+    },
+    "request": {
+      "message": "Review the request and try again. No changes were applied."
+    },
+    "timeout": {
+      "message": "The service did not respond in time. Existing data has not been changed.",
+      "title": "Request timed out"
+    },
+    "unavailable": {
+      "message": "A required service is temporarily unavailable. Try again after it recovers."
+    },
+    "unsupported": {
+      "message": "This feature is not available with the current server or deployment configuration."
+    },
     "unexpected": "An unexpected error occurred",
     "loadFailed": "Failed to load data",
     "retry": "Retry",

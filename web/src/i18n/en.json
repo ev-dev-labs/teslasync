@@ -8594,6 +8594,7 @@
     "helpFor": "Help for {{field}}"
   },
   "table": {
+    "genericName": "Data table",
     "search": {
       "loadedRows": "Search loaded rows"
     },
@@ -8623,7 +8624,9 @@
       "selectAll": "Select all rows",
       "deselectAll": "Deselect all rows",
       "selectRow": "Select row",
-      "deselectRow": "Deselect row"
+      "deselectRow": "Deselect row",
+      "deselectRowNamed": "Deselect {{row}}",
+      "selectRowNamed": "Select {{row}}"
     },
     "columns": {
       "button": "Columns",
@@ -8808,6 +8811,8 @@
     },
     "shortcuts": {
       "title": "Trip replay shortcuts",
+      "seekBack": "⏪ −{{n}}s",
+      "seekForward": "⏩ +{{n}}s",
       "help": "Show keyboard shortcuts",
       "play": "Play",
       "pause": "Pause",
@@ -9694,6 +9699,23 @@
     }
   },
   "error": {
+    "forbidden": {
+      "message": "Your account does not have permission to view or change this resource.",
+      "title": "Permission denied"
+    },
+    "request": {
+      "message": "Review the request and try again. No changes were applied."
+    },
+    "timeout": {
+      "message": "The service did not respond in time. Existing data has not been changed.",
+      "title": "Request timed out"
+    },
+    "unavailable": {
+      "message": "A required service is temporarily unavailable. Try again after it recovers."
+    },
+    "unsupported": {
+      "message": "This feature is not available with the current server or deployment configuration."
+    },
     "unexpected": "An unexpected error occurred",
     "loadFailed": "Failed to load data",
     "retry": "Retry",
@@ -20137,6 +20159,14 @@
     "decimalPrecisionPlaceholder": "e.g. 2"
   },
   "browserNotifications": {
+    "toast": {
+      "alertTitle": "TeslaSync Alert",
+      "exportFailedBody": "Data export failed. Check the exports page for details.",
+      "exportFailedTitle": "Export Failed",
+      "exportReadyBody": "{{filename}} is ready for download",
+      "exportReadyBodyGeneric": "Your data export is ready for download",
+      "exportReadyTitle": "Export Ready"
+    },
     "title": "Browser notifications",
     "subtitle": "Get notified when the app tab is in the background",
     "permissionError": "Could not request browser permission. Check site settings and try again.",

@@ -1,5 +1,13 @@
 {
   "browserNotifications": {
+    "toast": {
+      "alertTitle": "TeslaSync Alert",
+      "exportFailedBody": "Data export failed. Check the exports page for details.",
+      "exportFailedTitle": "Export Failed",
+      "exportReadyBody": "{{filename}} is ready for download",
+      "exportReadyBodyGeneric": "Your data export is ready for download",
+      "exportReadyTitle": "Export Ready"
+    },
     "title": "Browser notifications",
     "subtitle": "Get notified when the app tab is in the background",
     "permissionError": "Could not request browser permission. Check site settings and try again.",

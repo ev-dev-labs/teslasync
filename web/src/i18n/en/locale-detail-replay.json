@@ -24,6 +24,8 @@
     },
     "shortcuts": {
       "title": "Trip replay shortcuts",
+      "seekBack": "⏪ −{{n}}s",
+      "seekForward": "⏩ +{{n}}s",
       "help": "Show keyboard shortcuts",
       "play": "Play",
       "pause": "Pause",
