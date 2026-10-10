@@ -105,7 +105,7 @@ describe('FlagCompositionPanel — states', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // Skeleton placeholder must not appear when there is an error.
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders the skeleton while loading with no flags yet', () => {
@@ -231,7 +231,7 @@ describe('FlagCompositionPanel — composition breakdown', () => {
     expect(screen.getByRole('list')).toBeInTheDocument();
     expect(screen.getByText('Boolean')).toBeInTheDocument();
     // Stale-while-revalidate: no skeleton because data is already present.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('exposes the breakdown as an accessible, labelled list', () => {

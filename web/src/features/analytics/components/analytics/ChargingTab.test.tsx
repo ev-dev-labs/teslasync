@@ -192,7 +192,7 @@ describe('ChargingTab — loading', () => {
     // The pending KPI band keeps six static value slots, not pulse classes.
     const region = screen.getByRole('region', { name: SUMMARY_REGION });
     expect(region.querySelectorAll('[data-operational-metric] [aria-hidden="true"].h-5.w-20').length).toBeGreaterThanOrEqual(6);
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
 
     // Panel shells (titles) are always present, even mid-load.
     for (const title of PANEL_TITLES) {

@@ -133,6 +133,6 @@ describe('BridgeStatus', () => {
     expect(screen.queryByText('Not configured')).toBeNull();
     expect(screen.queryByText(/Set TESLASYNC_GITHUB_REPO/)).toBeNull();
     expect(screen.queryByText(/Connected/)).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 });

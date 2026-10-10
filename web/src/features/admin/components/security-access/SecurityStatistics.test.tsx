@@ -113,7 +113,7 @@ describe('SecurityStatistics — data', () => {
     }
     // Data branch → no skeletons, no empty state, no error alert.
     expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -216,7 +216,7 @@ describe('SecurityStatistics — error', () => {
     // The metrics grid and skeletons must not render.
     expect(screen.queryByRole('group')).toBeNull();
     expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -272,7 +272,7 @@ describe('SecurityStatistics — empty', () => {
     // No metrics, skeletons, or error in the empty branch.
     expect(screen.queryByRole('group')).toBeNull();
     expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

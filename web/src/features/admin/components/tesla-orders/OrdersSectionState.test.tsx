@@ -179,7 +179,7 @@ describe('OrdersSectionState', () => {
       expect(screen.getByText('orders board')).toBeInTheDocument();
       // No EmptyState (role=status), no Skeleton, no QueryError Retry.
       expect(screen.queryByRole('status')).toBeNull();
-      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
       expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
     });
   });
