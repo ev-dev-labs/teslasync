@@ -225,7 +225,7 @@ describe('OdometerCounterWidget', () => {
     drivingStatsMock.mockReturnValue(makeStatsQuery(undefined, { isLoading: true }));
     const { container } = renderWidget(<OdometerCounterWidget size={SIZE_WIDE} />);
     expect(screen.getByText('50,000.00 km')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
   });
 
   it('shows the secondary failure beside the odometer and retries both sources', () => {
@@ -335,7 +335,7 @@ describe('OdometerCounterWidget', () => {
 
     const { container } = renderWidget(<OdometerCounterWidget size={SIZE_TALL} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('50,000.00 km')).not.toBeInTheDocument();
     expect(screen.queryByText('No odometer data')).not.toBeInTheDocument();
   });

@@ -292,7 +292,7 @@ describe('ChargeStatusLiveWidget', () => {
 
     const { container } = renderWidget(<ChargeStatusLiveWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No charge data')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
   });

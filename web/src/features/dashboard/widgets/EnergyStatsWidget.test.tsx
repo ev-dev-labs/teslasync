@@ -361,7 +361,7 @@ describe('EnergyStatsWidget — states & interaction', () => {
     setup({ stats: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget({ size: STANDARD });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Energy stats')).toBeInTheDocument();
     expect(screen.queryByText('No energy data available')).not.toBeInTheDocument();
   });

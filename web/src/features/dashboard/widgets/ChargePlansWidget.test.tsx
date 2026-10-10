@@ -213,7 +213,7 @@ describe('ChargePlansWidget shared data trust', () => {
     const { container } = render(<MemoryRouter><ChargePlansWidget size={STANDARD} /></MemoryRouter>);
     expect(screen.getByText(name)).toBeInTheDocument();
     expect(screen.getByText('PG&E')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('No charge plans')).not.toBeInTheDocument();
   });
 
@@ -438,7 +438,7 @@ describe('ChargePlansWidget', () => {
     setup({ plans: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Charge plans')).toBeInTheDocument();
     expect(screen.queryByText('No charge plans or rate data')).not.toBeInTheDocument();
   });

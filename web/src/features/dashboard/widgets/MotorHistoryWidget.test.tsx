@@ -499,7 +499,7 @@ describe('MotorHistoryWidget — loading, empty & error states', () => {
     setHistory({ isLoading: true, data: undefined });
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('composed-chart')).toBeNull();
     expect(screen.queryByText('No motor history')).toBeNull();
   });

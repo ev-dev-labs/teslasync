@@ -274,7 +274,7 @@ describe('LivePowerFlowWidget — loading & empty states', () => {
     setLive({ data: undefined });
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
     expect(screen.queryByText('No Tesla energy site linked')).toBeNull();
     expect(flowSpy).not.toHaveBeenCalled();
@@ -285,7 +285,7 @@ describe('LivePowerFlowWidget — loading & empty states', () => {
     setLive({ isLoading: true, data: undefined });
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
   });
 

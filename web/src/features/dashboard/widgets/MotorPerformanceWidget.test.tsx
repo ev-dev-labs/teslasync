@@ -485,7 +485,7 @@ describe('MotorPerformanceWidget — lifecycle states', () => {
   it('renders only a skeleton while loading', () => {
     const { container } = renderWidget(FULL, { query: makeQuery({ isLoading: true, data: undefined }) });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Motor performance')).toBeInTheDocument();
     expect(screen.queryByText('No motor data')).toBeNull();
   });

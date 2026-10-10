@@ -169,7 +169,7 @@ describe('EnergyFlowAnimatedWidget — loading states', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(undefined, { data: undefined, isLoading: true }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No energy data available')).not.toBeInTheDocument();
     expect(diagram()).not.toBeInTheDocument();
   });
@@ -182,7 +182,7 @@ describe('EnergyFlowAnimatedWidget — loading states', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(undefined));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No energy data available')).not.toBeInTheDocument();
   });
 });

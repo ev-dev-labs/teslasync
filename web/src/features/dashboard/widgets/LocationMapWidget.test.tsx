@@ -392,7 +392,7 @@ describe('LocationMapWidget', () => {
 
     const { container } = renderWidget(<LocationMapWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByTestId('map')).not.toBeInTheDocument();
     expect(
       screen.queryByText('No location data available'),

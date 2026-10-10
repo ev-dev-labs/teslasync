@@ -388,7 +388,7 @@ describe('MaintenanceTrackerWidget — shell states', () => {
     mockMaintenance.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Maintenance')).toBeInTheDocument();
     expect(screen.queryByText('No maintenance data')).toBeNull();
   });

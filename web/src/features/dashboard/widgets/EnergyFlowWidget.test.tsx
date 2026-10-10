@@ -228,7 +228,7 @@ describe('EnergyFlowWidget — loading & empty states', () => {
     setState({ state: undefined });
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
     expect(screen.queryByText('No energy data available')).toBeNull();
     expect(flowSpy).not.toHaveBeenCalled();
@@ -238,7 +238,7 @@ describe('EnergyFlowWidget — loading & empty states', () => {
     setState({ isLoading: true, state: undefined });
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('flow-diagram')).toBeNull();
   });
 

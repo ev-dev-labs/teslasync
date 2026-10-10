@@ -332,7 +332,7 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
       sites: sitesQuery({ isLoading: true, data: undefined }),
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Energy site')).toBeInTheDocument();
     expect(screen.queryByText('No Tesla energy site linked')).toBeNull();
   });
@@ -344,7 +344,7 @@ describe('EnergySiteInfoWidget — lifecycle', () => {
     });
 
     // isLoading = sitesLoading || (!!siteId && infoLoading) → true here.
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Energy site')).toBeInTheDocument();
   });
 

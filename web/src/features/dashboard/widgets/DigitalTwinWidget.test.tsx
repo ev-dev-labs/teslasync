@@ -261,7 +261,7 @@ describe('DigitalTwinWidget — loading & empty states', () => {
     setVehicles(undefined, true);
     const { container } = renderWidget(SMALL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('vehicle-twin')).toBeNull();
     expect(screen.queryByText('Locked')).toBeNull();
   });

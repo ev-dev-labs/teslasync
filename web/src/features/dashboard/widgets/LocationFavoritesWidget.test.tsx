@@ -197,7 +197,7 @@ describe('LocationFavoritesWidget states', () => {
   it('retains its heading above a loading skeleton without empty copy', () => {
     mockUseLocations.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Favorite locations')).toBeInTheDocument();
     expect(screen.queryByText('No favorite locations')).toBeNull();
   });

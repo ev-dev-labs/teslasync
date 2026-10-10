@@ -330,7 +330,7 @@ describe('MediaHistoryWidget', () => {
     mediaMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No shell content while loading.
     expect(screen.queryByText('Media history')).toBeInTheDocument();
     expect(screen.queryByText(new RegExp(MUSIC))).not.toBeInTheDocument();
