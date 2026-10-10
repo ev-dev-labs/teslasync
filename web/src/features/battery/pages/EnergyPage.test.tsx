@@ -307,6 +307,12 @@ function install(opts: InstallOpts = {}) {
 const energyCallCount = () =>
   mockedRequest.mock.calls.filter((c) => String(c[0]).includes('/energy?start=')).length
 
+function getCardHeading(title: string) {
+  const header = screen.getByText(title, { selector: '[data-card-title="true"]' }).closest('header')
+  if (!(header instanceof HTMLElement)) throw new Error(`Missing card header: ${title}`)
+  return within(header).getByRole('heading', { name: title, exact: true })
+}
+
 function renderPage(initialEntries: string[] = ['/energy']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
@@ -351,7 +357,7 @@ describe('EnergyPage', () => {
     expect(screen.getAllByText('$121.67').length).toBeGreaterThan(0)
 
     // Lifetime energy comes straight from live charging telemetry.
-    expect(screen.getByText('54,321.00')).toBeInTheDocument()
+    expect(await screen.findByText('54,321.00 kWh')).toBeInTheDocument()
 
     // The decision brief combines measured drive consumption, real 90-day
     // parked-drain evidence, a usage projection, and explicit unsupported
@@ -359,7 +365,7 @@ describe('EnergyPage', () => {
     expect(screen.getByText('1.20%/day')).toBeInTheDocument()
     expect(screen.getByText('Projected 30-day use')).toBeInTheDocument()
     expect(screen.getByText('Not measured')).toBeInTheDocument()
-    expect(screen.getByText('Efficiency driver investigation')).toBeInTheDocument()
+    expect(getCardHeading('Efficiency driver investigation')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Review temperature impact' })).toHaveAttribute('href', '/temperature-impact')
     expect(screen.getByRole('link', { name: 'Review speed profile' })).toHaveAttribute('href', '/speed-profile')
     expect(screen.getByRole('link', { name: 'Review route efficiency' })).toHaveAttribute('href', '/route-efficiency')
@@ -421,13 +427,15 @@ describe('EnergyPage', () => {
       'Efficiency driver investigation', 'Efficiency & cost overview', 'Lifetime metrics',
       'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
       'Charger type breakdown', 'Recent charging sessions',
-    ]) expect(screen.getByRole('heading', { name })).toBeInTheDocument()
+    ]) expect(name === 'Lifetime metrics'
+      ? getCardHeading(name)
+      : screen.getByRole('heading', { name })).toBeInTheDocument()
 
     // Keep the visibility guarantee: asynchronous independent requests and
     // the real FadeIn entrances must settle while the drive request stays pending.
     const overview = screen.getByRole('region', { name: 'Energy overview' })
     await waitFor(() => {
-      expect(within(overview).getByText('54,321.00')).toBeVisible()
+      expect(within(overview).getByText('54,321.00 kWh')).toBeVisible()
       expect(screen.getByText('CCS')).toBeVisible()
       expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeVisible()
     }, { timeout: 2_000 })
@@ -527,7 +535,7 @@ describe('EnergyPage', () => {
       'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
       'Charger type breakdown', 'Efficiency & cost overview', 'Lifetime metrics',
     ]) {
-      expect(screen.getByRole('heading', { name: title, exact: true }))
+      expect(getCardHeading(title))
         .toHaveAttribute('data-card-title', 'true')
     }
 

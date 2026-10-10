@@ -288,8 +288,11 @@ describe('TariffLabPage — publication retention', () => {
       view.rerender(<TariffLabPage />);
       expect(card('Arbitrage summary')).toHaveTextContent('Not computed');
       expect(replayValues().every(metric => metric.state === 'missing')).toBe(true);
-      expect(drawer).not.toHaveTextContent('Submitted replay: vehicle #7');
-      expect(drawer).not.toHaveTextContent('Replay Nights');
+      expect(drawer).not.toBeInTheDocument();
+      fireEvent.click(within(card('Arbitrage summary')).getByRole('button', { name: 'Review details' }));
+      const currentDrawer = screen.getByRole('dialog');
+      expect(currentDrawer).not.toHaveTextContent('Submitted replay: vehicle #7');
+      expect(currentDrawer).not.toHaveTextContent('Replay Nights');
       fireEvent.keyDown(document, { key: 'Escape' });
       vi.mocked(useSelectedVehicle).mockReturnValue({ ...selection, vehicleId: 7 });
       view.rerender(<TariffLabPage />);
@@ -320,7 +323,7 @@ describe('TariffLabPage — publication retention', () => {
       expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('¥');
       expect(summaryMetric('Arbitrage summary', 'saving')).toHaveTextContent('—');
       expect(summaryMetric('Arbitrage summary', 'saving')).toHaveAttribute('data-value-state', 'missing');
-      expect(screen.getByRole('textbox', { name: 'Plan name required' })).toBeVisible();
+      await waitFor(() => expect(screen.getByRole('textbox', { name: 'Plan name required' })).toBeVisible());
     });
 
     it('shows an initial replay failure without claiming a retained result or hiding the controls', async () => {
@@ -336,7 +339,7 @@ describe('TariffLabPage — publication retention', () => {
       expect(screen.getByRole('button', { name: 'Replay load against plans' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Add plan' })).toBeEnabled();
       expect(screen.getByRole('heading', { name: 'Annualised cost by plan' })).toBeVisible();
-      expect(screen.getByRole('heading', { name: 'Where your energy actually landed' })).toBeVisible();
+      await waitFor(() => expect(screen.getByRole('heading', { name: 'Where your energy actually landed' })).toBeVisible());
     });
   });
 });

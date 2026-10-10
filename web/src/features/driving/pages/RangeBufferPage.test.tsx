@@ -5,6 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import type { UseUnitsResult } from '@/hooks/useUnits';
+import type { UnitPref } from '@/lib/unitConversion';
 import type { Drive } from '@/types/driving';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
@@ -104,17 +106,38 @@ vi.mock('@/hooks/useRangeState', () => ({
   },
 }));
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({
-    formatDistance: (
-      value: number | null | undefined,
-      options?: { precision?: number },
-    ) =>
-      value == null || !Number.isFinite(value)
-        ? '—'
-        : `${(value / 1_000).toFixed(options?.precision ?? 1)} km`,
-  }),
-}));
+vi.mock('@/hooks/useUnits', async () => {
+  const units = await import('@/lib/unitConversion');
+  const unitPrefs: UnitPref = {
+    distance: 'km',
+    speed: 'km/h',
+    temperature: '°C',
+    pressure: 'bar',
+    energy: 'kWh',
+    duration: 'h',
+    power: 'kW',
+    locale: 'en-US',
+    precision: 2,
+  };
+  return {
+    useUnits: (): UseUnitsResult => ({
+      unitPrefs,
+      formatDistance: (
+        value: number | null | undefined,
+        options?: { precision?: number },
+      ) =>
+        value == null || !Number.isFinite(value)
+          ? '—'
+          : `${(value / 1_000).toFixed(options?.precision ?? 1)} km`,
+      formatSpeed: (value, options) => units.formatSpeed(value, unitPrefs, options),
+      formatTemperature: (value, options) => units.formatTemperature(value, unitPrefs, options),
+      formatPressure: (value, options) => units.formatPressure(value, unitPrefs, options),
+      formatEnergy: (value, options) => units.formatEnergy(value, unitPrefs, options),
+      formatDuration: (value, options) => units.formatDuration(value, unitPrefs, options),
+      formatPower: (value, options) => units.formatPower(value, unitPrefs, options),
+    }),
+  };
+});
 
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
@@ -230,18 +253,18 @@ function renderPage() {
 }
 
 const sectionIds = [
-  'range-buffer-kpis',
+  'range-buffer-kpis-brief',
   'range-buffer-distribution',
   'range-buffer-month-trend',
   'range-buffer-threshold-sensitivity',
   'range-buffer-weekday-profile',
   'range-buffer-hour-profile',
-  'range-buffer-drive-context',
+  'range-buffer-drive-context-brief',
   'range-buffer-distance-profile',
   'range-buffer-destinations',
   'range-buffer-low-arrivals',
-  'range-buffer-evidence-support',
-  'range-buffer-accounting',
+  'range-buffer-evidence-support-brief',
+  'range-buffer-accounting-brief',
   'range-buffer-methodology',
 ] as const;
 
@@ -266,7 +289,11 @@ describe('RangeBufferPage', () => {
     renderPage();
     expectEverySection();
     const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).not.toHaveTextContent(/offline/i);
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -299,7 +326,7 @@ describe('RangeBufferPage', () => {
   it('freezes recency across query changes', () => {
     const view = renderPage();
     const support = within(
-      screen.getByTestId('range-buffer-evidence-support'),
+      screen.getByTestId('range-buffer-evidence-support-brief'),
     );
     expect(support.getByText('0.17 days')).toBeInTheDocument();
 
@@ -318,14 +345,14 @@ describe('RangeBufferPage', () => {
 
     expect(
       within(
-        screen.getByTestId('range-buffer-evidence-support'),
+        screen.getByTestId('range-buffer-evidence-support-brief'),
       ).getByText('0.17 days'),
     ).toBeInTheDocument();
   });
 
   it('recomputes every threshold-dependent surface from the selector', () => {
     renderPage();
-    const kpis = within(screen.getByTestId('range-buffer-kpis'));
+    const kpis = within(screen.getByTestId('range-buffer-kpis-brief'));
     expect(kpis.getByText('16.67%')).toBeInTheDocument();
 
     fireEvent.change(
@@ -393,7 +420,7 @@ describe('RangeBufferPage', () => {
       name: /retry/i,
     });
     expect(retries).toHaveLength(1);
-    fireEvent.click(retries[0]!);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -417,7 +444,7 @@ describe('RangeBufferPage', () => {
       screen.getAllByRole('button', { name: 'Retry' }),
     ).toHaveLength(1);
     expect(
-      within(screen.getByTestId('range-buffer-kpis')).getByText(
+      within(screen.getByTestId('range-buffer-kpis-brief')).getByText(
         '40.00%',
       ),
     ).toBeInTheDocument();

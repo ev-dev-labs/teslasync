@@ -71,6 +71,7 @@ import ChargingReconciliationPage from './ChargingReconciliationPage';
 import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { ChargingInvoice, ReconciledLine, ReconciliationReport } from '@/types/ownership';
+import { formatPct } from '../formatters';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockInvoices = useChargingInvoices as unknown as ReturnType<typeof vi.fn>;
@@ -319,6 +320,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
 
   it('exports only matching-state value-filtered lines with original numeric amounts', async () => {
     const report = makeReport();
+    report.lines![0].match_confidence_pct = 60;
     report.lines![1].match_state = 'unmatched';
     mockReport.mockReturnValue(makeQuery(report));
     renderPage();
@@ -327,9 +329,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(within(panel).getByRole('button', { name: 'Match filter' }));
     const filter = screen.getByRole('dialog', { name: 'Match filter' });
     fireEvent.click(within(filter).getByRole('checkbox', { name: 'Select all shown values' }));
-    const unmatched = within(filter).getAllByRole('checkbox').find((checkbox) =>
-      checkbox.getAttribute('aria-label')?.toLowerCase().startsWith('unmatched'),
-    );
+    const unmatched = within(filter).getByRole('checkbox', { name: formatPct(80) });
     expect(unmatched).toBeDefined();
     fireEvent.click(unmatched!);
     fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
@@ -485,7 +485,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     const statements = card('Provider statements');
     fireEvent.click(within(statements).getByRole('button', { name: 'Reorder or hide columns' }));
     const columns = screen.getByRole('menu', { name: 'Reorder or hide columns' });
-    fireEvent.click(within(columns).getByRole('checkbox', { name: 'Billed' }));
+    fireEvent.click(within(columns).getByRole('checkbox', { name: 'Show or hide Billed' }));
     expect(within(statements).queryByRole('columnheader', { name: 'Billed' })).not.toBeInTheDocument();
     fireEvent.click(within(statements).getByRole('button', { name: 'Reorder or hide columns' }));
 
@@ -501,7 +501,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(within(statements).getByRole('button', { name: 'Remove' })).toBeEnabled();
     fireEvent.click(within(statements).getByRole('button', { name: 'Reorder or hide columns' }));
     fireEvent.click(within(screen.getByRole('menu', { name: 'Reorder or hide columns' }))
-      .getByRole('checkbox', { name: 'Billed' }));
+      .getByRole('checkbox', { name: 'Show or hide Billed' }));
   });
 
   it('uses the latest loaded statement source after refresh rather than a stale export snapshot', async () => {
@@ -534,7 +534,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       .toBeDisabled();
     expect(downloadJSON).not.toHaveBeenCalled();
     expect(downloadCSV).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Invoice reference')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Invoice reference required' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import and reconcile' })).toBeEnabled();
   });
 

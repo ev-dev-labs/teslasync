@@ -62,9 +62,17 @@ const rows = () => Array.from({ length: 4 }, (_, id) => fakeDrive({ id }));
 function expectSections() {
   for (const name of sectionNames) expect(screen.getByRole('region', { name })).toBeInTheDocument();
 }
-function tile(container: HTMLElement, group: string, label: string) {
-  const strip = container.querySelector(`#${group}`)!;
-  return within(strip as HTMLElement).getByLabelText(new RegExp(`^${label}:`));
+function metricRegion(container: HTMLElement, group: 'efficiency-kpis' | 'efficiency-insights') {
+  return within(container).getByRole('region', {
+    name: group === 'efficiency-kpis' ? 'Lifetime efficiency evidence' : 'Energy insights',
+  });
+}
+function tile(container: HTMLElement, group: 'efficiency-kpis' | 'efficiency-insights', label: string) {
+  const metric = within(metricRegion(container, group)).getByText(label, { exact: true })
+    .closest('[data-operational-metric]');
+  if (!(metric instanceof HTMLElement)) throw new Error(`Missing operational metric: ${label}`);
+  expect(metric).toHaveAttribute('role', 'listitem');
+  return metric;
 }
 beforeEach(() => {
   H.units = fakeUnits();
@@ -85,8 +93,8 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
   it('retains every original section, 8+6 metrics, four charts, table, glossary and saved-view action', () => {
     const { container } = render(<EfficiencyPage />, { wrapper: Providers });
     expectSections();
-    expect(container.querySelectorAll('#efficiency-kpis [data-stat]')).toHaveLength(8);
-    expect(container.querySelectorAll('#efficiency-insights [data-stat]')).toHaveLength(6);
+    expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
+    expect(within(metricRegion(container, 'efficiency-insights')).getAllByRole('listitem')).toHaveLength(6);
     expect(container.querySelectorAll('figure')).toHaveLength(4);
     for (const name of ['Efficiency overview', 'Energy insights', 'Efficiency by temperature range'])
       expect(screen.getByRole('heading', { name })).toBeInTheDocument();
@@ -115,7 +123,7 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
     expect(tile(container, 'efficiency-kpis', 'Avg consumption')).toHaveTextContent('Wh/mi');
     expect(tile(container, 'efficiency-kpis', 'Avg speed')).toHaveTextContent('mph');
     expect(screen.getAllByText('68–86°F').length).toBeGreaterThan(0);
-    expect(container.querySelectorAll('#efficiency-kpis [data-stat]')).toHaveLength(8);
+    expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
     expect(container.querySelectorAll('figure')).toHaveLength(4);
   });
   it('preserves genuine numeric zeros, but never converts absent/NaN/Infinity/string measurements to zero', () => {
@@ -123,17 +131,17 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
       avgEfficiencyWhKm: 0, avgSpeedKmh: 0, topSpeedKmh: 0,
       co2SavedKg: 0, regenRatio: 0, regenEnergyWh: 0, totalDurationS: 0 }));
     const { container, rerender } = render(<EfficiencyPage />, { wrapper: Providers });
-    expect(tile(container, 'efficiency-kpis', 'Drives analyzed')).toHaveAttribute('data-state', 'value');
+    expect(tile(container, 'efficiency-kpis', 'Drives analyzed')).toHaveAttribute('data-value-state', 'value');
     expect(tile(container, 'efficiency-insights', 'Total regen')).toHaveTextContent('0');
     expect(tile(container, 'efficiency-insights', 'Regen ratio')).toHaveTextContent('0');
-    expect(tile(container, 'efficiency-kpis', 'Est. cost/km')).toHaveAttribute('data-state', 'missing');
+    expect(tile(container, 'efficiency-kpis', 'Est. cost/km')).toHaveAttribute('data-value-state', 'missing');
     H.stats = fakeQuery({ totalDrives: undefined, totalDistanceKm: Infinity,
       avgEfficiencyWhKm: NaN, avgSpeedKmh: '0', topSpeedKmh: null });
     rerender(<EfficiencyPage />);
     expectSections();
     for (const label of ['Drives analyzed', 'Total distance', 'Avg consumption', 'Avg speed', 'Top speed'])
-      expect(tile(container, 'efficiency-kpis', label)).toHaveAttribute('data-state', 'missing');
-    expect(container.querySelectorAll('#efficiency-kpis [data-stat]')).toHaveLength(8);
+      expect(tile(container, 'efficiency-kpis', label)).toHaveAttribute('data-value-state', 'missing');
+    expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
   });
   it('retains usable values/charts/table through stats and drives refresh failures and paused refresh', () => {
     const { container, rerender } = render(<EfficiencyPage />, { wrapper: Providers });
@@ -143,12 +151,25 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
     rerender(<EfficiencyPage />);
     expectSections();
     expect(Array.from(container.querySelectorAll('figure'))).toEqual(figures);
-    expect(container.querySelectorAll('#efficiency-kpis [data-stat]')).toHaveLength(8);
+    expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
     expect(screen.getAllByText('20–30°C').length).toBeGreaterThan(0);
     expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
     H.drives = { ...H.drives, error: null, fetchStatus: 'paused' };
     rerender(<EfficiencyPage />);
-    expect(screen.getAllByText('The device is offline, so this section is showing the last values it received.').length).toBeGreaterThan(0);
+    const blockedWarnings = container.querySelectorAll('[data-testid="stale-refresh-warning"][data-refresh-blocked="true"]');
+    expect(blockedWarnings.length).toBeGreaterThan(0);
+    for (const warning of blockedWarnings) {
+      expect(warning).toHaveAttribute('role', 'status');
+      expect(warning).toHaveAttribute('aria-live', 'polite');
+      expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+      expect(warning).not.toHaveTextContent(/offline/i);
+    }
+    expect(screen.queryByText('The device is offline, so this section is showing the last values it received.')).not.toBeInTheDocument();
+    expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
+    expect(within(metricRegion(container, 'efficiency-insights')).getAllByRole('listitem')).toHaveLength(6);
+    expect(tile(container, 'efficiency-kpis', 'Total distance')).toHaveTextContent('5,000');
+    expect(screen.getAllByText('20–30°C').length).toBeGreaterThan(0);
+    expect(Array.from(container.querySelectorAll('figure'))).toEqual(figures);
     expect(container.querySelectorAll('figure')).toHaveLength(4);
   });
   it.each(['stats', 'drives'] as const)('isolates initial %s failure from the independently healthy neighbor', source => {
@@ -157,7 +178,7 @@ describe('live Efficiency closure (AUTHORED NOT RUN)', () => {
     expectSections();
     expect(container.querySelectorAll('figure')).toHaveLength(4);
     if (source === 'stats') expect(screen.getAllByText('20–30°C').length).toBeGreaterThan(0);
-    else expect(container.querySelectorAll('#efficiency-kpis [data-stat]')).toHaveLength(8);
+    else expect(within(metricRegion(container, 'efficiency-kpis')).getAllByRole('listitem')).toHaveLength(8);
   });
   it.each(['loading', 'unknown', 'empty', 'malformed'] as const)('keeps the complete panel closure for %s sources', kind => {
     const query = kind === 'loading' ? fakeQuery(undefined, { isLoading: true })

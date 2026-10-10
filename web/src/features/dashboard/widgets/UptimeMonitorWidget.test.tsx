@@ -295,11 +295,11 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Degraded')).toBeInTheDocument();
-    // Fresh (not stale) so the only amber dot is the degraded service dot.
-    expect(container.querySelector('.bg-amber-400')).toBeTruthy();
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--semantic-warning)]');
   });
 
   it('maps a "warning" service to Degraded (not danger) and never leaks the raw status (regression)', () => {
@@ -320,12 +320,13 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     expect(screen.queryByText('warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Down')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-amber-400')).toBeTruthy();
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--semantic-warning)]');
   });
 
   it('collapses the whole broken family (unhealthy/offline/down/failed) to a single "Down" label', () => {
@@ -343,14 +344,15 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     // Four broken services, overall still "All OK" → exactly four "Down" badges.
     expect(screen.getAllByText('Down')).toHaveLength(4);
     // None of the raw backend status strings leak into the DOM.
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
     expect(screen.queryByText('failed')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--semantic-danger)]');
   });
 
   it('maps an "unknown" service to a neutral Unknown badge + gray dot', () => {
@@ -479,7 +481,7 @@ describe('UptimeMonitorWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
   });
@@ -571,14 +573,15 @@ describe('UptimeMonitorWidget — graceful degradation on transient error', () =
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     // Content is still on screen …
     expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    // … and the freshness indicator is in its error state (danger dot).
+    expect(screen.getByRole('button', { name: 'Refresh data · {{state}}' }).querySelector('[aria-hidden="true"].rounded-full'))
+      .toHaveClass('bg-[var(--semantic-danger)]');
   });
 });

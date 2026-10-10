@@ -117,7 +117,11 @@ function providers({ children }: { children: ReactNode }) {
 }
 function mount(ui: ReactNode) { return render(ui, { wrapper: providers }); }
 function metric(label: string) {
-  return screen.getByText(label).closest('[data-stat]') as HTMLElement;
+  const node = screen.getByText(label, {
+    selector: '[data-stat-label], [data-operational-metric] *',
+  }).closest('[data-stat], [data-operational-metric]');
+  if (!(node instanceof HTMLElement)) throw new Error(`Missing metric container: ${label}`);
+  return node;
 }
 beforeEach(() => {
   fixture.length = 'km'; fixture.temperature = 'C'; fixture.precision = undefined; fixture.locale = 'en-US';
@@ -183,17 +187,17 @@ describe('ride totals and display-only preferences', () => {
     fixture.length = 'mi'; fixture.precision = 3; fixture.locale = 'de-DE';
     view.rerender(<RideOverview drive={drive} />);
     expect(metric('Distance')).toHaveTextContent('1,000');
-    expect(within(metric('Distance')).getByText('mi')).toBeInTheDocument();
+    expect(within(metric('Distance')).getByText('1,000 mi')).toBeInTheDocument();
     expect(metric('Energy used')).toHaveTextContent('2,345');
     expect(screen.getByText(/22,369 mph/)).toBeInTheDocument();
     expect(JSON.stringify(drive)).toBe(bytes);
   });
   it('keeps null, invalid and genuine zero distinct, then preserves the unselected shell', () => {
     const view = mount(<RideOverview drive={{ ...drive, energyUsedWh: 0, regenEnergyWh: null, distanceM: Number.NaN }} />);
-    expect(metric('Energy used')).toHaveAttribute('data-state', 'value');
+    expect(metric('Energy used')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Energy used')).toHaveTextContent('0.00');
-    expect(metric('Energy recovered')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Distance')).toHaveAttribute('data-state', 'invalid');
+    expect(metric('Energy recovered')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Distance')).toHaveAttribute('data-value-state', 'invalid');
     view.rerender(<RideOverview drive={null} />);
     expect(screen.getByTestId('dynamics-ride-overview')).toBeInTheDocument();
     expect(screen.getByText('Choose a trip with recorded data to review its outcome.')).toBeInTheDocument();
@@ -296,17 +300,19 @@ describe('signed live physics and independent errors', () => {
     expect(metric('Combined')).toHaveTextContent('0.50');
     fixture.dynamics.data = { lateral_acceleration: 0, longitudinal_acceleration: null };
     view.rerender(<GForcePanel vehicleId={7} />);
-    expect(metric('Lateral')).toHaveAttribute('data-state', 'value');
+    expect(metric('Lateral')).toHaveAttribute('data-value-state', 'value');
     expect(metric('Lateral')).toHaveTextContent('0.00');
-    expect(metric('Combined')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Combined')).toHaveAttribute('data-value-state', 'missing');
   });
   it('never promotes an invalid axis into a magnitude or fabricates an observation timestamp', () => {
     fixture.dynamics.data = { lateral_acceleration: Number.NaN, longitudinal_acceleration: -0.4 };
     mount(<GForcePanel vehicleId={7} />);
-    expect(metric('Lateral')).toHaveAttribute('data-state', 'missing');
-    expect(metric('Combined')).toHaveAttribute('data-state', 'missing');
+    expect(metric('Lateral')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Combined')).toHaveAttribute('data-value-state', 'missing');
     expect(metric('Longitudinal')).toHaveTextContent('-0.40');
-    expect(document.querySelector('[data-period-kind="snapshot"]')).toBeInTheDocument();
+    expect(within(screen.getByTestId('dynamics-g-force')).getByText(
+      'Current signals · not trip history · Source observation time not provided',
+    )).toBeInTheDocument();
   });
   it('preserves pedal false/true/unknown and distinguishes invalid position from known zero', () => {
     fixture.dynamics.data = { pedal_position: 0, brake_pedal_position: Number.NaN, brake_pedal_active: false };
@@ -342,8 +348,12 @@ describe('signed live physics and independent errors', () => {
     expect(metric('Avg Drive Speed')).toHaveTextContent('18.00');
     expect(metric('Top Drive Speed')).toHaveTextContent('72.00');
     expect(metric('Motor Power')).toHaveTextContent('42.35');
-    expect(document.querySelector('#dynamics-current-motor-power')).toHaveAttribute('data-period-kind', 'snapshot');
-    expect(document.querySelector('#dynamics-range-speeds')).toHaveAttribute('data-period-kind', 'unknown');
+    expect(within(screen.getByTestId('dynamics-current-motor-power')).getByText(
+      `Current signals · not trip history · ${sample.ts}`,
+    )).toBeInTheDocument();
+    expect(within(screen.getByTestId('dynamics-range-speeds')).getByText(
+      'Average and maximum of the loaded trips, including any current drive; not a complete-range aggregate.',
+    )).toBeInTheDocument();
   });
   it('surfaces independent state/cruise/follow failures without dropping motor/dynamics neighbors', () => {
     fixture.vehicle = { error: new Error('speed failed'), isError: true };

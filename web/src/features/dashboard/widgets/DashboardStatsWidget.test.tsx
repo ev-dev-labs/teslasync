@@ -34,9 +34,10 @@
  * inside a MemoryRouter because the shared feedback components it composes may
  * reach for router context.
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import * as settingsHooks from '@/hooks/useSettings';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { DashboardStats } from '@/types/dashboard';
@@ -174,6 +175,8 @@ beforeEach(() => {
   timelineMock.mockReturnValue(makeQ({ data: [] as FSMTransition[] }));
 });
 
+afterEach(() => vi.restoreAllMocks());
+
 // ── Data-source resolution ───────────────────────────────────────────────────
 
 describe.each([1, 2, 3])('DashboardStatsWidget — identifying heading at cols=%i', (cols) => {
@@ -202,7 +205,7 @@ describe.each([1, 2, 3])('DashboardStatsWidget — identifying heading at cols=%
         expect(screen.getByText('Trips')).toBeInTheDocument();
         if (cols > 1) expect(screen.getByText('Charge sessions')).toBeInTheDocument();
       }
-      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       if (state === 'empty') expect(screen.getByText('No dashboard stats available')).toBeInTheDocument();
       if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
       if (state === 'retained failure') expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
@@ -271,9 +274,10 @@ describe('DashboardStatsWidget — states', () => {
     useDashboardStatsMock.mockReturnValue(
       makeQ<DashboardStats>(undefined, { isError: true, dataUpdatedAt: 0 }),
     );
-    const { container } = renderWidget();
+    renderWidget();
     // Error tier dot on the freshness chip, and an empty panel (never blank).
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    const freshness = screen.getByRole('button', { name: /^Refresh data · Error/ });
+    expect(freshness.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
     expect(screen.getByText('FSM state')).toBeInTheDocument();
   });
 });
@@ -289,10 +293,11 @@ describe('DashboardStatsWidget — primary freshness does not follow historical 
       makeQ<{ data: FSMTransition[] }>(undefined, { isError: true, dataUpdatedAt: 0 }),
     );
 
-    const { container } = renderWidget();
+    renderWidget();
     // Regression guard: the merged health used to be poisoned red by the 404.
-    expect(container.querySelector('.bg-red-400')).toBeNull();
-    expect(container.querySelector('.bg-emerald-400')).not.toBeNull();
+    const freshness = screen.getByRole('button', { name: /^Refresh data · Up to date/ });
+    expect(freshness.querySelector('[class*="--semantic-danger"]')).toBeNull();
+    expect(freshness.querySelector('[class*="--semantic-success"]')).not.toBeNull();
   });
 
   it('does not flip to the fetching tier when only the timeline is refetching', () => {
@@ -301,17 +306,19 @@ describe('DashboardStatsWidget — primary freshness does not follow historical 
       makeQ<{ data: FSMTransition[] }>(undefined, { isFetching: true, dataUpdatedAt: 0 }),
     );
 
-    const { container } = renderWidget();
-    expect(container.querySelector('.bg-sky-400')).toBeNull();
-    expect(container.querySelector('.bg-emerald-400')).not.toBeNull();
+    renderWidget();
+    const freshness = screen.getByRole('button', { name: /^Refresh data · Up to date/ });
+    expect(freshness.querySelector('[class*="--semantic-info"]')).toBeNull();
+    expect(freshness.querySelector('[class*="--semantic-success"]')).not.toBeNull();
   });
 
   it('still shows the error tier when the FSM state (a live source) fails', () => {
     useVehicleStateMachineMock.mockReturnValue(
       makeQ<VehicleState>(undefined, { isError: true, dataUpdatedAt: 0 }),
     );
-    const { container } = renderWidget();
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    renderWidget();
+    const freshness = screen.getByRole('button', { name: /^Refresh data · Error/ });
+    expect(freshness.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
   });
 });
 
@@ -528,7 +535,7 @@ describe('DashboardStatsWidget — a11y', () => {
       useDashboardStatsMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
       useVehicleStateMachineMock.mockReturnValue(makeQ(undefined, { isLoading: true }));
       const { container } = renderWidget();
-      expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+      expect(container.querySelector('[data-data-state="initial"] [class*="--skeleton-bg"]')).not.toBeNull();
     });
 
     it('does not keep disabled FSM hooks in a permanent loading state for an empty fleet', () => {
@@ -588,10 +595,34 @@ describe('DashboardStatsWidget — a11y', () => {
     });
 
     it('reactively formats memoized fleet counts without refetching', () => {
-      renderWidget();
+      const stats = makeQ(makeStats());
+      const fsm = makeQ(makeFsm());
+      const timeline = makeQ({ data: [] as FSMTransition[] });
+      useDashboardStatsMock.mockReturnValue(stats);
+      useVehicleStateMachineMock.mockReturnValue(fsm);
+      timelineMock.mockReturnValue(timeline);
+      const settings = settingsHooks.useSettings();
+      const settingsSpy = vi.spyOn(settingsHooks, 'useSettings');
+      const { rerender } = renderWidget();
       expect(screen.getByText('1,234')).toBeInTheDocument();
+      // OperationalBrief reads settings-backed unitPrefs.locale, not just the
+      // global bridge used by the compact hero.
+      settingsSpy.mockReturnValue({
+        ...settings,
+        settings: { ...settings.settings, locale: 'de-DE' },
+        locale: 'de-DE',
+      });
       act(() => setGlobalLocale('de-DE'));
+      rerender(
+        <MemoryRouter>
+          <DashboardStatsWidget size={{ cols: 2, rows: 2 }} />
+        </MemoryRouter>,
+      );
       expect(screen.getByText('1.234')).toBeInTheDocument();
+      expect(screen.queryByText('1,234')).not.toBeInTheDocument();
+      expect(stats.refetch).not.toHaveBeenCalled();
+      expect(fsm.refetch).not.toHaveBeenCalled();
+      expect(timeline.refetch).not.toHaveBeenCalled();
     });
 
     it('uses the canonical vehicle-only seven-day FSM route and renders its actual paginated response', () => {
@@ -618,7 +649,7 @@ describe('DashboardStatsWidget — a11y', () => {
       expect(screen.getByText('Recent transitions')).toBeInTheDocument();
       expect(screen.getByText('1,234')).toBeInTheDocument();
       expect(screen.getByText('42')).toBeInTheDocument();
-      expect(container.querySelector('[data-data-state="ok"] .animate-pulse')).not.toBeNull();
+      expect(container.querySelector('[data-data-state="ok"] [class*="--skeleton-bg"]')).not.toBeNull();
       expect(screen.queryByText('No data available')).not.toBeInTheDocument();
     });
 

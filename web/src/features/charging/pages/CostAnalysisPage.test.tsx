@@ -21,13 +21,13 @@
  *      pre-SI double-conversion that inflated it ~1600x to ~$96.56/km. The gas
  *      calculator's gallons still derive from miles (mpg is miles-based).
  *   3. Loading — while sessions are in flight the data sections show their
- *      loading affordances (chart spinners) and the KPI values are withheld,
+ *      loading affordances (chart statuses and static skeletons) and the KPI values are withheld,
  *      never a half-populated dashboard.
  *   4. Error — a failed sessions query surfaces retryable "Can't reach server"
  *      banners while the independent forecast section still renders its chart
  *      (graceful degrade), and Retry re-fires the sessions request.
  *   5. Empty — brand-new / replay accounts get honest per-section empty states
- *      (and zeroed KPI cards) with no divide-by-zero in the savings math.
+ *      (and unknown KPI cards) with no divide-by-zero in the savings math.
  *   6. Savings calculator interaction — editing the gas price recomputes the
  *      gas-equivalent cost, and Reset Defaults restores it.
  *   7. a11y + anti-stub — the landmark regions expose accessible names and the
@@ -84,6 +84,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import CostAnalysisPage from './CostAnalysisPage'
@@ -269,13 +270,22 @@ function renderPage(initialEntries: string[] = ['/cost-analysis']) {
       <QueryClientProvider client={client}>
         <ToastProvider>
           <SelectedVehicleProvider>
-            <CostAnalysisPage />
+            <ThemeProvider>
+              <CostAnalysisPage />
+            </ThemeProvider>
           </SelectedVehicleProvider>
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
   return { ...mounted, client }
+}
+
+function summaryRegion() {
+  const region = screen.getByRole('heading', { name: 'Cost summary metrics' })
+    .closest<HTMLElement>('[data-tour="cost-analysis"]')
+  if (!region) throw new Error('Cost summary must retain its named landmark')
+  return region
 }
 
 beforeEach(() => {
@@ -305,7 +315,7 @@ describe('CostAnalysisPage', () => {
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
     expect(screen.getByText('Monthly cost breakdown')).toBeInTheDocument()
     expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
-    const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
+    const energy = within(summaryRegion())
       .getByText('Total Energy').closest('[data-operational-metric]')
     expect(energy).not.toBeNull()
     expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('60.00 kWh')
@@ -323,7 +333,7 @@ describe('CostAnalysisPage', () => {
     expect(await screen.findByText('$0.10')).toBeInTheDocument()
     expect(screen.getAllByText('$6.00').length).toBeGreaterThan(0)
     expect(screen.getAllByText('3 sessions').length).toBeGreaterThan(0)
-    const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
+    const energy = within(summaryRegion())
       .getByText('Total Energy').closest('[data-operational-metric]')
     expect(energy).not.toBeNull()
     expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('60.00 kWh')
@@ -364,19 +374,22 @@ describe('CostAnalysisPage', () => {
 
   it('shows loading affordances while sessions are in flight and withholds KPI values', async () => {
     install({ sessionsPending: true })
-    renderPage()
+    const { container } = renderPage()
 
     // Once the fleet loads and the vehicle auto-selects, the enabled-but-pending
     // sessions query drives the data sections into their loading state.
-    const spinners = await screen.findAllByRole('status', { name: /Loading/i })
-    expect(spinners.length).toBeGreaterThan(0)
+    const loadingStatuses = await screen.findAllByRole('status', { name: /Loading/i })
+    expect(loadingStatuses.length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0)
 
     // The KPI values are not fabricated while data is loading.
     expect(screen.queryByText('$0.10')).toBeNull()
     expect(screen.queryByText('60.00 kWh')).toBeNull()
-    const energy = within(screen.getByRole('region', { name: 'Cost summary metrics' }))
+    const energy = within(summaryRegion())
       .queryByText('Total Energy')?.closest('[data-operational-metric]')
-    expect(energy?.querySelector('[data-operational-value]')).toHaveTextContent('—')
+    expect(energy).not.toBeNull()
+    expect(summaryRegion().querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
+    expect(energy?.querySelector('[data-operational-value]')).toBeNull()
   })
 
   it('surfaces retryable error banners and still renders the independent forecast', async () => {
@@ -399,7 +412,7 @@ describe('CostAnalysisPage', () => {
     // Retry re-fires the failed sessions request.
     const before = chargingCallCount()
     expect(before).toBeGreaterThanOrEqual(1)
-    const retry = screen.getAllByRole('button', { name: 'Retry' })[0]
+    const retry = within(summaryRegion()).getByRole('button', { name: 'Retry' })
     fireEvent.click(retry)
     await waitFor(() => expect(chargingCallCount()).toBeGreaterThan(before))
   })
@@ -415,7 +428,11 @@ describe('CostAnalysisPage', () => {
       screen.getByText('Need at least 3 months of charging data for cost forecasting.'),
     ).toBeInTheDocument()
 
-    // KPI cards fold to honest zeros; savingsPercent === 0 must not NaN out.
+    // No sessions means unknown source measurements, not fabricated zeros.
+    expect(summaryRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(6)
+    expect(summaryRegion().querySelectorAll('[data-operational-value]')).toHaveLength(6)
+    expect(within(summaryRegion()).getAllByText('—')).toHaveLength(6)
+    // Missing operands must not leak NaN or divide-by-zero into savings.
     expect(screen.queryByText(/NaN|Infinity/)).toBeNull()
 
     // No populated values leak through the empty branch.
@@ -449,7 +466,8 @@ describe('CostAnalysisPage', () => {
     await screen.findByText('$0.10')
 
     // Landmark regions expose their accessible names for screen-reader nav.
-    expect(screen.getByRole('region', { name: 'Cost summary metrics' })).toBeInTheDocument()
+    expect(summaryRegion()).toHaveAttribute('aria-label', 'Cost summary metrics')
+    expect(within(summaryRegion()).getByRole('region', { name: 'Cost summary metrics' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Cost trends' })).toBeInTheDocument()
     expect(
       screen.getByRole('region', { name: 'Lifetime and environmental impact' }),

@@ -408,7 +408,7 @@ describe('system-health — lazy component wiring', () => {
     mockUseConnectionPool.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('System health')).toBeInTheDocument();
   });
 
@@ -419,7 +419,7 @@ describe('system-health — lazy component wiring', () => {
     const { container } = await renderWidget('system-health', { cols: 2, rows: 4 });
 
     expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.getByText('128 MB')).toBeInTheDocument();
     expect(screen.getByText('5/25')).toBeInTheDocument();
     expect(screen.getByRole('status', { name: 'Loading Services' })).toBeInTheDocument();
@@ -517,7 +517,7 @@ describe('version-info — lazy component wiring', () => {
     const { container } = await renderWidget('version-info', { cols: 2, rows: 2 });
 
     expect(container.querySelector('[data-data-state="initial"]')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="initial"] [class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No version data available')).not.toBeInTheDocument();
     expect(screen.queryByText('Go version')).not.toBeInTheDocument();
   });

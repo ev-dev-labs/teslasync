@@ -152,9 +152,9 @@ describe('WidgetStatusGrid — cell rendering', () => {
 
 describe('WidgetStatusGrid — status → style map', () => {
   const cases: Array<[StatusCell['status'], string, string]> = [
-    ['ok', 'bg-emerald-500/10', 'bg-emerald-400'],
-    ['warning', 'bg-amber-500/10', 'bg-amber-400'],
-    ['error', 'bg-red-500/10', 'bg-red-400'],
+    ['ok', 'bg-[var(--semantic-success-bg)]', 'bg-[var(--semantic-success)]'],
+    ['warning', 'bg-[var(--semantic-warning-bg)]', 'bg-[var(--semantic-warning)]'],
+    ['error', 'bg-[var(--semantic-danger-bg)]', 'bg-[var(--semantic-danger)]'],
     ['inactive', 'bg-[var(--surface-2)]', 'bg-[var(--text-muted)]'],
     ['unknown', 'bg-[var(--surface-2)]', 'bg-[var(--text-muted)]'],
   ];

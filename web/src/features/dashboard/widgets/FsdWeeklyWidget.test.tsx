@@ -123,7 +123,7 @@ describe('FsdWeeklyWidget', () => {
           expect(screen.getByText('40.00%')).toBeInTheDocument();
           if (cols > 1) expect(screen.getByRole('link', { name: 'FSD insights' })).toHaveAttribute('href', '/fsd');
         }
-        if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+        if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
         if (state === 'empty') expect(screen.getByText('Select a vehicle')).toBeInTheDocument();
         if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
         if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();

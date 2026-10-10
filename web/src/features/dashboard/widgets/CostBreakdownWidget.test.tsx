@@ -103,7 +103,6 @@ vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
     currencySymbol: '$',
     costPerKwh: 0.12,
-    currencySymbol: '$',
     formatCurrency: money.formatCurrency,
     formatEnergyCost: (kwh: number) => `$${kwh}`,
     costPerDistanceUnit: () => null,
@@ -245,7 +244,7 @@ it('reviews actual cost quantities and the original tariff conversion without hi
   expect(within(drawer).getByText('$0.05')).toBeInTheDocument();
   expect(within(drawer).getByText('$180.00')).toBeInTheDocument();
   expect(within(drawer).getByText(/not independently measured savings/)).toBeInTheDocument();
-  expect(within(drawer).getByText(/Vehicle 42/)).toBeInTheDocument();
+  expect(within(drawer).getByText(/^Vehicle 42;/)).toBeInTheDocument();
 });
 
 function renderWidget(size: WidgetSize, props: Partial<WidgetProps> = {}) {
@@ -349,7 +348,7 @@ describe('CostBreakdownWidget — shell states', () => {
     mockCost.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Cost breakdown')).toBeInTheDocument();
     expect(screen.queryByText('No cost data')).toBeNull();
   });
@@ -479,7 +478,9 @@ describe('CostBreakdownWidget — standard layout', () => {
     mockCost.mockReturnValue(qr({ data: makeData({ monthly_breakdown: many }) }));
     renderWidget(STANDARD);
 
-    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    const rankedList = screen.getByText('2025-07').closest('ul');
+    if (!rankedList) throw new Error('Ranked monthly list did not mount');
+    expect(within(rankedList).getAllByRole('listitem')).toHaveLength(5);
     // Top five by value are 70…30; the two lowest months are dropped.
     expect(screen.getByText('2025-07')).toBeInTheDocument();
     expect(screen.queryByText('2025-01')).toBeNull();
@@ -577,9 +578,11 @@ describe('CostBreakdownWidget — null-safety & hardening', () => {
         ],
       } }));
       renderWidget(STANDARD);
-      expect(screen.getAllByRole('listitem')).toHaveLength(1);
-      expect(screen.getByRole('listitem')).toHaveTextContent('Credit');
-      expect(screen.getByRole('listitem')).not.toHaveTextContent('Unmeasured');
+      const rankedList = screen.getByText('Credit').closest('ul');
+      if (!rankedList) throw new Error('Ranked monthly list did not mount');
+      expect(within(rankedList).getAllByRole('listitem')).toHaveLength(1);
+      expect(within(rankedList).getByRole('listitem')).toHaveTextContent('Credit');
+      expect(within(rankedList).getByRole('listitem')).not.toHaveTextContent('Unmeasured');
       expect(screen.getAllByText('Unmeasured').length).toBeGreaterThan(0);
       expect(screen.getByText('—')).toBeInTheDocument();
     });

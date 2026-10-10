@@ -192,7 +192,7 @@ describe.each([1, 2, 3])('TirePressureVisualWidget — identifying heading at co
         expect(container.querySelectorAll(`rect[fill="${GREEN}"]`)).toHaveLength(4);
         expect(screen.getByText('All normal')).toBeInTheDocument();
       }
-      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       if (state === 'empty') expect(screen.getByText('No tire pressure data')).toBeInTheDocument();
       if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
       if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -231,7 +231,7 @@ describe('TirePressureVisualWidget — shell states', () => {
     mockLatest.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No tire pressure data')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });

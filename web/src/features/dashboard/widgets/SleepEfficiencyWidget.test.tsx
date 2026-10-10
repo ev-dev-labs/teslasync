@@ -247,7 +247,7 @@ describe('SleepEfficiencyWidget states', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget({ vehicleId: 1 });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Sleep efficiency')).toBeInTheDocument();
     expect(screen.queryByText('No sleep efficiency data')).toBeNull();
   });
@@ -294,7 +294,9 @@ describe('SleepEfficiencyWidget populated', () => {
     expect(within(drawer).getByText('60.00 h')).toBeInTheDocument();
     expect(within(drawer).getByText('4')).toBeInTheDocument();
     expect(within(drawer).getByText(/not a certified full-window wake count/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/Vehicle 1/)).toBeInTheDocument();
+    const drawerHeader = drawer.querySelector('[data-drawer-header="true"]');
+    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Missing sleep source drawer header');
+    expect(within(drawerHeader).getByText(/Vehicle 1/)).toBeInTheDocument();
   });
   it('preserves the source percentage beyond its scale without losing any derived statistics', async () => {
     const data = makeData({ sleep_efficiency_pct: 125 });
@@ -362,9 +364,9 @@ describe('SleepEfficiencyWidget populated', () => {
     renderWidget({ vehicleId: 1 });
 
     // (1200 + 600) / 60 = 30 — NOT (1200+600+5000+4000)/60 = 180.
-    expect(await screen.findByText('30.00')).toBeInTheDocument();
+    expect(await screen.findByText('30.00 h')).toBeInTheDocument();
     await waitFor(() => expect(document.querySelector('[aria-busy="true"]')).toBeNull());
-    expect(screen.queryByText('180.00')).toBeNull();
+    expect(screen.queryByText('180.00 h')).toBeNull();
   });
 
   const colorCases = [

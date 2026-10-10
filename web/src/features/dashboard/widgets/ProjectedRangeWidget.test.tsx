@@ -98,12 +98,10 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// Colour tokens the ComparisonBar fill paints per band. jsdom's cssstyle may
-// serialise the inline `backgroundColor` as either the hex or an rgb() form, so
-// each band matcher accepts both.
-const GREEN = /#10b981|rgb\(\s*16,\s*185,\s*129\s*\)/i;
-const AMBER = /#f59e0b|rgb\(\s*245,\s*158,\s*11\s*\)/i;
-const RED = /#ef4444|rgb\(\s*239,\s*68,\s*68\s*\)/i;
+// Assert semantic roles independently of their light/dark palette values.
+const GREEN = 'var(--semantic-success)';
+const AMBER = 'var(--semantic-warning)';
+const RED = 'var(--semantic-danger)';
 
 function makeData(overrides: Partial<ProjectedRangeData> = {}): ProjectedRangeData {
   return {
@@ -233,10 +231,10 @@ describe('ProjectedRangeWidget — standard layout (km)', () => {
 
 describe('ProjectedRangeWidget — health badge thresholds', () => {
   const cases: Array<{ score: number; text: string; klass: string }> = [
-    { score: 95, text: 'Excellent', klass: 'bg-green-100' },
-    { score: 75, text: 'Good', klass: 'bg-green-100' },
-    { score: 55, text: 'Fair', klass: 'bg-yellow-100' },
-    { score: 30, text: 'Poor', klass: 'bg-red-100' },
+    { score: 95, text: 'Excellent', klass: 'bg-[var(--semantic-success-bg)]' },
+    { score: 75, text: 'Good', klass: 'bg-[var(--semantic-success-bg)]' },
+    { score: 55, text: 'Fair', klass: 'bg-[var(--semantic-warning-bg)]' },
+    { score: 30, text: 'Poor', klass: 'bg-[var(--semantic-danger-bg)]' },
   ];
 
   it.each(cases)(
@@ -271,7 +269,7 @@ describe('ProjectedRangeWidget — comparison bar colour bands', () => {
     expect(bar).toHaveAttribute('aria-valuenow', '100');
     const fill = barFill(container);
     expect(fill.style.width).toBe('100%');
-    expect(fill.style.background).toMatch(GREEN);
+    expect(fill.style.background).toBe(GREEN);
   });
 
   it('paints the fill amber in the 60–79 band', () => {
@@ -281,7 +279,7 @@ describe('ProjectedRangeWidget — comparison bar colour bands', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(barFill(container).style.background).toMatch(AMBER);
+    expect(barFill(container).style.background).toBe(AMBER);
   });
 
   it('paints the fill red below 60', () => {
@@ -293,7 +291,7 @@ describe('ProjectedRangeWidget — comparison bar colour bands', () => {
 
     const bar = screen.getByRole('progressbar');
     expect(bar).toHaveAttribute('aria-valuenow', '40');
-    expect(barFill(container).style.background).toMatch(RED);
+    expect(barFill(container).style.background).toBe(RED);
   });
 
   it('renders an indeterminate progressbar (no aria-valuenow, no caption) when EPA is zero', () => {
@@ -423,7 +421,7 @@ describe('ProjectedRangeWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Projected range')).toBeInTheDocument();
     expect(screen.queryByText('No projected range data')).not.toBeInTheDocument();
   });
@@ -450,14 +448,15 @@ describe('ProjectedRangeWidget — query states', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     // Data is still on screen …
     expect(screen.getByText('Projected range')).toBeInTheDocument();
     expect(screen.getByText('350.00')).toBeInTheDocument();
     expect(screen.getByText(/Excellent/)).toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    const freshness = screen.getByRole('button', { name: /^Refresh data\b/i });
+    expect(freshness.querySelector('[aria-hidden="true"][class*="bg-[var(--semantic-danger)]"]')).toBeTruthy();
   });
 
   it('degrades a partial payload to a "—" range and an indeterminate bar without throwing', () => {
@@ -520,7 +519,7 @@ describe('ProjectedRangeWidget — freshness interaction', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data\b/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -537,7 +536,7 @@ describe('ProjectedRangeWidget — freshness interaction', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data\b/i }));
 
     expect(refetch).not.toHaveBeenCalled();
   });

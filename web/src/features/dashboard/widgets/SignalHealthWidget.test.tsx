@@ -167,7 +167,7 @@ it('reviews actual signal quantities, selected-vehicle scope and the unchanged g
   fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
   const drawer = screen.getByRole('dialog');
   expect(within(drawer).getByText('30s ago')).toBeInTheDocument();
-  expect(within(drawer).getByText(/Vehicle 42/)).toBeInTheDocument();
+  expect(within(drawer).getByText('Vehicle 42; current catalog and returned observations only', { exact: true })).toBeInTheDocument();
   expect(within(drawer).getAllByText(/does not certify distributed live-state freshness/).length).toBeGreaterThan(0);
   expect(within(drawer).getByText(/missing or unparseable timestamps/)).toBeInTheDocument();
 });
@@ -223,7 +223,7 @@ describe('SignalHealthWidget — independent source trust', () => {
     MOCK_GAPS = { data: undefined };
     MOCK_SIGNALS = { data: undefined };
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
   });
 });
 
@@ -234,7 +234,7 @@ describe('SignalHealthWidget — lifecycle states', () => {
     MOCK_GAPS = { data: { A: { timestamp: ago(10 * S) } } };
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     // Loading short-circuits the shell: title, content and empty state are gone.
     expect(screen.queryByText('Signal health')).toBeInTheDocument();
     expect(screen.getByText('Total signals')).toBeInTheDocument();
@@ -378,7 +378,7 @@ describe('SignalHealthWidget — compact view', () => {
     expect(screen.getByText('7')).toBeInTheDocument();
     expect(screen.getByText('Signals')).toBeInTheDocument();
     expect(screen.getByText('30s ago')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Signal health' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Signal source coverage' })).toBeInTheDocument();
     expect(screen.queryByText('Total signals')).toBeNull();
   });
 });

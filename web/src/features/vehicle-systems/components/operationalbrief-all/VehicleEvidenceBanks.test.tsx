@@ -12,8 +12,8 @@ import { SourceAvailabilityBrief } from './SourceAvailabilityBrief';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
-      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.[name] ?? '')),
+    t: (key: string, fallback?: string, values?: Record<string, unknown> & { replace?: Record<string, unknown> }) =>
+      (fallback ?? key).replace(/\{\{(\w+)\}\}/g, (_match, name: string) => String(values?.replace?.[name] ?? values?.[name] ?? '')),
     i18n: { language: 'en' },
   }),
 }));
@@ -80,7 +80,7 @@ describe('secondary banks use the actual Brief without replacing accounting iden
     fireEvent.click(within(screen.getByTestId(fixture.id)).getByRole('button', { name: 'Review details' }));
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Operational metrics')).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    fireEvent.click(within(dialog).getByLabelText('Close', { selector: '[data-drawer-header] button' }));
     expect(screen.getByText(fixture.identity)).toBeInTheDocument();
   });
 
@@ -120,6 +120,6 @@ describe('secondary banks use the actual Brief without replacing accounting iden
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByText('Known state does not imply an independent measurement.')).toBeInTheDocument();
     expect(within(dialog).getByText('Counts are evaluated against 0 unique timestamp-valid rows.')).toBeInTheDocument();
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+    fireEvent.click(within(dialog).getByLabelText('Close', { selector: '[data-drawer-header] button' }));
   });
 });

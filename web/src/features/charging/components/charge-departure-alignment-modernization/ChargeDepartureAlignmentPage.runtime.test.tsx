@@ -176,7 +176,6 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(stats[3]?.querySelector(':scope > div:last-child')).toHaveTextContent('of 15 ended charges within 24h of a drive');
     expect(result.container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
     expect(result.container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
-    expect(screen.getByText(/not complete lifetime coverage/)).toBeInTheDocument();
     expect(screen.getByText(/Pairing and flags are model-derived/)).toBeInTheDocument();
     expect(result.container.querySelector('[data-alignment-bounds="charging-history"]'))
       .toHaveTextContent(new Date(charges[0]!.ended_at!).toLocaleString('en'));
@@ -186,6 +185,11 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(screen.getByTestId('alignment-search')).toHaveTextContent('existing=kept');
     expect(screen.getByTestId('alignment-search')).toHaveTextContent('hidden_charge-departure-alignment=margin');
     expect(screen.queryByRole('combobox', { name: /Vehicle|Date range|Time range/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
+    const scopeContext = within(details).getByText('What changed', { exact: true }).parentElement;
+    if (!scopeContext) throw new Error('Missing narrative scope context');
+    expect(within(scopeContext).getByText(/not complete lifetime coverage/)).toBeInTheDocument();
   });
 
   it('keeps all loaded pairs reachable beyond the original twelve and every field in desktop columns', () => {
@@ -303,7 +307,8 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(tiles(result.container)[3]?.querySelector('[data-operational-value]')).toHaveTextContent('15');
     expect(screen.getByRole('table', { name: 'Recent Pairs' })).toBeInTheDocument();
     const warning = sourcePanel(result.container, 'charging-history');
-    expect(within(warning).getByText(/last values it received/)).toBeInTheDocument();
+    expect(within(warning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.'))
+      .toBeInTheDocument();
     fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
     expect(source.chargeRetry).toHaveBeenCalledTimes(1);
     expect(source.driveRetry).not.toHaveBeenCalled();
@@ -367,8 +372,10 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
       'SoC drift', 'Already-full dwell (min)', 'Pairing signals', 'Charge ID', 'Drive ID',
     ]) expect(within(modal).getByText(text, { exact: true })).toBeInTheDocument();
     expect(within(modal).getByText('charge-14')).toBeInTheDocument();
-    // Modal owns an icon Close and a footer Close; select the text-bearing footer.
-    fireEvent.click(within(modal).getByText('Close', { selector: 'button' }));
+    // Modal owns an icon Close and a footer Close; scope the accessible action to its footer.
+    const footer = modal.querySelector<HTMLElement>('[data-modal-footer]');
+    if (!footer) throw new Error('Missing mobile details footer');
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close', exact: true }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 

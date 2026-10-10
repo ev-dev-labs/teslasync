@@ -180,7 +180,7 @@ it.each([1, 2, 3])('identifies fleet statistics at %i columns', (cols) => {
 /** Let the real drive/charge queries resolve so both sparklines paint. */
 async function settleSparklines() {
   await waitFor(() =>
-    expect(document.querySelectorAll('polyline')).toHaveLength(2),
+    expect(document.querySelectorAll('[data-operational-metric] polyline')).toHaveLength(2),
   );
 }
 
@@ -355,7 +355,7 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
     mockVehicles.mockReturnValue(qr({ isLoading: true }));
     mockAnalytics.mockReturnValue(qr({ isLoading: true }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[aria-hidden="true"][class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByRole('group', { name: 'Fleet size' })).not.toBeInTheDocument();
   });
 
@@ -394,7 +394,7 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
     const { container } = renderWidget();
 
     // The error is communicated by the freshness chip…
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    expect(container.querySelector('button[aria-label*="Error"] [class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
     // …while all five tiles still render (never a blank panel).
     expect(document.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
   });

@@ -258,7 +258,7 @@ describe('ClimateControlPanelWidget — source brief', () => {
     expect(screen.getByText('Bat heater')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(query.refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -288,7 +288,7 @@ describe('ClimateControlPanelWidget — loading & empty states', () => {
     setQuery({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByRole('heading', { name: /Climate control/i })).toBeInTheDocument();
     expect(screen.queryByText('Fan speed')).toBeNull();
   });
@@ -517,6 +517,6 @@ describe('ClimateControlPanelWidget — interactions & a11y', () => {
     setQuery({ data: makeClimate() });
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: /Climate control/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Climate control$/i })).toBeInTheDocument();
   });
 });

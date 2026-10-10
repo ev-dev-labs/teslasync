@@ -10,6 +10,7 @@ import { request } from '@/api/client';
 import type { TeslaChargingSessionResponse } from '@/api/hooks/useCharging';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+import { ToastProvider } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import TeslaChargingSessionsPage from './TeslaChargingSessionsPage';
@@ -83,6 +84,41 @@ const clients: QueryClient[] = [];
 let translations: i18n;
 let historyPending: boolean;
 
+class LocalIntersectionObserver implements IntersectionObserver {
+  readonly root: Element | Document | null;
+  readonly rootMargin: string;
+  readonly thresholds: ReadonlyArray<number>;
+
+  constructor(
+    private readonly callback: IntersectionObserverCallback,
+    options: IntersectionObserverInit = {},
+  ) {
+    this.root = options.root ?? null;
+    this.rootMargin = options.rootMargin ?? '0px';
+    this.thresholds = Array.isArray(options.threshold)
+      ? options.threshold
+      : [options.threshold ?? 0];
+  }
+
+  observe(target: Element) {
+    // Sticky-header consumers need geometry as well as the visible-state flag.
+    const boundingClientRect = target.getBoundingClientRect();
+    this.callback([{
+      boundingClientRect,
+      intersectionRect: boundingClientRect,
+      intersectionRatio: 1,
+      isIntersecting: true,
+      rootBounds: null,
+      target,
+      time: performance.now(),
+    }], this);
+  }
+
+  unobserve() {}
+  disconnect() {}
+  takeRecords(): IntersectionObserverEntry[] { return []; }
+}
+
 function mount(children: ReactNode, route: string) {
   const client = new QueryClient({
     defaultOptions: {
@@ -95,7 +131,9 @@ function mount(children: ReactNode, route: string) {
     <I18nextProvider i18n={translations}>
       <MemoryRouter initialEntries={[`${route}?vehicle_id=7&from=2000-01-01&to=2100-01-01`]}>
         <QueryClientProvider client={client}>
-          <SelectedVehicleProvider>{children}</SelectedVehicleProvider>
+          <ToastProvider>
+            <SelectedVehicleProvider>{children}</SelectedVehicleProvider>
+          </ToastProvider>
         </QueryClientProvider>
       </MemoryRouter>
     </I18nextProvider>,
@@ -111,6 +149,7 @@ function LiveQueryCopyProbe() {
 }
 
 beforeEach(async () => {
+  vi.stubGlobal('IntersectionObserver', LocalIntersectionObserver);
   window.localStorage.clear();
   captured.brief = null;
   historyPending = false;
@@ -154,6 +193,7 @@ beforeEach(async () => {
 afterEach(() => {
   cleanup();
   for (const client of clients.splice(0)) client.clear();
+  vi.unstubAllGlobals();
 });
 
 describe('Tesla charging history canonical copy isolation', () => {

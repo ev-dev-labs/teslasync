@@ -365,7 +365,7 @@ describe('GuardModeWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Guard mode')).toBeInTheDocument();
     expect(screen.queryByText('No guard data')).not.toBeInTheDocument();
   });
@@ -376,9 +376,8 @@ describe('GuardModeWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    // isLoading = configLoading || eventsLoading → the shell shows the skeleton
-    // and suppresses the content even though the config payload has landed.
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    // The event source shows its static skeleton while loaded config stays visible.
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.getByText('Armed')).toBeInTheDocument();
   });
 
@@ -499,7 +498,7 @@ describe('GuardModeWidget — graceful degradation on transient error', () => {
     expect(screen.getByText('Armed')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    // … and the freshness indicator is in its error state (semantic danger dot).
+    expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).toBeTruthy();
   });
 });
