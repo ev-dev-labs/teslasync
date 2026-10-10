@@ -239,7 +239,7 @@ describe('RecentDrivesWidget states', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget(1);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives')).toBeNull();
   });

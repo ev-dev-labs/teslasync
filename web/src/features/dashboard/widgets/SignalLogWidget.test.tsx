@@ -323,7 +323,7 @@ describe('SignalLogWidget — standard layout (2×2)', () => {
     setup({ obs: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Signal log')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });

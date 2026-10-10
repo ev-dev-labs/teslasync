@@ -405,7 +405,7 @@ describe('PositionHeatmapWidget — data states', () => {
     positionsMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('Position heatmap')).toBeInTheDocument();
     expect(screen.queryByTestId('marker')).not.toBeInTheDocument();
     expect(captured.map).toBeNull();

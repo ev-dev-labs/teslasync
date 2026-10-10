@@ -357,7 +357,7 @@ describe('SpeedHeatmapWidget — states', () => {
   it('renders a loading skeleton while the query is pending', () => {
     useQueryMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No drive data yet')).toBeNull();
     expect(screen.queryByRole('img')).toBeNull();
   });

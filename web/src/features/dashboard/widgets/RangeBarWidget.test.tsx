@@ -368,7 +368,7 @@ describe('RangeBarWidget — loading & empty states', () => {
     setState({ isLoading: true, state: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(metricBarSpy).not.toHaveBeenCalled();
     expect(screen.queryByText('No range data')).toBeNull();
   });
@@ -380,7 +380,7 @@ describe('RangeBarWidget — loading & empty states', () => {
     setState({ state: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No range data')).toBeNull();
     expect(metricBarSpy).not.toHaveBeenCalled();
   });

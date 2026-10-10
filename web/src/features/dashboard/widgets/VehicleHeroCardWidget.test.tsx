@@ -446,7 +446,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
   it('renders only a skeleton while the selected vehicle state is loading', () => {
     const { container } = renderWidget(FULL, { state: makeStateQuery({ isLoading: true, data: undefined }) });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Vehicle')).toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).toBeNull();
   });
@@ -469,7 +469,7 @@ describe('VehicleHeroCardWidget — lifecycle states', () => {
       state: makeStateQuery({ isLoading: false, data: undefined }),
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No vehicle data')).toBeNull();
   });
 

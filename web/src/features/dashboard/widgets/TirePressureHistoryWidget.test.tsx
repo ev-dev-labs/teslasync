@@ -455,7 +455,7 @@ describe('TirePressureHistoryWidget', () => {
 
     const { container } = renderWidget(<TirePressureHistoryWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Tire pressure history')).toBeInTheDocument();
     expect(screen.queryByText('FL')).not.toBeInTheDocument();
   });

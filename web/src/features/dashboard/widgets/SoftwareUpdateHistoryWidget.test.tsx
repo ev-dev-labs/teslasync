@@ -340,7 +340,7 @@ describe('SoftwareUpdateHistoryWidget', () => {
 
     const { container } = renderWidget(<SoftwareUpdateHistoryWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Update history')).toBeInTheDocument();
     expect(screen.queryByText('2024.44.25')).not.toBeInTheDocument();
   });

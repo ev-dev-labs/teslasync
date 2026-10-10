@@ -103,7 +103,7 @@ describe('VehicleAccessWidget independent source trust', () => {
     expect(screen.getByText('Disabled')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Authorized drivers' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Pending invitations' })).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('No pending invitations')).not.toBeInTheDocument();
   });
 
@@ -274,7 +274,7 @@ describe('VehicleAccessWidget — loading / error / empty states', () => {
     setDrivers({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByRole('heading', { name: /Vehicle access/i })).toBeInTheDocument();
     expect(screen.queryByText('No access data available')).toBeNull();
   });
@@ -290,7 +290,7 @@ describe('VehicleAccessWidget — loading / error / empty states', () => {
     setMobile({ data: undefined });
     const { container } = renderWidget(FULL, undefined);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No access data available')).toBeNull();
   });
 

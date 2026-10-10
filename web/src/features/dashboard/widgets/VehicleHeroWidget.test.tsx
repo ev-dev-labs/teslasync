@@ -484,14 +484,14 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
     expect(screen.getByText('No vehicle data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('shows a loading skeleton while the vehicle list is still loading', () => {
     setup({ vehicles: makeQuery({ data: undefined, isLoading: true }) });
     const { container } = render(<VehicleHeroWidget size={STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('vehicle-hero')).not.toBeInTheDocument();
     expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
   });
