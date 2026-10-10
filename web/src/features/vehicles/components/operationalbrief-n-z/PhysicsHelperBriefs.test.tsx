@@ -116,7 +116,9 @@ describe('Tesla physics nested summary adoption', () => {
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Stored ingest timestamps: 1 / 2')).toBeInTheDocument();
     expect(within(drawer).getByText('Known event intervals: 1 / 2')).toBeInTheDocument();
-    expect(within(drawer).getByText(/Requested:/)).toBeInTheDocument();
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    if (!drawerHeader) throw new Error('Missing physics evidence drawer header');
+    expect(within(drawerHeader).getByText(/Requested:/)).toBeInTheDocument();
   });
 
   it('preserves false versus unknown mode fields and independent cross-check populations', () => {
