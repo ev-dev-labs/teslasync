@@ -501,7 +501,7 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
     // Form controls are present and labelled.
     expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/trigger type/i)).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Trigger type' })).toBeInTheDocument();
   });
 
   it('flips the readiness badge to "Ready to save" once name + trigger are set', () => {
@@ -509,7 +509,7 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Commute Prep' } });
-    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
 
@@ -536,12 +536,14 @@ describe('AutomationBuilderPage — create mode', () => {
     const brief = screen.getByTestId('automation-builder-brief');
     expect(brief.querySelector('[data-operational-metric="conditions"]')).toHaveTextContent('1');
     expect(brief.querySelector('[data-operational-metric="actions"]')).toHaveTextContent('2');
+    const nameEditor = screen.getByRole('textbox', { name: 'Name required' });
+    const triggerEditor = screen.getByRole('combobox', { name: 'Trigger type' });
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Automation summary details' });
     expect(within(drawer).getAllByText('Current editor draft only. Publishing still requires validation and an explicit save.').length).toBeGreaterThan(0);
     expect(within(drawer).getByText('Actions are executed in order.')).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Name$/)).toBeInTheDocument();
-    expect(screen.getByLabelText(/trigger type/i)).toBeInTheDocument();
+    expect(nameEditor).toBeInTheDocument();
+    expect(triggerEditor).toBeInTheDocument();
     expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
     expect(screen.getByTestId('action-builder')).toBeInTheDocument();
     expect(H.createMutateAsync).not.toHaveBeenCalled();
@@ -554,7 +556,7 @@ describe('AutomationBuilderPage — create mode', () => {
     const { container } = renderPage('/automations/new');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'My Automation' } });
-    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
     fireEvent.submit(container.querySelector('form')!);
@@ -578,7 +580,7 @@ describe('AutomationBuilderPage — create mode', () => {
     const { container } = renderPage('/automations/new');
 
     fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'My Automation' } });
-    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
       target: { value: 'trigger_signal' },
     });
     fireEvent.submit(container.querySelector('form')!);

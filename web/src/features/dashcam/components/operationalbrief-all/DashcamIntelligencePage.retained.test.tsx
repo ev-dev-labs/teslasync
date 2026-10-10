@@ -52,7 +52,10 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ formatDuration: (value: number | null) => value == null ? '—' : `${value}s` }),
 }));
 vi.mock('@/hooks/useNumberFormatting', () => ({
-  useNumberFormatting: () => ({ fmtNumber: (value: number) => String(value) }),
+  useNumberFormatting: () => ({
+    fmtNumber: (value: number) => String(value),
+    fmtInt: (value: number) => String(value),
+  }),
 }));
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatTime: (value: string | Date | null) => String(value ?? '—') }),
@@ -169,7 +172,7 @@ describe('dashcam retained page and non-summary boundaries', () => {
     fireEvent.change(screen.getByPlaceholderText('Search filename or notes…'), { target: { value: 'no match' } });
     expect(await screen.findByText('No clips match these filters')).toBeInTheDocument();
     expect(screen.queryByText('No clips imported yet')).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.getByRole('option')).toBeInTheDocument();
     h.query = { ...h.query, data: [] };
     rerender(<MemoryRouter><DashcamIntelligencePage /></MemoryRouter>);

@@ -36,9 +36,8 @@ vi.mock('react-i18next', async () => {
     useTranslation: () => ({
       t: (key: string, fallbackOrOpts?: unknown) => {
         if (typeof fallbackOrOpts === 'string') return fallbackOrOpts
-        if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
-          const o = fallbackOrOpts as Record<string, unknown>
-          if (typeof o.defaultValue === 'string') return o.defaultValue
+        if (fallbackOrOpts && typeof fallbackOrOpts === 'object' && 'defaultValue' in fallbackOrOpts) {
+          if (typeof fallbackOrOpts.defaultValue === 'string') return fallbackOrOpts.defaultValue
         }
         return key
       },
@@ -81,7 +80,7 @@ vi.mock('@/hooks/useUnits', async () => {
 import { request } from '@/api/client'
 import AutopilotSection from '../AutopilotSection'
 
-const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
+const mockedRequest = vi.mocked(request)
 
 function renderWithClient(ui: ReactNode) {
   const qc = new QueryClient({
@@ -150,11 +149,10 @@ function stubResponses(opts: {
   })
 }
 
-// StatCard renders the label and value in two SIBLING divs inside a
-// Card root. So `label.parentElement` is the label-row only — value
-// lives one level up. statCardText() walks to the Card root.
-function statCardText(labelEl: HTMLElement): string {
-  return labelEl.parentElement?.parentElement?.textContent ?? ''
+// OperationalBrief keeps source context separate from the primary measurement.
+function metricValueText(labelEl: HTMLElement): string {
+  return labelEl.closest('[data-operational-metric]')
+    ?.querySelector('[data-operational-value]')?.textContent ?? ''
 }
 
 describe('AutopilotSection — SI m/s correctness', () => {
@@ -165,9 +163,9 @@ describe('AutopilotSection — SI m/s correctness', () => {
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Current Speed')
     await waitFor(() => {
-      expect(statCardText(label)).toContain('60')
+      expect(metricValueText(label)).toContain('60')
     })
-    expect(statCardText(label)).not.toContain('37')
+    expect(metricValueText(label)).not.toContain('37')
   })
 
   it('renders Cruise Set Speed in mph from m/s without a /1.609 km/h step', async () => {
@@ -177,10 +175,10 @@ describe('AutopilotSection — SI m/s correctness', () => {
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Cruise Set Speed')
     await waitFor(() => {
-      expect(statCardText(label)).toContain('25')
+      expect(metricValueText(label)).toContain('25')
     })
     // Pre-fix would have rendered "16" (×1.39 instead of ×2.237).
-    expect(statCardText(label)).not.toContain('16')
+    expect(metricValueText(label)).not.toContain('16')
   })
 })
 
@@ -196,9 +194,10 @@ describe('AutopilotSection — Follow Distance enum decoding', () => {
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Follow Distance')
     await waitFor(() => {
-      expect(statCardText(label)).toContain('7')
+      expect(metricValueText(label)).toBe('7')
     })
-    expect(statCardText(label)).not.toContain('FollowDistance')
+    expect(metricValueText(label)).not.toContain('FollowDistance')
+    expect(label.closest('[data-operational-metric]')).toHaveTextContent('FollowDistance7')
   })
 
   it('renders em-dash when no follow-distance observations exist', async () => {
@@ -207,7 +206,7 @@ describe('AutopilotSection — Follow Distance enum decoding', () => {
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Follow Distance')
     await waitFor(() => {
-      expect(statCardText(label)).toContain('—')
+      expect(metricValueText(label)).toContain('—')
     })
   })
 })
@@ -217,31 +216,45 @@ describe('AutopilotSection — empty state', () => {
     stubResponses({ vehicleSpeedMps: 0, verifiedSpeed: false })
     renderWithClient(<AutopilotSection vehicleId={1} />)
     expect(await screen.findByText('No cruise / autopilot telemetry received yet')).toBeInTheDocument()
-    expect(screen.queryByText('Current Speed')).toBeNull()
+    const label = screen.getByText('Current Speed')
+    expect(metricValueText(label)).toBe('—')
+    expect(metricValueText(label)).not.toMatch(/0\.0/)
+    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
   })
 
   it('keeps a missing current speed unknown when other cruise evidence exists', async () => {
     stubResponses({ vehicleSpeedMps: 0, verifiedSpeed: false, cruiseSetSpeedMps: 11.176 })
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Current Speed')
-    expect(statCardText(label)).toContain('—')
-    expect(statCardText(label)).not.toMatch(/0\.0/)
-    expect(statCardText(await screen.findByText('Cruise Set Speed'))).toContain('25')
+    await waitFor(() => {
+      expect(metricValueText(label)).toContain('—')
+      expect(metricValueText(screen.getByText('Cruise Set Speed'))).toContain('25')
+    })
+    expect(metricValueText(label)).not.toMatch(/0\.0/)
+    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
   })
 
   it('preserves a true verified current zero instead of showing missing', async () => {
     stubResponses({ vehicleSpeedMps: 0 })
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Current Speed')
-    expect(statCardText(label)).toContain('0.00')
-    expect(statCardText(label)).not.toContain('—')
+    await waitFor(() => {
+      expect(metricValueText(label)).toContain('0.00')
+    })
+    expect(metricValueText(label)).not.toContain('—')
+    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value')
   })
 
   it('does not call a stale verified speed current', async () => {
     stubResponses({ vehicleSpeedMps: 0, freshness: 'stale', followDistanceEnum: 'FollowDistance7' })
     renderWithClient(<AutopilotSection vehicleId={1} />)
     const label = await screen.findByText('Current Speed')
-    expect(statCardText(label)).toContain('—')
+    await waitFor(() => {
+      expect(metricValueText(label)).toContain('—')
+      expect(metricValueText(screen.getByText('Follow Distance'))).toBe('7')
+    })
+    expect(metricValueText(label)).not.toMatch(/0\.0/)
+    expect(label.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
   })
 
   it('renders the empty state when no signals are present anywhere', async () => {
@@ -253,9 +266,12 @@ describe('AutopilotSection — empty state', () => {
         screen.getByText('No cruise / autopilot telemetry received yet'),
       ).toBeInTheDocument()
     })
-    // Stat labels must NOT appear in the empty branch.
-    expect(screen.queryByText('Current Speed')).toBeNull()
-    expect(screen.queryByText('Cruise Set Speed')).toBeNull()
-    expect(screen.queryByText('Follow Distance')).toBeNull()
+    // Empty sources retain all metric shells, without fabricated readings.
+    for (const label of ['Current Speed', 'Cruise Set Speed', 'Follow Distance']) {
+      const metricLabel = screen.getByText(label)
+      expect(metricValueText(metricLabel)).toBe('—')
+      expect(metricValueText(metricLabel)).not.toMatch(/0\.0/)
+      expect(metricLabel.closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing')
+    }
   })
 })

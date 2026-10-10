@@ -193,7 +193,7 @@ describe.each([1, 2, 3])('VersionInfoWidget — identifying heading at cols=%i',
         expect(screen.getByText('abcdef1')).toBeInTheDocument();
         if (cols > 1) expect(kvValue('Uptime')).toBe('1d 1h 1m');
       }
-      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       if (state === 'empty') expect(screen.getByText('No version data available')).toBeInTheDocument();
       if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
       if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -310,7 +310,7 @@ describe('VersionInfoWidget — shell states', () => {
     mockVersion.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Go version')).toBeNull();
   });
 

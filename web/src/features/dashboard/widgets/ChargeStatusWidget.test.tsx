@@ -210,7 +210,7 @@ describe('ChargeStatusWidget — shell states', () => {
     mockVehicleState.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Charging')).toBeNull();
     expect(screen.queryByText('No charge data')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
@@ -240,7 +240,7 @@ describe('ChargeStatusWidget — shell states', () => {
 
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     // …and the error is still communicated through the freshness chip.
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
   });
 });
 
@@ -390,7 +390,7 @@ describe('ChargeStatusWidget — refresh wiring', () => {
       expect(within(brief).getByText('Vehicle 42 · returned state snapshot; not a completed charging session or continuous recording.')).toBeInTheDocument();
       expect(screen.getByText('Charging')).toBeInTheDocument();
       expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh data ·/i }));
       expect(refetch).toHaveBeenCalledTimes(1);
     });
 
@@ -425,7 +425,7 @@ describe('ChargeStatusWidget — refresh wiring', () => {
       mockVehicleState.mockReturnValue(qr());
       const discovery = renderWidget();
       expect(discovery.container.querySelector('[data-data-state]')).toHaveAttribute('data-data-state', 'initial');
-      expect(discovery.container.querySelector('.animate-pulse')).toBeInTheDocument();
+      expect(discovery.container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       expect(screen.queryByTestId('dashboard-charge-status-idle-brief')).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
       expect(discover).toHaveBeenCalledTimes(1);

@@ -365,7 +365,7 @@ describe('WatchSummaryWidget — standard layout', () => {
       expect(screen.getAllByText('Charging')).toHaveLength(2);
       expect(screen.getByText('72.00')).toBeInTheDocument();
       expect(screen.getByText('2h ago')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh', exact: true }));
       expect(refetchSummary).toHaveBeenCalledTimes(1);
       expect(refetchComplication).toHaveBeenCalledTimes(1);
 
@@ -406,19 +406,19 @@ describe('WatchSummaryWidget — standard layout', () => {
 
 describe('WatchSummaryWidget — state badge variants', () => {
   const cases = [
-    { state: 'online', label: 'Online', cls: 'bg-green-100' },
-    { state: 'asleep', label: 'Asleep', cls: BADGE_VARIANTS.neutral },
-    { state: 'offline', label: 'Offline', cls: 'bg-yellow-100' },
+    { state: 'online', label: 'Online', cls: 'bg-green-100', expectedVariant: BADGE_VARIANTS.success },
+    { state: 'asleep', label: 'Asleep', cls: BADGE_VARIANTS.neutral, expectedVariant: BADGE_VARIANTS.neutral },
+    { state: 'offline', label: 'Offline', cls: 'bg-yellow-100', expectedVariant: BADGE_VARIANTS.warning },
   ] as const;
 
-  it.each(cases)('renders "$state" with the $cls badge variant', ({ state, label, cls }) => {
+  it.each(cases)('renders "$state" with the $cls badge variant', ({ state, label, expectedVariant }) => {
     useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary({ state }) }));
 
     renderWidget({ cols: 2, rows: 2 });
 
     const badge = screen.getByText(label);
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain(cls);
+    expect(badge.className).toContain(expectedVariant);
   });
 });
 
@@ -516,10 +516,9 @@ describe('WatchSummaryWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    // isLoading = summaryLoading || compLoading → the shell shows the skeleton
-    // and suppresses the content even though the summary payload has landed.
+    // A pending complication must not replace retained summary content.
     expect(screen.getByText('Battery')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByText('Watch summary')).toBeInTheDocument();
   });
 });
@@ -534,7 +533,7 @@ describe('WatchSummaryWidget — graceful degradation on error', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     // Content is still on screen …
     expect(screen.getByText('Watch summary')).toBeInTheDocument();
@@ -542,7 +541,7 @@ describe('WatchSummaryWidget — graceful degradation on error', () => {
     // … the full-panel QueryError is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Refresh data/ }).querySelector('[class*="bg-[var(--semantic-danger)]"]')).toBeTruthy();
   });
 
   it('shows the initial-failure retry when the summary errors with no retained data', () => {
@@ -550,12 +549,12 @@ describe('WatchSummaryWidget — graceful degradation on error', () => {
       makeSummaryQuery({ data: undefined, isError: true, isFetching: false }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Watch summary')).toBeInTheDocument();
     expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /^Refresh data/ }).querySelector('[class*="bg-[var(--semantic-danger)]"]')).toBeTruthy();
   });
 });
 

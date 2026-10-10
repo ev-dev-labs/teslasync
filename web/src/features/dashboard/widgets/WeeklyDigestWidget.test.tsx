@@ -236,7 +236,7 @@ describe.each([1, 2, 3])('WeeklyDigestWidget — identifying heading at cols=%i'
         expect(screen.getByText('Distance')).toBeInTheDocument();
         expect(deltas()).toHaveLength(cols === 1 ? 2 : 4);
       }
-      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       if (state === 'empty') expect(screen.getByText('No weekly data yet')).toBeInTheDocument();
       if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
       if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
@@ -367,7 +367,7 @@ describe('WeeklyDigestWidget — loading, error & empty states', () => {
     setDigest({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByRole('heading')).toBeInTheDocument();
     expect(screen.queryByTestId('delta')).toBeNull();
   });
@@ -419,7 +419,7 @@ describe('WeeklyDigestWidget — vehicle id resolution', () => {
     expect(weeklyDigestMock).toHaveBeenCalledWith('');
     expect(screen.getByText('No weekly data yet')).toBeInTheDocument();
     expect(screen.queryByTestId('delta')).toBeNull();
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('does not query an invalid explicit vehicle id (%s)', (id) => {
@@ -445,7 +445,7 @@ describe('WeeklyDigestWidget — vehicle id resolution', () => {
     });
     const { container } = renderWidget(FULL);
     expect(weeklyDigestMock).toHaveBeenCalledWith('');
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('No weekly data yet')).toBeNull();
     expect(screen.queryByTestId('delta')).toBeNull();
   });

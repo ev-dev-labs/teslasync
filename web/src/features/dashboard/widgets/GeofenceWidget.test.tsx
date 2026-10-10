@@ -337,7 +337,7 @@ describe('GeofenceWidget — states', () => {
   it('retains configured fences with unknown membership while position is pending', () => {
     useVehicleStateMock.mockReturnValue(makeState(null, { isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.queryByText('Outside')).not.toBeInTheDocument();
     expect(screen.queryByText('Inside')).not.toBeInTheDocument();
@@ -347,7 +347,7 @@ describe('GeofenceWidget — states', () => {
   it('also shows the skeleton while the geofence query is pending', () => {
     useGeofencesMock.mockReturnValue(makeFenceResult(undefined, { isLoading: true }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('shows the empty state (never a blank panel) when no geofences are configured', () => {
@@ -460,10 +460,11 @@ describe('GeofenceWidget — refresh + freshness', () => {
   it('surfaces the error freshness dot when only the geofence query fails (regression: was ignored)', () => {
     useVehicleStateMock.mockReturnValue(makeState()); // healthy live source
     useGeofencesMock.mockReturnValue(makeFenceResult(undefined, { isError: true, dataUpdatedAt: 0 }));
-    const { container } = renderWidget({ cols: 1, rows: 1 });
-    // Merged health follows the geofence error → red dot, not a bogus fresh one.
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
-    expect(container.querySelector('.bg-emerald-400')).toBeNull();
+    renderWidget({ cols: 1, rows: 1 });
+    const freshness = screen.getByRole('button', { name: /refresh data · error/i });
+    // Merged health follows the geofence error → danger dot, not a bogus fresh one.
+    expect(freshness.querySelector('[class~="bg-[var(--semantic-danger)]"]')).not.toBeNull();
+    expect(freshness.querySelector('[class~="bg-[var(--semantic-success)]"]')).toBeNull();
   });
 });
 
@@ -486,7 +487,7 @@ describe('GeofenceWidget — map', () => {
     expect(element).toBeInstanceOf(HTMLDivElement);
     expect(element?.querySelector('img')).toBeNull();
     expect(element?.querySelector('div')?.style.width).toBe('28px');
-    expect(props.icon?.options.html).toContain('background:#00f0ff');
+    expect(props.icon?.options.html).toContain('background:var(--semantic-info)');
     expect(screen.getByTestId('vehicle-marker')).toHaveAttribute('data-pos', JSON.stringify([SF_LAT, SF_LON]));
     expect(screen.getByTestId('widget-map')).toHaveAttribute('data-zoom', '12');
     expect(screen.getAllByTestId('fence-circle')).toHaveLength(2);

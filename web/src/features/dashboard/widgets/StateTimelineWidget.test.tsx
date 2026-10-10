@@ -150,7 +150,7 @@ describe.each([1, 2, 3])('StateTimelineWidget — identifying heading at cols=%i
         expect(screen.getByRole('img', { name: 'driving: 3h 0m, 75.00%; idle: 1h 0m, 25.00%' })).toBeInTheDocument();
         if (cols === 3) expect(screen.getByText('24h timeline')).toBeInTheDocument();
       }
-      if (state === 'loading') expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
       if (state === 'empty') expect(screen.getByText('No state data available')).toBeInTheDocument();
       if (state === 'initial failure') expect(screen.getAllByRole('alert').length).toBeGreaterThan(0);
       if (state === 'retained failure') expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
@@ -283,7 +283,7 @@ describe('StateTimelineWidget — wide layout (≥3 col)', () => {
     const { container } = renderWidget({ size: { cols: 4, rows: 3 } });
     expect(screen.getAllByText('3h 0m').length).toBeGreaterThan(0);
     expect(screen.getByText('75.00%')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
   });
 
   it('shows transition failure locally without erasing retained summary history', () => {
@@ -314,7 +314,7 @@ describe('StateTimelineWidget — loading / empty / error', () => {
     mockTimeline.mockReturnValue(makeQuery({ data: undefined }));
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'State timeline' })).toBeInTheDocument();
   });

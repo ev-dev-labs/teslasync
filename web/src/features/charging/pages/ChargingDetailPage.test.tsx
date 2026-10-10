@@ -355,7 +355,11 @@ function renderPage() {
   );
 }
 
-const kpiRegion = () => screen.getByRole('region', { name: 'Key metrics' });
+const kpiRegion = () => {
+  const container = document.getElementById('charging-detail-metrics');
+  if (!container) throw new Error('Charging detail metrics container is missing');
+  return within(container).getByRole('region', { name: 'Key metrics' });
+};
 
 /** Real OperationalBrief reading, selected by its retained source label. */
 function cardValue(scope: HTMLElement, label: string): string {
