@@ -320,25 +320,25 @@ describe('ActiveOrdersSection — status badge variants', () => {
   it('maps a delivered status to the success (green) variant', () => {
     renderWithStatus('Delivered')
     const badge = screen.getByText('Delivered')
-    expect(badge.className).toContain('bg-green-100')
+    expect(badge.className).toContain('bg-[var(--semantic-success-bg)]')
   })
 
   it('maps ready/transport statuses to the info (blue) variant', () => {
     renderWithStatus('READY_FOR_TRANSPORT')
     const badge = screen.getByText('Ready for transport')
-    expect(badge.className).toContain('bg-blue-100')
+    expect(badge.className).toContain('bg-[var(--semantic-info-bg)]')
   })
 
   it('maps cancelled/rejected statuses to the danger (red) variant', () => {
     renderWithStatus('CANCELED')
     const badge = screen.getByText('Canceled')
-    expect(badge.className).toContain('bg-red-100')
+    expect(badge.className).toContain('bg-[var(--semantic-danger-bg)]')
   })
 
   it('maps pending/order statuses to the warning (yellow) variant', () => {
     renderWithStatus('Pending')
     const badge = screen.getByText('Pending')
-    expect(badge.className).toContain('bg-yellow-100')
+    expect(badge.className).toContain('bg-[var(--semantic-warning-bg)]')
   })
 
   it('maps an unrecognized status to the neutral (gray) variant', () => {
