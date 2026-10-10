@@ -526,7 +526,7 @@ describe('DayLogPage', () => {
     expect(within(drawer).getByText('5.2 kWh')).toBeInTheDocument();
     expect(within(drawer).getByText(/Recorded driving duration in seconds/)).toBeInTheDocument();
     expect(within(drawer).getAllByText(/2026-09-14 · UTC/).length).toBeGreaterThanOrEqual(6);
-    expect(within(drawer).getByText(/\[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z\) · end exclusive/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/\[2026-09-14T00:00:00Z, 2026-09-15T00:00:00Z\) · end exclusive/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
     fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
