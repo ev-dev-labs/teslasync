@@ -108,7 +108,8 @@
     },
     "brief": {
       "penalty": "Cold minus warm consumption",
-      "cohortTitle": "Distance-weighted cohort consumption"
+      "cohortTitle": "Distance-weighted cohort consumption",
+      "window": "{{start}}–{{end}}; returned selected-window drives"
     }
   }
 }

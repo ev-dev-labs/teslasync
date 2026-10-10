@@ -2511,6 +2511,7 @@
       "added": "Energy added",
       "dwell": "Complete dwell",
       "efficiency": "Efficiency",
+      "empty": "No charge interval in this window.",
       "precondition": "Preconditioning",
       "stillPlugged": "Still plugged / unknown",
       "title": "Charge physics",
@@ -2521,6 +2522,7 @@
       "accessory": "Accessory / HVAC",
       "aero": "Aero",
       "drivetrainLoss": "Drivetrain loss (model)",
+      "empty": "No drive interval in this window.",
       "grade": "Grade",
       "inertial": "Inertial",
       "measured": "Measured pack energy",
@@ -2560,6 +2562,7 @@
     "park": {
       "avgWatts": "Average drain",
       "cabin": "Cabin overheat",
+      "empty": "No park interval in this window.",
       "energy": "Park energy",
       "pluggedAtLimit": "Plugged at limit",
       "precondition": "Preconditioning",

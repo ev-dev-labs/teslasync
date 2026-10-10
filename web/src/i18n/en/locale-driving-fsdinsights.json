@@ -362,7 +362,8 @@
     },
     "brief": {
       "observatoryMetrics": "Reset-safe counter quantities",
-      "periodQuantities": "Current and previous period quantities"
+      "periodQuantities": "Current and previous period quantities",
+      "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}"
     },
     "chooseVehicle": "Choose a vehicle",
     "commute": {

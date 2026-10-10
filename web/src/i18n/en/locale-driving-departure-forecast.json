@@ -483,6 +483,7 @@
   },
   "driving": {
     "brief": {
+      "awaiting": "Awaiting evidence",
       "eyebrow": "Driving evidence",
       "loading": "Loading source",
       "retained": "Retained source",

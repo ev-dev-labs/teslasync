@@ -33,7 +33,8 @@
         "title": "Activity over time",
         "series": "Actions",
         "empty": "No activity recorded in this window.",
-        "colDay": "Day"
+        "colDay": "Day",
+        "aria": "{{total}} actions across {{days}} days"
       },
       "topActions": {
         "title": "Top actions",
@@ -55,6 +56,9 @@
       },
       "feed": {
         "title": "Activity feed"
+      },
+      "brief": {
+        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions."
       }
     },
     "action": {

@@ -704,7 +704,8 @@
     "centerDisplay": "Center display",
     "homelinkDevices": "HomeLink Devices",
     "sparkline": {
-      "retained": "Trend may be out of date"
+      "retained": "Trend may be out of date",
+      "trend": "{{signal}} trend, {{count}} samples in the last hour"
     }
   },
   "achievements": {

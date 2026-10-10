@@ -11,7 +11,9 @@
       "subsetScope": "Returned subset",
       "unknownScope": "Coverage unknown",
       "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
-      "returned": "Returned evidence"
+      "returned": "Returned evidence",
+      "awaiting": "Awaiting evidence",
+      "window": "{{start}}–{{end}}; returned drive subset, not a server-wide aggregate"
     }
   }
 }

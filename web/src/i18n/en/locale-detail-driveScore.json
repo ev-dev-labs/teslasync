@@ -107,6 +107,15 @@
     "serverUnavailable": "Server drive score is unavailable; scored history remains visible",
     "serverUnavailableOnly": "Server drive score is unavailable",
     "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
-    "selectVehicle": "Select a vehicle in the header to load drive score evidence."
+    "selectVehicle": "Select a vehicle in the header to load drive score evidence.",
+    "brief": {
+      "average": "Average computed score for the returned scored-drive cohort, on a 0–100 scale.",
+      "best": "Highest computed score among the returned scored drives, on a 0–100 scale.",
+      "count": "Returned scored drives, not the independent server score total.",
+      "efficiency": "Average consumption in the returned scored-drive cohort.",
+      "description": "Computed driving scores and consumption retain their source cohort; the overall score gauge uses its independent assessment source.",
+      "scope": "Returned scored-drive subset in the selected period; independent score-assessment coverage may differ",
+      "source": "Computed scored-drive cohort; the retained trend label comes from the independent score assessment."
+    }
   }
 }

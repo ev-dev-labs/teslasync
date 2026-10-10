@@ -87,7 +87,8 @@
     "analyzed": "Analyzed",
     "brief": {
       "cohortTitle": "Distance-weighted cohort consumption",
-      "penalty": "Cold minus warm consumption"
+      "penalty": "Cold minus warm consumption",
+      "window": "{{start}}–{{end}}; returned selected-window drives"
     },
     "coldGroup": "Cold starts ({{count}} drives)",
     "coldShare": "Cold starts",

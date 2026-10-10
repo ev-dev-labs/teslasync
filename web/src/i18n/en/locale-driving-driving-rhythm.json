@@ -447,7 +447,8 @@
       "calendarDenominator": "{{count}} selected local calendar days define the rate denominator.",
       "coverage": "Observed-history coverage",
       "coverageScope": "Included non-future starts define the observed span; the selected date scope may be wider.",
-      "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration."
+      "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration.",
+      "window": "{{start}}–{{end}} · {{timezone}}"
     },
     "browseDrives": "Browse drives",
     "comparison": {

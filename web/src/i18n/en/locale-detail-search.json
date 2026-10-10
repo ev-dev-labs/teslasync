@@ -212,19 +212,24 @@
       },
       "security": {
         "totpEnroll": {
-          "title": "Enable two-factor authentication"
+          "title": "Enable two-factor authentication",
+          "desc": "Set up TOTP from your authenticator app to protect destructive admin actions."
         },
         "totpBackupCodes": {
-          "title": "TOTP backup codes"
+          "title": "TOTP backup codes",
+          "desc": "Regenerate or download the backup codes used when you lose access to your authenticator."
         },
         "totpDisable": {
-          "title": "Disable two-factor authentication"
+          "title": "Disable two-factor authentication",
+          "desc": "Remove the TOTP credential and revoke all backup codes for the current subject."
         },
         "sessionsList": {
-          "title": "Active sessions"
+          "title": "Active sessions",
+          "desc": "See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions."
         },
         "sessionsRevokeAll": {
-          "title": "Sign out all other devices"
+          "title": "Sign out all other devices",
+          "desc": "Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer."
         }
       },
       "advanced": {
@@ -245,21 +250,64 @@
       },
       "webhooks": {
         "list": {
-          "title": "Webhook channels"
+          "title": "Webhook channels",
+          "desc": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver."
         },
         "signing": {
-          "title": "Webhook HMAC signing"
+          "title": "Webhook HMAC signing",
+          "desc": "Sign outbound webhooks with a shared secret so receivers can verify authenticity via the X-TeslaSync-Signature header."
         },
         "test": {
-          "title": "Test a webhook channel"
+          "title": "Test a webhook channel",
+          "desc": "Fire a test event at a configured webhook to verify your receiver and signature pipeline."
         }
       },
       "reset": {
         "section": {
-          "title": "Reset a section to defaults"
+          "title": "Reset a section to defaults",
+          "desc": "Wipe one section at a time — alert rules, geofences, channels, automations, dashboard layouts, quiet hours, or general/appearance preferences."
         },
         "all": {
-          "title": "Reset ALL settings"
+          "title": "Reset ALL settings",
+          "desc": "Danger zone — wipe every user-discoverable preference, alert rule, channel, geofence, automation, and dashboard layout in one transaction. Requires typing RESET to confirm."
+        }
+      },
+      "fleet": {
+        "setup": {
+          "desc": "Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming."
+        }
+      },
+      "workspace": {
+        "persona": {
+          "desc": "Prioritize navigation for an owner, fleet operator, analyst, or administrator."
+        },
+        "landing": {
+          "desc": "Choose the first page shown when TeslaSync opens."
+        },
+        "vehicle": {
+          "desc": "Choose the vehicle used for the global scope on a fresh app load."
+        },
+        "range": {
+          "desc": "Choose the default time range used by global analysis controls."
+        },
+        "discovery": {
+          "title": "Help and release highlights",
+          "desc": "Control contextual explanations and product-change highlights."
+        }
+      },
+      "privacy": {
+        "recentPagesClear": {
+          "title": "Clear recently viewed pages",
+          "desc": "Wipe the local list of pages used by the status bar and the Recent section in the command palette."
+        },
+        "consentManage": {
+          "desc": "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser."
+        }
+      },
+      "helix": {
+        "integration": {
+          "title": "Helix (AI integration)",
+          "desc": "Optional AI integration — provider, API key, cost cap, and per-feature opt-in toggles. Off by default."
         }
       }
     }

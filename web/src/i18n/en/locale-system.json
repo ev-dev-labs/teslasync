@@ -1120,6 +1120,9 @@
       "breakdowns": {
         "aria": "Activity breakdowns"
       },
+      "brief": {
+        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions."
+      },
       "byCategory": {
         "empty": "No categories to break down yet.",
         "title": "By category"
@@ -1153,6 +1156,7 @@
         "title": "Top actions"
       },
       "trend": {
+        "aria": "{{total}} actions across {{days}} days",
         "colDay": "Day",
         "empty": "No activity recorded in this window.",
         "series": "Actions",
@@ -2595,6 +2599,9 @@
       }
     },
     "channelsTitle": "Ways to get help",
+    "commandReliability": {
+      "overall": "Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average."
+    },
     "explore": {
       "aria": "Explore the app"
     },

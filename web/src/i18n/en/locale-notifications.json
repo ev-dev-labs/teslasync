@@ -1914,6 +1914,10 @@
       "nameLabel": "Channel name",
       "namePlaceholderPrefix": "My",
       "nameRequired": "Name is required",
+      "providers": {
+        "configured": "{{count}} configured",
+        "subtitle": "{{inUse}} of {{total}} provider types in use"
+      },
       "test": "Test connection",
       "testFailed": "Test failed",
       "testHint": "Save then click \"Send test\" to verify the configuration.",

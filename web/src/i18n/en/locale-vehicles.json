@@ -202,7 +202,8 @@
       "unexplained": "Unexplained residual",
       "predicted": "Predicted (known terms)",
       "session": "Session",
-      "reconcile": "reconcile"
+      "reconcile": "reconcile",
+      "empty": "No drive interval in this window."
     },
     "charge": {
       "title": "Charge physics",
@@ -212,7 +213,8 @@
       "added": "Energy added",
       "wall": "Wall energy",
       "precondition": "Preconditioning",
-      "efficiency": "Efficiency"
+      "efficiency": "Efficiency",
+      "empty": "No charge interval in this window."
     },
     "park": {
       "title": "Park / vampire physics",
@@ -224,7 +226,8 @@
       "cabin": "Cabin overheat",
       "precondition": "Preconditioning",
       "quiet": "Quiet pack",
-      "pluggedAtLimit": "Plugged at limit"
+      "pluggedAtLimit": "Plugged at limit",
+      "empty": "No park interval in this window."
     },
     "thermal": {
       "title": "Thermal",

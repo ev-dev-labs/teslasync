@@ -1535,6 +1535,7 @@
       "accessory": "Accessory / HVAC",
       "aero": "Aero",
       "drivetrainLoss": "Drivetrain loss (model)",
+      "empty": "No drive interval in this window.",
       "grade": "Grade",
       "inertial": "Inertial",
       "measured": "Measured pack energy",

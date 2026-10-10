@@ -467,6 +467,7 @@
   },
   "driving": {
     "brief": {
+      "awaiting": "Awaiting evidence",
       "completeScope": "Complete analysis window",
       "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "eyebrow": "Driving evidence",

@@ -130,7 +130,8 @@
       "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration.",
       "coverage": "Observed-history coverage",
       "coverageScope": "Included non-future starts define the observed span; the selected date scope may be wider.",
-      "calendarDenominator": "{{count}} selected local calendar days define the rate denominator."
+      "calendarDenominator": "{{count}} selected local calendar days define the rate denominator.",
+      "window": "{{start}}–{{end}} · {{timezone}}"
     }
   }
 }

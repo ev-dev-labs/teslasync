@@ -199,6 +199,9 @@
         "minutesAgo": "{{count}}m ago",
         "hoursAgo": "{{count}}h ago",
         "daysAgo": "{{count}}d ago"
+      },
+      "brief": {
+        "scope": "Vehicle {{vehicle}} · History {{start}} to {{end}} (exclusive). Current status comes from a separate latest-state query."
       }
     },
     "audit": {
@@ -589,7 +592,8 @@
         "vin": "VIN",
         "vinPending": "Not assigned",
         "delivery": "Delivery",
-        "upgradable": "Upgrade available"
+        "upgradable": "Upgrade available",
+        "aria": "{{model}} order, {{status}}"
       },
       "cols": {
         "model": "Model",
@@ -622,7 +626,8 @@
       "col": {
         "count": "Count",
         "severity": "Severity"
-      }
+      },
+      "tableCount": "{{count}} hypertables"
     },
     "secretRotation": {
       "col": {
@@ -648,7 +653,8 @@
       }
     },
     "slowQueries": {
-      "colQuery": "Query"
+      "colQuery": "Query",
+      "kpiAnalyzedSub": "Top {{limit}} by {{metric}}"
     },
     "dataQuality": {
       "summary": {

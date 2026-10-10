@@ -2648,7 +2648,8 @@
     },
     "brief": {
       "penalty": "Cold minus warm consumption",
-      "cohortTitle": "Distance-weighted cohort consumption"
+      "cohortTitle": "Distance-weighted cohort consumption",
+      "window": "{{start}}–{{end}}; returned selected-window drives"
     }
   },
   "shareCard": {
@@ -3419,7 +3420,8 @@
       "departureUnit": "Minutes after local midnight; circular 24-hour median, not elapsed duration.",
       "coverage": "Observed-history coverage",
       "coverageScope": "Included non-future starts define the observed span; the selected date scope may be wider.",
-      "calendarDenominator": "{{count}} selected local calendar days define the rate denominator."
+      "calendarDenominator": "{{count}} selected local calendar days define the rate denominator.",
+      "window": "{{start}}–{{end}} · {{timezone}}"
     }
   },
   "parking": {
@@ -4564,6 +4566,9 @@
     "chargerResilience": {
       "score": "A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%).",
       "effectiveSites": "The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once."
+    },
+    "commandReliability": {
+      "overall": "Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average."
     }
   },
   "date": {
@@ -8522,19 +8527,24 @@
       },
       "security": {
         "totpEnroll": {
-          "title": "Enable two-factor authentication"
+          "title": "Enable two-factor authentication",
+          "desc": "Set up TOTP from your authenticator app to protect destructive admin actions."
         },
         "totpBackupCodes": {
-          "title": "TOTP backup codes"
+          "title": "TOTP backup codes",
+          "desc": "Regenerate or download the backup codes used when you lose access to your authenticator."
         },
         "totpDisable": {
-          "title": "Disable two-factor authentication"
+          "title": "Disable two-factor authentication",
+          "desc": "Remove the TOTP credential and revoke all backup codes for the current subject."
         },
         "sessionsList": {
-          "title": "Active sessions"
+          "title": "Active sessions",
+          "desc": "See which browsers and devices are currently signed in to TeslaSync and revoke individual sessions."
         },
         "sessionsRevokeAll": {
-          "title": "Sign out all other devices"
+          "title": "Sign out all other devices",
+          "desc": "Revoke every TeslaSync session except the current browser. Useful after a lost laptop or shared computer."
         }
       },
       "advanced": {
@@ -8555,21 +8565,64 @@
       },
       "webhooks": {
         "list": {
-          "title": "Webhook channels"
+          "title": "Webhook channels",
+          "desc": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver."
         },
         "signing": {
-          "title": "Webhook HMAC signing"
+          "title": "Webhook HMAC signing",
+          "desc": "Sign outbound webhooks with a shared secret so receivers can verify authenticity via the X-TeslaSync-Signature header."
         },
         "test": {
-          "title": "Test a webhook channel"
+          "title": "Test a webhook channel",
+          "desc": "Fire a test event at a configured webhook to verify your receiver and signature pipeline."
         }
       },
       "reset": {
         "section": {
-          "title": "Reset a section to defaults"
+          "title": "Reset a section to defaults",
+          "desc": "Wipe one section at a time — alert rules, geofences, channels, automations, dashboard layouts, quiet hours, or general/appearance preferences."
         },
         "all": {
-          "title": "Reset ALL settings"
+          "title": "Reset ALL settings",
+          "desc": "Danger zone — wipe every user-discoverable preference, alert rule, channel, geofence, automation, and dashboard layout in one transaction. Requires typing RESET to confirm."
+        }
+      },
+      "fleet": {
+        "setup": {
+          "desc": "Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming."
+        }
+      },
+      "workspace": {
+        "persona": {
+          "desc": "Prioritize navigation for an owner, fleet operator, analyst, or administrator."
+        },
+        "landing": {
+          "desc": "Choose the first page shown when TeslaSync opens."
+        },
+        "vehicle": {
+          "desc": "Choose the vehicle used for the global scope on a fresh app load."
+        },
+        "range": {
+          "desc": "Choose the default time range used by global analysis controls."
+        },
+        "discovery": {
+          "title": "Help and release highlights",
+          "desc": "Control contextual explanations and product-change highlights."
+        }
+      },
+      "privacy": {
+        "recentPagesClear": {
+          "title": "Clear recently viewed pages",
+          "desc": "Wipe the local list of pages used by the status bar and the Recent section in the command palette."
+        },
+        "consentManage": {
+          "desc": "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser."
+        }
+      },
+      "helix": {
+        "integration": {
+          "title": "Helix (AI integration)",
+          "desc": "Optional AI integration — provider, API key, cost cap, and per-feature opt-in toggles. Off by default."
         }
       }
     }
@@ -8591,7 +8644,40 @@
     "openSettings": "Open settings",
     "dataFreshness": "Data freshness: {{state}}",
     "chartFigure": "Chart: {{title}}",
-    "helpFor": "Help for {{field}}"
+    "helpFor": "Help for {{field}}",
+    "summary": {
+      "route": {
+        "fromTo": "Route map from {{start}} to {{end}}",
+        "distance": "Distance {{distance}}",
+        "duration": "Duration {{duration}}"
+      },
+      "gauge": {
+        "value": "{{label}}: {{value}}",
+        "range": "Scale {{min}} to {{max}}"
+      },
+      "state": {
+        "current": "{{label}}: {{state}}"
+      },
+      "timeline": {
+        "empty": "{{label}}: no entries",
+        "count": "{{label}}: {{count}} entries",
+        "span": "From {{start}} to {{end}}"
+      }
+    },
+    "status": {
+      "loaded": "{{label}} loaded",
+      "loadedCount": "{{label}} loaded, {{count}} items",
+      "empty": "No {{label}} to show",
+      "refreshError": "Could not refresh {{label}}",
+      "saveError": "Could not save {{label}}",
+      "bulkPartial": "{{action}}: {{succeeded}} succeeded, {{failed}} failed",
+      "bulkDone": "{{action}}: {{succeeded}} items",
+      "selectionCount": "{{selectedCount}} of {{totalCount}} rows selected",
+      "streamConnected": "{{scope}} connected",
+      "streamReconnecting": "{{scope}} reconnecting",
+      "streamDisconnected": "{{scope}} disconnected",
+      "streamUpdated": "{{scope}} updated"
+    }
   },
   "table": {
     "genericName": "Data table",
@@ -9977,6 +10063,9 @@
         "minutesAgo": "{{count}}m ago",
         "hoursAgo": "{{count}}h ago",
         "daysAgo": "{{count}}d ago"
+      },
+      "brief": {
+        "scope": "Vehicle {{vehicle}} · History {{start}} to {{end}} (exclusive). Current status comes from a separate latest-state query."
       }
     },
     "audit": {
@@ -10367,7 +10456,8 @@
         "vin": "VIN",
         "vinPending": "Not assigned",
         "delivery": "Delivery",
-        "upgradable": "Upgrade available"
+        "upgradable": "Upgrade available",
+        "aria": "{{model}} order, {{status}}"
       },
       "cols": {
         "model": "Model",
@@ -10400,7 +10490,8 @@
       "col": {
         "count": "Count",
         "severity": "Severity"
-      }
+      },
+      "tableCount": "{{count}} hypertables"
     },
     "secretRotation": {
       "col": {
@@ -10426,7 +10517,8 @@
       }
     },
     "slowQueries": {
-      "colQuery": "Query"
+      "colQuery": "Query",
+      "kpiAnalyzedSub": "Top {{limit}} by {{metric}}"
     },
     "dataQuality": {
       "summary": {
@@ -15458,7 +15550,8 @@
     "centerDisplay": "Center display",
     "homelinkDevices": "HomeLink Devices",
     "sparkline": {
-      "retained": "Trend may be out of date"
+      "retained": "Trend may be out of date",
+      "trend": "{{signal}} trend, {{count}} samples in the last hour"
     }
   },
   "activity": {
@@ -15495,7 +15588,8 @@
         "title": "Activity over time",
         "series": "Actions",
         "empty": "No activity recorded in this window.",
-        "colDay": "Day"
+        "colDay": "Day",
+        "aria": "{{total}} actions across {{days}} days"
       },
       "topActions": {
         "title": "Top actions",
@@ -15517,6 +15611,9 @@
       },
       "feed": {
         "title": "Activity feed"
+      },
+      "brief": {
+        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions."
       }
     },
     "action": {
@@ -15972,7 +16069,8 @@
       "outages30d": "Outages (30d)",
       "title": "Backup history",
       "avgDuration": "Avg duration",
-      "duration": "Duration"
+      "duration": "Duration",
+      "summaryScope": "Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound"
     },
     "backupMonitor": {
       "statusSuccess": "Success",
@@ -16494,7 +16592,10 @@
       "title": "Energy stats",
       "dailyUsage": "Daily usage",
       "energyKwh": "Energy (kWh)",
-      "date": "Date"
+      "date": "Date",
+      "summary": {
+        "scope": "Vehicle {{id}} · source period {{days}} days"
+      }
     },
     "exportActiveJobs": "Active exports",
     "exportRunningBadge": "Running",
@@ -16560,7 +16661,10 @@
       "lifetime": "lifetime",
       "noData": "No lifetime data",
       "title": "Lifetime stats",
-      "error": "Unable to load lifetime stats"
+      "error": "Unable to load lifetime stats",
+      "summary": {
+        "scope": "Vehicle {{id}} · lifetime"
+      }
     },
     "recentlyUnlocked": {
       "title": "Recently unlocked",
@@ -16646,7 +16750,10 @@
       "inMonths": "~{{months}} mo",
       "day": "day",
       "noData": "No mileage data",
-      "title": "Mileage stats"
+      "title": "Mileage stats",
+      "summary": {
+        "scope": "Vehicle {{id}} · rolling 30 days / lifetime"
+      }
     },
     "monthlyMileage": {
       "chartAria": "Distance driven by month",
@@ -16944,7 +17051,8 @@
       "averageSpeed": "Average speed",
       "day": "Day",
       "driveCount": "Drive count",
-      "hour": "Hour"
+      "hour": "Hour",
+      "gridLabel": "Average speed by day of week and hour of day"
     },
     "speedProfile": {
       "sampleScope": "Observed speed samples · average power is not energy efficiency",
@@ -17224,7 +17332,10 @@
       "topSpeed": "Top speed",
       "inYear": "in {year}",
       "noData": "No year-in-review data",
-      "title": "Year in review"
+      "title": "Year in review",
+      "summary": {
+        "scope": "Vehicle {{id}} · year {{year}}"
+      }
     },
     "updateStatus": "{{status}}",
     "moreInfoAbout": "More info about {{title}}",
@@ -17273,7 +17384,12 @@
     "watchMeasurementsTitle": "Returned watch measurements",
     "watchMeasurementsDescription": "Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate.",
     "watchMeasurementsScope": "Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage.",
-    "watchDefaultVehicle": "default"
+    "watchDefaultVehicle": "default",
+    "fsdWeekly": {
+      "summary": {
+        "scope": "Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}"
+      }
+    }
   },
   "operationalSummary": {
     "retained": "Retained source data",
@@ -18424,7 +18540,16 @@
     "serverUnavailable": "Server drive score is unavailable; scored history remains visible",
     "serverUnavailableOnly": "Server drive score is unavailable",
     "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
-    "selectVehicle": "Select a vehicle in the header to load drive score evidence."
+    "selectVehicle": "Select a vehicle in the header to load drive score evidence.",
+    "brief": {
+      "average": "Average computed score for the returned scored-drive cohort, on a 0–100 scale.",
+      "best": "Highest computed score among the returned scored drives, on a 0–100 scale.",
+      "count": "Returned scored drives, not the independent server score total.",
+      "efficiency": "Average consumption in the returned scored-drive cohort.",
+      "description": "Computed driving scores and consumption retain their source cohort; the overall score gauge uses its independent assessment source.",
+      "scope": "Returned scored-drive subset in the selected period; independent score-assessment coverage may differ",
+      "source": "Computed scored-drive cohort; the retained trend label comes from the independent score assessment."
+    }
   },
   "drives": {
     "analysis": "Trends and highlights",
@@ -19561,7 +19686,11 @@
         "title": "No channels configured",
         "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
       },
-      "testHint": "Save then click \"Send test\" to verify the configuration."
+      "testHint": "Save then click \"Send test\" to verify the configuration.",
+      "providers": {
+        "subtitle": "{{inUse}} of {{total}} provider types in use",
+        "configured": "{{count}} configured"
+      }
     },
     "alertStudio": {
       "title": "Alert studio",
@@ -22878,7 +23007,8 @@
     "notMeasured": "Not measured",
     "brief": {
       "observatoryMetrics": "Reset-safe counter quantities",
-      "periodQuantities": "Current and previous period quantities"
+      "periodQuantities": "Current and previous period quantities",
+      "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}"
     },
     "drive": {
       "confidence": {
@@ -25845,7 +25975,12 @@
     "streamAria": "Streaming and domain readiness",
     "subscribeAria": "Subscribe telemetry",
     "subtitle": "Connect Tesla, keep the token fresh, subscribe a vehicle, then wait for telemetry.",
-    "tokenUnavailable": "Fleet access-token status unavailable."
+    "tokenUnavailable": "Fleet access-token status unavailable.",
+    "progress": {
+      "token": {
+        "title": "Keep the Fleet token fresh"
+      }
+    }
   },
   "totp": {
     "disable": {
@@ -33834,7 +33969,8 @@
       "unexplained": "Unexplained residual",
       "predicted": "Predicted (known terms)",
       "session": "Session",
-      "reconcile": "reconcile"
+      "reconcile": "reconcile",
+      "empty": "No drive interval in this window."
     },
     "charge": {
       "title": "Charge physics",
@@ -33844,7 +33980,8 @@
       "added": "Energy added",
       "wall": "Wall energy",
       "precondition": "Preconditioning",
-      "efficiency": "Efficiency"
+      "efficiency": "Efficiency",
+      "empty": "No charge interval in this window."
     },
     "park": {
       "title": "Park / vampire physics",
@@ -33856,7 +33993,8 @@
       "cabin": "Cabin overheat",
       "precondition": "Preconditioning",
       "quiet": "Quiet pack",
-      "pluggedAtLimit": "Plugged at limit"
+      "pluggedAtLimit": "Plugged at limit",
+      "empty": "No park interval in this window."
     },
     "thermal": {
       "title": "Thermal",
@@ -35290,7 +35428,9 @@
       "subsetScope": "Returned subset",
       "unknownScope": "Coverage unknown",
       "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
-      "returned": "Returned evidence"
+      "returned": "Returned evidence",
+      "awaiting": "Awaiting evidence",
+      "window": "{{start}}–{{end}}; returned drive subset, not a server-wide aggregate"
     }
   },
   "resourcesPanel": {
@@ -35298,5 +35438,16 @@
     "healthyWorkersBarLabel": "{{label}} health",
     "title": "Resources",
     "utilizationBarLabel": "{{label}} usage"
+  },
+  "progressRing": {
+    "ariaLabel": "Progress: {{percent}}%"
+  },
+  "demoMode": {
+    "label": "DEMO DATA — synthetic sample, not your vehicle"
+  },
+  "signalConfig": {
+    "deselectCategory": "Deselect all {{category}} signals",
+    "selectCategory": "Select all {{category}} signals",
+    "setCategoryInterval": "Set interval for all {{category}} signals"
   }
 }

@@ -16,7 +16,40 @@
     "openSettings": "Open settings",
     "dataFreshness": "Data freshness: {{state}}",
     "chartFigure": "Chart: {{title}}",
-    "helpFor": "Help for {{field}}"
+    "helpFor": "Help for {{field}}",
+    "summary": {
+      "route": {
+        "fromTo": "Route map from {{start}} to {{end}}",
+        "distance": "Distance {{distance}}",
+        "duration": "Duration {{duration}}"
+      },
+      "gauge": {
+        "value": "{{label}}: {{value}}",
+        "range": "Scale {{min}} to {{max}}"
+      },
+      "state": {
+        "current": "{{label}}: {{state}}"
+      },
+      "timeline": {
+        "empty": "{{label}}: no entries",
+        "count": "{{label}}: {{count}} entries",
+        "span": "From {{start}} to {{end}}"
+      }
+    },
+    "status": {
+      "loaded": "{{label}} loaded",
+      "loadedCount": "{{label}} loaded, {{count}} items",
+      "empty": "No {{label}} to show",
+      "refreshError": "Could not refresh {{label}}",
+      "saveError": "Could not save {{label}}",
+      "bulkPartial": "{{action}}: {{succeeded}} succeeded, {{failed}} failed",
+      "bulkDone": "{{action}}: {{succeeded}} items",
+      "selectionCount": "{{selectedCount}} of {{totalCount}} rows selected",
+      "streamConnected": "{{scope}} connected",
+      "streamReconnecting": "{{scope}} reconnecting",
+      "streamDisconnected": "{{scope}} disconnected",
+      "streamUpdated": "{{scope}} updated"
+    }
   },
   "alerts": {
     "tabFlash": "(!) Alert — ",
@@ -427,6 +460,9 @@
     "mobileSummary": "Not live",
     "showDetails": "Details",
     "hideDetails": "Less"
+  },
+  "demoMode": {
+    "label": "DEMO DATA — synthetic sample, not your vehicle"
   },
   "density": {
     "table": "Table",
@@ -2104,6 +2140,9 @@
       "dismiss": "Dismiss"
     }
   },
+  "progressRing": {
+    "ariaLabel": "Progress: {{percent}}%"
+  },
   "resourcesPanel": {
     "emptyText": "No resource metrics available",
     "healthyWorkersBarLabel": "{{label}} health",
@@ -2118,6 +2157,11 @@
     "info": "Info",
     "warn": "Warning",
     "critical": "Critical"
+  },
+  "signalConfig": {
+    "deselectCategory": "Deselect all {{category}} signals",
+    "selectCategory": "Select all {{category}} signals",
+    "setCategoryInterval": "Set interval for all {{category}} signals"
   },
   "signalQuery": {
     "from": "From",

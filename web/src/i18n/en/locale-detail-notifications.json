@@ -359,7 +359,11 @@
         "title": "No channels configured",
         "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
       },
-      "testHint": "Save then click \"Send test\" to verify the configuration."
+      "testHint": "Save then click \"Send test\" to verify the configuration.",
+      "providers": {
+        "subtitle": "{{inUse}} of {{total}} provider types in use",
+        "configured": "{{count}} configured"
+      }
     },
     "alertStudio": {
       "title": "Alert studio",

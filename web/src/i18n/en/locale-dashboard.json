@@ -439,7 +439,8 @@
       "outages30d": "Outages (30d)",
       "title": "Backup history",
       "avgDuration": "Avg duration",
-      "duration": "Duration"
+      "duration": "Duration",
+      "summaryScope": "Energy site {{siteId}}; history since {{since}}, no explicit exclusive end bound"
     },
     "backupMonitor": {
       "statusSuccess": "Success",
@@ -961,7 +962,10 @@
       "title": "Energy stats",
       "dailyUsage": "Daily usage",
       "energyKwh": "Energy (kWh)",
-      "date": "Date"
+      "date": "Date",
+      "summary": {
+        "scope": "Vehicle {{id}} · source period {{days}} days"
+      }
     },
     "exportActiveJobs": "Active exports",
     "exportRunningBadge": "Running",
@@ -1027,7 +1031,10 @@
       "lifetime": "lifetime",
       "noData": "No lifetime data",
       "title": "Lifetime stats",
-      "error": "Unable to load lifetime stats"
+      "error": "Unable to load lifetime stats",
+      "summary": {
+        "scope": "Vehicle {{id}} · lifetime"
+      }
     },
     "recentlyUnlocked": {
       "title": "Recently unlocked",
@@ -1113,7 +1120,10 @@
       "inMonths": "~{{months}} mo",
       "day": "day",
       "noData": "No mileage data",
-      "title": "Mileage stats"
+      "title": "Mileage stats",
+      "summary": {
+        "scope": "Vehicle {{id}} · rolling 30 days / lifetime"
+      }
     },
     "monthlyMileage": {
       "chartAria": "Distance driven by month",
@@ -1411,7 +1421,8 @@
       "averageSpeed": "Average speed",
       "day": "Day",
       "driveCount": "Drive count",
-      "hour": "Hour"
+      "hour": "Hour",
+      "gridLabel": "Average speed by day of week and hour of day"
     },
     "speedProfile": {
       "sampleScope": "Observed speed samples · average power is not energy efficiency",
@@ -1691,7 +1702,10 @@
       "topSpeed": "Top speed",
       "inYear": "in {year}",
       "noData": "No year-in-review data",
-      "title": "Year in review"
+      "title": "Year in review",
+      "summary": {
+        "scope": "Vehicle {{id}} · year {{year}}"
+      }
     },
     "updateStatus": "{{status}}",
     "moreInfoAbout": "More info about {{title}}",
@@ -1740,7 +1754,12 @@
     "watchMeasurementsTitle": "Returned watch measurements",
     "watchMeasurementsDescription": "Range and cabin temperature come only from the watch summary; battery, vehicle state, lock and charging indicators remain separate.",
     "watchMeasurementsScope": "Requested vehicle {{id}} · returned watch summary snapshot; complication freshness does not establish measurement freshness or continuous recording coverage.",
-    "watchDefaultVehicle": "default"
+    "watchDefaultVehicle": "default",
+    "fsdWeekly": {
+      "summary": {
+        "scope": "Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}"
+      }
+    }
   },
   "widgets": {
     "gridFootprint": "{{cols}}×{{rows}} grid",
