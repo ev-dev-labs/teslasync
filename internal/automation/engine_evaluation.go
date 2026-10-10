@@ -75,13 +75,10 @@ func (e *Engine) evaluateTypedCondition(index int, item any, a *models.Automatio
 }
 
 func evaluateTimeWindowCondition(index int, c *models.AutomationStepConditionTimeWindow, now time.Time) conditionResult {
-	cfg := &condition.TimeWindowConfig{
-		Type:      "time_window",
-		StartTime: c.StartTime.Format("15:04"),
-		EndTime:   c.EndTime.Format("15:04"),
-		Timezone:  c.Timezone,
+	if c == nil {
+		return conditionResult{Index: index, Type: models.AutomationStepKindConditionTimeWindow, Result: "unknown", Reason: "time_window condition is nil"}
 	}
-	res, _, err := condition.EvaluateTimeWindow(cfg, now)
+	res, _, err := condition.EvaluateTypedTimeWindow(c.StartTime, c.EndTime, c.Timezone, c.DaysOfWeek, now)
 	if err != nil {
 		return conditionResult{Index: index, Type: models.AutomationStepKindConditionTimeWindow, Result: "unknown", Reason: "evaluation error: " + err.Error()}
 	}

@@ -144,9 +144,10 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 }
 
 type testRunConditionConfig struct {
-	condType string
-	raw      json.RawMessage
-	err      error
+	condType   string
+	raw        json.RawMessage
+	err        error
+	timeWindow *models.AutomationStepConditionTimeWindow
 }
 
 // evaluateTestConditions parses and evaluates each condition in the automation.
@@ -168,6 +169,17 @@ func (h *AutomationHandler) evaluateTestConditions(af *models.AutomationFull, no
 				Result: "unknown",
 				Reason: cfg.err.Error(),
 			})
+			continue
+		}
+		if cfg.timeWindow != nil {
+			c := cfg.timeWindow
+			base := testConditionResult{Index: i, Type: cfg.condType}
+			res, snapshot, err := condition.EvaluateTypedTimeWindow(c.StartTime, c.EndTime, c.Timezone, c.DaysOfWeek, now)
+			if err != nil {
+				results = append(results, withUnknown(base, "evaluation error: "+err.Error()))
+			} else {
+				results = append(results, withResult(base, res, snapshot))
+			}
 			continue
 		}
 		var peek struct {
@@ -237,12 +249,7 @@ func testRunConditionTimeWindow(c *models.AutomationStepConditionTimeWindow) tes
 	if c == nil {
 		return testRunConditionConfig{condType: "time_window", err: fmt.Errorf("time_window condition is nil")}
 	}
-	return marshalTestRunCondition("time_window", map[string]any{
-		"type":       "time_window",
-		"start_time": c.StartTime.Format("15:04"),
-		"end_time":   c.EndTime.Format("15:04"),
-		"timezone":   c.Timezone,
-	})
+	return testRunConditionConfig{condType: "time_window", timeWindow: c}
 }
 
 func testRunConditionSignal(c *models.AutomationStepConditionSignal) testRunConditionConfig {

@@ -13,10 +13,76 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
+	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
+
+func TestEvaluateTestConditionsTypedWeekdayParity(t *testing.T) {
+	h := &AutomationHandler{}
+	tests := []struct {
+		name, start, end, timezone, instant, want string
+		days                                      []int16
+	}{
+		{"allowed Monday", "00:00", "00:00", "", "2026-10-05T12:00:00Z", "met", []int16{1, 2}},
+		{"wrong Wednesday", "00:00", "00:00", "", "2026-10-07T12:00:00Z", "not_met", []int16{1, 2}},
+		{"Sunday zero", "00:00", "00:00", "", "2026-10-04T12:00:00Z", "met", []int16{0}},
+		{"empty unrestricted", "00:00", "00:00", "", "2026-10-04T12:00:00Z", "met", nil},
+		{"inclusive start", "09:00", "17:00", "", "2026-10-05T09:00:00Z", "met", []int16{1}},
+		{"exclusive end", "09:00", "17:00", "", "2026-10-05T17:00:00Z", "not_met", []int16{1}},
+		{"overnight current day", "22:00", "06:00", "", "2026-10-06T01:00:00Z", "not_met", []int16{1}},
+		{"overnight allowed", "22:00", "06:00", "", "2026-10-06T01:00:00Z", "met", []int16{2}},
+		{"local Monday", "00:00", "00:00", "America/Los_Angeles", "2026-10-06T01:00:00Z", "met", []int16{1}},
+		{"local rejects UTC day", "00:00", "00:00", "America/Los_Angeles", "2026-10-06T01:00:00Z", "not_met", []int16{2}},
+		{"invalid timezone", "00:00", "00:00", "Mars/Olympus", "2026-10-05T12:00:00Z", "unknown", nil},
+		{"invalid day", "00:00", "00:00", "", "2026-10-05T12:00:00Z", "unknown", []int16{-1}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start, err := time.Parse("15:04", tt.start)
+			if err != nil {
+				t.Fatal(err)
+			}
+			end, err := time.Parse("15:04", tt.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			now, err := time.Parse(time.RFC3339, tt.instant)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c := models.AutomationStepConditionTimeWindow{
+				StartTime: start, EndTime: end, Timezone: tt.timezone, DaysOfWeek: tt.days,
+			}
+			expected, snapshot, evalErr := condition.EvaluateTypedTimeWindow(start, end, tt.timezone, tt.days, now)
+			for _, payload := range []any{c, &c} {
+				af := &models.AutomationFull{
+					Conditions: []any{payload},
+					Actions:    []any{&models.AutomationAction{CommandName: "lock"}},
+				}
+				results := h.evaluateTestConditions(af, now)
+				if len(results) != 1 || results[0].Result != tt.want {
+					t.Fatalf("payload %T results = %#v, want %s", payload, results, tt.want)
+				}
+				if evalErr == nil {
+					if results[0].Reason != expected.Reason || !bytes.Equal(results[0].Snapshot, snapshot) {
+						t.Fatalf("dry-run differs from shared typed evaluator: %#v", results[0])
+					}
+					actions, _ := h.simulateActions(af, expected.Met)
+					if len(actions) != 1 || !actions[0].Simulated || actions[0].WouldSkip == expected.Met {
+						t.Fatalf("dry-run actions = %#v", actions)
+					}
+				}
+			}
+		})
+	}
+	nilCondition := (*models.AutomationStepConditionTimeWindow)(nil)
+	results := h.evaluateTestConditions(&models.AutomationFull{Conditions: []any{nilCondition}}, time.Now().UTC())
+	if len(results) != 1 || results[0].Result != "unknown" {
+		t.Fatalf("nil typed condition = %#v", results)
+	}
+}
 
 func TestAutomationDTOContract_AcceptsTypedCreateAndUpdateFields(t *testing.T) {
 	req, err := decodeAutomationInputDTO(strings.NewReader(validAutomationDTOPayload()))
