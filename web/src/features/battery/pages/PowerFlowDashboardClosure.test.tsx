@@ -129,7 +129,7 @@ describe('Power Flow bounded closure — actual mounted preservation', () => {
     const drawer = within(screen.getByRole('dialog'));
     expect(drawer.getByText('Charging', { exact: true })).toBeVisible();
     expect(drawer.getByText('Importing', { exact: true })).toBeVisible();
-    expect(drawer.getByText('Live energy status', { exact: true })).toBeVisible();
+    expect(drawer.getByText('Live energy status', { exact: true, selector: '[data-drawer-header] p' })).toBeVisible();
     expect(JSON.stringify(live)).toBe(before);
   });
 
