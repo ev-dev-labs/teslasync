@@ -422,12 +422,12 @@ describe('VehicleHero', () => {
   it('colours the battery gauge amber below 50% and green above it', () => {
     const low = renderHero({ state: { ...baseState, battery_level: 20 } });
     // Amber fill is unique to a low battery gauge.
-    expect(hasGaugeColor(low.container as HTMLElement, '#f59e0b')).toBe(true);
+    expect(hasGaugeColor(low.container as HTMLElement, gaugeTone.warning)).toBe(true);
     cleanup();
 
     const high = renderHero({ state: { ...baseState, battery_level: 90 } });
     // Green fill — only the battery gauge uses it when idle (not charging).
-    expect(hasGaugeColor(high.container as HTMLElement, '#10b981')).toBe(true);
+    expect(hasGaugeColor(high.container as HTMLElement, gaugeTone.success)).toBe(true);
   });
 });
 
