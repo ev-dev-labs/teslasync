@@ -245,7 +245,7 @@ describe('ChargeSessionChartWidget states', () => {
     mockRequest.mockImplementation(() => new Promise(() => {}));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Charge sessions')).toBeInTheDocument();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();
   });
