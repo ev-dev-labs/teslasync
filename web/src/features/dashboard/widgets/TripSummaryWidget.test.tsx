@@ -365,7 +365,7 @@ describe('TripSummaryWidget', () => {
     tripsMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No shell content while loading.
     expect(screen.queryByText('Trip summary')).toBeInTheDocument();
     expect(screen.queryByText('Big Sur Loop')).not.toBeInTheDocument();

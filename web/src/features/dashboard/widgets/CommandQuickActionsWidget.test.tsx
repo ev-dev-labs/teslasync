@@ -284,7 +284,7 @@ describe('CommandQuickActionsWidget', () => {
     const { container } = renderWidget(<CommandQuickActionsWidget size={SIZE_MEDIUM} />);
 
     // The shell renders its skeleton instead of flashing "No vehicle selected".
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No vehicle selected')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Lock' })).not.toBeInTheDocument();
   });
@@ -299,7 +299,7 @@ describe('CommandQuickActionsWidget', () => {
     );
 
     // id is known up-front → no skeleton, the command grid is usable.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.getByRole('button', { name: 'Lock' })).toBeInTheDocument();
   });
 

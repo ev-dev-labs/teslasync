@@ -227,7 +227,7 @@ describe('RouteEfficiencyWidget states', () => {
     mockRequest.mockImplementation(() => new Promise(() => {})); // hang
     const { container } = renderWidget({ vehicleId: 1 });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Route efficiency')).toBeInTheDocument();
     expect(screen.queryByText('No route data')).toBeNull();
   });

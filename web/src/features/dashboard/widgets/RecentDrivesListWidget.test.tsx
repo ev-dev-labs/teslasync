@@ -385,7 +385,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     setup({ drives: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget({ size: STANDARD });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Recent drives')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives recorded')).not.toBeInTheDocument();
   });

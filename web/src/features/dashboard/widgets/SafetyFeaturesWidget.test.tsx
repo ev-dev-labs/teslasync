@@ -385,7 +385,7 @@ describe('SafetyFeaturesWidget', () => {
 
     const { container } = renderWidget(<SafetyFeaturesWidget size={SIZE_MEDIUM} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Safety features')).toBeInTheDocument();
     expect(screen.queryByText('No safety data')).not.toBeInTheDocument();
   });
