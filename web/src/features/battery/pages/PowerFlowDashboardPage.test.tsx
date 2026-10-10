@@ -269,8 +269,8 @@ describe('PowerFlowDashboardPage — populated (charging / importing)', () => {
     const grid = within(status).getByText('Grid: Active');
     expect(grid).toBeInTheDocument();
     // Active grid → success (green), never danger.
-    expect(grid.className).toContain('bg-green-100');
-    expect(grid.className).not.toContain('bg-red-100');
+    expect(grid.className).toContain('bg-[var(--semantic-success-bg)]');
+    expect(grid.className).not.toContain('bg-[var(--semantic-danger-bg)]');
 
     expect(within(status).getByText('Storm Mode Active')).toBeInTheDocument();
     expect(within(status).getByText('Backup Capable')).toBeInTheDocument();
@@ -422,12 +422,12 @@ describe('PowerFlowDashboardPage — edge branches', () => {
     // Bug-fix #2 — status strip: unknown is neutral, never a red danger chip.
     const stripBadge = within(statusRegion()).getByText('Grid: Unknown');
     expect(stripBadge.className).toContain(BADGE_VARIANTS.neutral);
-    expect(stripBadge.className).not.toContain('bg-red-100');
+    expect(stripBadge.className).not.toContain('bg-[var(--semantic-danger-bg)]');
 
     // Bug-fix #2 — site-details panel: same neutral mapping for the bare value.
     const siteBadge = within(overviewRegion()).getByText('Unknown');
     expect(siteBadge.className).toContain(BADGE_VARIANTS.neutral);
-    expect(siteBadge.className).not.toContain('bg-red-100');
+    expect(siteBadge.className).not.toContain('bg-[var(--semantic-danger-bg)]');
 
     // Storm/backup off render their negative-state values.
     expect(within(overviewRegion()).getByText('Off')).toBeInTheDocument();
@@ -439,8 +439,8 @@ describe('PowerFlowDashboardPage — edge branches', () => {
     renderPage();
 
     const badge = within(statusRegion()).getByText('Grid: Islanded');
-    expect(badge.className).toContain('bg-red-100');
-    expect(badge.className).not.toContain('bg-green-100');
+    expect(badge.className).toContain('bg-[var(--semantic-danger-bg)]');
+    expect(badge.className).not.toContain('bg-[var(--semantic-success-bg)]');
   });
 });
 
