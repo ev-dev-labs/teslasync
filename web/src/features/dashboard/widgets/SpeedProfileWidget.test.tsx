@@ -505,7 +505,7 @@ describe('SpeedProfileWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Speed profile')).toBeInTheDocument();
     expect(screen.queryByText('No speed data')).not.toBeInTheDocument();
   });
@@ -550,7 +550,7 @@ describe('SpeedProfileWidget — query states', () => {
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.getByText('Speed profile')).toBeInTheDocument();
     expect(screen.getByText('54.00-108.00')).toBeInTheDocument();
-    expect(container.querySelector('.bg-red-400')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--semantic-danger"]')).toBeInTheDocument();
   });
 });
 

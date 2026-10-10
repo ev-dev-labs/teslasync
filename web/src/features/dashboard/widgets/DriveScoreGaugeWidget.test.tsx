@@ -38,8 +38,12 @@ vi.mock('react-i18next', () => ({
     t: (key: string, fallback?: string, opts?: Record<string, unknown>) => {
       const base = typeof fallback === 'string' ? fallback : key;
       if (opts && typeof opts === 'object') {
+        const replacements = opts.replace;
+        const values = replacements && typeof replacements === 'object'
+          ? { ...opts, ...replacements }
+          : opts;
         return base.replace(/{{(\w+)}}/g, (_m, name: string) =>
-          name in opts ? String(opts[name]) : `{{${name}}}`,
+          name in values ? String(values[name]) : `{{${name}}}`,
         );
       }
       return base;
@@ -199,7 +203,7 @@ describe('DriveScoreGaugeWidget states', () => {
     mockUseDriveScore.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(TALL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Drive score')).toBeInTheDocument();
     expect(screen.queryByText('No score yet')).toBeNull();
   });

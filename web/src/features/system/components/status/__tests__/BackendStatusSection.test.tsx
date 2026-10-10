@@ -107,7 +107,7 @@ describe('BackendStatusSection', () => {
 
     // The accordion header always renders; the body is skeletons only.
     expect(screen.getByText('Backend status')).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(2)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThanOrEqual(2)
     expect(screen.queryByText('Component health')).not.toBeInTheDocument()
     expect(screen.queryByText('Database connection pool')).not.toBeInTheDocument()
   })
@@ -140,7 +140,7 @@ describe('BackendStatusSection', () => {
 
     // Roll-up badge: all healthy → success variant.
     const badge = screen.getByText(/^4\/4 healthy$/)
-    expect(badge).toHaveClass('bg-green-100')
+    expect(badge).toHaveClass('bg-[var(--semantic-success-bg)]')
 
     // DB connection pool stat cards.
     expect(screen.getByText('Database connection pool')).toBeInTheDocument()
@@ -176,7 +176,7 @@ describe('BackendStatusSection', () => {
 
     // Partial health → warning variant with the correct count.
     const badge = screen.getByText(/^1\/2 healthy$/)
-    expect(badge).toHaveClass('bg-yellow-100')
+    expect(badge).toHaveClass('bg-[var(--semantic-warning-bg)]')
 
     // Status text colour comes from statusTextClass().
     expect(screen.getByText('unhealthy')).toHaveClass('text-red-400')

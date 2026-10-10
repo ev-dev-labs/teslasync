@@ -313,7 +313,7 @@ describe('RegenEfficiencyWidget — shell states', () => {
     mockRegen.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(hasGauge(container)).toBe(false);
     expect(screen.queryByText('No regen data')).toBeNull();
   });
@@ -403,7 +403,7 @@ describe('RegenEfficiencyWidget — null-safety', () => {
     expect(within(drawer).getByText('5000 Wh')).toBeInTheDocument();
     expect(within(drawer).getByText('7')).toBeInTheDocument();
     expect(within(drawer).getByText(/absolute drive power is not regenerative power/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/Vehicle 42/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/Vehicle 42/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
   });
 });
 

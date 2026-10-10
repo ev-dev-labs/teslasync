@@ -201,7 +201,7 @@ describe('MediaNowPlayingWidget — states', () => {
   it('renders a loading skeleton while the media query is pending', () => {
     useMediaLatestMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Nothing playing')).toBeNull();
   });
 
@@ -217,7 +217,7 @@ describe('MediaNowPlayingWidget — states', () => {
       makeResult({ isError: true, dataUpdatedAt: 0, data: null }),
     );
     const { container } = renderWidget();
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    expect(container.querySelector('[class*="--semantic-danger"]')).not.toBeNull();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('Nothing playing')).toBeNull();
   });

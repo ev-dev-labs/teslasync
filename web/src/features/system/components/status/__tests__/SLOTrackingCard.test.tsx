@@ -143,7 +143,7 @@ describe('SLOTrackingCard — data states', () => {
     expect(container.textContent).toContain('Last 30 days')
     expect(container.textContent).toContain('5 / 6 components healthy')
     // A healthy figure at or above target is painted green, not red/amber.
-    expect(screen.getByText('99.98%')).toHaveClass('dark:text-emerald-300')
+    expect(screen.getByText('99.98%')).toHaveClass('text-[var(--semantic-success)]')
   })
 
   it('surfaces an alert when the request fails', async () => {
@@ -202,12 +202,12 @@ describe('SLOTrackingCard — tone thresholds', () => {
 
   it('paints amber when uptime is within one point below the 99% target', async () => {
     const value = await renderWithPct(98.5)
-    expect(value).toHaveClass('dark:text-amber-300')
+    expect(value).toHaveClass('text-[var(--semantic-warning)]')
   })
 
   it('paints red when uptime is more than one point below target', async () => {
     const value = await renderWithPct(90)
-    expect(value).toHaveClass('dark:text-rose-300')
+    expect(value).toHaveClass('text-[var(--semantic-danger)]')
   })
 })
 

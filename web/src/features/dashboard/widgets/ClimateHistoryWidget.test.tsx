@@ -273,8 +273,8 @@ describe('ClimateHistoryWidget — full view (°C)', () => {
     ]);
 
     // Two series with the right colours + keys.
-    expect(cap.areaByKey.inside).toEqual({ stroke: '#0072B2', name: 'inside' });
-    expect(cap.areaByKey.outside).toEqual({ stroke: '#E69F00', name: 'outside' });
+    expect(cap.areaByKey.inside).toEqual({ stroke: '#91b4d2', name: 'inside' });
+    expect(cap.areaByKey.outside).toEqual({ stroke: '#c0a384', name: 'outside' });
 
     // Summary shows the LATEST (last-after-sort) cabin + outside temps.
     expect(screen.getByText('Cabin')).toBeInTheDocument();
@@ -361,7 +361,7 @@ describe('ClimateHistoryWidget — empty / lifecycle states', () => {
     const view = renderWidget(FULL, vehicleId);
     expect(mockedRequest).not.toHaveBeenCalled();
     expect(screen.getByText('No climate history')).toBeInTheDocument();
-    expect(view.container.querySelector('.animate-pulse')).toBeNull();
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('shows an accessible empty state (not a chart) when there are no rows', async () => {
@@ -379,7 +379,7 @@ describe('ClimateHistoryWidget — empty / lifecycle states', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderWidget(FULL, 7);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Climate history')).toBeInTheDocument();
     expect(screen.queryByText('No climate history')).toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();

@@ -520,7 +520,7 @@ describe('MapOverviewPage — position loading', () => {
     expect(band).toHaveAttribute('aria-busy', 'true')
     expect(band.querySelector('[data-operational-value]')).toBeNull()
     expect(screen.queryByText('90.00 km/h')).toBeNull()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0)
   })
 })
 
@@ -529,7 +529,7 @@ describe('MapOverviewPage — position loading', () => {
 describe('MapOverviewPage — interactions', () => {
   it('opens retained position evidence without changing map layers or playback', async () => {
     renderPage()
-    const band = screen.getByRole('region', { name: 'Vehicle status' })
+    const band = await screen.findByRole('region', { name: 'Vehicle status' })
     await waitFor(() => expect(within(band).getByText('90.00 km/h')).toBeInTheDocument())
     fireEvent.click(within(band).getByRole('button', { name: 'Review details' }))
     const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' })

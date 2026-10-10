@@ -394,11 +394,17 @@ async function renderRealUnitPresenters() {
   );
   const region = screen.getByRole('region', { name: 'Real unit presenters' });
   const metric = (label: string) => {
-    const tile = within(region).getByText(label).closest('[data-stat]');
+    const tile = within(region).getByText(label).closest('[data-stat], [data-operational-metric]');
     expect(tile).not.toBeNull();
-    const value = tile!.querySelector('[data-stat-value]');
+    const value = tile!.querySelector('[data-stat-value], [data-operational-value]');
     const unit = tile!.querySelector('[data-stat-unit]');
     expect(value).not.toBeNull();
+    // OperationalBrief renders the real formatted value and unit as one string.
+    if (tile!.hasAttribute('data-operational-metric')) {
+      const formatted = value!.textContent?.match(/^(-?\d+(?:\.\d+)?)\s*(.+)$/);
+      expect(formatted).not.toBeNull();
+      return { value: Number(formatted![1]), unit: formatted![2] };
+    }
     return { value: Number(value!.textContent), unit: unit?.textContent };
   };
   return metric;

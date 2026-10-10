@@ -165,10 +165,14 @@ describe('ChargeInterruptionPage preservation and trust (authored, NOTRUN)', () 
       'No end timestamp recorded',
     ]) expect(within(details).getAllByText(text, { exact: true }).length).toBeGreaterThan(0);
     expect(details.querySelectorAll('li')).toHaveLength(2);
-    expect(screen.getByText(/Coverage and time bounds are not reported/)).toBeInTheDocument();
     expect(result.container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
     expect(result.container.querySelector('[data-period-kind]')).toHaveAttribute('data-period-kind', 'unknown');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details', exact: true }));
+    const narrative = within(screen.getByRole('dialog')).getByRole('region', { name: 'Decision narrative' });
+    const limitations = within(narrative).getByText('Limitations', { exact: true }).parentElement;
+    if (!limitations) throw new Error('Source limitations container missing');
+    expect(within(limitations).getByText(/Coverage and time bounds are not reported/)).toBeInTheDocument();
   });
 
   it('keeps all source data and URL state after refresh failure, and retries the history source', () => {
@@ -193,7 +197,10 @@ describe('ChargeInterruptionPage preservation and trust (authored, NOTRUN)', () 
     const result = mountPage();
     source.query = { ...source.query, fetchStatus: 'paused' };
     result.rerender(<ChargeInterruptionPage />);
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).not.toHaveTextContent('offline');
     expect(tiles(result.container).every(tile => tile.getAttribute('data-value-state') === 'value')).toBe(true);
     assertSeries();
     source.query = { fetchStatus: 'paused', refetch: source.retry };

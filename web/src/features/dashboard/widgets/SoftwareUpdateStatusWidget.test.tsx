@@ -250,7 +250,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     mockConfig.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Current version')).toBeNull();
     expect(screen.queryByText('No software data')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
@@ -281,7 +281,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     const { container } = renderWidget();
 
     expect(screen.getByText('No software data')).toBeInTheDocument();
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    expect(container.querySelector('[class*="bg-[var(--semantic-danger)]"]')).not.toBeNull();
   });
 });
 

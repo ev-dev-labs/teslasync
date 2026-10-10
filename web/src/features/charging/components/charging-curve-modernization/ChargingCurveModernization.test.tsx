@@ -155,7 +155,9 @@ describe('charging curve production orchestration', () => {
     expect(screen.getByTestId('fingerprint')).toHaveAttribute('data-vehicle', '7');
     expect(screen.getByTestId('ml')).toHaveAttribute('data-vehicle', '7');
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(2);
-    expect(screen.getByText('Up to 200 returned sessions; not a full-history aggregate.')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('charging-curve-summary')).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Returned sessions in the workspace range details' });
+    expect(within(details).getByRole('region', { name: 'Decision narrative' })).toHaveTextContent('Up to 200 returned sessions; not a full-history aggregate.');
   });
 
   it('preserves selected curve, details and all neighbors through retained refresh errors and retries', () => {
@@ -232,7 +234,10 @@ describe('charging curve production orchestration', () => {
     h.query = { ...h.query, fetchStatus: 'paused' };
     mounted.refresh();
     expect(screen.getByTestId('comparison')).toHaveAttribute('data-ids', '101,102');
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(/offline/);
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).not.toHaveTextContent(/offline/i);
     h.query = { ...h.query, data: undefined };
     mounted.refresh();
     expect(mounted.container.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy', 'true');

@@ -367,7 +367,7 @@ describe('TeslaChargingHistoryPage — happy path', () => {
   });
   it('renders the page shell, every section, and all panel headings', async () => {
     installRequest();
-    renderPage();
+    const { container } = renderPage();
     await waitForSummary();
 
     expect(
@@ -378,8 +378,11 @@ describe('TeslaChargingHistoryPage — happy path', () => {
     ).toBeInTheDocument();
 
     // KPI region + the three data panels all mount (none gated away).
+    const summary = container.querySelector('#tesla-charging-history-summary');
+    expect(summary).toBeInstanceOf(HTMLElement);
+    if (!(summary instanceof HTMLElement)) throw new Error('Charging summary container is missing');
     expect(
-      screen.getByRole('region', { name: 'Charging summary metrics' }),
+      within(summary).getByRole('region', { name: 'Charging summary metrics' }),
     ).toBeInTheDocument();
     expect(screen.getByText('Monthly spending')).toBeInTheDocument();
     expect(screen.getByText('Top locations')).toBeInTheDocument();
@@ -469,7 +472,7 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Panel chrome stays mounted — only the bodies are skeletons.
     expect(screen.getByText('Monthly spending')).toBeInTheDocument();

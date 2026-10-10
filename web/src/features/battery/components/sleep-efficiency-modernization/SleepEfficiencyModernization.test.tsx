@@ -89,7 +89,7 @@ describe('live Sleep Efficiency modernization (authored; execution NOTRUN)', () 
     allShells();
     const evidence = screen.getByTestId('sleep-efficiency-kpi-evidence');
     expect(evidence.querySelectorAll('[data-operational-metric]')).toHaveLength(7);
-    const durationMetric = evidence.querySelector('[aria-label^="Duration-based sleep efficiency:"]');
+    const durationMetric = evidence.querySelector('[data-operational-metric="sleep-duration-efficiency"]');
     expect(durationMetric).toHaveTextContent('—');
     expect(durationMetric).toHaveTextContent('Unavailable pending dwell reconstruction');
     expect(within(evidence).getByText('Count-based; not a time share', { selector: '[data-battery-detail-context]' })).toBeInTheDocument();
@@ -125,7 +125,10 @@ describe('live Sleep Efficiency modernization (authored; execution NOTRUN)', () 
     const view = mount();
     mockSleep.mockReturnValue(query({ fetchStatus: 'paused' }));
     view.refresh();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).not.toHaveTextContent(/offline/i);
     allShells();
     mockSleep.mockReturnValue(query({ data: undefined, fetchStatus: 'paused', isPending: true, isSuccess: false }));
     view.refresh();

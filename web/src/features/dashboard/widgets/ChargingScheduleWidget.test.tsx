@@ -379,8 +379,8 @@ describe('ChargingScheduleWidget — states', () => {
   it('renders a loading skeleton while the signals query is pending', () => {
     useVehiclesMock.mockReturnValue({ data: [{ id: 1 }] });
     useQueryMock.mockReturnValue(makeSignalsResult({ isLoading: true, data: undefined }));
-    const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    renderWidget();
+    expect(screen.getByRole('status', { name: 'Loading Charging schedule' }).querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No schedule data')).toBeNull();
     expect(screen.queryByText('Charging schedule')).toBeInTheDocument();
   });
@@ -405,8 +405,8 @@ describe('ChargingScheduleWidget — states', () => {
     useQueryMock.mockReturnValue(
       makeSignalsResult({ isError: true, dataUpdatedAt: 0, data: undefined }),
     );
-    const { container } = renderWidget();
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    renderWidget();
+    expect(screen.getByRole('button', { name: 'Refresh data · Error' }).querySelector('[class*="--semantic-danger"]')).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /refresh/i })).toHaveLength(2);
     expect(screen.getByText('Charging schedule unavailable')).toBeInTheDocument();
     expect(screen.getByText('64%')).toBeInTheDocument();

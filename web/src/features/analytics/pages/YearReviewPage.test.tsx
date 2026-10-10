@@ -450,7 +450,7 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Sections stay mounted (only their bodies are skeletons)…
     expect(screen.getByRole('region', { name: 'Activity' })).toBeInTheDocument();
@@ -520,7 +520,7 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     const { container } = renderPage('/year-review/2023');
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
     expect(yearReviewCalls().length).toBe(0);

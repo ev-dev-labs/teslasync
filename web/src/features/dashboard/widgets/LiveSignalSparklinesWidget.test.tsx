@@ -229,9 +229,9 @@ describe('SIGNAL_COLORS palette', () => {
 
   it('matches the documented cyan/purple/amber/emerald/blue/rose order', () => {
     expect(SIGNAL_COLORS).toEqual([
-      '#00f0ff',
-      '#a855f7',
-      '#f59e0b',
+      '#91bbc0',
+      '#b5a8c9',
+      '#cfb481',
       '#10b981',
       '#3b82f6',
       '#f43f5e',
@@ -368,7 +368,7 @@ describe('LiveSignalSparklinesWidget — empty / lifecycle states', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderWidget(FULL, 1);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Live signal sparklines')).toBeInTheDocument();
     expect(screen.queryByText('Battery Level')).toBeNull();
   });

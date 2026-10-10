@@ -345,7 +345,7 @@ describe('SystemHealthWidget — standard layout (2×4)', () => {
     });
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Database').parentElement?.parentElement?.className).toContain('bg-emerald-500/10');
+    expect(screen.getByText('Database').parentElement?.parentElement?.className).toContain('bg-[var(--semantic-success-bg)]');
     // The whole point: `warning` is amber, not red.
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     expect(screen.getByText('Unknown')).toBeInTheDocument();
@@ -490,7 +490,7 @@ describe('SystemHealthWidget — states & interaction', () => {
     setup({ health: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.getByText('2.4 GB')).toBeInTheDocument();
     expect(screen.queryByText('System health')).toBeInTheDocument();
     expect(screen.queryByText('No system health data')).not.toBeInTheDocument();

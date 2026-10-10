@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render as renderWithTestingLibrary, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render as renderWithTestingLibrary, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
@@ -16,10 +16,15 @@ vi.mock('react-i18next', async importOriginal => ({
     i18n: { language: 'en' },
   }),
 }));
-vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
-  unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
-    energy: 'Wh', duration: 'h', power: 'W' },
-}) }));
+vi.mock('@/hooks/useUnits', async () => {
+  const { useSyncExternalStore } = await import('react');
+  const { getFormatterPreferences, subscribeFormatterPreferences } = await import('@/lib/numberFormat');
+  return { useUnits: () => {
+    const { locale, precision } = useSyncExternalStore(subscribeFormatterPreferences, getFormatterPreferences);
+    return { unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+      energy: 'Wh', duration: 'h', power: 'W', locale, precision } };
+  } };
+});
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
 vi.mock('@/components/ui', async importOriginal => ({
   ...await importOriginal<typeof import('@/components/ui')>(),
@@ -67,9 +72,12 @@ describe('live charging overview source preservation', () => {
     expect(screen.getByText('Avg rate (kW)')).toBeInTheDocument();
     expect(screen.getByText('Avg power (kW)')).toBeInTheDocument();
     expect(screen.getByText(props.secondary)).toBeInTheDocument();
-    expect(screen.getByText(period.provenance)).toBeInTheDocument();
     expect(JSON.stringify(chargingStats)).toBe(before);
     expect(container.querySelector('[data-testid="charging-overview"] [role="list"]')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const details = within(screen.getByRole('dialog', { name: 'Overview details' }));
+    const limitations = details.getByText('Limitations').parentElement!;
+    expect(within(limitations).getByText(period.provenance)).toBeInTheDocument();
   });
   it('composes the original Delta operands/precision/direction and prior tooltip without computing a new delta', () => {
     const { container } = render(<ChargingOverviewStats {...props} />);

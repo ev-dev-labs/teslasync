@@ -167,7 +167,9 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     const drawer = within(screen.getByRole('dialog'));
     expect(drawer.getByText('one sigma under selected assumptions')).toBeVisible();
     expect(drawer.getByText('descriptive ratio, not state of health')).toBeVisible();
-    expect(drawer.getByText(/not a lifetime record or a battery-health measurement/)).toBeVisible();
+    expect(drawer.getByText(/not a lifetime record or a battery-health measurement/, {
+      selector: '[data-drawer-header] p',
+    })).toBeVisible();
     expect(drawer.getByText('Not scored')).toBeVisible();
     expect(JSON.stringify(raw)).toBe(before);
   });
@@ -236,7 +238,7 @@ describe('Pack Capacity source modernization (NOT RUN)', () => {
     expect(h.refetch).toHaveBeenCalledTimes(1);
     setQuery({ fetchStatus: 'paused' });
     view.rerenderPage();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('showing the last values it received');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
     expect(screen.getByTestId('pack-capacity-kpis').querySelector('[data-operational-value]')?.textContent).toBe(before);
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(h.refetch).toHaveBeenCalledTimes(2);

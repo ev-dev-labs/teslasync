@@ -160,7 +160,7 @@ describe('ExportKpiBand', () => {
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0);
-    expect(container.querySelectorAll('.motion-safe\\:animate-pulse')).toHaveLength(5);
+    expect(container.querySelectorAll('[data-operational-metric] [aria-hidden="true"][class*="--surface-3"]')).toHaveLength(5);
   });
 
   it('keeps the labelled summary region present in both the loading and loaded states', () => {
@@ -260,8 +260,10 @@ describe('ExportKpiBand', () => {
     expect(within(drawer).getByText('Sum of known positive finite file sizes in bytes across all returned jobs; missing or invalid sizes contribute nothing.')).toBeInTheDocument();
     expect(within(drawer).getByText('Binary byte units use saved precision and locale. A zero footprint displays as —, not as an unknown source.')).toBeInTheDocument();
     expect(within(drawer).getByText(/Derived from the export\/jobs response snapshot; list coverage is not an all-time or date-range guarantee\./)).toBeInTheDocument();
-    expect(within(drawer).getByText('Loaded jobs before table filters and pagination; no date window is applied.')).toBeInTheDocument();
-    expect(within(drawer).getByText(/Successful load time is unknown\./)).toBeInTheDocument();
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Export summary drawer header is missing');
+    expect(within(drawerHeader).getByText('Loaded jobs before table filters and pagination; no date window is applied.')).toBeInTheDocument();
+    expect(within(drawerHeader).getByText(/Successful load time is unknown\./)).toBeInTheDocument();
     expect(within(drawer).getByText('1.50 KB')).toBeInTheDocument();
     fireEvent.keyDown(drawer, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());

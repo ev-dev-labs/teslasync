@@ -116,7 +116,7 @@ describe('deriveMqttStats', () => {
     expect(within(drawer).getByText('12.50')).toBeInTheDocument();
     expect(within(drawer).getByText('1,500')).toBeInTheDocument();
     expect(within(drawer).getByText(/one missing operand makes the total unknown/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/no complete calendar-day or verified-live coverage/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/no complete calendar-day or verified-live coverage/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
   });
   it('sums signal counts + rates and returns the most-recent lastReceived', () => {
     const out = deriveMqttStats([
@@ -264,7 +264,7 @@ describe('MQTTStatusWidget — states & interaction', () => {
     mockMqtt.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('MQTT status')).toBeInTheDocument();
     expect(screen.queryByText('No MQTT status data')).not.toBeInTheDocument();
   });

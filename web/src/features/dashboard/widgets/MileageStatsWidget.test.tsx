@@ -297,7 +297,7 @@ describe('MileageStatsWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Mileage stats')).toBeInTheDocument();
     expect(screen.queryByText('No mileage data')).not.toBeInTheDocument();
   });
@@ -423,7 +423,7 @@ describe('MileageStatsWidget — graceful degradation on transient error', () =>
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    // … and the freshness indicator is in its error state (danger dot).
+    expect(container.querySelector('[class*="--semantic-danger"].rounded-full')).toBeTruthy();
   });
 });

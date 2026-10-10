@@ -45,7 +45,10 @@ vi.mock('react-i18next', () => ({
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           let s = fallbackOrOpts;
-          for (const [k, v] of Object.entries(opts)) s = s.replace(`{{${k}}}`, String(v));
+          const replacements = opts.replace != null && typeof opts.replace === 'object'
+            ? opts.replace
+            : opts;
+          for (const [k, v] of Object.entries(replacements)) s = s.replace(`{{${k}}}`, String(v));
           return s;
         }
         return fallbackOrOpts;
@@ -318,7 +321,7 @@ describe('VampireDrainWidget — loading / empty / error', () => {
     mockEvents.mockReturnValue(makeQuery({ data: undefined }));
     const { container } = renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No vampire drain data')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Vampire drain' })).toBeInTheDocument();
   });

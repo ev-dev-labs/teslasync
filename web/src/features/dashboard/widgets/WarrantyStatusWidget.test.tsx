@@ -249,7 +249,7 @@ describe('WarrantyStatusWidget — states', () => {
     warrantyMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
     expect(warrantyVehicleIdMock).toHaveBeenCalledWith('7');
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Warranty status')).toBeInTheDocument();
     expect(screen.queryByText('No warranty data')).toBeNull();
   });
@@ -267,7 +267,7 @@ describe('WarrantyStatusWidget — states', () => {
       makeResult({ isError: true, dataUpdatedAt: 0, data: undefined }),
     );
     const { container } = renderWidget();
-    expect(container.querySelector('.bg-red-400')).not.toBeNull();
+    expect(container.querySelector('[class*="bg-[var(--semantic-danger)]"]')).not.toBeNull();
     expect(screen.getAllByRole('button', { name: /refresh/i }).length).toBeGreaterThan(0);
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
   });

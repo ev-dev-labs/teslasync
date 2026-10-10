@@ -49,7 +49,8 @@ describe('backup history canonical feed preservation', () => {
     hooks.sites.mockReturnValue(queryResult([{ energy_site_id: 101 }], { refetch: sitesRetry }));
     hooks.history.mockReturnValue(queryResult(events, { error: new Error('offline'), isError: true, refetch: historyRetry }));
     renderWidget(<BackupHistoryWidget size={{ cols: 2, rows: 4 }} />);
-    expect(screen.getAllByRole('listitem')).toHaveLength(10);
+    const feed = screen.getByRole('list', { name: 'Event feed' });
+    expect(within(feed).getAllByRole('listitem')).toHaveLength(10);
     fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(historyRetry).toHaveBeenCalledOnce();
     expect(sitesRetry).toHaveBeenCalledOnce();
@@ -58,7 +59,8 @@ describe('backup history canonical feed preservation', () => {
   it('keeps a missing duration unknown rather than counting it as a zero-length outage', () => {
     hooks.history.mockReturnValue(queryResult([{ ...events[0], duration_seconds: null }]));
     renderWidget(<BackupHistoryWidget size={{ cols: 2, rows: 4 }} />);
-    const row = screen.getByRole('listitem');
+    const feed = screen.getByRole('list', { name: 'Event feed' });
+    const row = within(feed).getByRole('listitem');
     expect(within(row).getByText('Duration: —')).toBeVisible();
     expect(within(row).queryByText('0s')).not.toBeInTheDocument();
   });

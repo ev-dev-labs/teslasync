@@ -318,10 +318,11 @@ describe('drivetrain live modernization preservation (authored)', () => {
   });
 
   it('preserves genuine zero values without manufacturing missing readings', () => {
-    const { container } = render(<DrivetrainHealthPage />, { wrapper: Providers });
-    const powerValues = Array.from(container.querySelectorAll('[data-metric="power"][data-state="value"]'));
+    render(<DrivetrainHealthPage />, { wrapper: Providers });
+    const liveReadings = screen.getByRole('region', { name: 'Returned motor readings' });
+    const powerValues = Array.from(liveReadings.querySelectorAll('[data-operational-metric="power"][data-value-state="value"], [data-operational-metric="regen"][data-value-state="value"]'));
     expect(powerValues.some(node => (node.textContent ?? '').includes('0.00'))).toBe(true);
-    const missingTemperatures = container.querySelectorAll('[data-metric="temperature"][data-state="missing"]');
+    const missingTemperatures = liveReadings.querySelectorAll('[data-operational-metric="temp-front"][data-value-state="missing"], [data-operational-metric="temp-rear"][data-value-state="missing"], [data-operational-metric="inverter"][data-value-state="missing"], [data-operational-metric="battery"][data-value-state="missing"]');
     expect(missingTemperatures.length).toBeGreaterThan(0);
   });
 
@@ -344,7 +345,7 @@ describe('drivetrain live modernization preservation (authored)', () => {
     expect(screen.queryByText('Real-time telemetry active')).toBeNull();
     expect(screen.getByText('No temperature evidence for an active health assessment')).toBeTruthy();
     expect(container.querySelectorAll('[data-recommendation]')).toHaveLength(4);
-    expect(container.querySelectorAll('[data-state="missing"]').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]').length).toBeGreaterThan(0);
     expect(container.querySelectorAll('figure')).toHaveLength(4);
   });
 
