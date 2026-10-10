@@ -84,6 +84,19 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
 
   const totalWh = knownNumber(summary?.total_wh);
   const totalSpend = knownNumber(summary?.total_spend);
+  const sourceBrief = (
+    <DashboardSourceBrief
+      metrics={[
+        { metricId: 'energy', rawValue: totalWh, label: t('widget.superchargerHistory.totals', '30-day totals'), description: t('widget.superchargerHistory.energyDescription', 'Reported summary energy in watt-hours, not the sum of the top-ten presentation rows.'), display: { formatter: raw => ({ value: formatEnergy(Number(raw)), unit: '' }) } },
+        { metricId: 'currency', rawValue: totalSpend, label: t('widget.superchargerHistory.compactLabel', '30-day Supercharger'), description: t('widget.superchargerHistory.spendDescription', 'Reported Supercharger summary spend; missing values remain unknown, not free charging.'), display: { formatter: raw => ({ value: formatCurrency(Number(raw)), unit: '' }) } },
+      ]}
+      state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
+      title={t('widget.superchargerHistory.summaryTitle', 'Supercharger source totals')}
+      description={t('widget.superchargerHistory.summaryDescription', 'Reported 30-day totals remain independent of the ten most-recent sessions ranked by energy; incomplete session energy does not imply a complete sample.')}
+      scope={t('widget.superchargerHistory.summaryScope', 'Tesla charging history; source summary window, exact instants and timezone are not supplied')}
+      loading={isLoading && !data} testId="supercharger-history-operational-brief"
+    />
+  );
 
   // Compact: show 30-day Supercharger spend as big number
   if (isCompact) {
@@ -97,22 +110,16 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
         isError={isError}
         onRefresh={() => refetch()}
       >
-        <DashboardSourceBrief
-          metrics={[
-            { metricId: 'energy', rawValue: totalWh, label: t('widget.superchargerHistory.totals', '30-day totals'), description: t('widget.superchargerHistory.energyDescription', 'Reported summary energy in watt-hours, not the sum of the top-ten presentation rows.'), display: { formatter: raw => ({ value: formatEnergy(Number(raw)), unit: '' }) } },
-            { metricId: 'currency', rawValue: totalSpend, label: t('widget.superchargerHistory.compactLabel', '30-day Supercharger'), description: t('widget.superchargerHistory.spendDescription', 'Reported Supercharger summary spend; missing values remain unknown, not free charging.'), display: { formatter: raw => ({ value: formatCurrency(Number(raw)), unit: '' }) } },
-          ]}
-          state={dataState} eyebrow={t('dashboard.summary.eyebrow', 'Source summary')}
-          title={t('widget.superchargerHistory.summaryTitle', 'Supercharger source totals')}
-          description={t('widget.superchargerHistory.summaryDescription', 'Reported 30-day totals remain independent of the ten most-recent sessions ranked by energy; incomplete session energy does not imply a complete sample.')}
-          scope={t('widget.superchargerHistory.summaryScope', 'Tesla charging history; source summary window, exact instants and timezone are not supplied')}
-          loading={isLoading && !data} testId="supercharger-history-operational-brief"
-        />
         {entries.length > 0 ? (
-          <WidgetBigNumber
-            value={totalSpend == null ? null : formatCurrency(totalSpend)}
-            label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
-          />
+          <>
+            {sourceBrief}
+            <div role="group" aria-label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}>
+              <WidgetBigNumber
+                value={totalSpend == null ? null : formatCurrency(totalSpend)}
+                label={t('widget.superchargerHistory.compactLabel', '30-day Supercharger')}
+              />
+            </div>
+          </>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
             icon={<Zap className="h-5 w-5" />}
@@ -138,6 +145,7 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
     >
       {entries.length > 0 ? (
         <div className="flex flex-col gap-2 h-full">
+          {sourceBrief}
           <div className="flex-1 min-h-0 overflow-y-auto">
             <WidgetRankedList
               items={rankedItems}
@@ -149,7 +157,6 @@ export default function SuperchargerHistoryWidget({ size }: WidgetProps) {
               emptyIcon={<Zap className="h-5 w-5" />}
             />
           </div>
-
         </div>
       ) : (
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
