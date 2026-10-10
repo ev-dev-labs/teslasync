@@ -144,7 +144,7 @@ describe('PrivacyKpiCards', () => {
 
     // No metric content yet — placeholders only, so the layout never jumps.
     expect(screen.queryByText('Recent pages stored')).not.toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(4)
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
   })
 

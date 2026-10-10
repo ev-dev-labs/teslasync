@@ -132,7 +132,7 @@ describe('ChannelStatsBand — loading', () => {
     expect(region).toHaveAttribute('aria-busy', 'true');
     expect(region).toHaveAttribute('aria-label', 'Loading notification statistics');
     // Four skeleton cells, and none of the metric labels leak through.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(4);
     expect(screen.queryByText('Total sent')).not.toBeInTheDocument();
   });
 

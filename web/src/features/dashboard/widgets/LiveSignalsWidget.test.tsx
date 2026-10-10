@@ -269,7 +269,7 @@ describe('LiveSignalsWidget — rendering', () => {
     const { container } = render(<LiveSignalsWidget size={STANDARD} />);
 
     expect(screen.getByText('245.00 Nm')).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(3);
     // The still-loading sections withhold their values but keep their headers.
     expect(screen.getByText('Climate')).toBeInTheDocument();
     expect(screen.queryByText('20.00°C')).not.toBeInTheDocument();

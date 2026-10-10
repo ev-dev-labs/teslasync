@@ -122,7 +122,7 @@ describe('TemperatureMetricCards — states (loading > empty > data)', () => {
   it('renders six aria-hidden skeletons and no tiles while loading', () => {
     const { container } = renderCards({ loading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
     expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
     // Loading strictly precedes the empty / data branches.
     expect(screen.queryByText('Health Score')).toBeNull();
@@ -132,7 +132,7 @@ describe('TemperatureMetricCards — states (loading > empty > data)', () => {
   it('loading wins even when the sensor list is empty (no EmptyState flash)', () => {
     const { container } = renderCards({ sensors: [], loading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
     expect(screen.queryByRole('status')).toBeNull();
   });
 
@@ -300,6 +300,6 @@ describe('TemperatureMetricCards — a11y', () => {
     const { container } = renderCards({ loading: true });
     const grid = container.querySelector('div[aria-hidden="true"]');
     expect(grid).not.toBeNull();
-    expect(grid?.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(grid?.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
   });
 });

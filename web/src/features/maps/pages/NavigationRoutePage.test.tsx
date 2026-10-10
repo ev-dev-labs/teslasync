@@ -703,7 +703,7 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     // ...but the history-bound charts are skeletons, not resolved markers.
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(3);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThanOrEqual(3);
   });
 
   it('surfaces QueryError in the latest-snapshot sections and wires its Retry', async () => {

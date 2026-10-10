@@ -88,7 +88,7 @@ describe('ActivityFeedPanel', () => {
     const status = screen.getByRole('status', { name: 'Loading activity feed' });
     expect(status).toHaveAttribute('aria-busy', 'true');
     // Six skeleton rows stand in for the pending feed.
-    expect(status.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(status.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
     // The feed itself (and its empty copy) must not render underneath.
     expect(screen.queryByText('No recent activity in this window.')).toBeNull();
   });

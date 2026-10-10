@@ -82,7 +82,7 @@ describe('HealthProbesSection', () => {
     const { container } = renderSection()
 
     expect(screen.getByText('Health probes')).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(2)
     // The probe cards ("/healthz") must not be present until data resolves.
     expect(screen.queryByText(/healthz/)).toBeNull()
   })

@@ -218,7 +218,7 @@ describe('AuditLogPage — data states', () => {
     mockedRequest.mockReturnValue(new Promise<AuditLogEntry[]>(() => {}));
     const { container } = renderPage();
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(5);
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
     // No table has mounted yet — skeletons stand in for it.
     expect(screen.queryByRole('table')).toBeNull();

@@ -224,7 +224,7 @@ describe('DrivingSection — populated', () => {
     // Chart branch: the bar chart region carries an accessible name (role=img),
     // and neither the skeleton nor the empty placeholder leaks alongside it.
     expect(chartRegion()).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(
       screen.queryByText('No driving distance data is available for this week.'),
     ).toBeNull();

@@ -477,7 +477,7 @@ describe('LocationsPage — loading & error states', () => {
     expect(within(kpiRegion()).getByText('Unique places')).toBeInTheDocument();
     expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
     expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
   });
 
   it('surfaces a retry-able error and re-fetches when Retry is clicked', async () => {
