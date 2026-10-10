@@ -5,22 +5,24 @@
  * Run against `vite preview` after a production build. The NotFound route
  * must be fully covered by the static shell; Dashboard may request only its
  * route-owned locale bundle.
+ *
+ * Usage: node scripts/probe-i18n-startup.mjs [--strict] [--dist <dir>]
+ * Locale bytes use the selected output, relative to web/ (default: web/dist).
  */
-import { chromium } from '@playwright/test'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { gzipSync } from 'node:zlib'
-import { createServer } from 'vite'
 import { setTimeout as delay } from 'node:timers/promises'
+import { resolveDistRoot } from './check-i18n-runtime.mjs'
 
 const baseURL = process.env.LOCALE_PROBE_BASE_URL ?? 'http://127.0.0.1:4173'
 const STRICT = process.argv.includes('--strict')
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const ASSETS_DIR = join(__dirname, '..', 'dist', 'assets')
 const MAX_ROUTE_LOCALE_REQUESTS = 5
 
 async function loadApiFixtures() {
+  const { createServer } = await import('vite')
   const loader = await createServer({
     root: join(__dirname, '..'),
     configFile: false,
@@ -109,15 +111,21 @@ async function captureLocaleRequests(browser, path, fixtures) {
   return { requests: [...requests].sort(), i18nErrors, missingKeys }
 }
 
-function localeByteSummary(requests) {
+export function localeByteSummary(requests, distRoot = resolveDistRoot()) {
+  const assetsDir = join(distRoot, 'assets')
   return requests.map((request) => {
     const file = request.split('/').pop()
-    const contents = readFileSync(join(ASSETS_DIR, file))
+    const contents = readFileSync(join(assetsDir, file))
     return `${file} (${contents.length} raw / ${gzipSync(contents).length} gzip bytes)`
   })
 }
 
 async function main() {
+  const distRoot = resolveDistRoot()
+  if (!existsSync(distRoot) || !statSync(distRoot).isDirectory()) {
+    throw new Error(`output directory not found: ${distRoot} — run build first`)
+  }
+  const { chromium } = await import('@playwright/test')
   const fixtures = await loadApiFixtures()
   const browser = await chromium.launch({ headless: true })
   try {
@@ -136,7 +144,7 @@ async function main() {
     const i18nErrors = routes.flatMap(([, result]) => result.i18nErrors)
     for (const [name, result] of routes) {
       console.log(
-        `[i18n-runtime] ${name}: ${result.requests.length} deferred locale requests${result.requests.length ? ` (${localeByteSummary(result.requests).join(', ')})` : ''}${result.missingKeys.length ? `; missing keys: ${result.missingKeys.join(', ')}` : ''}`,
+        `[i18n-runtime] ${name}: ${result.requests.length} deferred locale requests${result.requests.length ? ` (${localeByteSummary(result.requests, distRoot).join(', ')})` : ''}${result.missingKeys.length ? `; missing keys: ${result.missingKeys.join(', ')}` : ''}`,
       )
     }
     console.log(`[i18n-runtime] missing namespace console errors: ${i18nErrors.length}`)
@@ -162,7 +170,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error('[i18n-runtime] probe failed:', error)
-  process.exit(1)
-})
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error('[i18n-runtime] probe failed:', error)
+    process.exitCode = 1
+  })
+}
