@@ -35,7 +35,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
-import type { TrendPoint } from './constants';
+import { HOURS_COLOR, type TrendPoint } from './constants';
 import { HoursTrendPanel } from './HoursTrendPanel';
 
 // ── i18n: resolve the string fallback (2nd arg) so assertions read on copy. ──
@@ -186,7 +186,7 @@ describe('HoursTrendPanel — populated', () => {
     // The "Hours Remaining" literal is routed through t() — the mock resolves
     // the English fallback, proving the string is translatable.
     expect(series).toHaveAttribute('data-name', 'Hours Remaining');
-    expect(series).toHaveAttribute('data-stroke', '#06b6d4');
+    expect(series).toHaveAttribute('data-stroke', HOURS_COLOR);
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-key', 'label');
     expect(screen.getByTestId('y-axis')).toHaveAttribute('data-unit', ' h');
   });
