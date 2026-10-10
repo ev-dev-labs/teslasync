@@ -284,7 +284,7 @@ describe('DriveScoreWidget', () => {
 
     const { container } = renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
     expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
