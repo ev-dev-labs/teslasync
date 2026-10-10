@@ -136,7 +136,7 @@ describe('EventTimeline — state precedence', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(container.querySelector('.space-y-2[aria-hidden="true"]')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(
       screen.queryByRole('list', { name: 'Security event timeline' }),
     ).toBeNull();

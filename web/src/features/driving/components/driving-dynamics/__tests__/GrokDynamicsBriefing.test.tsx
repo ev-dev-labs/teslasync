@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DriveDynamicsSnapshot, MotorSnapshot } from '@/api/types';
+import type { UseUnitsResult } from '@/hooks/useUnits';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -25,12 +26,31 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({
-    formatPower: (watts: number | null) => (watts == null ? '—' : `${(watts / 1000).toFixed(1)} kW`),
-    formatTemperature: (c: number | null) => (c == null ? '—' : `${c.toFixed(0)}°C`),
-  }),
-}));
+vi.mock('@/hooks/useUnits', async () => {
+  const lib = await vi.importActual<typeof import('@/lib/unitConversion')>('@/lib/unitConversion');
+  const unitPrefs: UseUnitsResult['unitPrefs'] = {
+    distance: 'km',
+    speed: 'km/h',
+    temperature: '°C',
+    pressure: 'bar',
+    energy: 'kWh',
+    duration: 'h',
+    power: 'kW',
+    locale: 'en-US',
+  };
+  return {
+    useUnits: (): UseUnitsResult => ({
+      unitPrefs,
+      formatDistance: (value, options) => lib.formatDistance(value, unitPrefs, options),
+      formatSpeed: (value, options) => lib.formatSpeed(value, unitPrefs, options),
+      formatTemperature: (value, options) => lib.formatTemperature(value, unitPrefs, { precision: 0, ...options }),
+      formatPressure: (value, options) => lib.formatPressure(value, unitPrefs, options),
+      formatEnergy: (value, options) => lib.formatEnergy(value, unitPrefs, options),
+      formatDuration: (value, options) => lib.formatDuration(value, unitPrefs, options),
+      formatPower: (value, options) => lib.formatPower(value, unitPrefs, { precision: 1, ...options }),
+    }),
+  };
+});
 
 const motorState = vi.hoisted(() => ({
   data: undefined as MotorSnapshot | null | undefined,
