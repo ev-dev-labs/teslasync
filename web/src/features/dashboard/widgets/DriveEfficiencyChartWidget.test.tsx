@@ -516,7 +516,7 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     setup({ drives: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = renderWidget({ size: STANDARD });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Drive efficiency')).toBeInTheDocument();
     expect(screen.queryByText('No efficiency data yet')).not.toBeInTheDocument();
   });
