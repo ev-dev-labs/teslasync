@@ -60,7 +60,9 @@ describe('route-owned shared locale closures', () => {
     {
       path: '/vehicles', namespace: 'vehicles', bundle: 'vehicles',
       keys: ['operations.vehicles.narrative.whatChangedWithoutBattery', 'vehicles.preview.trust.checking',
-        'dataState.staleNamed.title', 'dataState.refreshBlocked.message'],
+        'dataState.staleNamed.title', 'dataState.refreshBlocked.message',
+        'developerReference.stats.metric.percent.description', 'developerReference.stats.reason.missing',
+        'developerReference.stats.reason.nonfinite', 'developerReference.stats.reason.overflow'],
     },
   ])('serves $path shared keys from its own lazy bundle', async ({ path, namespace, bundle, keys }) => {
     window.history.replaceState(null, '', path)

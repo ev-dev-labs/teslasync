@@ -2065,6 +2065,20 @@
           "label": "Text"
         }
       },
+      "reason": {
+        "bytes": "Expected a non-negative byte count",
+        "count": "Expected a non-negative safe integer count",
+        "countTotal": "Expected a non-negative safe integer total",
+        "duration": "Expected a non-negative duration for this display",
+        "formatter": "Expected a non-empty formatted measurement",
+        "identifier": "Expected a non-negative safe integer identifier",
+        "latency": "Expected a non-negative latency",
+        "missing": "No measurement supplied",
+        "nonfinite": "Expected a finite numeric measurement",
+        "overflow": "Display conversion exceeded the finite numeric range",
+        "sessions": "Needs at least 2 sessions — synthetic reason, not a production eligibility rule",
+        "text": "Expected non-empty source text"
+      },
       "state": {
         "empty": "No metrics supplied",
         "loading": "Loading measurements",

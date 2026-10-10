@@ -530,6 +530,19 @@ describe('checked-in locale artifacts', () => {
     expect(shell).not.toHaveProperty('changelogEntries')
   })
 
+  it('packs vehicle formatter reason keys without changing authoritative fallbacks', () => {
+    const resource = emitted.get('vehicles')
+    const reasons = leafKeys(catalog.developerReference.stats.reason, 'developerReference.stats.reason') as string[]
+    for (const key of reasons) {
+      expect(usageManifest.featureRequiredKeys.vehicles, key).toContain(key)
+      expect(nested(resource, key), key).toEqual(nested(catalog, key))
+    }
+    expect(usageManifest.namespaceFallbackBundles.developerReference).toBe('detail-developerReference')
+    expect(nested(emitted.get('detail-developerReference'), 'developerReference')).toEqual(catalog.developerReference)
+    expect(nested(emitted.get('detail-operations'), 'operations')).toEqual(catalog.operations)
+    expect(runtimeManifest.missing).toEqual(knownMissingBaseline)
+  })
+
   it('packs driving route closure while keeping complete namespaces in narrow fallbacks', () => {
     const resource = emitted.get('driving')
     expect(resource).toBeDefined()

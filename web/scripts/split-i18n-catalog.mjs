@@ -169,7 +169,7 @@ function stringLiteralText(node) {
  *   the prefix must ship with the shell because the suffix is only known at
  *   runtime.
  */
-function indirectTranslationKeys(file, catalogLeaves) {
+function indirectTranslationKeys(file, catalogLeaves, computedKeyBindings = false) {
   const source = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true)
   const indirect = new Set()
   const deferred = new Set()
@@ -183,6 +183,17 @@ function indirectTranslationKeys(file, catalogLeaves) {
   const addKeyBinding = (name, initializer) => {
     if (!name || !KEY_IDENTIFIER.test(name)) return
     addIfCatalogLeaf(indirect, initializer)
+    if (computedKeyBindings && initializer) {
+      // Vehicle metric formatters return computed reasonKey values through
+      // conditional expressions rather than calling t() at their definition.
+      const visitBinding = (node) => {
+        if (ts.isTemplateExpression(node) && node.head.text.includes('.')) {
+          prefixes.add(node.head.text)
+        }
+        ts.forEachChild(node, visitBinding)
+      }
+      visitBinding(initializer)
+    }
     if (initializer && ts.isArrayLiteralExpression(initializer)) {
       for (const element of initializer.elements) addIfCatalogLeaf(indirect, element)
     }
@@ -252,15 +263,16 @@ function usageManifest(catalog) {
     if (!literalKeyCache.has(file)) literalKeyCache.set(file, translationKeys(file))
     return literalKeyCache.get(file)
   }
-  const closureKeys = (file) => {
-    if (!sourceKeyCache.has(file)) {
-      const { indirect, deferred, prefixes } = indirectTranslationKeys(file, catalogLeaves)
-      sourceKeyCache.set(file, new Set([
+  const closureKeys = (file, computedKeyBindings = false) => {
+    const cacheKey = `${computedKeyBindings}:${file}`
+    if (!sourceKeyCache.has(cacheKey)) {
+      const { indirect, deferred, prefixes } = indirectTranslationKeys(file, catalogLeaves, computedKeyBindings)
+      sourceKeyCache.set(cacheKey, new Set([
         ...literalKeys(file), ...indirect, ...deferred,
         ...[...prefixes].flatMap(prefix => keysUnderPrefix(prefix, catalogLeaves)),
       ]))
     }
-    return sourceKeyCache.get(file)
+    return sourceKeyCache.get(cacheKey)
   }
 
   for (const file of sourceFiles) {
@@ -352,7 +364,7 @@ function usageManifest(catalog) {
     const keys = new Set()
     for (const file of staticClosure(SOURCE_ROOT, roots, dependencyCache)) {
       if (!/\.(?:ts|tsx)$/.test(file)) continue
-      for (const key of closureKeys(file)) {
+      for (const key of closureKeys(file, bundle === 'vehicles')) {
         for (const sibling of siblingKeys(catalog, key)) {
           if (getNested(catalog, sibling) !== undefined) keys.add(sibling)
         }
