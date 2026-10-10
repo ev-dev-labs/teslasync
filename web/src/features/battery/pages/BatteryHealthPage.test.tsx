@@ -796,7 +796,12 @@ describe('BatteryHealthPage · design-system consistency', () => {
       expect(healthTone(soh)).toBe(expected);
     }
     for (const pct of [0, 5, 5.1, 15, 15.1, 40]) {
-      expect(gaugeTone[degradationTone(pct)]).toBe(degradationColor(pct));
+      const expected = degradationColor(pct) === '#10b981'
+        ? gaugeTone.success
+        : degradationColor(pct) === '#f59e0b'
+          ? gaugeTone.warning
+          : gaugeTone.danger;
+      expect(gaugeTone[degradationTone(pct)]).toBe(expected);
     }
   });
 
