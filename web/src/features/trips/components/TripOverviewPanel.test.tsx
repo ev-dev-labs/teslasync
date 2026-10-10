@@ -187,7 +187,7 @@ describe('TripOverviewPanel — ready state (complete trip)', () => {
   });
 
   it('does not render loading, error, or empty affordances', () => {
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -230,7 +230,7 @@ describe('TripOverviewPanel — loading state', () => {
   it('renders a skeleton and no metadata when there is no cached trip', () => {
     renderPanel({ isLoading: true, trip: undefined });
 
-    expect(document.querySelector('.animate-pulse')).not.toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Trip ID')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -241,7 +241,7 @@ describe('TripOverviewPanel — loading state', () => {
     renderPanel({ isLoading: true, trip: makeTrip({ id: 99 }) });
 
     expect(ddText('Trip ID')).toBe('99');
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 });
 
@@ -286,7 +286,7 @@ describe('TripOverviewPanel — empty state', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Trip not found');
     // Neither the skeleton nor the metadata body is present.
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByText('Trip ID')).toBeNull();
   });
 });

@@ -392,7 +392,7 @@ describe('DoorWindowStatusWidget — compact view', () => {
 describe('DoorWindowStatusWidget — lifecycle states', () => {
   it('renders only a skeleton while loading', () => {
     const { container } = renderWidget(FULL, { query: makeQuery({ data: undefined, isLoading: true }) });
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Door & window status')).toBeInTheDocument();
     expect(screen.queryByText('No door/window data')).toBeNull();
   });

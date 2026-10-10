@@ -143,7 +143,7 @@ describe('ActivityTrendPanel — populated', () => {
     expect(screen.queryByText(EMPTY)).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders the chart (not the empty state) for a quiet window of all-zero days', () => {
@@ -166,7 +166,7 @@ describe('ActivityTrendPanel — loading / error', () => {
     });
 
     expect(screen.getByRole('heading', { name: new RegExp(TITLE, 'i') })).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByTestId('bar-chart')).toBeNull();
     expect(screen.queryByText(EMPTY)).toBeNull();
   });
@@ -201,7 +201,7 @@ describe('ActivityTrendPanel — loading / error', () => {
   it('gives loading precedence over error when both flags are set', () => {
     const { container } = renderPanel({ isLoading: true, isError: true, error: new Error('x') });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
   });

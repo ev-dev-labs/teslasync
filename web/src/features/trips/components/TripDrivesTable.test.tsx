@@ -303,7 +303,7 @@ describe('TripDrivesTable — functional column sorting', () => {
 describe('TripDrivesTable — render states', () => {
   it('shows the skeleton (and no table) while loading with no trip yet', () => {
     const { container } = renderTable({ trip: undefined, isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     // Panel title is always present, even mid-load.
     expect(screen.getByText('Drives in this trip')).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe('TripDrivesTable — render states', () => {
     });
     // Error wins — no skeleton, no table.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
